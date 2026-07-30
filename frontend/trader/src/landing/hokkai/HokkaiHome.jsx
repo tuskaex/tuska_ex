@@ -13,7 +13,6 @@ import { useInView } from 'react-intersection-observer'
 // the trader dashboard, which defines its own versions of those names.
 import './hokkai.css'
 import AnimatedSection, { PageTransition } from './components/AnimatedSection'
-import MarketTicker from './components/MarketTicker'
 import { stats } from './HomeData'
 
 // Section components
@@ -60,11 +59,6 @@ function Home() {
       {/* `hk-landing` is the scope hook every rule in hokkai.css hangs
           off. Without it the ported page renders unstyled. */}
       <div className="hk-landing min-h-screen">
-
-      {/* Market Ticker */}
-      <div className="pt-16 md:pt-18">
-        <MarketTicker />
-      </div>
 
       {/* 1. Hero Section */}
       <HeroSection />

@@ -115,64 +115,6 @@ export default function HeroSection() {
       {/* ── Main Content ── */}
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto w-full">
 
-        {/* Live badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="flex justify-center mb-8"
-        >
-          <div
-            className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/10"
-            style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)' }}
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full bg-[#e11d48] animate-pulse"
-              style={{ boxShadow: '0 0 6px rgba(225,29,72,0.9)' }}
-            />
-            <span className="text-[#e11d48] text-xs font-bold uppercase tracking-[0.25em] font-mono">
-              Live Markets — 24/5 Trading
-            </span>
-            <span className="text-white/20 text-xs">|</span>
-            <span className="text-slate-400 text-xs font-mono">60+ Instruments</span>
-          </div>
-        </motion.div>
-
-        {/* Main Heading — Michroma futuristic */}
-        <div>
-          {/* Line 1: TRADE GLOBAL */}
-          <h1
-            className="font-bold text-white leading-none mb-3"
-            style={{
-              fontFamily: "var(--font-michroma), Michroma, sans-serif",
-              fontSize: 'clamp(2.4rem, 7vw, 5.5rem)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              textShadow: '0 0 60px rgba(225,29,72,0.25)',
-            }}
-          >
-            TRADE GLOBAL
-          </h1>
-
-          {/* Line 2: MARKETS — gradient preserved */}
-          <h1
-            className="font-bold leading-none mb-6"
-            style={{
-              fontFamily: "var(--font-michroma), Michroma, sans-serif",
-              fontSize: 'clamp(2.4rem, 7vw, 5.5rem)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              background: 'linear-gradient(135deg, #e11d48 0%, #f43f5e 60%, #ff6b81 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              filter: 'drop-shadow(0 0 30px rgba(225,29,72,0.5))',
-            }}
-          >
-            MARKETS
-          </h1>
-        </div>
-
         {/* Neon divider */}
         <motion.div
           initial={{ scaleX: 0 }}
@@ -185,18 +127,6 @@ export default function HeroSection() {
             style={{ background: 'linear-gradient(90deg, transparent, #e11d48, transparent)', boxShadow: '0 0 8px rgba(225,29,72,0.6)' }}
           />
         </motion.div>
-
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-          className="text-slate-300 text-lg md:text-xl mb-10 max-w-2xl mx-auto leading-relaxed"
-        >
-          Institutional-grade execution. Zero compromise.
-          Access <span className="text-white font-semibold">60+ instruments</span> with{' '}
-          <span className="text-[#e11d48] font-semibold">millisecond precision</span>.
-        </motion.p>
 
         {/* CTA Buttons */}
         <motion.div

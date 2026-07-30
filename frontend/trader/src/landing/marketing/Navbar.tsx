@@ -65,7 +65,6 @@ export interface NavbarProps {
 
 const NAV_LINKS: { label: string; key: ActivePage; href: string; external?: boolean }[] = [
   { label: 'Platforms', key: 'platforms', href: '/platforms' },
-  { label: 'Liquidity', key: 'liquidity', href: 'https://liquidity.tuskaex.com', external: true },
   { label: 'Partners', key: 'partners', href: '/partners' },
   { label: 'Policy', key: 'policy', href: '/policy' },
   { label: 'About', key: 'about', href: '/about' },
