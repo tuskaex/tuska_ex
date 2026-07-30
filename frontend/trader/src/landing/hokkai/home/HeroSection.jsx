@@ -16,7 +16,18 @@ import React from 'react'
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    /* The negative top margin slides this section up UNDER the sticky navbar
+       so the video starts at the very top of the viewport and fills it.
+       Without it the navbar occupies flow space above the hero, and the page
+       surface showed as a band over the video plus slivers either side of the
+       navbar's rounded pill and in its 12px side gutters.
+
+       The offsets are the navbar's total height and must track it: `top-3`
+       (12px) + `h-16` (64px) = 76px, and at md `top-4` (16px) + 68px = 84px.
+       If the navbar's height or top offset changes in Navbar.tsx, these two
+       numbers change with it. The navbar keeps z-50 so it still floats over
+       the footage rather than being covered by it. */
+    <section className="relative min-h-screen overflow-hidden -mt-[76px] md:-mt-[84px]">
 
       {/* ── Background Video ── */}
       <video

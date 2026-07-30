@@ -1,131 +1,40 @@
-export type Lang = 'fr' | 'en'
+export type Lang = 'ja' | 'en'
 
 export const LANG_STORAGE_KEY = 'tuskaex-lang'
 
 type DictNode = string | { [key: string]: DictNode }
 
+/* `ja` is deliberately PARTIAL. Every lookup falls back to `en` when a key
+   is missing (see LangProvider.t), so the Japanese column only carries the
+   strings that were translated deliberately: navigation, buttons and other
+   short UI labels.
+
+   The long marketing prose is intentionally NOT here. Machine-translating a
+   broker's copy — spreads, custody, risk and regulatory wording — produces
+   text that reads fluent and states things the business has not agreed to.
+   Those keys stay English until a human translator supplies them; add them
+   to this block as they arrive and they will start resolving automatically. */
 interface Dict {
-  fr: Record<string, DictNode>
+  ja: Record<string, DictNode>
   en: Record<string, DictNode>
 }
 
 export const dict: Dict = {
-  fr: {
+  ja: {
     nav: {
-      markets: 'Marchés',
-      platforms: 'Plateformes',
-      partners: 'Partenaires',
-      policy: 'Politique',
-      about: 'À propos',
-      contact: 'Contact',
-      login: 'Connexion',
-      signup: 'Inscription',
-      lang: 'FR',
+      markets: '市場',
+      platforms: 'プラットフォーム',
+      partners: 'パートナー',
+      policy: 'ポリシー',
+      about: '会社概要',
+      contact: 'お問い合わせ',
+      login: 'ログイン',
+      signup: '新規登録',
+      lang: 'JA',
     },
     hero: {
-      eyebrow: 'Trading de précision',
-      headlineA: 'Votre avantage.',
-      headlineB: 'Chaque marché.',
-      headlineC: 'Aucun compromis.',
-      sub: 'Tradez plus de 200 paires de devises et les meilleurs actifs crypto avec des spreads ultra-serrés, une exécution éclair et la sécurité d’une infrastructure suisse — le tout depuis une plateforme unique.',
-      ctaOpen: 'Ouvrir un compte',
-      ctaDemo: 'Essayer en démo',
-    },
-    bank: {
-      titleA: 'TuskaEx Banking,',
-      titleB: 'Débancarisé.',
-      lead: 'Votre argent mérite mieux qu’un coffre poussiéreux. TuskaEx vous offre la précision de la banque suisse fusionnée avec la vitesse du trading moderne — pas de costumes obligatoires, pas de frais cachés tolérés.',
-      sub: 'Tradez le Forex. Conservez la crypto. Détenez des titres. Le tout depuis un seul compte, adossé à la régulation suisse et conçu pour ceux qui veulent vraiment comprendre leur argent.',
-      eyebrow: 'Ce que vous pouvez trader',
-      cards: {
-        metals: { title: 'Métaux précieux', body: 'Or, argent et les actifs qui survivent à chaque gros titre.' },
-        currency: { title: 'Paires de devises', body: 'Le marché FX mondial à portée de main. Spreads serrés. Exécution propre.' },
-        cfds: { title: 'CFD', body: 'Long, court, dans toutes les directions du marché.' },
-      },
-      explore: 'Explorer',
-    },
-    platforms: {
-      eyebrow: 'Plateformes',
-      titleA: 'Des plateformes qui',
-      titleB: 'ne vous freinent pas',
-      lead1: 'Des outils de classe mondiale. Zéro drame d’apprentissage. Spreads dès',
-      lead2: '1,1 pips',
-      pick: 'Choisissez votre arme',
-      explore: 'Explorer',
-    },
-    pricing: {
-      from: 'Spreads dès',
-      pips: 'pips',
-      eyebrow: 'Tarification',
-      titleA: 'Une tarification',
-      titleB: 'qui ne vous fait pas sourciller',
-      lead: 'Pas de frais mystères. Pas de surprises en petits caractères. Juste une tarification honnête et compétitive qui vous permet de garder davantage de ce que vous gagnez.',
-      sub: 'Consultez nos conditions de trading Forex, types de comptes et politiques d’exécution — tout est transparent.',
-      cards: {
-        c1: { t: 'Conditions de trading Forex', b: 'Spreads serrés, liquidité profonde, exécution prévisible.' },
-        c2: { t: 'Types de comptes', b: 'Du premier trade au flux institutionnel — choisissez votre niveau.' },
-        c3: { t: 'Exécution', b: 'Exécutions éclair, frais transparents, zéro surprise.' },
-      },
-      explore: 'Explorer',
-    },
-    securities: {
-      eyebrow: 'Valeurs mobilières',
-      titleA: 'L’arsenal complet pour un',
-      titleB: 'portefeuille qui travaille',
-      lead: 'Actions, ETF, obligations, options, contrats à terme, dérivés. Chaque pierre angulaire du trading — à portée pour un portefeuille qui travaille aussi dur que vous.',
-      regulated: '',
-      explore: 'Explorer',
-    },
-    crypto: {
-      eyebrow: 'Crypto',
-      titleA: '52 cryptos.',
-      titleB: 'Sécurité de qualité institutionnelle.',
-      lead: '52 cryptomonnaies sur notre propre échange TuskaEx. Du Bitcoin à celles dont votre cousin n’a jamais entendu parler. Tradez 24/7 avec une sécurité de qualité suisse.',
-      regulated: '',
-      explore: 'Explorer',
-    },
-    steps: {
-      titleA: 'Ouvrez un compte en',
-      titleB: '3 étapes',
-      cta: 'Ouvrir un compte',
-      s1: { t: 'Choisissez votre plateforme et remplissez la demande', d: 'Quelques minutes, pas de réunions. Choisissez CFXD, TradingView, MetaTrader 4 ou MetaTrader 5.', tag: 'Demande rapide' },
-      s2: { t: 'Téléchargez votre pièce d’identité et un justificatif de domicile', d: 'Passeport ou carte d’identité, plus un justificatif de domicile de moins de 6 mois.', tag: 'Vérifié & sécurisé' },
-      s3: { t: 'Approvisionnez votre compte et commencez à trader', d: 'C’est tout. Pas d’obstacles, pas de salles d’attente.', tag: 'Commencez à trader' },
-    },
-    about: {
-      eyebrow: 'Qui sommes-nous',
-      titleA: 'Conçu pour la transparence.',
-      titleB: 'Zéro austérité.',
-      lead: 'Nous avons fait l’ingénierie inverse du système bancaire pour que vous n’ayez pas à le combattre. TuskaEx vous offre la stabilité de qualité institutionnelle avec l’agilité d’une fintech — car les deux n’ont jamais été ennemis.',
-      learnMore: 'En savoir plus',
-    },
-    follow: {
-      title: 'Suivez-nous',
-    },
-    footerLinks: {
-      eyebrow: 'Restons en contact',
-      lead: 'De vraies personnes, une vraie aide. Des réponses avant même que vous ne posiez la question.',
-      cols: {
-        client: { h: 'Devenez client', l1: 'Ouvrir un compte', l2: 'Parrainer un ami (Forex)' },
-        partner: { h: 'Devenir partenaire', l1: 'Partenariats Forex' },
-        help: { h: 'Aide & Support', l1: 'Centre d’aide', l2: 'Service client' },
-      },
-    },
-    disclaimer: {
-      title: 'Avis sur les risques',
-      p1: 'Le trading de produits à effet de levier — y compris le change, les métaux précieux au comptant et les contrats sur la différence (CFD) — comporte un risque de perte significatif. L’effet de levier amplifie aussi bien les gains que les pertes, et ce type de trading peut ne pas convenir à tous les investisseurs. Vous pouvez perdre plus que votre dépôt initial et être amené à effectuer des versements supplémentaires si le solde de votre compte tombe sous la marge requise. Les positions ouvertes à effet de levier engagent également des frais de roll-over, de financement et autres frais applicables.',
-      p2: 'Avant d’ouvrir un compte chez TuskaEx, évaluez attentivement votre niveau d’expérience, vos objectifs d’investissement, vos ressources financières, vos revenus et votre tolérance personnelle au risque. Les pertes peuvent théoriquement être illimitées. Les performances passées ne préjugent pas des résultats futurs. Les données de marché présentées le sont à titre informatif uniquement, provenant de tiers réputés fiables ; TuskaEx n’en garantit pas l’exactitude et se réserve le droit de différer ou d’interrompre la diffusion sans préavis. Les clôtures de position sont exécutées sous forme d’ordres au marché au cours acheteur ou vendeur en vigueur ; un slippage peut survenir, notamment lors de fortes volatilités.',
-      p3: 'Si vous n’êtes pas sûr que le trading à effet de levier convienne à votre situation, veuillez consulter un conseiller financier indépendant avant de poursuivre. Pour tous les détails sur l’effet de levier, les frais, les exigences de marge et les coûts de trading, référez-vous à notre documentation officielle.',
-      p4: '',
-      hq: 'Siège social :',
-      hqAddr: 'Rue de la Tour-de-l’Île 4, 1204 Genève',
-      copyright: '© 2026 TuskaEx. Tous droits réservés.',
-      links: {
-        privacy: 'Politique de confidentialité',
-        terms: 'Conditions d’utilisation',
-        risk: 'Avis sur les risques',
-        vuln: 'Divulgation de vulnérabilité',
-      },
+      ctaOpen: '口座を開設',
+      ctaDemo: 'デモを試す',
     },
   },
   en: {

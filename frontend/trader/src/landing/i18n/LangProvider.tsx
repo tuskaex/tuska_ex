@@ -30,13 +30,17 @@ interface LangProviderProps {
   defaultLang?: Lang
 }
 
-export function LangProvider({ children, defaultLang = 'fr' }: LangProviderProps) {
+export function LangProvider({ children, defaultLang = 'en' }: LangProviderProps) {
   const [lang, setLangState] = useState<Lang>(defaultLang)
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(LANG_STORAGE_KEY) as Lang | null
-      if (saved === 'fr' || saved === 'en') setLangState(saved)
+      /* 'fr' is read and discarded on purpose: the site shipped a French
+         toggle before this, so returning visitors still have it persisted.
+         Treating it as unrecognised drops them onto the default rather than
+         leaving them stuck on a language that no longer exists. */
+      if (saved === 'ja' || saved === 'en') setLangState(saved)
     } catch {
       /* localStorage unavailable; keep default */
     }
@@ -56,7 +60,7 @@ export function LangProvider({ children, defaultLang = 'fr' }: LangProviderProps
   }, [])
 
   const toggleLang = useCallback(() => {
-    setLang(lang === 'fr' ? 'en' : 'fr')
+    setLang(lang === 'ja' ? 'en' : 'ja')
   }, [lang, setLang])
 
   const t = useCallback(

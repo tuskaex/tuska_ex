@@ -139,6 +139,21 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
       : rawPathname.replace(/\/+$/, '')
   const isLight = LIGHT_MARKETING_PATHS.has(pathname)
 
+  /* '/' is the one path where the two halves of "light" disagree.
+   *
+   * It is on the LIGHT list because its chrome choice belongs there — it
+   * gets LandingFooter, not the legacy dark Footer, and it must NOT pick up
+   * `data-mkt` (whose --mkt-bg-canvas is #FFFFFF) or `landing-root`. But its
+   * SURFACE is a full-bleed cyber-samurai hero video, so a white html
+   * background and a white wrapper showed as white slivers around the
+   * navbar's rounded pill and in the 12px gutters beside it.
+   *
+   * So surface darkness is tracked separately from `isLight` instead of
+   * being derived from it. Nothing else changes for '/', and no other path
+   * is affected at all. */
+  const isHome = pathname === '' || pathname === '/'
+  const darkSurface = !isLight || isHome
+
   /* Force the html background to match the page surface so overscroll
    * doesn't reveal a stale dark/light stripe. Without this, dark home
    * looks fine, but the new light marketing pages get black bleed
@@ -149,7 +164,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
     const prevBg = html.style.backgroundColor
     const prevColor = html.style.color
 
-    if (isLight) {
+    if (!darkSurface) {
       html.setAttribute('data-theme', 'light')
       html.style.backgroundColor = '#ffffff'
       html.style.color = '#111827'
@@ -164,10 +179,10 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
       html.style.backgroundColor = prevBg
       html.style.color = prevColor
     }
-  }, [isLight])
+  }, [darkSurface])
 
   return (
-    <LangProvider defaultLang="fr">
+    <LangProvider defaultLang="en">
     <PopupProvider>
       <ScrollProgress />
       {/* Wrapper attributes per mode:
@@ -184,10 +199,16 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
                                 theme without re-checking the URL. */}
       <div
         {...(isLight ? {} : { 'data-mkt': 'true' })}
-        data-page-mode={isLight ? 'light' : 'dark'}
+        data-page-mode={darkSurface ? 'dark' : 'light'}
         className={
           isLight
-            ? 'min-h-screen bg-white text-gray-900'
+            ? /* Home keeps the light track's chrome but needs a dark canvas
+                 under its full-bleed hero video — see the darkSurface note
+                 above. It deliberately omits `landing-root`, whose deep-navy
+                 pin would fight the hero's own gradients. */
+              isHome
+              ? 'min-h-screen bg-[#08090b] text-[#f5f5f5]'
+              : 'min-h-screen bg-white text-gray-900'
             : 'landing-root min-h-screen bg-[#08090b] text-[#f5f5f5]'
         }
       >
@@ -200,10 +221,10 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
              on top of that footage and blocks it. So the navbar theme is
              decided separately from `isLight` rather than derived from it.
              Every other path keeps the light chrome it already had. */
-          theme={pathname === '' || pathname === '/' ? 'dark' : 'light'}
+          theme={isHome ? 'dark' : 'light'}
         />
         {children}
-        {isLight ? <LandingFooter /> : <Footer />}
+        {isLight ? <LandingFooter theme={isHome ? 'dark' : 'light'} /> : <Footer />}
       </div>
     </PopupProvider>
     </LangProvider>

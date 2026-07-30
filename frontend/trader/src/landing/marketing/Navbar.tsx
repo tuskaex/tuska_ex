@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronRight, Globe, Menu, X, Download, Monitor } from 'lucide-react'
-import Button from './ui/Button'
 import { slugify } from './ui/slugify'
 import { useLang } from '@/landing/i18n/LangProvider'
 import { useAuthStore } from '@/stores/authStore'
@@ -86,6 +85,9 @@ const NAV_THEME = {
       'border-[#D60101] text-[#D60101] hover:bg-[#D60101] hover:text-white',
     loginBtn:
       'border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white',
+    /* Filled counterpart to loginBtn. Carries `border` too, so both pills
+       resolve to the identical box height under border-box sizing. */
+    signupBtn: 'border-[#D60101] bg-[#D60101] text-white hover:bg-[#b00101]',
     iconBtnOn: 'bg-[#D60101] text-white',
     iconBtnOff: 'text-[#D60101] hover:bg-[#D60101] hover:text-white',
     langBtn: 'text-gray-900 hover:bg-gray-100',
@@ -109,6 +111,7 @@ const NAV_THEME = {
     outlineBtn:
       'border-[#e11d48] text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
     loginBtn: 'border-white/25 text-white hover:bg-white hover:text-[#080a0e]',
+    signupBtn: 'border-[#e11d48] bg-[#e11d48] text-white hover:bg-[#be123c]',
     iconBtnOn: 'bg-[#e11d48] text-white',
     iconBtnOff: 'text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
     langBtn: 'text-slate-200 hover:bg-white/10',
@@ -123,6 +126,16 @@ const NAV_THEME = {
     burger: 'text-slate-200',
   },
 } as const
+
+/* One geometry for every pill in the bar. Login and Sign up previously
+   disagreed because Sign up went through <Button>, whose base sets
+   `px-6 py-3 rounded-md`; the navbar appended `px-3.5 py-2 rounded-full`, and
+   which of two conflicting Tailwind utilities wins is decided by their order
+   in the generated stylesheet, not by the order in the className string. So
+   the override silently lost and Sign up rendered as a taller rounded rect
+   next to Login's pill. Both are plain links sharing this constant now. */
+const PILL =
+  'inline-flex items-center justify-center whitespace-nowrap px-3.5 py-2 rounded-full border text-[13px] font-semibold transition-colors'
 
 const NAV_LINKS: { label: string; key: ActivePage; href: string; external?: boolean }[] = [
   { label: 'Platforms', key: 'platforms', href: '/platforms' },
@@ -501,39 +514,37 @@ export default function MarketingNavbar({
             )}
           </div>
           {showCta && (showAppLink ? (
-            <Button
-              variant="primary"
+            <Link
               href="/dashboard"
-              className="px-5 py-2 rounded-full"
+              className={`${PILL} ${c.signupBtn}`}
             >
               Open App
-            </Button>
+            </Link>
           ) : (
             <>
               <Link
                 href="/auth/portal"
-                className={`inline-flex items-center justify-center whitespace-nowrap px-3.5 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.loginBtn}`}
+                className={`${PILL} ${c.loginBtn}`}
               >
                 {t('nav.login')}
               </Link>
-              <Button
-                variant="primary"
+              <Link
                 href="/auth/register"
-                className="whitespace-nowrap px-3.5 py-2 text-[13px] rounded-full"
+                className={`${PILL} ${c.signupBtn}`}
               >
                 {ctaLabel}
-              </Button>
+              </Link>
             </>
           ))}
           <button
             type="button"
             onClick={toggleLang}
             className={`inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full transition-colors ${c.langBtn}`}
-            aria-label={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
-            title={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
+            aria-label={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
+            title={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
           >
             <Globe className="w-4 h-4" style={{ color: c.accent }} strokeWidth={2} />
-            <span className="font-semibold uppercase">{lang === 'fr' ? 'FR' : 'EN'}</span>
+            <span className="font-semibold uppercase">{lang === 'ja' ? 'JA' : 'EN'}</span>
           </button>
         </div>
 
@@ -664,29 +675,29 @@ export default function MarketingNavbar({
             {showCta && (
               <li className={`flex items-center gap-3 pt-3 border-t ${c.dividerStrong}`}>
                 {showAppLink ? (
-                  <Button
-                    variant="primary"
+                  <Link
                     href="/dashboard"
-                    className="px-5 py-2 rounded-full"
+                    onClick={() => setOpen(false)}
+                    className={`${PILL} ${c.signupBtn}`}
                   >
                     Open App
-                  </Button>
+                  </Link>
                 ) : (
                   <>
                     <Link
                       href="/auth/portal"
                       onClick={() => setOpen(false)}
-                      className={`inline-flex items-center justify-center px-5 py-2 rounded-full border text-sm font-semibold ${c.loginBtn}`}
+                      className={`${PILL} ${c.loginBtn}`}
                     >
                       {t('nav.login')}
                     </Link>
-                    <Button
-                      variant="primary"
+                    <Link
                       href="/auth/register"
-                      className="px-5 py-2 rounded-full"
+                      onClick={() => setOpen(false)}
+                      className={`${PILL} ${c.signupBtn}`}
                     >
                       {ctaLabel}
-                    </Button>
+                    </Link>
                   </>
                 )}
               </li>
