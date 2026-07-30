@@ -1,4 +1,5 @@
 """Admin Bank Service — CRUD for bank accounts, QR upload/serve."""
+import logging
 import os
 import re
 import uuid
@@ -15,17 +16,58 @@ from packages.common.src.path_safety import PathTraversalError, safe_join_under_
 from dependencies import write_audit_log
 
 
+logger = logging.getLogger("admin.bank_service")
+
+
 def _upload_dir() -> Path:
     env = os.environ.get("BANK_QR_UPLOAD_DIR", "").strip()
     if env:
         p = Path(env)
     else:
         p = Path(__file__).resolve().parents[1] / "uploads" / "qr"
-    p.mkdir(parents=True, exist_ok=True)
+    # BEST-EFFORT ONLY — must never raise.
+    #
+    # This runs at module import, and main.py imports routes.banks at
+    # startup, so an exception here propagates all the way out of
+    # uvicorn's app loader and the entire admin API fails to boot. That
+    # is exactly what happened in production: the uploads/ bind mount is
+    # owned by the host user while the container runs as uid 1001, the
+    # mkdir raised EACCES, and an unwritable QR folder took down admin
+    # login, user management and deposit approval with it.
+    #
+    # A directory this service may never touch must not be a boot
+    # dependency. Log it and carry on; _ensure_writable() below turns it
+    # into a clean 500 for the one endpoint that actually needs it.
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.warning(
+            "Bank QR upload dir %s is not usable (%s). QR upload/serve will "
+            "fail until it is writable by uid %s; the rest of the admin API "
+            "is unaffected.", p, e, os.getuid() if hasattr(os, "getuid") else "?",
+        )
     return p
 
 
 UPLOAD_DIR = _upload_dir()
+
+
+def _ensure_writable() -> Path:
+    """Re-attempt the mkdir on the request path so a fixed volume starts
+    working without a restart, and a still-broken one returns a readable
+    error instead of an opaque traceback."""
+    try:
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error("QR upload dir %s unusable: %s", UPLOAD_DIR, e)
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "QR upload storage is not writable on the server. "
+                "Check the uploads volume permissions."
+            ),
+        )
+    return UPLOAD_DIR
 
 
 async def list_bank_accounts(db: AsyncSession) -> list:
@@ -138,7 +180,7 @@ async def upload_qr_code(file: UploadFile) -> dict:
         ext = "png"
 
     filename = f"{uuid.uuid4().hex}.{ext}"
-    filepath = UPLOAD_DIR / filename
+    filepath = _ensure_writable() / filename
     filepath.write_bytes(contents)
 
     return {"url": f"/banks/qr/{filename}", "filename": filename}

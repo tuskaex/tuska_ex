@@ -1,4 +1,5 @@
 """Admin Banner Service — CRUD for banners, image upload/serve."""
+import logging
 import os
 import re
 import uuid
@@ -16,17 +17,48 @@ from packages.common.src.path_safety import PathTraversalError, safe_join_under_
 from dependencies import write_audit_log
 
 
+logger = logging.getLogger("admin.banner_service")
+
+
 def _upload_dir() -> Path:
     env = os.environ.get("BANNERS_UPLOAD_DIR", "").strip()
     if env:
         p = Path(env)
     else:
         p = Path(__file__).resolve().parents[3] / "uploads" / "banners"
-    p.mkdir(parents=True, exist_ok=True)
+    # Best-effort — must never raise. Imported at startup via
+    # routes.banners, so an EACCES here (uploads/ bind mount owned by the
+    # host user vs the container's uid 1001) would take the whole admin
+    # API down. See the same guard in bank_service for the full write-up.
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.warning(
+            "Banner upload dir %s is not usable (%s). Banner upload/serve "
+            "will fail until it is writable; the rest of the admin API is "
+            "unaffected.", p, e,
+        )
     return p
 
 
 UPLOAD_DIR = _upload_dir()
+
+
+def _ensure_writable() -> Path:
+    """Retry on the request path so a repaired volume recovers without a
+    restart, and a broken one yields a readable 500."""
+    try:
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.error("Banner upload dir %s unusable: %s", UPLOAD_DIR, e)
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Banner upload storage is not writable on the server. "
+                "Check the uploads volume permissions."
+            ),
+        )
+    return UPLOAD_DIR
 MEDIA_PATH_PREFIX = "/api/v1/banners/media"
 
 
@@ -83,7 +115,7 @@ async def upload_banner_image(file: UploadFile) -> dict:
         ext = "png"
 
     out_name = f"{uuid.uuid4().hex}.{ext}"
-    out_path = UPLOAD_DIR / out_name
+    out_path = _ensure_writable() / out_name
     out_path.write_bytes(contents)
 
     return {"url": f"{MEDIA_PATH_PREFIX}/{out_name}", "filename": out_name}

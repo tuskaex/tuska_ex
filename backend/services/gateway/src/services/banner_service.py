@@ -1,4 +1,5 @@
 """Banner Service — Active banner listing, click tracking, media serving."""
+import logging
 import os
 from datetime import datetime
 from pathlib import Path
@@ -13,13 +14,29 @@ from packages.common.src.models import Banner
 from packages.common.src.path_safety import PathTraversalError, safe_join_under_base
 
 
+logger = logging.getLogger("gateway.banner_service")
+
+
 def _upload_dir() -> Path:
     env = os.environ.get("BANNERS_UPLOAD_DIR", "").strip()
     if env:
         p = Path(env)
     else:
         p = Path(__file__).resolve().parents[4] / "uploads" / "banners"
-    p.mkdir(parents=True, exist_ok=True)
+    # Best-effort — must never raise. This module is imported at gateway
+    # startup, so an EACCES here (uploads/ bind mount owned by the host
+    # user vs the container's uid 1001) would stop the ENTIRE trader API
+    # from booting — orders, positions, auth, everything — over a banner
+    # image folder. This service only ever reads from the directory
+    # anyway; the admin API is what writes to it.
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        logger.warning(
+            "Banner media dir %s is not usable (%s). Banner images will 404 "
+            "until it is readable; the rest of the gateway is unaffected.",
+            p, e,
+        )
     return p
 
 
