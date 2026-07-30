@@ -443,17 +443,10 @@ export default function MarketingNavbar({
         </ul>
 
         <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 ml-auto shrink-0">
-          {/* Direct Android APK download. Plain <a download> so the browser
-              fetches the file straight away; on Android the OS then shows the
-              install prompt (user may need "install from unknown sources"). */}
-          <a
-            href="/downloads/TuskaEx.apk"
-            download="TuskaEx.apk"
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.outlineBtn}`}
-          >
-            <Download className="w-4 h-4 shrink-0" strokeWidth={2} />
-            Download APK
-          </a>
+          {/* Order matters here: the two utility controls (desktop-terminal
+              picker, language) sit first, then the calls to action. Grouping
+              the icon-sized controls together stops them reading as debris
+              scattered between the buttons. */}
           {/* Desktop-terminal download: icon button opens a Windows / macOS
               picker on click. Windows ships the signed-later .exe installer;
               macOS ships a .dmg (coming soon until a Mac build is provided). */}
@@ -518,6 +511,27 @@ export default function MarketingNavbar({
               </>
             )}
           </div>
+          <button
+            type="button"
+            onClick={toggleLang}
+            className={`inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full transition-colors ${c.langBtn}`}
+            aria-label={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
+            title={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
+          >
+            <Globe className="w-4 h-4" style={{ color: c.accent }} strokeWidth={2} />
+            <span className="font-semibold uppercase">{lang === 'ja' ? 'JA' : 'EN'}</span>
+          </button>
+          {/* Direct Android APK download. Plain <a download> so the browser
+              fetches the file straight away; on Android the OS then shows the
+              install prompt (user may need "install from unknown sources"). */}
+          <a
+            href="/downloads/TuskaEx.apk"
+            download="TuskaEx.apk"
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.outlineBtn}`}
+          >
+            <Download className="w-4 h-4 shrink-0" strokeWidth={2} />
+            Download APK
+          </a>
           {showCta && (showAppLink ? (
             <Link
               href="/dashboard"
@@ -541,16 +555,6 @@ export default function MarketingNavbar({
               </Link>
             </>
           ))}
-          <button
-            type="button"
-            onClick={toggleLang}
-            className={`inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full transition-colors ${c.langBtn}`}
-            aria-label={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
-            title={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
-          >
-            <Globe className="w-4 h-4" style={{ color: c.accent }} strokeWidth={2} />
-            <span className="font-semibold uppercase">{lang === 'ja' ? 'JA' : 'EN'}</span>
-          </button>
         </div>
 
         <button
