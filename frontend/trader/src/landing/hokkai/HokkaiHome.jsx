@@ -17,6 +17,7 @@ import { stats } from './HomeData'
 
 // Section components
 import HeroSection from './home/HeroSection'
+import QuoteTicker from './home/QuoteTicker'
 import AboutSection from './home/AboutSection'
 import WhySection from './home/WhySection'
 import MarketsSection from './home/MarketsSection'
@@ -60,10 +61,14 @@ function Home() {
           off. Without it the ported page renders unstyled. */}
       <div className="hk-landing min-h-screen">
 
-      {/* 1. Hero Section */}
+      {/* 1. Hero Section — video only, no overlaid content by design */}
       <HeroSection />
 
-      {/* 2. Stats Bar — Glassmorphism */}
+      {/* 2. Quote Ticker — was overlaid on the hero video; it sits under the
+             video now so the footage plays clean. */}
+      <QuoteTicker />
+
+      {/* 3. Stats Bar — Glassmorphism */}
       <section
         className="relative py-10 border-y border-white/5 overflow-hidden"
         style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(12px)' }}
@@ -92,31 +97,31 @@ function Home() {
         />
       </section>
 
-      {/* 3. About */}
+      {/* 4. About */}
       <AboutSection />
 
-      {/* 4. Why Choose */}
+      {/* 5. Why Choose */}
       <WhySection />
 
-      {/* 5. Markets */}
+      {/* 6. Markets */}
       <MarketsSection />
 
-      {/* 6. Platform */}
+      {/* 7. Platform */}
       <PlatformSection />
 
-      {/* 7. Accounts */}
+      {/* 8. Accounts */}
       <AccountsSection />
 
-      {/* 8. Conditions */}
+      {/* 9. Conditions */}
       <ConditionsSection />
 
-      {/* 9. Tools */}
+      {/* 10. Tools */}
       <ToolsSection />
 
-      {/* 10. Education */}
+      {/* 11. Education */}
       <EducationSection />
 
-      {/* 11. Bottom (Testimonials + FAQ + CTA) */}
+      {/* 12. Bottom (Testimonials + FAQ + CTA) */}
       <BottomSection />
 
       </div>
