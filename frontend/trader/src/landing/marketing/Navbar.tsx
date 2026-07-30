@@ -61,7 +61,68 @@ export interface NavbarProps {
   showCta?: boolean
   subNavLeft?: SubNavLink[] | null
   subNavRight?: SubNavLink[] | null
+  /* Chrome to render. Defaults to 'light' so every existing call site keeps
+     the white pill it already had. 'dark' is for pages whose hero is dark
+     footage — a white slab floats on top of those and blocks the artwork. */
+  theme?: 'light' | 'dark'
 }
+
+/* Per-theme class strings. Kept as one table rather than sprinkling
+   ternaries through the JSX, so "what does dark mode look like" is a single
+   thing to read and there is no way to theme one control and forget another.
+
+   Dark uses the crimson #e11d48 that the cyber-samurai landing is built on,
+   not the #D60101 of the light chrome. Two different reds in one viewport
+   reads as a mistake, and on that page the hero sets the reference. */
+const NAV_THEME = {
+  light: {
+    shell:
+      'bg-white/55 ring-1 ring-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] supports-[backdrop-filter]:bg-white/45',
+    link: 'text-gray-900',
+    linkHover: 'hover:text-[#D60101]',
+    linkActive: 'text-[#D60101]',
+    accent: '#D60101',
+    outlineBtn:
+      'border-[#D60101] text-[#D60101] hover:bg-[#D60101] hover:text-white',
+    loginBtn:
+      'border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white',
+    iconBtnOn: 'bg-[#D60101] text-white',
+    iconBtnOff: 'text-[#D60101] hover:bg-[#D60101] hover:text-white',
+    langBtn: 'text-gray-900 hover:bg-gray-100',
+    panel: 'border-gray-200 bg-white',
+    panelItem: 'text-gray-900 hover:bg-[#D60101]/10 hover:text-[#D60101]',
+    panelMuted: 'text-gray-400',
+    panelBadge: 'bg-gray-100 text-gray-400',
+    divider: 'border-black/5',
+    dividerStrong: 'border-gray-200',
+    drawer: 'bg-white/80',
+    drawerLink: 'text-gray-900/80',
+    burger: 'text-gray-900',
+  },
+  dark: {
+    shell:
+      'bg-[#080a0e]/70 ring-1 ring-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.55)] supports-[backdrop-filter]:bg-[#080a0e]/55',
+    link: 'text-slate-200',
+    linkHover: 'hover:text-[#e11d48]',
+    linkActive: 'text-[#e11d48]',
+    accent: '#e11d48',
+    outlineBtn:
+      'border-[#e11d48] text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
+    loginBtn: 'border-white/25 text-white hover:bg-white hover:text-[#080a0e]',
+    iconBtnOn: 'bg-[#e11d48] text-white',
+    iconBtnOff: 'text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
+    langBtn: 'text-slate-200 hover:bg-white/10',
+    panel: 'border-white/10 bg-[#0b0e13]',
+    panelItem: 'text-slate-200 hover:bg-[#e11d48]/15 hover:text-[#e11d48]',
+    panelMuted: 'text-slate-500',
+    panelBadge: 'bg-white/10 text-slate-400',
+    divider: 'border-white/10',
+    dividerStrong: 'border-white/10',
+    drawer: 'bg-[#080a0e]/90',
+    drawerLink: 'text-slate-300',
+    burger: 'text-slate-200',
+  },
+} as const
 
 const NAV_LINKS: { label: string; key: ActivePage; href: string; external?: boolean }[] = [
   { label: 'Platforms', key: 'platforms', href: '/platforms' },
@@ -294,7 +355,9 @@ export default function MarketingNavbar({
   showCta = true,
   subNavLeft = null,
   subNavRight = null,
+  theme = 'light',
 }: NavbarProps) {
+  const c = NAV_THEME[theme]
   const [open, setOpen] = useState(false)
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
   // Desktop-terminal download dropdown (Windows / macOS choice on click).
@@ -330,7 +393,10 @@ export default function MarketingNavbar({
   )
 
   return (
-    <header className="sticky top-3 md:top-4 z-50 mx-3 md:mx-4 lg:mx-5 rounded-2xl bg-white/55 backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-black/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] supports-[backdrop-filter]:bg-white/45">
+    <header
+      data-nav-theme={theme}
+      className={`sticky top-3 md:top-4 z-50 mx-3 md:mx-4 lg:mx-5 rounded-2xl backdrop-blur-2xl backdrop-saturate-150 ${c.shell}`}
+    >
       <nav className="w-full mx-auto px-3 md:px-4 lg:px-5 relative flex items-center gap-3 h-16 md:h-[68px]">
         <div className="shrink-0">
           <Wordmark />
@@ -339,8 +405,8 @@ export default function MarketingNavbar({
         <ul className="hidden lg:flex flex-1 items-center justify-center gap-3 xl:gap-5 2xl:gap-6">
           {NAV_LINKS.map((link) => {
             const active = link.key === activePage
-            const cls = `whitespace-nowrap text-[13px] 2xl:text-[14px] font-semibold tracking-tight transition-colors hover:text-[#D60101] ${
-              active ? 'text-[#D60101]' : 'text-gray-900'
+            const cls = `whitespace-nowrap text-[13px] 2xl:text-[14px] font-semibold tracking-tight transition-colors ${c.linkHover} ${
+              active ? c.linkActive : c.link
             }`
             return (
               <li key={link.key}>
@@ -365,7 +431,7 @@ export default function MarketingNavbar({
           <a
             href="/downloads/TuskaEx.apk"
             download="TuskaEx.apk"
-            className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border border-[#D60101] text-[13px] font-semibold text-[#D60101] hover:bg-[#D60101] hover:text-white transition-colors"
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.outlineBtn}`}
           >
             <Download className="w-4 h-4 shrink-0" strokeWidth={2} />
             Download APK
@@ -381,9 +447,9 @@ export default function MarketingNavbar({
               aria-expanded={terminalMenuOpen}
               aria-label="Download Desktop Terminal"
               title="Download Desktop Terminal"
-              className={`inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#D60101] transition-colors ${
-                terminalMenuOpen ? 'bg-[#D60101] text-white' : 'text-[#D60101] hover:bg-[#D60101] hover:text-white'
-              }`}
+              className={`inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors ${
+                theme === 'dark' ? 'border-[#e11d48]' : 'border-[#D60101]'
+              } ${terminalMenuOpen ? c.iconBtnOn : c.iconBtnOff}`}
             >
               <Monitor className="w-4 h-4 shrink-0" strokeWidth={2} />
             </button>
@@ -399,9 +465,9 @@ export default function MarketingNavbar({
                 />
                 <div
                   role="menu"
-                  className="absolute right-0 top-full mt-2 z-50 w-60 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl"
+                  className={`absolute right-0 top-full mt-2 z-50 w-60 rounded-xl border p-1.5 shadow-xl ${c.panel}`}
                 >
-                  <div className="px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-gray-400">
+                  <div className={`px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-widest ${c.panelMuted}`}>
                     Desktop Terminal
                   </div>
                   {/* Windows */}
@@ -410,7 +476,7 @@ export default function MarketingNavbar({
                     download="TuskaExTerminal-Setup.exe"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-[#D60101]/10 hover:text-[#D60101] transition-colors"
+                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold transition-colors ${c.panelItem}`}
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
                       <path d="M3 5.6 10.3 4.6v6.9H3V5.6Zm0 12.8 7.3 1v-6.8H3v5.8Zm8.2 1.1L21 21V12.4h-9.8v7.1Zm0-14.9v7.1H21V3l-9.8 1.6Z" />
@@ -421,14 +487,14 @@ export default function MarketingNavbar({
                   <div
                     role="menuitem"
                     aria-disabled="true"
-                    className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold text-gray-400 cursor-not-allowed"
+                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold cursor-not-allowed ${c.panelMuted}`}
                     title="macOS build coming soon"
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
                       <path d="M16.4 12.9c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.6.8-3.3.8-.7 0-1.7-.8-2.8-.8-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.5 2.2 2.6 2.2 1 0 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.6 1.1 0 1.8-1 2.5-2 .8-1.2 1.1-2.3 1.1-2.3s-2.1-.8-2.1-3.2ZM14.3 6.3c.6-.7 1-1.7.9-2.7-.8 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6.9.1 1.8-.5 2.5-1.2Z" />
                     </svg>
                     <span className="flex-1">Download for macOS</span>
-                    <span className="text-[9px] font-bold uppercase tracking-wide rounded bg-gray-100 px-1.5 py-0.5 text-gray-400">Soon</span>
+                    <span className={`text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${c.panelBadge}`}>Soon</span>
                   </div>
                 </div>
               </>
@@ -446,7 +512,7 @@ export default function MarketingNavbar({
             <>
               <Link
                 href="/auth/portal"
-                className="inline-flex items-center justify-center whitespace-nowrap px-3.5 py-2 rounded-full border border-gray-900 text-[13px] font-semibold text-gray-900 hover:bg-gray-900 hover:text-white transition-colors"
+                className={`inline-flex items-center justify-center whitespace-nowrap px-3.5 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.loginBtn}`}
               >
                 {t('nav.login')}
               </Link>
@@ -462,18 +528,18 @@ export default function MarketingNavbar({
           <button
             type="button"
             onClick={toggleLang}
-            className="inline-flex items-center gap-1 text-[13px] text-gray-900 px-2 py-1 rounded-full hover:bg-gray-100 transition-colors"
+            className={`inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full transition-colors ${c.langBtn}`}
             aria-label={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
             title={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
           >
-            <Globe className="w-4 h-4 text-[#D60101]" strokeWidth={2} />
+            <Globe className="w-4 h-4" style={{ color: c.accent }} strokeWidth={2} />
             <span className="font-semibold uppercase">{lang === 'fr' ? 'FR' : 'EN'}</span>
           </button>
         </div>
 
         <button
           type="button"
-          className="lg:hidden ml-auto p-2 -mr-2 text-gray-900"
+          className={`lg:hidden ml-auto p-2 -mr-2 ${c.burger}`}
           aria-label="Toggle menu"
           onClick={() => setOpen((v) => !v)}
         >
@@ -483,7 +549,7 @@ export default function MarketingNavbar({
 
       {hasSubNav && (
         <div
-          className="hidden lg:block border-t border-black/5 relative"
+          className={`hidden lg:block border-t relative ${c.divider}`}
           onMouseLeave={() => setHoveredLabel(null)}
         >
           <div className="w-full mx-auto px-5 md:px-8 lg:px-10 flex items-center justify-between h-11">
@@ -514,12 +580,12 @@ export default function MarketingNavbar({
       )}
 
       {open && (
-        <div className="lg:hidden border-t border-black/5 rounded-b-2xl bg-white/80 backdrop-blur-2xl backdrop-saturate-150">
+        <div className={`lg:hidden border-t rounded-b-2xl backdrop-blur-2xl backdrop-saturate-150 ${c.divider} ${c.drawer}`}>
           <ul className="w-full mx-auto px-6 md:px-10 lg:px-16 py-4 flex flex-col gap-3">
             {NAV_LINKS.map((link) => {
               const active = link.key === activePage
               const cls = `block text-sm font-semibold py-1 ${
-                active ? 'text-[#D60101]' : 'text-gray-900/80'
+                active ? c.linkActive : c.drawerLink
               }`
               return (
                 <li key={link.key}>
@@ -546,13 +612,13 @@ export default function MarketingNavbar({
               )
             })}
             {hasSubNav && (
-              <li className="pt-3 mt-1 border-t border-gray-200">
+              <li className={`pt-3 mt-1 border-t ${c.dividerStrong}`}>
                 <ul className="flex flex-col gap-2">
                   {allSubNav.map((link) => (
                     <li key={link.label}>
                       <a
                         href={link.href}
-                        className="block text-sm text-gray-900/80 py-1"
+                        className={`block text-sm py-1 ${c.drawerLink}`}
                         onClick={() => setOpen(false)}
                       >
                         {link.label}
@@ -562,12 +628,12 @@ export default function MarketingNavbar({
                 </ul>
               </li>
             )}
-            <li className="pt-3 border-t border-gray-200">
+            <li className={`pt-3 border-t ${c.dividerStrong}`}>
               <a
                 href="/downloads/TuskaEx.apk"
                 download="TuskaEx.apk"
                 onClick={() => setOpen(false)}
-                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#D60101] text-[#D60101] text-sm font-semibold hover:bg-[#D60101] hover:text-white transition-colors"
+                className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
               >
                 <Download className="w-4 h-4" strokeWidth={2} />
                 Download APK
@@ -578,7 +644,7 @@ export default function MarketingNavbar({
                 href="/downloads/TuskaExTerminal-Setup-1.0.1.exe"
                 download="TuskaExTerminal-Setup.exe"
                 onClick={() => setOpen(false)}
-                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#D60101] text-[#D60101] text-sm font-semibold hover:bg-[#D60101] hover:text-white transition-colors"
+                className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
               >
                 <Monitor className="w-4 h-4" strokeWidth={2} />
                 Terminal for Windows
@@ -588,15 +654,15 @@ export default function MarketingNavbar({
               <span
                 aria-disabled="true"
                 title="macOS build coming soon"
-                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-gray-200 text-gray-400 text-sm font-semibold cursor-not-allowed"
+                className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold cursor-not-allowed ${c.dividerStrong} ${c.panelMuted}`}
               >
                 <Monitor className="w-4 h-4" strokeWidth={2} />
                 Terminal for macOS
-                <span className="text-[9px] font-bold uppercase tracking-wide rounded bg-gray-100 px-1.5 py-0.5">Soon</span>
+                <span className={`text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${c.panelBadge}`}>Soon</span>
               </span>
             </li>
             {showCta && (
-              <li className="flex items-center gap-3 pt-3 border-t border-gray-200">
+              <li className={`flex items-center gap-3 pt-3 border-t ${c.dividerStrong}`}>
                 {showAppLink ? (
                   <Button
                     variant="primary"
@@ -610,7 +676,7 @@ export default function MarketingNavbar({
                     <Link
                       href="/auth/portal"
                       onClick={() => setOpen(false)}
-                      className="inline-flex items-center justify-center px-5 py-2 rounded-full border border-gray-900 text-gray-900 text-sm font-semibold"
+                      className={`inline-flex items-center justify-center px-5 py-2 rounded-full border text-sm font-semibold ${c.loginBtn}`}
                     >
                       {t('nav.login')}
                     </Link>

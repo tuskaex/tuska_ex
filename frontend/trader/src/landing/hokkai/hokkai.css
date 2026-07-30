@@ -223,3 +223,31 @@
 .hk-landing .cyber-section-mid {
   background: linear-gradient(180deg, #07090e 0%, #05070a 100%);
 }
+
+/* ── Hide the window scrollbar on this landing ────────────────────
+   The page is a full-bleed cinematic dark surface; the native bar cut a
+   bright vertical stripe down the right edge of it. It is HIDDEN, not
+   disabled — wheel, touch, keyboard (space / PgDn / arrows) and the
+   scrollbar's own drag target all still work, because only the painted
+   widget is removed.
+
+   Losing the position indicator is the real cost of this, and it is
+   covered: `(landing)/layout.tsx` mounts <ScrollProgress />, a fixed 3px
+   bar across the top that tracks scrollYProgress. Do not remove that
+   component while this rule is live, or the page becomes a long scroll
+   with nothing at all reporting where you are in it.
+
+   Scoped with :has() so it applies only while this landing is mounted —
+   the trader terminal keeps its scrollbars, where seeing the position in
+   a positions/history table actually matters. */
+html:has(.hk-landing),
+html:has(.hk-landing) body {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* legacy Edge/IE */
+}
+html:has(.hk-landing)::-webkit-scrollbar,
+html:has(.hk-landing) body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;                /* Chrome / Safari */
+}

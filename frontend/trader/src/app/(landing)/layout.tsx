@@ -195,6 +195,12 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
           activePage={ACTIVE_PAGE_BY_PATH[pathname] ?? 'private'}
           subNavLeft={null}
           subNavRight={null}
+          /* '/' is on the LIGHT track for its footer + page surface, but its
+             hero is the full-bleed cyber-samurai video — a white pill floats
+             on top of that footage and blocks it. So the navbar theme is
+             decided separately from `isLight` rather than derived from it.
+             Every other path keeps the light chrome it already had. */
+          theme={pathname === '' || pathname === '/' ? 'dark' : 'light'}
         />
         {children}
         {isLight ? <LandingFooter /> : <Footer />}
