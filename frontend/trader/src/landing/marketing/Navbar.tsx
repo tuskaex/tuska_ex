@@ -91,7 +91,9 @@ const NAV_THEME = {
     signupBtn: 'border-[#D60101] bg-[#D60101] text-white hover:bg-[#b00101]',
     iconBtnOn: 'bg-[#D60101] text-white',
     iconBtnOff: 'text-[#D60101] hover:bg-[#D60101] hover:text-white',
-    langBtn: 'text-gray-900 hover:bg-gray-100',
+    /* Neutral border, not the accent: same size as the terminal button beside
+       it, but still reading as a utility control rather than a call to action. */
+    langBtn: 'border-gray-300 text-gray-900 hover:bg-gray-100',
     panel: 'border-gray-200 bg-white',
     panelItem: 'text-gray-900 hover:bg-[#D60101]/10 hover:text-[#D60101]',
     panelMuted: 'text-gray-400',
@@ -115,7 +117,7 @@ const NAV_THEME = {
     signupBtn: 'border-[#e11d48] bg-[#e11d48] text-white hover:bg-[#be123c]',
     iconBtnOn: 'bg-[#e11d48] text-white',
     iconBtnOff: 'text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
-    langBtn: 'text-slate-200 hover:bg-white/10',
+    langBtn: 'border-white/15 text-slate-200 hover:bg-white/10',
     panel: 'border-white/10 bg-[#0b0e13]',
     panelItem: 'text-slate-200 hover:bg-[#e11d48]/15 hover:text-[#e11d48]',
     panelMuted: 'text-slate-500',
@@ -128,15 +130,24 @@ const NAV_THEME = {
   },
 } as const
 
-/* One geometry for every pill in the bar. Login and Sign up previously
-   disagreed because Sign up went through <Button>, whose base sets
-   `px-6 py-3 rounded-md`; the navbar appended `px-3.5 py-2 rounded-full`, and
-   which of two conflicting Tailwind utilities wins is decided by their order
-   in the generated stylesheet, not by the order in the className string. So
-   the override silently lost and Sign up rendered as a taller rounded rect
-   next to Login's pill. Both are plain links sharing this constant now. */
+/* The right-hand cluster used to be four different sizes: the terminal icon
+   was a 40px circle, the language toggle about 24px (py-1 and no border), and
+   the pills landed somewhere between because they sized on vertical padding
+   alone. Everything derives from these two constants now.
+
+   CONTROL_H is an explicit height rather than py-*, because with `text-[13px]`
+   Tailwind sets the font size and leaves line-height inherited — so padding
+   alone cannot produce a predictable box.
+
+   PILL is the shared geometry. Login and Sign up used to disagree too: Sign up
+   went through <Button>, whose base sets `px-6 py-3 rounded-md`, and the
+   navbar's appended `px-3.5 py-2 rounded-full` lost — conflicting Tailwind
+   utilities are resolved by their order in the generated stylesheet, not by
+   the order in the className string. Both are plain links sharing this now. */
+const CONTROL_H = 'h-9'
+
 const PILL =
-  'inline-flex items-center justify-center whitespace-nowrap px-3.5 py-2 rounded-full border text-[13px] font-semibold transition-colors'
+  `inline-flex items-center justify-center whitespace-nowrap ${CONTROL_H} px-3.5 rounded-full border text-[13px] font-semibold transition-colors`
 
 const NAV_LINKS: { label: string; key: ActivePage; href: string; external?: boolean }[] = [
   { label: 'Platforms', key: 'platforms', href: '/platforms' },
@@ -458,7 +469,7 @@ export default function MarketingNavbar({
               aria-expanded={terminalMenuOpen}
               aria-label="Download Desktop Terminal"
               title="Download Desktop Terminal"
-              className={`inline-flex items-center justify-center w-10 h-10 rounded-full border transition-colors ${
+              className={`inline-flex items-center justify-center w-9 ${CONTROL_H} rounded-full border transition-colors ${
                 theme === 'dark' ? 'border-[#e11d48]' : 'border-[#D60101]'
               } ${terminalMenuOpen ? c.iconBtnOn : c.iconBtnOff}`}
             >
@@ -514,7 +525,7 @@ export default function MarketingNavbar({
           <button
             type="button"
             onClick={toggleLang}
-            className={`inline-flex items-center gap-1 text-[13px] px-2 py-1 rounded-full transition-colors ${c.langBtn}`}
+            className={`inline-flex items-center justify-center gap-1.5 ${CONTROL_H} px-3 rounded-full border text-[13px] font-semibold transition-colors ${c.langBtn}`}
             aria-label={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
             title={`Switch language to ${lang === 'ja' ? 'English' : 'Japanese'}`}
           >
@@ -527,7 +538,7 @@ export default function MarketingNavbar({
           <a
             href="/downloads/TuskaEx.apk"
             download="TuskaEx.apk"
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border text-[13px] font-semibold transition-colors ${c.outlineBtn}`}
+            className={`${PILL} gap-1.5 ${c.outlineBtn}`}
           >
             <Download className="w-4 h-4 shrink-0" strokeWidth={2} />
             Download APK
