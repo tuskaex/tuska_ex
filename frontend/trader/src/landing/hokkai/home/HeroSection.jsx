@@ -38,28 +38,29 @@ export default function HeroSection() {
       />
 
       {/* ── Multi-layer Cyber Gradient Overlay ──
-          Lightened so the background video actually reads through it; it
-          was 0.55 / 0.65 / 0.92 black, which flattened the footage into a
-          dark smear.
+          Lightened twice now: 0.55/0.65/0.92 → 0.26/0.40/0.80 → the values
+          below. The footage is the point of the hero, so the overlay only
+          has to earn its keep where text actually sits.
 
           The stops are NOT uniform on purpose:
           • top stays the lightest — nothing sits there but the video, and
             the navbar is a solid pill with its own background.
-          • the middle is where the quote chips ride, so it keeps enough
-            density for white text to stay legible over the bright lantern
-            highlights in the footage.
-          • the bottom stays heaviest. That is a seam, not decoration —
-            the next section is near-black, and fading out of it here is
-            what stops a visible horizontal band at the hero's edge. Do
-            not flatten this stop to match the others. */}
+          • the middle is now empty (the quote chips moved down to the
+            scroll cue), so it no longer needs density for legibility —
+            it only bridges the top and bottom stops.
+          • the bottom stays heaviest, and now does double duty: it is the
+            seam against the near-black next section — fading out here is
+            what stops a visible horizontal band at the hero's edge — and
+            it is also the backing the chips read against. Do not flatten
+            this stop to match the others. */}
       <div
         className="absolute inset-0"
         style={{
           background: `
             linear-gradient(to bottom,
-              rgba(5,7,10,0.26) 0%,
-              rgba(1,2,3,0.40) 55%,
-              rgba(1,2,3,0.80) 100%
+              rgba(5,7,10,0.14) 0%,
+              rgba(1,2,3,0.26) 55%,
+              rgba(1,2,3,0.70) 100%
             )
           `,
         }}
@@ -131,8 +132,29 @@ export default function HeroSection() {
         北海
       </div>
 
-      {/* ── Main Content ── */}
-      <div className="relative z-10 text-center px-4 max-w-5xl mx-auto w-full">
+      {/* ── Bottom stack — scroll cue, then the quote marquee beneath it ──
+          Both used to be separate: the chips were centred in the hero and
+          the scroll cue was pinned to the bottom. They are one bottom-
+          anchored column now so the quotes read as a ticker along the
+          foot of the hero and the middle stays clear footage.
+
+          pointer-events-none lives on the scroll cue only, NOT here — the
+          marquee needs pointer events for its hover-to-pause. */}
+      <div className="absolute bottom-8 left-0 right-0 z-10 flex flex-col items-center gap-4">
+
+        {/* Scroll Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.6 }}
+          className="flex flex-col items-center gap-2 pointer-events-none"
+        >
+          <span className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-mono">Scroll</span>
+          <div
+            className="w-px h-10"
+            style={{ background: 'linear-gradient(180deg, rgba(225,29,72,0.6), transparent)' }}
+          />
+        </motion.div>
 
         {/* Live Data Chips — auto-scrolling marquee.
             MARQUEE_COPIES copies of liveChips are rendered and the track is
@@ -145,7 +167,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
-          className="chip-marquee"
+          className="chip-marquee w-full max-w-5xl px-4"
         >
           <div className="chip-marquee-track">
             {Array.from({ length: MARQUEE_COPIES }).flatMap((_, copy) =>
@@ -179,20 +201,6 @@ export default function HeroSection() {
           </div>
         </motion.div>
       </div>
-
-      {/* ── Scroll Indicator ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2, duration: 0.6 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none"
-      >
-        <span className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-mono">Scroll</span>
-        <div
-          className="w-px h-10"
-          style={{ background: 'linear-gradient(180deg, rgba(225,29,72,0.6), transparent)' }}
-        />
-      </motion.div>
 
     </section>
   )
