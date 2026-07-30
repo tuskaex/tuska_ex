@@ -9,6 +9,11 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi'
 
+// How many times liveChips is repeated inside the marquee track. Must stay
+// EVEN — the keyframe translates the track by -50%, i.e. exactly half the
+// copies, so an odd count would jump at the loop point.
+const MARQUEE_COPIES = 4
+
 // Live data chips shown below the CTA
 const liveChips = [
   { label: 'EUR/USD', value: '1.0854', change: '+0.21%', positive: true },
@@ -114,31 +119,44 @@ export default function HeroSection() {
       {/* ── Main Content ── */}
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto w-full">
 
-        {/* Live Data Chips */}
+        {/* Live Data Chips — auto-scrolling marquee.
+            MARQUEE_COPIES copies of liveChips are rendered and the track is
+            animated to translateX(-50%), so the second half lands exactly
+            where the first started and the loop is seamless. 4 copies (not
+            2) because liveChips is short — 2 copies would be narrower than
+            the container on desktop and leave a visible empty stretch.
+            See .chip-marquee in hokkai.css for the width maths. */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.7 }}
-          className="flex flex-wrap justify-center gap-3"
+          className="chip-marquee"
         >
-          {liveChips.map((chip) => (
-            <div
-              key={chip.label}
-              className="flex items-center gap-2.5 px-4 py-2.5 rounded-lg border border-white/8 transition-all duration-300 hover:border-white/20"
-              style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
-            >
-              <span className="text-white text-xs font-mono font-bold tracking-wider">{chip.label}</span>
-              <span className="text-slate-400 text-xs font-mono">{chip.value}</span>
-              <span
-                className={`flex items-center gap-0.5 text-xs font-mono font-semibold ${
-                  chip.positive ? 'text-[#00d4aa]' : 'text-[#e11d48]'
-                }`}
-              >
-                {chip.positive ? <FiTrendingUp size={9} /> : <FiTrendingDown size={9} />}
-                {chip.change}
-              </span>
-            </div>
-          ))}
+          <div className="chip-marquee-track">
+            {Array.from({ length: MARQUEE_COPIES }).flatMap((_, copy) =>
+              liveChips.map((chip) => (
+                <div
+                  key={`${copy}-${chip.label}`}
+                  /* aria-hidden on the duplicates: a screen reader should hear
+                     the four quotes once, not four times over. */
+                  aria-hidden={copy > 0 ? 'true' : undefined}
+                  className="flex shrink-0 items-center gap-2.5 whitespace-nowrap px-4 py-2.5 rounded-lg border border-white/8 transition-all duration-300 hover:border-white/20"
+                  style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
+                >
+                  <span className="text-white text-xs font-mono font-bold tracking-wider">{chip.label}</span>
+                  <span className="text-slate-400 text-xs font-mono">{chip.value}</span>
+                  <span
+                    className={`flex items-center gap-0.5 text-xs font-mono font-semibold ${
+                      chip.positive ? 'text-[#00d4aa]' : 'text-[#e11d48]'
+                    }`}
+                  >
+                    {chip.positive ? <FiTrendingUp size={9} /> : <FiTrendingDown size={9} />}
+                    {chip.change}
+                  </span>
+                </div>
+              )),
+            )}
+          </div>
         </motion.div>
       </div>
 

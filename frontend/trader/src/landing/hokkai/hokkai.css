@@ -145,6 +145,48 @@
   100% { transform: translateX(-50%); }
 }
 
+/* ── Hero live-quote chips: auto horizontal scroll ───────────
+   The seam is only invisible if half the track width equals a whole
+   number of copies INCLUDING the gap that follows the last chip.
+   With `gap: G` and N chips the track measures  sum(chips) + (N-1)*G,
+   which is one G short — the loop would stutter by 12px every cycle.
+   `padding-right: G` adds that missing gap back, and since translateX
+   percentages resolve against the border box (padding included), -50%
+   then lands exactly on the start of the second half. Keep gap and
+   padding-right identical if either is ever changed. */
+.hk-landing .chip-marquee {
+  overflow: hidden;
+  /* Chips fade out at the edges instead of being sliced mid-glyph. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+}
+.hk-landing .chip-marquee-track {
+  display: inline-flex;
+  gap: 0.75rem;
+  padding-right: 0.75rem;
+  animation: hk-chip-marquee 32s linear infinite;
+  will-change: transform;
+}
+/* Pause on hover so a quote can actually be read. */
+.hk-landing .chip-marquee:hover .chip-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes hk-chip-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Vestibular-safety: constant motion is a documented migraine/nausea
+   trigger, so honour the OS setting and just show the chips statically. */
+@media (prefers-reduced-motion: reduce) {
+  .hk-landing .chip-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
 /* ── Misc helpers used by the ported sections ───────────────── */
 .hk-landing .cyber-heading {
   font-family: var(--font-michroma), 'Michroma', sans-serif;
