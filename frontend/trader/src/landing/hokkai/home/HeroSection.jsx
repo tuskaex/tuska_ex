@@ -37,15 +37,29 @@ export default function HeroSection() {
         playsInline
       />
 
-      {/* ── Multi-layer Cyber Gradient Overlay ── */}
+      {/* ── Multi-layer Cyber Gradient Overlay ──
+          Lightened so the background video actually reads through it; it
+          was 0.55 / 0.65 / 0.92 black, which flattened the footage into a
+          dark smear.
+
+          The stops are NOT uniform on purpose:
+          • top stays the lightest — nothing sits there but the video, and
+            the navbar is a solid pill with its own background.
+          • the middle is where the quote chips ride, so it keeps enough
+            density for white text to stay legible over the bright lantern
+            highlights in the footage.
+          • the bottom stays heaviest. That is a seam, not decoration —
+            the next section is near-black, and fading out of it here is
+            what stops a visible horizontal band at the hero's edge. Do
+            not flatten this stop to match the others. */}
       <div
         className="absolute inset-0"
         style={{
           background: `
             linear-gradient(to bottom,
-              rgba(5,7,10,0.55) 0%,
-              rgba(1,2,3,0.65) 50%,
-              rgba(1,2,3,0.92) 100%
+              rgba(5,7,10,0.26) 0%,
+              rgba(1,2,3,0.40) 55%,
+              rgba(1,2,3,0.80) 100%
             )
           `,
         }}
@@ -72,8 +86,9 @@ export default function HeroSection() {
         }}
       />
 
-      {/* ── Subtle Grid ── */}
-      <div className="absolute inset-0 grid-bg opacity-25 pointer-events-none" />
+      {/* ── Subtle Grid ── (dialled back with the overlay above: at 25% it
+          read as haze over the now-visible footage rather than as a grid) */}
+      <div className="absolute inset-0 grid-bg opacity-[0.12] pointer-events-none" />
 
       {/* ── Side Accent Lines ── */}
       <div
@@ -140,8 +155,13 @@ export default function HeroSection() {
                   /* aria-hidden on the duplicates: a screen reader should hear
                      the four quotes once, not four times over. */
                   aria-hidden={copy > 0 ? 'true' : undefined}
-                  className="flex shrink-0 items-center gap-2.5 whitespace-nowrap px-4 py-2.5 rounded-lg border border-white/8 transition-all duration-300 hover:border-white/20"
-                  style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)' }}
+                  className="flex shrink-0 items-center gap-2.5 whitespace-nowrap px-4 py-2.5 rounded-lg border border-white/10 transition-all duration-300 hover:border-white/25"
+                  /* Dark fill, not the old rgba(255,255,255,0.04). A white
+                     wash cannot carry white text — it only worked while the
+                     overlay above was near-opaque. Now that the footage
+                     shows through, the chips need their own dark backing or
+                     the quotes wash out over the lit lanterns. */
+                  style={{ background: 'rgba(5,7,10,0.55)', backdropFilter: 'blur(10px)' }}
                 >
                   <span className="text-white text-xs font-mono font-bold tracking-wider">{chip.label}</span>
                   <span className="text-slate-400 text-xs font-mono">{chip.value}</span>
