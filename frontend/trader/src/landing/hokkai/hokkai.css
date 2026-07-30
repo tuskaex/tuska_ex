@@ -1,0 +1,183 @@
+/* ============================================================
+   TuskaEx landing — "Cyber-Samurai" style layer
+   ============================================================
+   Ported from the standalone Hokkai Markets Vite site so its
+   landing page renders identically inside Next.js.
+
+   SCOPING: every rule is nested under `.hk-landing`, which the
+   landing page root div carries. The trader app already ships a
+   large global stylesheet (globals.css) that defines its own
+   `.card`, `.section-container`, `.btn-primary` etc. Leaving
+   these unscoped would silently restyle the dashboard, the
+   terminal and every other marketing page. Scoping keeps the
+   blast radius to this one page.
+
+   The crimson (#e11d48) accent and the Japanese motifs are kept
+   deliberately — only the brand NAME was changed to TuskaEx.
+   ============================================================ */
+
+.hk-landing {
+  /* The Vite site set these on <body>; scope them to the page root
+     so the rest of the app keeps its own background + font. */
+  background: #05070a;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.hk-landing .section-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+.hk-landing .section-padding {
+  @apply py-16 md:py-24;
+}
+.hk-landing .section-title {
+  @apply text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight;
+  font-family: var(--font-michroma), 'Michroma', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hk-landing .section-subtitle {
+  @apply text-lg text-slate-400 leading-relaxed;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+.hk-landing .btn-primary {
+  @apply inline-flex items-center justify-center px-6 py-3 bg-[#e11d48] text-white font-semibold rounded-lg transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0;
+  box-shadow: 0 0 18px rgba(225, 29, 72, 0.35);
+}
+.hk-landing .btn-primary:hover {
+  box-shadow: 0 0 32px rgba(225, 29, 72, 0.6), 0 0 60px rgba(225, 29, 72, 0.2);
+}
+.hk-landing .btn-secondary {
+  @apply inline-flex items-center justify-center px-6 py-3 border border-[#e11d48] text-[#e11d48] font-semibold rounded-lg transition-all duration-300 hover:bg-[#e11d48]/10 hover:-translate-y-0.5 active:translate-y-0;
+}
+.hk-landing .btn-secondary:hover {
+  box-shadow: 0 0 20px rgba(225, 29, 72, 0.2);
+}
+.hk-landing .btn-outline {
+  @apply inline-flex items-center justify-center px-6 py-3 border border-white/20 text-white font-semibold rounded-lg transition-all duration-300 hover:border-white/50 hover:bg-white/5 hover:-translate-y-0.5;
+}
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.hk-landing .card {
+  @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 transition-all duration-300 hover:border-white/25 hover:-translate-y-1;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+.hk-landing .card:hover {
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(225, 29, 72, 0.08);
+}
+
+/* Cyber card hover — top border sweep */
+.hk-landing .jp-card {
+  position: relative;
+  overflow: hidden;
+}
+.hk-landing .jp-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(225, 29, 72, 0.7), transparent);
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+.hk-landing .jp-card:hover::before {
+  transform: scaleX(1);
+}
+
+/* ── Japanese motifs ────────────────────────────────────────── */
+.hk-landing .jp-kanji {
+  font-family: 'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho Pro', serif;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  user-select: none;
+  pointer-events: none;
+}
+.hk-landing .jp-wave-bg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60' viewBox='0 0 200 60'%3E%3Cpath d='M0 30 C25 10, 50 10, 75 30 C100 50, 125 50, 150 30 C175 10, 200 10, 200 30' stroke='rgba(225,29,72,0.06)' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0 45 C25 25, 50 25, 75 45 C100 65, 125 65, 150 45 C175 25, 200 25, 200 45' stroke='rgba(225,29,72,0.03)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-size: 200px 60px;
+  background-repeat: repeat-x;
+  background-position: bottom;
+}
+
+/* ── Background patterns ────────────────────────────────────── */
+.hk-landing .shoji-bg {
+  background-image:
+    linear-gradient(rgba(225, 29, 72, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225, 29, 72, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.hk-landing .dot-bg {
+  background-image: radial-gradient(rgba(225, 29, 72, 0.07) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+.hk-landing .grid-bg {
+  background-image:
+    linear-gradient(rgba(225, 29, 72, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(225, 29, 72, 0.04) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* ── Market ticker ──────────────────────────────────────────── */
+.hk-landing .ticker-wrapper {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.hk-landing .ticker-track {
+  display: inline-flex;
+  animation: hk-ticker 40s linear infinite;
+}
+.hk-landing .ticker-track:hover {
+  animation-play-state: paused;
+}
+.hk-landing .ticker-item {
+  @apply flex items-center gap-2 px-6 text-sm font-mono whitespace-nowrap;
+}
+
+/* Namespaced so it can't collide with a `ticker` keyframe elsewhere
+   in the app's global CSS. */
+@keyframes hk-ticker {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ── Misc helpers used by the ported sections ───────────────── */
+.hk-landing .cyber-heading {
+  font-family: var(--font-michroma), 'Michroma', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  @apply font-bold text-white;
+}
+.hk-landing .animated-underline {
+  position: relative;
+}
+.hk-landing .animated-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  transition: width 0.3s ease;
+}
+.hk-landing .animated-underline:hover::after {
+  width: 100%;
+}
+.hk-landing .text-shadow-red {
+  text-shadow: 0 0 40px rgba(225, 29, 72, 0.5), 0 0 80px rgba(225, 29, 72, 0.2);
+}
+.hk-landing .text-positive { color: #00d4aa; }
+.hk-landing .text-negative { color: #e11d48; }
+.hk-landing .bg-white\/2 { background-color: rgba(255, 255, 255, 0.02); }
+.hk-landing .bg-white\/3 { background-color: rgba(255, 255, 255, 0.03); }
+.hk-landing .cyber-section-dark {
+  background: linear-gradient(180deg, #05070a 0%, #010203 100%);
+}
+.hk-landing .cyber-section-mid {
+  background: linear-gradient(180deg, #07090e 0%, #05070a 100%);
+}
