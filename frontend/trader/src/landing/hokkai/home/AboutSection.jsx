@@ -55,7 +55,9 @@ export default function AboutSection() {
               <div
                 className="relative rounded-2xl overflow-hidden aspect-square w-full max-w-md mx-auto border border-white/8"
                 style={{
-                  backgroundImage: 'url(/card_image_1.png)',
+                  /* Lives in public/tuskaex/, not public/ — the bare
+                     /card_image_1.png this used to point at 404'd. */
+                  backgroundImage: 'url(/tuskaex/card_image_1.png)',
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundRepeat: 'no-repeat',

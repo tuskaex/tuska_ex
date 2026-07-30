@@ -33,7 +33,20 @@ export function loadChartLibrary(): Promise<void> {
     const s = document.createElement('script');
     s.src = LIBRARY_SRC;
     s.async = true;
-    s.onload = () => resolve();
+    s.onload = () => {
+      // A `load` event is not proof the bundle is really there. When the
+      // file is absent, Next's catch-all can answer with an HTML page and
+      // some paths still fire `load` rather than `error`; the script then
+      // never defines window.TradingView and the caller would sit waiting
+      // on a resolved promise for an API that does not exist. Treat a
+      // missing global as a load failure so the caller can say so.
+      if (!window.TradingView) {
+        loadPromise = null; // allow retry once the bundle is installed
+        reject(new Error('charting library loaded but window.TradingView is undefined'));
+        return;
+      }
+      resolve();
+    };
     s.onerror = () => {
       loadPromise = null; // allow retry
       reject(new Error('Failed to load charting library'));

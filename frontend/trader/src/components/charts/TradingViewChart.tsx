@@ -129,6 +129,9 @@ function TradingViewChartInner({
   const positions = useTradingStore((s) => s.positions);
   const pendingOrders = useTradingStore((s) => s.pendingOrders);
   const [chartReady, setChartReady] = useState(false);
+  // Set when the TradingView bundle cannot be loaded at all. Without this the
+  // loader below spins forever with no explanation — see the load block.
+  const [loadError, setLoadError] = useState<string | null>(null);
   // line key -> { id, price, creating, text, color, textColor, pnl, propAt }.
   // Keys: <posId> (entry), <posId>-sl, <posId>-tp, ord-<id>, ord-<id>-sl/-tp.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -180,12 +183,28 @@ function TradingViewChartInner({
         /* resolveSymbol falls back to heuristics */
       }
 
+      // Both failure paths below used to `return` silently, leaving the
+      // full-cover spinner up forever with nothing in the UI to explain it.
+      // The charting library is licensed and NOT in the repo, so "missing
+      // bundle" is the normal state on a fresh deploy — it has to be
+      // legible, not an infinite spinner.
       try {
         await loadChartLibrary();
       } catch {
+        if (!disposed) {
+          setLoadError(
+            'Chart library not found. The licensed TradingView bundle is missing from public/charting_library/ on this deployment.',
+          );
+        }
         return;
       }
-      if (disposed || !containerRef.current || !window.TradingView) return;
+      if (disposed) return;
+      if (!containerRef.current || !window.TradingView) {
+        // Script fetched but never defined window.TradingView — usually a
+        // 404/redirect HTML page served with a 200 in place of the bundle.
+        setLoadError('Chart library loaded but did not initialise. Check that public/charting_library/ holds the real bundle.');
+        return;
+      }
 
       widgetRef.current = new window.TradingView.widget({
         symbol: initialSymbol,
@@ -982,16 +1001,21 @@ function TradingViewChartInner({
     <div className={clsx('relative w-full h-full min-h-[200px] min-w-0 bg-bg-base')} data-tv-chart-root>
       <div id={CONTAINER_ID} ref={containerRef} className="h-full w-full min-h-[200px]" />
 
-      {/* Loader until the chart is ready (covers the library load). */}
+      {/* Loader until the chart is ready (covers the library load), or a
+          readable message if the library could not be loaded at all. */}
       {!chartReady && (
         <div
-          className="absolute inset-0 z-40 flex items-center justify-center"
+          className="absolute inset-0 z-40 flex items-center justify-center p-6 text-center"
           style={{ background: theme === 'dark' ? '#0b0e11' : '#ffffff' }}
         >
-          <div
-            className="animate-spin"
-            style={{ width: 34, height: 34, borderRadius: '50%', border: '3px solid rgba(242,106,31,0.25)', borderTopColor: '#f26a1f' }}
-          />
+          {loadError ? (
+            <p className="max-w-sm text-sm leading-relaxed text-text-secondary">{loadError}</p>
+          ) : (
+            <div
+              className="animate-spin"
+              style={{ width: 34, height: 34, borderRadius: '50%', border: '3px solid rgba(214,1,1,0.25)', borderTopColor: '#D60101' }}
+            />
+          )}
         </div>
       )}
 
