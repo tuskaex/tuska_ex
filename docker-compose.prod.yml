@@ -18,8 +18,19 @@ services:
   # Kafka + Zookeeper + kafka-ui removed (see docker-compose.yml).
 
   # ── Backend services — restart policy + localhost-only ports ──
+  #
+  # `ports: !override` is load-bearing, not decoration. Compose MERGES the
+  # `ports` sequence across -f files instead of replacing it, so the base
+  # docker-compose.yml bindings ("8000:8000", "8001:8001", "3010:3000",
+  # "3011:3001") stayed live alongside the 127.0.0.1 ones below — publishing
+  # the gateway and admin API on 0.0.0.0, i.e. straight to the internet,
+  # bypassing nginx and Cloudflare entirely. ufw does NOT save you here:
+  # Docker writes its own iptables rules ahead of the ufw chain.
+  # !override (Compose >= 2.24) replaces the list instead of appending to it.
+  # Verify after any change to this file — no 0.0.0.0 may appear in:
+  #   docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
   admin-api:
-    ports:
+    ports: !override
       - "127.0.0.1:8003:8001"
     restart: always
     environment:
@@ -30,7 +41,7 @@ services:
     command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
 
   gateway:
-    ports:
+    ports: !override
       - "127.0.0.1:8002:8000"
     restart: always
     environment:
@@ -77,7 +88,7 @@ services:
         # only browser-injected wallets (MetaMask, OKX) work; the WalletConnect
         # mobile-deeplink path (Trust Wallet etc.) is disabled.
         NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:-}
-    ports:
+    ports: !override
       - "127.0.0.1:3012:3000"
     environment:
       INTERNAL_API_URL: http://gateway:8000/api/v1
@@ -94,7 +105,7 @@ services:
     build:
       context: ./frontend/admin
       dockerfile: Dockerfile
-    ports:
+    ports: !override
       - "127.0.0.1:3013:3001"
     environment:
       ADMIN_API_PROXY_TARGET: http://admin-api:8001
