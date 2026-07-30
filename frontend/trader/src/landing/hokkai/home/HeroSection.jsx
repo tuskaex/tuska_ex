@@ -6,9 +6,8 @@
 // ============================================
 
 import React from 'react'
-import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FiArrowRight, FiPlay, FiTrendingUp, FiTrendingDown } from 'react-icons/fi'
+import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi'
 
 // Live data chips shown below the CTA
 const liveChips = [
@@ -114,52 +113,6 @@ export default function HeroSection() {
 
       {/* ── Main Content ── */}
       <div className="relative z-10 text-center px-4 max-w-5xl mx-auto w-full">
-
-        {/* Neon divider */}
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
-          className="flex justify-center mb-6"
-        >
-          <div
-            className="w-24 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent, #e11d48, transparent)', boxShadow: '0 0 8px rgba(225,29,72,0.6)' }}
-          />
-        </motion.div>
-
-        {/* CTA Buttons */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.55 }}
-          className="flex flex-wrap justify-center gap-4 mb-14"
-        >
-          {/* Primary — Crimson Neon */}
-          <Link
-            to="/accounts"
-            className="inline-flex items-center gap-2 px-8 py-4 text-white font-bold text-sm rounded-lg transition-all duration-300 hover:-translate-y-0.5 uppercase tracking-wider"
-            style={{
-              fontFamily: "var(--font-michroma), Michroma, sans-serif",
-              background: '#e11d48',
-              boxShadow: '0 0 20px rgba(225,29,72,0.45), 0 0 60px rgba(225,29,72,0.15)',
-              letterSpacing: '0.08em',
-            }}
-            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 35px rgba(225,29,72,0.7), 0 0 80px rgba(225,29,72,0.25)'}
-            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(225,29,72,0.45), 0 0 60px rgba(225,29,72,0.15)'}
-          >
-            Open Live Account <FiArrowRight size={15} />
-          </Link>
-
-          {/* Ghost — White border */}
-          <Link
-            to="/accounts"
-            className="inline-flex items-center gap-2 px-8 py-4 text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:bg-white/8 hover:-translate-y-0.5 uppercase tracking-wider border border-white/25 hover:border-white/50"
-            style={{ fontFamily: "var(--font-michroma), Michroma, sans-serif", letterSpacing: '0.08em' }}
-          >
-            <FiPlay size={13} /> Try Free Demo
-          </Link>
-        </motion.div>
 
         {/* Live Data Chips */}
         <motion.div
