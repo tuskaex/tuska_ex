@@ -48,11 +48,19 @@ a licensed bundle that lives at `frontend/trader/public/charting_library/`
 and the license does not permit redistributing the bundle.
 
 Consequence: `git push` / `git pull` can never move it. Every machine that
-builds the trader frontend needs its own copy, placed once:
+builds the trader frontend needs its own copy, placed once. Ship it as a
+tarball — `scp -r` of ~1930 tiny files takes minutes and is easy to interrupt
+half-way, which leaves a partial tree that looks installed but 404s:
 
 ```bash
-rsync -az --delete frontend/trader/public/charting_library/ \
-  <server>:/opt/tuskaex/frontend/trader/public/charting_library/
+# on a machine that has the library
+tar -czf cl.tar.gz -C frontend/trader/public charting_library   # ~5 MB
+scp cl.tar.gz <server>:/tmp/
+
+# on the server
+rm -rf /opt/tuskaex/frontend/trader/public/charting_library
+tar -xzf /tmp/cl.tar.gz -C /opt/tuskaex/frontend/trader/public/
+rm /tmp/cl.tar.gz
 ```
 
 It then survives every future deploy — git does not touch ignored paths, and

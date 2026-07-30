@@ -67,14 +67,31 @@ TO_BUILD=()
 # still boots; the only symptom is "Chart library not found" in the terminal
 # at runtime. Fail here instead: a loud deploy-time stop costs a minute, a
 # silently chartless production deploy costs an afternoon of bisecting.
-if [ $NEEDS_TRADER -eq 1 ] && [ ! -f frontend/trader/public/charting_library/charting_library.standalone.js ]; then
-  echo "✖ Licensed charting library missing — refusing to build a chartless trader."
-  echo "    expected: $REPO_DIR/frontend/trader/public/charting_library/"
-  echo "  It is untracked on purpose, so copy it once from a machine that has it:"
-  echo "    rsync -az --delete frontend/trader/public/charting_library/ \\"
-  echo "      <this-server>:$REPO_DIR/frontend/trader/public/charting_library/"
-  echo "  It survives future deploys — git never touches an ignored directory."
-  exit 1
+#
+# The entry file and bundles/ are checked separately because a half-finished
+# copy is a real failure mode already hit in production: this server once held
+# bundles/ with 130 of ~1930 files and no entry bundle at all, which serves a
+# 404 for the entry script and looks identical to "never copied". The file
+# floor is a truncation tripwire, not a version assertion.
+if [ $NEEDS_TRADER -eq 1 ]; then
+  CL=frontend/trader/public/charting_library
+  CL_ENTRY=$([ -f "$CL/charting_library.standalone.js" ] && echo yes || echo NO)
+  CL_FILES=$(find "$CL" -type f 2>/dev/null | wc -l)
+  if [ "$CL_ENTRY" = NO ] || [ "$CL_FILES" -lt 1000 ]; then
+    echo "✖ Licensed charting library missing or incomplete — refusing to build a chartless trader."
+    echo "    expected: $REPO_DIR/$CL/ — entry bundle + ~1930 files"
+    echo "    found:    entry=$CL_ENTRY files=$CL_FILES"
+    echo "  It is untracked on purpose. Copy it from a machine that has it —"
+    echo "  tar, not 'scp -r': ~1930 tiny files over scp takes minutes, the"
+    echo "  tarball is 5 MB and lands in seconds."
+    echo "    tar -czf cl.tar.gz -C frontend/trader/public charting_library"
+    echo "    scp cl.tar.gz <this-server>:/tmp/"
+    echo "  then on the server:"
+    echo "    rm -rf $REPO_DIR/$CL"
+    echo "    tar -xzf /tmp/cl.tar.gz -C $REPO_DIR/frontend/trader/public/"
+    echo "  It survives future deploys — git never touches an ignored directory."
+    exit 1
+  fi
 fi
 
 if [ ${#TO_BUILD[@]} -gt 0 ]; then
