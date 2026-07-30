@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ChevronRight, Globe, Menu, X, Download, Monitor } from 'lucide-react'
 import { slugify } from './ui/slugify'
+import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
 import { useLang } from '@/landing/i18n/LangProvider'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -145,11 +146,15 @@ const NAV_LINKS: { label: string; key: ActivePage; href: string; external?: bool
   { label: 'Contact', key: 'contact', href: '/contact' },
 ]
 
-function Wordmark() {
+/* The stock lockup is black-on-transparent, so on the dark pill its brush
+   ring and "TUSKA" glyphs vanish and only the red "T" and ".EX" survive —
+   the mark reads as broken fragments. The light lockup is the same artwork
+   with those blacks turned white, red untouched. */
+function Wordmark({ theme }: { theme: 'light' | 'dark' }) {
   return (
     <Link href="/" className="inline-flex items-center" aria-label="TuskaEx home">
       <Image
-        src="/marketing/tuskaex-logo.png"
+        src={theme === 'dark' ? BRAND_LOGO_LIGHT : BRAND_LOGO}
         alt="TuskaEx"
         width={220}
         height={48}
@@ -412,7 +417,7 @@ export default function MarketingNavbar({
     >
       <nav className="w-full mx-auto px-3 md:px-4 lg:px-5 relative flex items-center gap-3 h-16 md:h-[68px]">
         <div className="shrink-0">
-          <Wordmark />
+          <Wordmark theme={theme} />
         </div>
 
         <ul className="hidden lg:flex flex-1 items-center justify-center gap-3 xl:gap-5 2xl:gap-6">

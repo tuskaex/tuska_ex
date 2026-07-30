@@ -12,6 +12,12 @@ export const BRAND_NAME = 'TuskaEx';
 // keep them in sync. The square mark alone lives at
 // /marketing/tuskaex_fevicon.png.
 export const BRAND_LOGO = '/marketing/tuskaex-logo.png';
+// Same lockup recoloured for dark surfaces: the black brush ring and the
+// "TUSKA" glyphs are white, while the red "T" mark and ".EX" are untouched.
+// BRAND_LOGO is black-on-transparent, so on a dark background two thirds of
+// it disappears and only the red fragments read. Use this wherever the
+// backdrop is dark; regenerate it from BRAND_LOGO if the lockup changes.
+export const BRAND_LOGO_LIGHT = '/marketing/tuskaex-logo-light.png';
 export const BRAND_DOMAIN = 'tuskaex.com';
 export const BRAND_SUPPORT_EMAIL = 'support@tuskaex.com';
 export const BRAND_COPYRIGHT = `${BRAND_NAME} © ${new Date().getFullYear()}. All rights reserved.`;

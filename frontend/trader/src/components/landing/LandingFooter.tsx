@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Phone } from 'lucide-react'
+import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
 
 /* Same structure in both themes — only the palette swaps. Dark exists for the
    cyber-samurai home page, where a white footer ended the page on a bright
@@ -43,7 +44,7 @@ export default function LandingFooter({ theme = 'light' }: LandingFooterProps) {
           <div className="lg:col-span-2">
             <Link href="/" aria-label="TuskaEx home" className="inline-flex items-center gap-2 mb-4">
               <Image
-                src="/marketing/tuskaex-logo.png"
+                src={theme === 'dark' ? BRAND_LOGO_LIGHT : BRAND_LOGO}
                 alt="TuskaEx"
                 width={1947}
                 height={361}
