@@ -61,6 +61,22 @@ TO_BUILD=()
 [ $NEEDS_TRADER -eq 1 ]    && TO_BUILD+=(trader-frontend)
 [ $NEEDS_ADMIN_FE -eq 1 ]  && TO_BUILD+=(admin-frontend)
 
+# The TradingView Charting Library is licensed and deliberately untracked
+# (frontend/trader/.gitignore) — `git pull` above can never deliver it. The
+# Dockerfile copies public/ verbatim, so a missing bundle still builds and
+# still boots; the only symptom is "Chart library not found" in the terminal
+# at runtime. Fail here instead: a loud deploy-time stop costs a minute, a
+# silently chartless production deploy costs an afternoon of bisecting.
+if [ $NEEDS_TRADER -eq 1 ] && [ ! -f frontend/trader/public/charting_library/charting_library.standalone.js ]; then
+  echo "✖ Licensed charting library missing — refusing to build a chartless trader."
+  echo "    expected: $REPO_DIR/frontend/trader/public/charting_library/"
+  echo "  It is untracked on purpose, so copy it once from a machine that has it:"
+  echo "    rsync -az --delete frontend/trader/public/charting_library/ \\"
+  echo "      <this-server>:$REPO_DIR/frontend/trader/public/charting_library/"
+  echo "  It survives future deploys — git never touches an ignored directory."
+  exit 1
+fi
+
 if [ ${#TO_BUILD[@]} -gt 0 ]; then
   echo "▶ Building: ${TO_BUILD[*]}"
   $COMPOSE build "${TO_BUILD[@]}"

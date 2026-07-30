@@ -40,6 +40,34 @@ in place of the no-op. Real Kafka only earns its keep at multi-region,
 multi-consumer scale.
 
 
+## Charting library (licensed — not in git)
+
+The trader terminal renders with **TradingView Advanced Charts (CL v31.0.0)**,
+a licensed bundle that lives at `frontend/trader/public/charting_library/`
+(~26 MB, 1931 files) and is **deliberately gitignored** — this repo is public,
+and the license does not permit redistributing the bundle.
+
+Consequence: `git push` / `git pull` can never move it. Every machine that
+builds the trader frontend needs its own copy, placed once:
+
+```bash
+rsync -az --delete frontend/trader/public/charting_library/ \
+  <server>:/opt/tuskaex/frontend/trader/public/charting_library/
+```
+
+It then survives every future deploy — git does not touch ignored paths, and
+the Dockerfile copies `public/` verbatim into the image. `deploy.sh` refuses to
+build the trader frontend when the bundle is absent, because a missing bundle
+produces a build that boots fine and only fails at runtime with "Chart library
+not found" ([TradingViewChart.tsx](frontend/trader/src/components/charts/TradingViewChart.tsx)).
+
+Sanity check on a server:
+
+```bash
+curl -sI https://trade.tuskaex.com/charting_library/charting_library.standalone.js | head -1
+# want: HTTP/2 200   (404 → bundle not on the server; 503 → nginx rate limit)
+```
+
 ## Backups & disaster recovery
 
 Daily snapshots of Postgres, TimescaleDB, and the `uploads/` directory are
