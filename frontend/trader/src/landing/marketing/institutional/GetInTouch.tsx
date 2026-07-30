@@ -21,7 +21,7 @@ export default function GetInTouch() {
 
         <form onSubmit={onSubmit} className="mt-10 max-w-3xl">
           <p className="text-xs text-gray-600 mb-4">
-            <span className="text-[#E94E1B]">*</span> Mandatory fields
+            <span className="text-[#D60101]">*</span> Mandatory fields
           </p>
 
           <div className="grid md:grid-cols-2 gap-4">

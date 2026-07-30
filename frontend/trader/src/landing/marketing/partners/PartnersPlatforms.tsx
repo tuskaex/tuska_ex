@@ -21,9 +21,9 @@ function FloatingWidget({ title, value, sub, className = '' }: WidgetProps) {
       </div>
       <div className="mt-1 text-base font-bold text-gray-900">{value}</div>
       <div className="mt-2 flex gap-1">
-        <span className="flex-1 h-1.5 rounded-sm bg-[#E94E1B]/70" />
+        <span className="flex-1 h-1.5 rounded-sm bg-[#D60101]/70" />
         <span className="flex-1 h-1.5 rounded-sm bg-gray-900/80" />
-        <span className="flex-1 h-1.5 rounded-sm bg-[#E94E1B]/40" />
+        <span className="flex-1 h-1.5 rounded-sm bg-[#D60101]/40" />
       </div>
     </div>
   )

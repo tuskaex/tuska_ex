@@ -36,12 +36,12 @@ export default function CurrencyPairsPage() {
       <section className="relative bg-gradient-to-b from-white to-gray-50 pt-24 pb-16 md:pt-28 md:pb-20 overflow-hidden">
         <div className="max-w-6xl mx-auto px-6 lg:px-8 grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E94E1B]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
               Markets · Foreign Exchange
             </p>
             <h1 className="mt-4 text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight leading-[1.05]">
               The world&apos;s<br />
-              <span className="text-[#E94E1B]">largest market.</span>
+              <span className="text-[#D60101]">largest market.</span>
             </h1>
             <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed max-w-xl">
               Trade 80+ currency pairs across majors, minors, and exotics. Spreads from
@@ -51,7 +51,7 @@ export default function CurrencyPairsPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 href="/auth/register"
-                className="inline-flex items-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+                className="inline-flex items-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
               >
                 Open your account <ArrowRight className="w-4 h-4" />
               </Link>
@@ -64,8 +64,8 @@ export default function CurrencyPairsPage() {
             </div>
           </div>
           <div className="relative flex items-center justify-center">
-            <div className="w-40 h-40 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-[#E94E1B]/40 to-[#E94E1B]/10 blur-3xl absolute" aria-hidden="true" />
-            <Globe className="relative w-32 h-32 md:w-44 md:h-44 text-[#E94E1B]" strokeWidth={1.25} />
+            <div className="w-40 h-40 md:w-56 md:h-56 rounded-full bg-gradient-to-br from-[#D60101]/40 to-[#D60101]/10 blur-3xl absolute" aria-hidden="true" />
+            <Globe className="relative w-32 h-32 md:w-44 md:h-44 text-[#D60101]" strokeWidth={1.25} />
           </div>
         </div>
       </section>
@@ -95,7 +95,7 @@ export default function CurrencyPairsPage() {
                   <tr key={p.symbol} className="border-t border-gray-200 hover:bg-gray-50/60">
                     <td className="px-5 py-4 font-mono font-semibold text-gray-900">{p.symbol}</td>
                     <td className="px-5 py-4 text-gray-700">{p.name}</td>
-                    <td className="px-5 py-4 font-mono text-[#E94E1B] font-semibold">{p.spread}</td>
+                    <td className="px-5 py-4 font-mono text-[#D60101] font-semibold">{p.spread}</td>
                     <td className="px-5 py-4 text-gray-700">{p.leverage}</td>
                   </tr>
                 ))}
@@ -114,7 +114,7 @@ export default function CurrencyPairsPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <div key={title} className="bg-white rounded-2xl p-7 border border-gray-200/60">
-                <span className="w-11 h-11 rounded-xl bg-[#E94E1B]/10 text-[#E94E1B] flex items-center justify-center">
+                <span className="w-11 h-11 rounded-xl bg-[#D60101]/10 text-[#D60101] flex items-center justify-center">
                   <Icon className="w-5 h-5" strokeWidth={2} />
                 </span>
                 <h3 className="mt-4 text-lg font-bold text-gray-900">{title}</h3>
@@ -128,7 +128,7 @@ export default function CurrencyPairsPage() {
       <section className="bg-white py-16">
         <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-tight">
-            Ready to trade <span className="text-[#E94E1B]">FX?</span>
+            Ready to trade <span className="text-[#D60101]">FX?</span>
           </h2>
           <p className="mt-4 text-base text-gray-700">
             Open a live account or test-drive the platform on a funded demo.
@@ -136,7 +136,7 @@ export default function CurrencyPairsPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/auth/register"
-              className="inline-flex items-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
             >
               Open your account
             </Link>

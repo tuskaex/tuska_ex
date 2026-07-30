@@ -20,7 +20,7 @@ export default function MmHero() {
           </Button>
           <a
             href="#mm-platform"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#E94E1B] hover:text-[#E94E1B] transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D60101] hover:text-[#D60101] transition-colors"
           >
             <span>Access our platform</span>
             <ArrowRight className="w-4 h-4" strokeWidth={2.5} />

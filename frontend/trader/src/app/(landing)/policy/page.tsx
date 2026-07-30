@@ -59,17 +59,17 @@ export default function PolicyPage() {
           <div className="grid items-center gap-10 lg:grid-cols-2">
             {/* Left — copy + CTAs */}
             <div className="-translate-y-10 md:-translate-y-16">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E94E1B]">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
                 Policies &amp; Legal
               </p>
               <h1 className="mt-4 text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight leading-[1.05]">
                 Clear rules.<br />
-                <span className="text-[#E94E1B]">No fine-print games.</span>
+                <span className="text-[#D60101]">No fine-print games.</span>
               </h1>
               <p className="mt-6 max-w-xl text-base md:text-lg text-gray-700 leading-relaxed">
                 Every document below is the actual contract you’re entering into. Read them in
                 full before opening an account — and reach out to{' '}
-                <Link href="/contact" className="text-[#E94E1B] font-semibold underline-offset-4 hover:underline">
+                <Link href="/contact" className="text-[#D60101] font-semibold underline-offset-4 hover:underline">
                   legal@tuskaex.com
                 </Link>{' '}
                 if anything is unclear.
@@ -83,7 +83,7 @@ export default function PolicyPage() {
                 </a>
                 <Link
                   href="/contact"
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-7 py-3 text-sm font-semibold text-gray-900 transition-colors hover:border-[#E94E1B] hover:text-[#E94E1B]"
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-7 py-3 text-sm font-semibold text-gray-900 transition-colors hover:border-[#D60101] hover:text-[#D60101]"
                 >
                   Contact legal <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                 </Link>
@@ -102,7 +102,7 @@ export default function PolicyPage() {
                 <Link
                   key={title}
                   href={href}
-                  className="group relative block rounded-3xl bg-gradient-to-b from-[#E94E1B] to-[#ff9b6b] shadow-[0_18px_45px_-20px_rgba(233,78,27,0.55)] transition-transform duration-300 hover:-translate-y-1"
+                  className="group relative block rounded-3xl bg-gradient-to-b from-[#D60101] to-[#ff9b6b] shadow-[0_18px_45px_-20px_rgba(214,1,1,0.55)] transition-transform duration-300 hover:-translate-y-1"
                 >
                   {/* white face shifted to expose a colored accent bar on one side */}
                   <div
@@ -112,14 +112,14 @@ export default function PolicyPage() {
                     <span
                       aria-hidden="true"
                       className={`pointer-events-none absolute top-1/2 -translate-y-1/2 select-none text-[130px] font-extrabold leading-none ${onLeft ? 'left-2' : 'right-2'}`}
-                      style={{ color: 'transparent', WebkitTextStroke: '2px rgba(233,78,27,0.35)' }}
+                      style={{ color: 'transparent', WebkitTextStroke: '2px rgba(214,1,1,0.35)' }}
                     >
                       {i + 1}
                     </span>
 
                     {/* gradient icon badge (opposite corner to the number) */}
                     <span
-                      className={`absolute top-7 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#E94E1B] to-[#ff8a50] text-white shadow-md ${onLeft ? 'right-6' : 'left-6'}`}
+                      className={`absolute top-7 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#D60101] to-[#ff8a50] text-white shadow-md ${onLeft ? 'right-6' : 'left-6'}`}
                     >
                       <Icon className="h-5 w-5" strokeWidth={2} />
                     </span>
@@ -128,7 +128,7 @@ export default function PolicyPage() {
                     <div className={`relative flex flex-col gap-3 ${onLeft ? 'pl-24 pr-14' : 'pr-24 pl-14'}`}>
                       <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                       <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
-                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#E94E1B] group-hover:gap-2 transition-all">
+                      <span className="inline-flex items-center gap-1 text-sm font-semibold text-[#D60101] group-hover:gap-2 transition-all">
                         Read the document <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                       </span>
                     </div>
@@ -156,7 +156,7 @@ export default function PolicyPage() {
               <span
                 key={i}
                 aria-hidden="true"
-                className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#E94E1B]/15 to-[#E94E1B]/5 border border-[#E94E1B]/15"
+                className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#D60101]/15 to-[#D60101]/5 border border-[#D60101]/15"
                 style={{
                   width: bubble.size,
                   height: bubble.size,
@@ -169,7 +169,7 @@ export default function PolicyPage() {
 
             <div className="relative z-10 max-w-5xl mx-auto">
           <div className="text-center max-w-3xl mx-auto">
-            <Scale className="w-10 h-10 text-[#E94E1B] mx-auto" strokeWidth={1.5} />
+            <Scale className="w-10 h-10 text-[#D60101] mx-auto" strokeWidth={1.5} />
             <h2 className="mt-4 text-2xl md:text-3xl font-extrabold uppercase tracking-tight">
               Regulatory framework
             </h2>
@@ -191,7 +191,7 @@ export default function PolicyPage() {
                   aria-hidden="true"
                 />
                 <div className="min-w-0">
-                  <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-[#E94E1B]">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-[#D60101]">
                     {row.label}
                   </h3>
                   <p className="mt-2 text-sm text-gray-700 leading-relaxed">{row.body}</p>
@@ -216,7 +216,7 @@ export default function PolicyPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/contact"
-              className="inline-flex items-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
             >
               Contact compliance
             </Link>

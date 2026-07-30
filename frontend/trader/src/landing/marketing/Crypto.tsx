@@ -31,7 +31,7 @@ export default function Crypto() {
           {COINS.map((coin, i) => (
             <div
               key={i}
-              className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#E94E1B]/15 to-[#E94E1B]/5 border border-[#E94E1B]/15"
+              className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#D60101]/15 to-[#D60101]/5 border border-[#D60101]/15"
               style={{
                 width: coin.size,
                 height: coin.size,
@@ -46,7 +46,7 @@ export default function Crypto() {
           <div className="relative max-w-2xl mx-auto text-center">
             <Eyebrow>{t('crypto.eyebrow')}</Eyebrow>
             <h2 className={`mt-4 ${HEADING_SECTION}`}>
-              {t('crypto.titleA')} <span className="text-[#E94E1B]">{t('crypto.titleB')}</span>
+              {t('crypto.titleA')} <span className="text-[#D60101]">{t('crypto.titleB')}</span>
             </h2>
             <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed">
               {t('crypto.lead')}

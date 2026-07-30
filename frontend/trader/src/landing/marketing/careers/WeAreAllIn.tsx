@@ -70,7 +70,7 @@ export default function WeAreAllIn() {
             type="button"
             onClick={next}
             disabled={index >= max}
-            className="w-9 h-9 rounded-full bg-[#E94E1B] text-white flex items-center justify-center hover:bg-[#E94E1B] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="w-9 h-9 rounded-full bg-[#D60101] text-white flex items-center justify-center hover:bg-[#D60101] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             aria-label="Next"
           >
             <ChevronRight className="w-4 h-4" strokeWidth={2.5} />

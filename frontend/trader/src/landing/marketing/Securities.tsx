@@ -17,7 +17,7 @@ export default function Securities() {
           <Eyebrow>{t('securities.eyebrow')}</Eyebrow>
           <h2 className={`mt-4 ${HEADING_SECTION}`}>
             {t('securities.titleA')}{' '}
-            <span className="text-[#E94E1B]">{t('securities.titleB')}</span>
+            <span className="text-[#D60101]">{t('securities.titleB')}</span>
           </h2>
           <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed">
             {t('securities.lead')}

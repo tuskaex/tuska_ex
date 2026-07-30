@@ -74,13 +74,20 @@ const config: Config = {
           bg: 'rgba(220,38,38,0.1)',
           glow: 'rgba(220,38,38,0.2)',
         },
-        /* Vantage-style accent — orange #E94E1B for CTAs, brand marks, NEW badges. */
+        /* Brand accent — the red sampled from the TuskaEx logo mark
+         * (public/marketing/tuskaex-logo.png): the "T" glyph and the "EX"
+         * of the wordmark are #D60101. Used for CTAs, brand marks, NEW
+         * badges. Replaced the previous orange #E94E1B, which did not
+         * match the logo.
+         *
+         * NOTE: `sell` above is #DC2626 — visually close to this. Do not
+         * use accent.* to convey trade direction; use buy/sell tokens. */
         accent: {
-          DEFAULT: '#E94E1B',
-          hover: '#C73E11',
-          soft: '#FCE6DD',
-          light: '#F58A60',
-          dark: '#C73E11',
+          DEFAULT: '#D60101',
+          hover: '#A30000',
+          soft: '#FDE3E3',
+          light: '#F14A4A',
+          dark: '#A30000',
         },
         success: '#10B981',
         warning: '#F59E0B',
@@ -99,8 +106,8 @@ const config: Config = {
         'primary': {
           bg: '#FFFFFF',
           secondary: '#FAFAFA',
-          accent: '#E94E1B',
-          purple: '#C73E11',
+          accent: '#D60101',
+          purple: '#A30000',
         },
         /* ─────────────────────────────────────────────────────────
            Marketing site palette (`mkt.*` namespace)
@@ -136,7 +143,7 @@ const config: Config = {
         },
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #F58A60 0%, #E94E1B 50%, #C73E11 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #F14A4A 0%, #D60101 50%, #A30000 100%)',
         'gradient-hero': 'linear-gradient(135deg, #FFFFFF 0%, #FAFAFA 50%, #F5F5F5 100%)',
         'gradient-section': 'linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)',
         'gradient-section-alt': 'linear-gradient(180deg, #FAFAFA 0%, #FFFFFF 100%)',

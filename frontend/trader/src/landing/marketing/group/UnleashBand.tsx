@@ -5,7 +5,7 @@ export default function UnleashBand() {
         <div
           className="text-[clamp(4rem,16vw,14rem)] font-extrabold uppercase tracking-tight leading-none whitespace-nowrap select-none -mx-6"
           style={{
-            WebkitTextStroke: '1.5px #E94E1B',
+            WebkitTextStroke: '1.5px #D60101',
             color: 'transparent',
           }}
         >

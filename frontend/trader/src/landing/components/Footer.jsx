@@ -72,7 +72,7 @@ export default function Footer() {
                 </svg>
                 <span className="inline-flex items-baseline font-bold tracking-tight text-lg select-none">
                   <span className="text-white">Tuska</span>
-                  <span className="text-[#E94E1B]">Ex</span>
+                  <span className="text-[#D60101]">Ex</span>
                 </span>
               </Link>
               <p className="text-sm leading-relaxed max-w-sm mb-6" style={{ color: 'var(--fx-text-2)' }}>
@@ -102,7 +102,7 @@ export default function Footer() {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = 'var(--fx-gold-light)'
-                      e.currentTarget.style.borderColor = 'rgba(233,78,27,0.4)'
+                      e.currentTarget.style.borderColor = 'rgba(214,1,1,0.4)'
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = 'var(--fx-text-2)'

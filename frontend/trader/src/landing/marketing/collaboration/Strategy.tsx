@@ -38,25 +38,25 @@ function StepIllustration() {
     <div className="relative bg-gray-50 rounded-3xl w-full aspect-square max-w-md mx-auto flex items-center justify-center overflow-hidden">
       <div className="relative w-48 h-48 md:w-60 md:h-60">
         <div
-          className="absolute inset-0 rounded-full border-[14px] md:border-[18px] border-[#E94E1B]"
+          className="absolute inset-0 rounded-full border-[14px] md:border-[18px] border-[#D60101]"
           style={{
             clipPath: 'polygon(0 0, 100% 0, 100% 50%, 50% 50%, 50% 100%, 0 100%)',
           }}
           aria-hidden="true"
         />
         <div
-          className="absolute inset-0 rounded-full border-[14px] md:border-[18px] border-[#E94E1B]/30"
+          className="absolute inset-0 rounded-full border-[14px] md:border-[18px] border-[#D60101]/30"
           aria-hidden="true"
         />
         <div className="absolute inset-6 bg-white rounded-md shadow-md flex flex-col gap-1.5 p-3 md:p-4">
           <span className="h-2 rounded bg-gray-900/15" />
           <span className="h-2 rounded bg-gray-900/10 w-3/4" />
           <span className="h-2 rounded bg-gray-900/15 w-5/6" />
-          <span className="h-2 rounded bg-[#E94E1B]/40 w-2/3" />
+          <span className="h-2 rounded bg-[#D60101]/40 w-2/3" />
         </div>
       </div>
       <span
-        className="absolute top-10 right-10 w-3 h-3 rounded-full bg-[#E94E1B]"
+        className="absolute top-10 right-10 w-3 h-3 rounded-full bg-[#D60101]"
         aria-hidden="true"
       />
     </div>
@@ -92,8 +92,8 @@ export default function Strategy() {
                     onMouseEnter={() => setActive(i)}
                     className={`pl-5 py-5 border-l-2 transition-colors cursor-pointer ${
                       isActive
-                        ? 'border-[#E94E1B]'
-                        : 'border-gray-200 hover:border-[#E94E1B]/40'
+                        ? 'border-[#D60101]'
+                        : 'border-gray-200 hover:border-[#D60101]/40'
                     }`}
                   >
                     <h3 className="text-sm md:text-base font-bold text-gray-900">

@@ -18,7 +18,7 @@ export default function Pricing() {
             <div className="text-2xl md:text-3xl font-extrabold text-gray-900">
               {t('pricing.from')}
             </div>
-            <div className={`${TEXT_STAT} text-[#E94E1B] mt-2 leading-none`}>1.1</div>
+            <div className={`${TEXT_STAT} text-[#D60101] mt-2 leading-none`}>1.1</div>
             <div className="text-xl md:text-2xl font-extrabold text-gray-900 mt-2">
               {t('pricing.pips')}
             </div>
@@ -28,7 +28,7 @@ export default function Pricing() {
             <Eyebrow>{t('pricing.eyebrow')}</Eyebrow>
             <h2 className={`mt-4 ${HEADING_SECTION}`}>
               {t('pricing.titleA')}{' '}
-              <span className="text-[#E94E1B]">{t('pricing.titleB')}</span>
+              <span className="text-[#D60101]">{t('pricing.titleB')}</span>
             </h2>
             <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed">
               {t('pricing.lead')}
@@ -39,7 +39,7 @@ export default function Pricing() {
               {CARD_IDS.map((id) => (
                 <div
                   key={id}
-                  className="bg-white border border-gray-200 hover:border-[#E94E1B]/40 hover:shadow-md transition-all rounded-xl p-5 flex flex-col gap-3"
+                  className="bg-white border border-gray-200 hover:border-[#D60101]/40 hover:shadow-md transition-all rounded-xl p-5 flex flex-col gap-3"
                 >
                   <h3 className="text-sm font-bold text-gray-900 leading-snug">
                     {t(`pricing.cards.${id}.t`)}
@@ -63,7 +63,7 @@ export default function Pricing() {
               <button
                 type="button"
                 aria-label="Next"
-                className="w-9 h-9 rounded-full bg-[#E94E1B] text-white flex items-center justify-center hover:bg-[#C73E11] transition-colors"
+                className="w-9 h-9 rounded-full bg-[#D60101] text-white flex items-center justify-center hover:bg-[#A30000] transition-colors"
               >
                 <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
               </button>

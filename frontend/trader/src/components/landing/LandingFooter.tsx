@@ -29,30 +29,30 @@ export default function LandingFooter() {
           <div>
             <p className="font-semibold text-gray-900 mb-4">Products</p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li><Link href="/platforms" className="hover:text-[#E94E1B] transition-colors">Trading Platforms</Link></li>
-              <li><Link href="/auth/register" className="hover:text-[#E94E1B] transition-colors">Open Live Account</Link></li>
-              <li><Link href="/demo-account" className="hover:text-[#E94E1B] transition-colors">Demo Account</Link></li>
-              <li><Link href="/partners" className="hover:text-[#E94E1B] transition-colors">Become a Partner</Link></li>
+              <li><Link href="/platforms" className="hover:text-[#D60101] transition-colors">Trading Platforms</Link></li>
+              <li><Link href="/auth/register" className="hover:text-[#D60101] transition-colors">Open Live Account</Link></li>
+              <li><Link href="/demo-account" className="hover:text-[#D60101] transition-colors">Demo Account</Link></li>
+              <li><Link href="/partners" className="hover:text-[#D60101] transition-colors">Become a Partner</Link></li>
             </ul>
           </div>
 
           <div>
             <p className="font-semibold text-gray-900 mb-4">Company</p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li><Link href="/about" className="hover:text-[#E94E1B] transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="hover:text-[#E94E1B] transition-colors">Contact</Link></li>
-              <li><Link href="/policy" className="hover:text-[#E94E1B] transition-colors">Policy & Legal</Link></li>
+              <li><Link href="/about" className="hover:text-[#D60101] transition-colors">About Us</Link></li>
+              <li><Link href="/contact" className="hover:text-[#D60101] transition-colors">Contact</Link></li>
+              <li><Link href="/policy" className="hover:text-[#D60101] transition-colors">Policy & Legal</Link></li>
             </ul>
           </div>
 
           <div>
             <p className="font-semibold text-gray-900 mb-4">Support</p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li><Link href="/contact" className="hover:text-[#E94E1B] transition-colors">Contact Support</Link></li>
+              <li><Link href="/contact" className="hover:text-[#D60101] transition-colors">Contact Support</Link></li>
               <li>
                 <a
                   href="tel:+33759159987"
-                  className="inline-flex items-center gap-2 hover:text-[#E94E1B] transition-colors"
+                  className="inline-flex items-center gap-2 hover:text-[#D60101] transition-colors"
                 >
                   <Phone className="w-4 h-4 shrink-0" />
                   <span>+33 7 59 15 99 87</span>
@@ -65,10 +65,10 @@ export default function LandingFooter() {
         <div className="border-t border-gray-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-400 text-sm">&copy; {new Date().getFullYear()} TuskaEx. All rights reserved.</p>
           <div className="flex items-center gap-5 text-sm text-gray-400">
-            <Link href="/privacy" className="hover:text-[#E94E1B] transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-[#E94E1B] transition-colors">Terms of Service</Link>
-            <Link href="/risk" className="hover:text-[#E94E1B] transition-colors">Risk Disclosure</Link>
-            <Link href="/account-deletion" className="hover:text-[#E94E1B] transition-colors">Account Deletion</Link>
+            <Link href="/privacy" className="hover:text-[#D60101] transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-[#D60101] transition-colors">Terms of Service</Link>
+            <Link href="/risk" className="hover:text-[#D60101] transition-colors">Risk Disclosure</Link>
+            <Link href="/account-deletion" className="hover:text-[#D60101] transition-colors">Account Deletion</Link>
           </div>
         </div>
       </div>

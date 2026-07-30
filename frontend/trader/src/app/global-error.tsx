@@ -78,7 +78,7 @@ export default function GlobalError({
             href="/"
             style={{
               display: 'inline-block',
-              background: '#E94E1B',
+              background: '#D60101',
               color: '#ffffff',
               fontWeight: 600,
               padding: '12px 24px',

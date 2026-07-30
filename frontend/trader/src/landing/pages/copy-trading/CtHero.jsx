@@ -27,7 +27,7 @@ export default function CtHero() {
         className="absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(8,9,11,0.55) 0%, rgba(8,9,11,0.78) 100%), radial-gradient(60% 60% at 80% 25%, rgba(233,78,27,0.10) 0%, rgba(233,78,27,0) 60%)',
+            'linear-gradient(180deg, rgba(8,9,11,0.55) 0%, rgba(8,9,11,0.78) 100%), radial-gradient(60% 60% at 80% 25%, rgba(214,1,1,0.10) 0%, rgba(214,1,1,0) 60%)',
         }}
       />
       <div className="fx-container relative z-10 w-full pt-28 md:pt-32 lg:pt-36 pb-16 md:pb-20">
@@ -67,8 +67,8 @@ export default function CtHero() {
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{
-                    background: 'rgba(233,78,27,0.10)',
-                    border: '1px solid rgba(233,78,27,0.30)',
+                    background: 'rgba(214,1,1,0.10)',
+                    border: '1px solid rgba(214,1,1,0.30)',
                   }}
                 >
                   <Icon size={14} style={{ color: 'var(--fx-gold-light)' }} />

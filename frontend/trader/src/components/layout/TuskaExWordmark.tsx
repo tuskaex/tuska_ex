@@ -46,14 +46,14 @@ export function TuskaExWordmark({
         title="Trading home"
         className={cn(
           'flex items-center justify-center rounded-md hover:bg-bg-hover w-9 h-9 transition-colors',
-          'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[#E94E1B]',
+          'focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-[#D60101]',
           className,
         )}
       >
         {hideFlag ? (
           <span className="inline-flex items-baseline font-bold tracking-tight text-base select-none">
             <span className="text-text-primary">T</span>
-            <span className="text-[#E94E1B]">E</span>
+            <span className="text-[#D60101]">E</span>
           </span>
         ) : (
           <Image
@@ -81,7 +81,7 @@ export function TuskaExWordmark({
       href={href}
       aria-label="TuskaEx home"
       className={cn(
-        'inline-flex items-center min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E94E1B]/60 focus-visible:rounded-md',
+        'inline-flex items-center min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D60101]/60 focus-visible:rounded-md',
         className,
       )}
     >

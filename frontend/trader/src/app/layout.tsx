@@ -126,7 +126,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 loading: {
                   duration: Infinity,
                   className: 'tuskaex-hot-toast',
-                  iconTheme: { primary: '#E94E1B', secondary: 'var(--toast-bg)' },
+                  iconTheme: { primary: '#D60101', secondary: 'var(--toast-bg)' },
                 },
               }}
             />

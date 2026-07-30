@@ -22,20 +22,20 @@ export default function DifferentBank() {
               <div className="relative w-full max-w-[680px] aspect-[5/4]">
                 <div
                   aria-hidden="true"
-                  className="absolute inset-6 rounded-[2rem] bg-[#E94E1B]/20 blur-3xl"
+                  className="absolute inset-6 rounded-[2rem] bg-[#D60101]/20 blur-3xl"
                 />
                 <Image
                   src="/assets/bull.png"
                   alt="TuskaEx — bullish on your future"
                   fill
                   sizes="(max-width: 768px) 100vw, 680px"
-                  className="relative object-contain drop-shadow-[0_28px_48px_rgba(233,78,27,0.28)]"
+                  className="relative object-contain drop-shadow-[0_28px_48px_rgba(214,1,1,0.28)]"
                 />
               </div>
             </div>
             <div className="md:col-span-7 order-1 md:order-2">
               <h2 className={HEADING_SECTION}>
-                {t('bank.titleA')} <span className="text-[#E94E1B]">{t('bank.titleB')}</span>
+                {t('bank.titleA')} <span className="text-[#D60101]">{t('bank.titleB')}</span>
               </h2>
               <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed">
                 {t('bank.lead')}
@@ -47,14 +47,14 @@ export default function DifferentBank() {
           </div>
 
           <div className="mt-14">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E94E1B]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
               {t('bank.eyebrow')}
             </p>
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               {CARD_KEYS.map((card) => (
                 <div
                   key={card.id}
-                  className="bg-white rounded-xl p-7 md:p-8 flex flex-col gap-4 border border-gray-200/60 hover:border-[#E94E1B]/40 hover:shadow-lg transition-all"
+                  className="bg-white rounded-xl p-7 md:p-8 flex flex-col gap-4 border border-gray-200/60 hover:border-[#D60101]/40 hover:shadow-lg transition-all"
                 >
                   <h3 className="text-xl md:text-2xl font-bold text-gray-900">
                     {t(`bank.cards.${card.id}.title`)}

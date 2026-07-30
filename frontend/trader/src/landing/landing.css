@@ -24,9 +24,9 @@
   /* Accent palette — indigo primary, amber highlight.
      Names kept as --fx-gold* so existing components still
      compile without a per-file rewrite. */
-  --fx-gold:         #E94E1B;   /* primary accent — TuskaEx indigo */
-  --fx-gold-light:   #F58A60;   /* highlight / hover */
-  --fx-gold-dark:    #C73E11;   /* deep indigo (pressed / borders) */
+  --fx-gold:         #D60101;   /* primary accent — TuskaEx indigo */
+  --fx-gold-light:   #F14A4A;   /* highlight / hover */
+  --fx-gold-dark:    #A30000;   /* deep indigo (pressed / borders) */
   --fx-gold-soft:    rgba(99, 102, 241, 0.12);
 
   /* Secondary accent for "earn" / highlight chips. Used by
@@ -168,17 +168,17 @@
   /* ── Squishy 3D "Explore" pill ─────────────────────────────
      Cream face sitting on a solid orange base + soft drop, so it
      reads as a physical, pressable button. On :active the face
-     drops into its base (the "squish"). Orange theme = #E94E1B;
+     drops into its base (the "squish"). Orange theme = #D60101;
      base/drop use a darker orange (#B23A12) instead of black. */
   .fx-explore-btn {
     display: inline-flex; align-items: center; gap: .5rem;
     background: #FBF8F2;
-    color: #E94E1B;
+    color: #D60101;
     font-weight: 700;
     line-height: 1;
     padding: .7rem 1.5rem;
     border-radius: 9999px;
-    border: 2px solid #E94E1B;
+    border: 2px solid #D60101;
     box-shadow: 0 2px 0 0 #B23A12,
                 0 6px 12px -5px rgba(178,58,18,0.45);
     transform: translateY(0);
@@ -686,7 +686,7 @@
        page-banner purge — pure-CSS radial glow + dark gradient gives
        the section depth without an asset dependency. */
     background:
-      radial-gradient(ellipse 70% 55% at 50% 30%, rgba(233,78,27,0.18), transparent 65%),
+      radial-gradient(ellipse 70% 55% at 50% 30%, rgba(214,1,1,0.18), transparent 65%),
       linear-gradient(to bottom, rgba(8,9,11,0.65), rgba(8,9,11,0.95)),
       var(--fx-bg);
   }

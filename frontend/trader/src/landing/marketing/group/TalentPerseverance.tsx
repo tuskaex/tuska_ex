@@ -29,7 +29,7 @@ export default function TalentPerseverance() {
             </div>
           </div>
 
-          <div className="bg-[#E94E1B] text-white rounded-2xl p-6 md:p-8 flex flex-col gap-4">
+          <div className="bg-[#D60101] text-white rounded-2xl p-6 md:p-8 flex flex-col gap-4">
             <ImagePlaceholder
               label="Article"
               rounded="rounded-md"

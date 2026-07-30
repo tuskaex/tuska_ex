@@ -59,7 +59,7 @@ export default function AdminLoginPage() {
         {/* Decorative orange ball behind the left panel */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent to-black/60" />
-          <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#E94E1B] rounded-full opacity-90" />
+          <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#D60101] rounded-full opacity-90" />
           <div className="absolute -bottom-6 left-32 w-32 h-20 bg-white rounded-full opacity-90 blur-2xl" />
         </div>
 
@@ -97,7 +97,7 @@ export default function AdminLoginPage() {
         {/* Right form panel */}
         <div className="p-8 md:p-12 md:w-1/2 flex flex-col justify-center bg-white text-[#0A0A0A] relative z-20">
           <div className="mb-8">
-            <p className="text-sm uppercase tracking-wider text-[#E94E1B] font-semibold mb-3">
+            <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
               Admin access
             </p>
             <h2 className="text-3xl font-medium mb-2 tracking-tight">Operator console</h2>
@@ -114,7 +114,7 @@ export default function AdminLoginPage() {
                   id="email"
                   autoComplete="email"
                   placeholder="admin@tuskaex.com"
-                  className="text-sm w-full py-2.5 pl-10 pr-3 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E94E1B]/20 focus:border-[#E94E1B] bg-white text-black transition-colors"
+                  className="text-sm w-full py-2.5 pl-10 pr-3 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D60101]/20 focus:border-[#D60101] bg-white text-black transition-colors"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -130,7 +130,7 @@ export default function AdminLoginPage() {
                   id="password"
                   autoComplete="current-password"
                   placeholder="••••••••"
-                  className="text-sm w-full py-2.5 pl-10 pr-10 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E94E1B]/20 focus:border-[#E94E1B] bg-white text-black transition-colors"
+                  className="text-sm w-full py-2.5 pl-10 pr-10 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D60101]/20 focus:border-[#D60101] bg-white text-black transition-colors"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -155,7 +155,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#E94E1B] hover:bg-[#C73E11] disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-[#D60101] hover:bg-[#A30000] disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2 mt-2"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? 'Signing in…' : 'Sign in'}

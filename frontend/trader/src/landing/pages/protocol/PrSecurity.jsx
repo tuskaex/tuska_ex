@@ -45,8 +45,8 @@ export default function PrSecurity() {
                   <div
                     className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
                     style={{
-                      background: 'rgba(233,78,27,0.08)',
-                      border: '1px solid rgba(233,78,27,0.28)',
+                      background: 'rgba(214,1,1,0.08)',
+                      border: '1px solid rgba(214,1,1,0.28)',
                     }}
                   >
                     <Icon size={20} style={{ color: 'var(--fx-gold-light)' }} />

@@ -26,14 +26,14 @@ export default function PrTable() {
             style={{
               background:
                 'linear-gradient(180deg, var(--fx-bg-elev) 0%, var(--fx-bg-elev-2) 100%)',
-              border: '1px solid rgba(233,78,27,0.32)',
-              boxShadow: '0 30px 70px -30px rgba(233,78,27,0.30)',
+              border: '1px solid rgba(214,1,1,0.32)',
+              boxShadow: '0 30px 70px -30px rgba(214,1,1,0.30)',
             }}
           >
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px]">
                 <thead>
-                  <tr style={{ background: 'rgba(233,78,27,0.06)', borderBottom: '1px solid var(--fx-line)' }}>
+                  <tr style={{ background: 'rgba(214,1,1,0.06)', borderBottom: '1px solid var(--fx-line)' }}>
                     <th
                       className="text-left px-5 md:px-7 py-4 text-[11px] font-bold uppercase tracking-[0.22em]"
                       style={{ color: 'var(--fx-text-3)' }}

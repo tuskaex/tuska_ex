@@ -20,7 +20,7 @@ export default function IbBestForYou() {
             <ul className="mt-8 flex flex-col gap-4">
               {ITEMS.map((item) => (
                 <li key={item} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#E94E1B] text-white flex-shrink-0">
+                  <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D60101] text-white flex-shrink-0">
                     <Check className="w-3 h-3" strokeWidth={3} />
                   </span>
                   <span className="text-sm md:text-[15px] text-gray-900">{item}</span>

@@ -19,7 +19,7 @@ export default function YourAdvantages() {
               key={text}
               className="bg-gray-50 rounded-2xl p-6 md:p-7 flex flex-col gap-4"
             >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#E94E1B] text-white">
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-[#D60101] text-white">
                 <Check className="w-5 h-5" strokeWidth={3} />
               </span>
               <p className="text-sm md:text-[15px] text-gray-900 leading-relaxed">{text}</p>

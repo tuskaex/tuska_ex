@@ -41,8 +41,8 @@ export default function TxExample() {
             style={{
               background:
                 'linear-gradient(180deg, var(--fx-bg-elev-2) 0%, var(--fx-bg-elev) 100%)',
-              border: '1px solid rgba(233,78,27,0.32)',
-              boxShadow: '0 30px 70px -30px rgba(233,78,27,0.30)',
+              border: '1px solid rgba(214,1,1,0.32)',
+              boxShadow: '0 30px 70px -30px rgba(214,1,1,0.30)',
             }}
           >
             {/* Header */}
@@ -50,7 +50,7 @@ export default function TxExample() {
               className="flex items-center justify-between px-6 md:px-7 py-4"
               style={{
                 borderBottom: '1px solid var(--fx-line)',
-                background: 'rgba(233,78,27,0.04)',
+                background: 'rgba(214,1,1,0.04)',
               }}
             >
               <div className="flex items-center gap-3">
@@ -118,10 +118,10 @@ export default function TxExample() {
                         className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
                         style={{
                           background:
-                            tradeSize === v ? 'rgba(233,78,27,0.18)' : 'rgba(255,255,255,0.04)',
+                            tradeSize === v ? 'rgba(214,1,1,0.18)' : 'rgba(255,255,255,0.04)',
                           border:
                             tradeSize === v
-                              ? '1px solid rgba(233,78,27,0.55)'
+                              ? '1px solid rgba(214,1,1,0.55)'
                               : '1px solid var(--fx-line-strong)',
                           color: tradeSize === v ? 'var(--fx-gold-light)' : 'var(--fx-text-2)',
                         }}
@@ -147,7 +147,7 @@ export default function TxExample() {
                     step={1}
                     value={leverage}
                     onChange={(e) => setLeverage(Number(e.target.value))}
-                    className="mt-3 w-full accent-[#F58A60]"
+                    className="mt-3 w-full accent-[#F14A4A]"
                   />
                   <div className="mt-1 flex justify-between text-[10px]" style={{ color: 'var(--fx-text-3)' }}>
                     <span>1Ã—</span>
@@ -211,7 +211,7 @@ export default function TxExample() {
                 />
                 <Row
                   icon={Receipt}
-                  iconColor="#F58A60"
+                  iconColor="#F14A4A"
                   label="Brokerage"
                   value={`$${fmt(brokerage)}`}
                   sub="Applied on execution"
@@ -253,7 +253,7 @@ export default function TxExample() {
               className="px-6 md:px-7 py-4 text-xs text-center"
               style={{
                 borderTop: '1px solid var(--fx-line)',
-                background: 'rgba(233,78,27,0.04)',
+                background: 'rgba(214,1,1,0.04)',
                 color: 'var(--fx-text-3)',
               }}
             >

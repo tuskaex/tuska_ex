@@ -23,7 +23,7 @@ export default function NumberWorthThousand() {
 
         <div className="mt-10 grid grid-cols-2 lg:grid-cols-4 gap-4">
           {STATS.map((s) => (
-            <div key={s.label} className="bg-[#E94E1B] text-white rounded-2xl p-6 md:p-7">
+            <div key={s.label} className="bg-[#D60101] text-white rounded-2xl p-6 md:p-7">
               <p className="text-xs uppercase tracking-[0.15em] font-semibold text-white/90">
                 {s.label}
               </p>

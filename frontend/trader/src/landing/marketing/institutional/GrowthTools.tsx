@@ -32,7 +32,7 @@ export default function GrowthTools() {
 
         <div className="relative mt-12 max-w-5xl mx-auto">
           <ImagePlaceholder label="Trading Platform" className="w-full aspect-[16/9]" />
-          <div className="hidden md:block absolute -left-4 bottom-10 bg-[#E94E1B] text-white rounded-xl shadow-xl p-4 w-56">
+          <div className="hidden md:block absolute -left-4 bottom-10 bg-[#D60101] text-white rounded-xl shadow-xl p-4 w-56">
             <div className="text-[10px] uppercase tracking-wider opacity-80">Trading Platform</div>
             <p className="mt-2 text-xs leading-relaxed">
               Our dedicated trading platform for institutional clients. Easy on the eye, intuitive

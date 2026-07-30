@@ -11,16 +11,16 @@ export default function CtCTA() {
             className="relative rounded-3xl p-8 md:p-12 lg:p-14 overflow-hidden"
             style={{
               background:
-                'linear-gradient(135deg, rgba(233,78,27,0.18) 0%, var(--fx-bg-elev-2) 60%), var(--fx-bg-elev)',
-              border: '1px solid rgba(233,78,27,0.35)',
-              boxShadow: '0 40px 80px -30px rgba(233,78,27,0.35)',
+                'linear-gradient(135deg, rgba(214,1,1,0.18) 0%, var(--fx-bg-elev-2) 60%), var(--fx-bg-elev)',
+              border: '1px solid rgba(214,1,1,0.35)',
+              boxShadow: '0 40px 80px -30px rgba(214,1,1,0.35)',
             }}
           >
             <div
               className="absolute -top-px left-[8%] right-[8%] h-px"
               style={{
                 background:
-                  'linear-gradient(90deg, transparent, rgba(233,78,27,0.85), transparent)',
+                  'linear-gradient(90deg, transparent, rgba(214,1,1,0.85), transparent)',
               }}
             />
             <div className="absolute inset-0 fx-grid-bg pointer-events-none" />
@@ -30,7 +30,7 @@ export default function CtCTA() {
                 <span className="badge mb-5" style={{ display: 'inline-flex' }}>
                   <span
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: 'var(--fx-gold)', boxShadow: '0 0 8px rgba(233,78,27,0.7)' }}
+                    style={{ background: 'var(--fx-gold)', boxShadow: '0 0 8px rgba(214,1,1,0.7)' }}
                   />
                   Copy Trading
                 </span>

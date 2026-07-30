@@ -12,7 +12,7 @@ function AnnualReportCard({ dare, inWord, action, label }: AnnualReportCardProps
     <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 flex items-center gap-5 min-h-[200px]">
       <div className="relative w-32 h-44 md:w-40 md:h-52 bg-gray-50 rounded-md shadow-md flex items-center justify-center flex-shrink-0">
         <span
-          className="absolute -right-3 top-4 w-10 h-10 rounded-full bg-[#E94E1B]"
+          className="absolute -right-3 top-4 w-10 h-10 rounded-full bg-[#D60101]"
           aria-hidden="true"
         />
         <span className="font-extrabold text-gray-900 text-sm md:text-base uppercase tracking-tight text-center">
@@ -45,7 +45,7 @@ function InvestmentCard({ ir, caseTitle }: InvestmentCardProps) {
         </h3>
       </div>
       <div
-        className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 w-32 h-32 md:w-44 md:h-44 rounded-full border-[14px] md:border-[18px] border-[#E94E1B]/70"
+        className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 w-32 h-32 md:w-44 md:h-44 rounded-full border-[14px] md:border-[18px] border-[#D60101]/70"
         aria-hidden="true"
       />
     </div>
@@ -63,12 +63,12 @@ export default function AnnualReport() {
 
         <div className="mt-6 flex justify-end items-center gap-3">
           <span className="flex gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#E94E1B]" />
+            <span className="w-2 h-2 rounded-full bg-[#D60101]" />
             <span className="w-2 h-2 rounded-full bg-gray-200" />
           </span>
           <button
             type="button"
-            className="w-9 h-9 rounded-full bg-[#E94E1B] text-white flex items-center justify-center hover:bg-[#E94E1B] transition-colors"
+            className="w-9 h-9 rounded-full bg-[#D60101] text-white flex items-center justify-center hover:bg-[#D60101] transition-colors"
             aria-label="Next"
           >
             <ChevronRight className="w-4 h-4" strokeWidth={2.5} />

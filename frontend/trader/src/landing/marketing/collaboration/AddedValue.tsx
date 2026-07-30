@@ -43,11 +43,11 @@ function GaugeIllustration() {
   return (
     <div className="relative w-full aspect-[5/3] flex items-center justify-center">
       <div
-        className="relative w-44 h-24 md:w-56 md:h-32 border-[14px] md:border-[18px] border-[#E94E1B] rounded-t-full border-b-0"
+        className="relative w-44 h-24 md:w-56 md:h-32 border-[14px] md:border-[18px] border-[#D60101] rounded-t-full border-b-0"
         aria-hidden="true"
       >
         <span
-          className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#E94E1B] text-white flex items-center justify-center"
+          className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-8 h-8 md:w-10 md:h-10 rounded-full bg-[#D60101] text-white flex items-center justify-center"
           aria-hidden="true"
         >
           <User className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2.5} />
@@ -69,14 +69,14 @@ function ChartIllustration() {
         <polyline
           points="0,60 25,40 50,55 75,30 100,42 125,18 150,28 175,12 200,20"
           fill="none"
-          stroke="#E94E1B"
+          stroke="#D60101"
           strokeWidth="2.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <circle cx="75" cy="30" r="3" fill="#E94E1B" />
+        <circle cx="75" cy="30" r="3" fill="#D60101" />
       </svg>
-      <span className="absolute left-[36%] top-1 text-[11px] font-bold text-[#E94E1B] bg-[#E94E1B]/15 px-2 py-0.5 rounded">
+      <span className="absolute left-[36%] top-1 text-[11px] font-bold text-[#D60101] bg-[#D60101]/15 px-2 py-0.5 rounded">
         + 6%
       </span>
     </div>

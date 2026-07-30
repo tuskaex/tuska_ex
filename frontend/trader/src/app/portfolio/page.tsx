@@ -548,7 +548,7 @@ function PortfolioPageContent() {
 
       <DashboardShell mainClassName="flex items-center justify-center bg-bg-base">
         <div className="flex flex-col items-center gap-3 py-12">
-          <div className="w-8 h-8 border-2 border-[#E94E1B] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#D60101] border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-[#888]">Loading portfolio...</span>
         </div>
       </DashboardShell>
@@ -596,7 +596,7 @@ function PortfolioPageContent() {
               <select
                 value={validAccountId ?? ''}
                 onChange={(e) => onPickAccount(e.target.value)}
-                className="rounded-lg border border-[#E5E5E5] bg-white px-3 py-2 text-sm font-medium text-text-primary outline-none focus:border-[#E94E1B] cursor-pointer"
+                className="rounded-lg border border-[#E5E5E5] bg-white px-3 py-2 text-sm font-medium text-text-primary outline-none focus:border-[#D60101] cursor-pointer"
                 aria-label="Filter by trading account"
               >
                 <option value="">All accounts</option>
@@ -613,16 +613,16 @@ function PortfolioPageContent() {
         {invalidAccountParam ? (
           <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-text-primary">
             Invalid account id in the URL — showing your full portfolio.{' '}
-            <Link href="/portfolio" className="font-semibold text-[#E94E1B] underline underline-offset-2 hover:text-[#C73E11]">
+            <Link href="/portfolio" className="font-semibold text-[#D60101] underline underline-offset-2 hover:text-[#A30000]">
               Reset
             </Link>
           </div>
         ) : null}
 
         {validAccountId ? (
-          <div className="rounded-xl border border-[#E94E1B]/30 bg-[#E94E1B]/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-xl border border-[#D60101]/30 bg-[#D60101]/10 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#E94E1B]">Account scope</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[#D60101]">Account scope</p>
               <p className="text-sm text-text-primary mt-0.5">
                 Journal and trade list for{' '}
                 <span className="font-mono font-semibold">
@@ -632,7 +632,7 @@ function PortfolioPageContent() {
             </div>
             <Link
               href="/portfolio"
-              className="text-xs font-semibold text-[#E94E1B] hover:text-[#C73E11] underline underline-offset-2 shrink-0"
+              className="text-xs font-semibold text-[#D60101] hover:text-[#A30000] underline underline-offset-2 shrink-0"
             >
               View all accounts
             </Link>
@@ -996,7 +996,7 @@ function PortfolioPageContent() {
                       className={clsx(
                         'min-w-[32px] h-8 px-2 rounded-md text-xs font-semibold transition-colors border',
                         n === page
-                          ? 'bg-[#E94E1B] text-text-inverse border-[#E94E1B]'
+                          ? 'bg-[#D60101] text-text-inverse border-[#D60101]'
                           : 'bg-bg-card text-text-secondary border-border-primary hover:bg-bg-hover',
                       )}
                     >
@@ -1034,7 +1034,7 @@ export default function PortfolioPage() {
       fallback={(
         <DashboardShell mainClassName="flex items-center justify-center bg-bg-base">
           <div className="flex flex-col items-center gap-3 py-12">
-            <div className="w-8 h-8 border-2 border-[#E94E1B] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#D60101] border-t-transparent rounded-full animate-spin" />
             <span className="text-sm text-[#888]">Loading portfolio...</span>
           </div>
         </DashboardShell>

@@ -20,7 +20,7 @@ export default function TxHero() {
         className="absolute inset-0 z-0"
         style={{
           background:
-            'linear-gradient(180deg, rgba(8,9,11,0.55) 0%, rgba(8,9,11,0.78) 100%), radial-gradient(60% 60% at 80% 25%, rgba(233,78,27,0.10) 0%, rgba(233,78,27,0) 60%)',
+            'linear-gradient(180deg, rgba(8,9,11,0.55) 0%, rgba(8,9,11,0.78) 100%), radial-gradient(60% 60% at 80% 25%, rgba(214,1,1,0.10) 0%, rgba(214,1,1,0) 60%)',
         }}
       />
       <div className="fx-container relative z-10 w-full pt-28 md:pt-32 lg:pt-36 pb-16 md:pb-20">

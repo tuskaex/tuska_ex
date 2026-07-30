@@ -44,7 +44,7 @@ export default function JoinUs() {
                   className="border-b border-gray-200 hover:bg-gray-50/60 transition-colors"
                 >
                   <td className="px-4 py-3">
-                    <a href="#" className="text-[#E94E1B] hover:underline underline-offset-2">
+                    <a href="#" className="text-[#D60101] hover:underline underline-offset-2">
                       {job.title}
                     </a>
                   </td>
@@ -60,7 +60,7 @@ export default function JoinUs() {
         <div className="mt-6 flex flex-col items-center gap-4">
           <a
             href="#"
-            className="inline-flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-[#E94E1B] transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-semibold text-gray-900 hover:text-[#D60101] transition-colors"
           >
             <span>See more</span>
             <Plus className="w-4 h-4" strokeWidth={2.5} />

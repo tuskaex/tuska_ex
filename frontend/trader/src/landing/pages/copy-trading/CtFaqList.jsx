@@ -18,7 +18,7 @@ export default function CtFaqList({ items, title = 'FAQ' }) {
       <div
         className="flex items-center gap-2 px-5 md:px-6 py-3.5"
         style={{
-          background: 'rgba(233,78,27,0.05)',
+          background: 'rgba(214,1,1,0.05)',
           borderBottom: '1px solid var(--fx-line)',
         }}
       >
@@ -45,7 +45,7 @@ export default function CtFaqList({ items, title = 'FAQ' }) {
                 onClick={() => setOpen(isOpen ? null : i)}
                 className="w-full flex items-center justify-between gap-4 px-5 md:px-6 py-4 text-left transition-colors"
                 style={{
-                  background: isOpen ? 'rgba(233,78,27,0.04)' : 'transparent',
+                  background: isOpen ? 'rgba(214,1,1,0.04)' : 'transparent',
                 }}
               >
                 <span className="text-sm md:text-[15px] font-semibold text-white">

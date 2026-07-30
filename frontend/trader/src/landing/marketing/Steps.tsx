@@ -22,7 +22,7 @@ export default function Steps() {
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 py-20 md:py-28">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className={HEADING_SECTION}>
-            {t('steps.titleA')} <span className="text-[#E94E1B]">{t('steps.titleB')}</span>
+            {t('steps.titleA')} <span className="text-[#D60101]">{t('steps.titleB')}</span>
           </h2>
         </div>
 

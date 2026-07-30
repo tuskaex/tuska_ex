@@ -17,7 +17,7 @@ export default function CareersHero() {
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 pt-10 pb-16 md:pt-14 md:pb-20">
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-start">
           <div className="lg:col-span-7 order-2 lg:order-1">
-            <h1 className={`${TEXT_DISPLAY} text-[#E94E1B] leading-[0.9]`}>All in!</h1>
+            <h1 className={`${TEXT_DISPLAY} text-[#D60101] leading-[0.9]`}>All in!</h1>
             <p className="mt-7 max-w-xl text-base md:text-lg text-gray-600 leading-relaxed">
               We are building the bank of tomorrow. This means combining our differences to
               imagine, discuss, code, develop, test, learn… and celebrate every step together. It

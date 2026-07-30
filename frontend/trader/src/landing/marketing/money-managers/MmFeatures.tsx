@@ -14,16 +14,16 @@ function ClockIllustration() {
   return (
     <div className="relative bg-gray-50 rounded-3xl aspect-square w-full max-w-sm mx-auto flex items-center justify-center overflow-hidden">
       <span
-        className="absolute top-12 left-10 w-10 h-10 rounded-full bg-[#E94E1B]/30"
+        className="absolute top-12 left-10 w-10 h-10 rounded-full bg-[#D60101]/30"
         aria-hidden="true"
       />
       <span
         className="absolute bottom-12 right-12 w-3 h-3 rounded-full bg-gray-900"
         aria-hidden="true"
       />
-      <div className="relative w-44 h-44 md:w-52 md:h-52 rounded-full bg-[#E94E1B] flex items-center justify-center shadow-lg">
+      <div className="relative w-44 h-44 md:w-52 md:h-52 rounded-full bg-[#D60101] flex items-center justify-center shadow-lg">
         <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-white flex items-center justify-center">
-          <Clock className="w-20 h-20 md:w-24 md:h-24 text-[#E94E1B]" strokeWidth={1.5} />
+          <Clock className="w-20 h-20 md:w-24 md:h-24 text-[#D60101]" strokeWidth={1.5} />
         </div>
       </div>
     </div>
@@ -42,7 +42,7 @@ export default function MmFeatures() {
             <ul className="mt-7 flex flex-col gap-3">
               {FEATURES.map((f) => (
                 <li key={f} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#E94E1B] text-white flex-shrink-0">
+                  <span className="mt-0.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#D60101] text-white flex-shrink-0">
                     <Check className="w-3 h-3" strokeWidth={3} />
                   </span>
                   <span className="text-sm text-gray-900">{f}</span>

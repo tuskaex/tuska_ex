@@ -219,8 +219,8 @@ function BrokerHome() {
         <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-                <WalletIcon size={20} className="text-[#E94E1B]" />
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+                <WalletIcon size={20} className="text-[#D60101]" />
               </div>
               <p className="text-[11px] uppercase tracking-wide font-semibold text-text-tertiary">Total Balance</p>
             </div>
@@ -235,10 +235,10 @@ function BrokerHome() {
         <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
                 {todaysPnl >= 0
-                  ? <TrendingUp size={20} className="text-[#E94E1B]" />
-                  : <TrendingDown size={20} className="text-[#E94E1B]" />}
+                  ? <TrendingUp size={20} className="text-[#D60101]" />
+                  : <TrendingDown size={20} className="text-[#D60101]" />}
               </div>
               <p className="text-[11px] uppercase tracking-wide font-semibold text-text-tertiary">Open P/L</p>
             </div>
@@ -266,31 +266,31 @@ function BrokerHome() {
             const id = activeId || accounts[0]!.id;
             router.push(`/trading/terminal?account=${encodeURIComponent(id)}&view=chart`);
           }}
-          className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#E94E1B] transition-colors flex items-center gap-4 text-left"
+          className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-            <BarChart3 size={22} className="text-[#E94E1B]" />
+          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+            <BarChart3 size={22} className="text-[#D60101]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold text-text-primary truncate">Trade Now</p>
             <p className="text-xs text-text-secondary mt-0.5">Start Trading</p>
           </div>
-          <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#E94E1B] group-hover:translate-x-1 transition-all shrink-0" />
+          <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#D60101] group-hover:translate-x-1 transition-all shrink-0" />
         </button>
 
         <button
           type="button"
           onClick={() => router.push('/social')}
-          className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#E94E1B] transition-colors flex items-center gap-4 text-left"
+          className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-            <Users size={22} className="text-[#E94E1B]" />
+          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+            <Users size={22} className="text-[#D60101]" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-base font-bold text-text-primary truncate">Copy Trading</p>
             <p className="text-xs text-text-secondary mt-0.5">Copy Top Traders</p>
           </div>
-          <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#E94E1B] group-hover:translate-x-1 transition-all shrink-0" />
+          <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#D60101] group-hover:translate-x-1 transition-all shrink-0" />
         </button>
 
         {/* Add Funds tile is meaningless for try-with-demo users — demo
@@ -299,16 +299,16 @@ function BrokerHome() {
           <button
             type="button"
             onClick={() => router.push('/wallet')}
-            className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#E94E1B] transition-colors flex items-center gap-4 text-left"
+            className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-              <WalletIcon size={22} className="text-[#E94E1B]" />
+            <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <WalletIcon size={22} className="text-[#D60101]" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-bold text-text-primary truncate">Add Funds</p>
               <p className="text-xs text-text-secondary mt-0.5">Deposit Now</p>
             </div>
-            <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#E94E1B] group-hover:translate-x-1 transition-all shrink-0" />
+            <ArrowRight size={20} className="text-text-tertiary group-hover:text-[#D60101] group-hover:translate-x-1 transition-all shrink-0" />
           </button>
         )}
       </div>
@@ -352,7 +352,7 @@ function AccountBalanceCard({
               className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
               style={a?.is_demo
                 ? { color: '#f59e0b', background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)' }
-                : { color: '#E94E1B', background: 'rgba(233,78,27,0.12)', border: '1px solid rgba(233,78,27,0.3)' }}
+                : { color: '#D60101', background: 'rgba(214,1,1,0.12)', border: '1px solid rgba(214,1,1,0.3)' }}
             >
               {a?.is_demo ? 'Demo' : 'Real'}
             </span>
@@ -382,7 +382,7 @@ function AccountBalanceCard({
                     className="text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded"
                     style={acc.is_demo
                       ? { color: '#f59e0b', background: 'rgba(245,158,11,0.12)' }
-                      : { color: '#E94E1B', background: 'rgba(233,78,27,0.12)' }}
+                      : { color: '#D60101', background: 'rgba(214,1,1,0.12)' }}
                   >
                     {acc.is_demo ? 'Demo' : 'Real'}
                   </span>
@@ -401,7 +401,7 @@ function AccountBalanceCard({
             <Link
               href="/wallet"
               className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-bold transition-colors"
-              style={{ background: '#E94E1B', color: '#ffffff' }}
+              style={{ background: '#D60101', color: '#ffffff' }}
             >
               <ArrowDownToLine size={14} /> Deposit
             </Link>
@@ -456,7 +456,7 @@ function Stat({ label, value, highlight }: { label: string; value: string; highl
       <p className="text-[10px] uppercase tracking-[0.14em] font-medium text-text-tertiary">{label}</p>
       <p
         className={clsx('mt-1 font-bold tabular-nums', highlight ? 'text-xl md:text-2xl' : 'text-base md:text-lg')}
-        style={{ color: highlight ? '#E94E1B' : 'var(--text-primary)' }}
+        style={{ color: highlight ? '#D60101' : 'var(--text-primary)' }}
       >
         {value}
       </p>
@@ -538,7 +538,7 @@ function BannerStrip({ banners }: { banners: Banner[] }) {
             <span
               key={i}
               className="w-1.5 h-1.5 rounded-full transition-colors"
-              style={{ background: i === index ? '#E94E1B' : 'rgba(255,255,255,0.4)' }}
+              style={{ background: i === index ? '#D60101' : 'rgba(255,255,255,0.4)' }}
             />
           ))}
         </div>

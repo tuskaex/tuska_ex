@@ -30,7 +30,7 @@ export default function IbRockSolid() {
   return (
     <section className="bg-white">
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 py-16 md:py-24">
-        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold uppercase tracking-tight text-[#E94E1B] text-center max-w-3xl mx-auto leading-tight">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold uppercase tracking-tight text-[#D60101] text-center max-w-3xl mx-auto leading-tight">
           Rely on a rock-solid partner
         </h2>
 

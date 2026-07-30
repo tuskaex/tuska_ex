@@ -33,7 +33,7 @@ export default function CtHow() {
               className="hidden md:block absolute top-[42px] left-[8%] right-[8%] h-px pointer-events-none"
               style={{
                 backgroundImage:
-                  'repeating-linear-gradient(90deg, rgba(233,78,27,0.5) 0 6px, transparent 6px 14px)',
+                  'repeating-linear-gradient(90deg, rgba(214,1,1,0.5) 0 6px, transparent 6px 14px)',
               }}
             />
             {steps.map((s, i) => {
@@ -46,9 +46,9 @@ export default function CtHow() {
                       style={{
                         background:
                           'linear-gradient(180deg, var(--fx-bg) 0%, var(--fx-bg-elev-2) 100%)',
-                        border: '1px solid rgba(233,78,27,0.28)',
+                        border: '1px solid rgba(214,1,1,0.28)',
                         boxShadow:
-                          '0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 32px -16px rgba(233,78,27,0.32)',
+                          '0 1px 0 rgba(255,255,255,0.06) inset, 0 12px 32px -16px rgba(214,1,1,0.32)',
                       }}
                     >
                       <Icon size={26} style={{ color: 'var(--fx-gold-light)' }} />
@@ -58,7 +58,7 @@ export default function CtHow() {
                           background:
                             'linear-gradient(180deg, var(--fx-gold-light), var(--fx-gold))',
                           color: '#1a1408',
-                          boxShadow: '0 6px 16px -6px rgba(233,78,27,0.55)',
+                          boxShadow: '0 6px 16px -6px rgba(214,1,1,0.55)',
                         }}
                       >
                         {i + 1}

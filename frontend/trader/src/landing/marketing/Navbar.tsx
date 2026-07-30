@@ -105,7 +105,7 @@ function DropdownCard({ title, body, accent = 'currency' }: DropdownCardProps) {
       <p className="absolute z-10 bottom-16 left-6 right-6 text-sm text-gray-900/80 leading-relaxed max-w-[60%]">
         {body}
       </p>
-      <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-gray-900/40 flex items-center justify-center text-gray-900 z-10 group-hover:border-[#E94E1B] group-hover:text-[#E94E1B] transition-colors">
+      <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-gray-900/40 flex items-center justify-center text-gray-900 z-10 group-hover:border-[#D60101] group-hover:text-[#D60101] transition-colors">
         <ChevronRight className="w-4 h-4" strokeWidth={2} />
       </span>
     </a>
@@ -126,7 +126,7 @@ function FeaturedHero({ title, body, accent = 'orange' }: FeaturedHeroProps) {
         href={href}
         className="group relative block rounded-2xl overflow-hidden h-full min-h-[420px] bg-[#475a6b] text-white"
       >
-        <span className="absolute top-0 bottom-0 left-0 w-1.5 bg-[#E94E1B] z-20" aria-hidden="true" />
+        <span className="absolute top-0 bottom-0 left-0 w-1.5 bg-[#D60101] z-20" aria-hidden="true" />
         <div
           className="absolute inset-0 z-0"
           style={{
@@ -143,7 +143,7 @@ function FeaturedHero({ title, body, accent = 'orange' }: FeaturedHeroProps) {
           aria-hidden="true"
         />
         <p className="absolute bottom-6 left-8 right-16 text-sm font-semibold leading-snug z-10">{body}</p>
-        <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-white/70 flex items-center justify-center text-white z-10 group-hover:bg-white group-hover:text-[#E94E1B] transition-colors">
+        <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-white/70 flex items-center justify-center text-white z-10 group-hover:bg-white group-hover:text-[#D60101] transition-colors">
           <ChevronRight className="w-4 h-4" strokeWidth={2} />
         </span>
       </a>
@@ -153,13 +153,13 @@ function FeaturedHero({ title, body, accent = 'orange' }: FeaturedHeroProps) {
     <a
       href={href}
       className={`group relative block rounded-2xl overflow-hidden p-6 h-full min-h-[420px] ${
-        accent === 'orange' ? 'bg-[#E94E1B] text-white' : 'bg-gray-50 text-gray-900'
+        accent === 'orange' ? 'bg-[#D60101] text-white' : 'bg-gray-50 text-gray-900'
       }`}
     >
       <h3 className="text-3xl font-extrabold uppercase tracking-tight relative z-10">{title}</h3>
       <div className="absolute inset-0 marketing-featured-illustration" />
       <p className="absolute bottom-6 left-6 right-16 text-sm font-semibold leading-snug z-10">{body}</p>
-      <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-white/70 flex items-center justify-center text-white z-10 group-hover:bg-white group-hover:text-[#E94E1B] transition-colors">
+      <span className="absolute bottom-5 right-5 w-9 h-9 rounded-full border border-white/70 flex items-center justify-center text-white z-10 group-hover:bg-white group-hover:text-[#D60101] transition-colors">
         <ChevronRight className="w-4 h-4" strokeWidth={2} />
       </span>
     </a>
@@ -182,7 +182,7 @@ function LinkGroup({ title, items, extraTitle, extraItems }: LinkGroupProps) {
           <li key={label}>
             <a
               href={`/${slugify(label)}`}
-              className="text-[15px] text-gray-900 hover:text-[#E94E1B] transition-colors"
+              className="text-[15px] text-gray-900 hover:text-[#D60101] transition-colors"
             >
               {label}
             </a>
@@ -199,7 +199,7 @@ function LinkGroup({ title, items, extraTitle, extraItems }: LinkGroupProps) {
               <li key={label}>
                 <a
                   href={`/${slugify(label)}`}
-                  className="text-[15px] text-gray-900 hover:text-[#E94E1B] transition-colors"
+                  className="text-[15px] text-gray-900 hover:text-[#D60101] transition-colors"
                 >
                   {label}
                 </a>
@@ -280,7 +280,7 @@ function SubNavItem({ link, onHover, isActive }: SubNavItemProps) {
       <a
         href={link.href}
         className={`block py-3 text-sm font-bold transition-colors ${
-          showAccent ? 'text-[#E94E1B]' : 'text-gray-900 hover:text-[#E94E1B]'
+          showAccent ? 'text-[#D60101]' : 'text-gray-900 hover:text-[#D60101]'
         }`}
       >
         {link.label}
@@ -339,8 +339,8 @@ export default function MarketingNavbar({
         <ul className="hidden lg:flex flex-1 items-center justify-center gap-3 xl:gap-5 2xl:gap-6">
           {NAV_LINKS.map((link) => {
             const active = link.key === activePage
-            const cls = `whitespace-nowrap text-[13px] 2xl:text-[14px] font-semibold tracking-tight transition-colors hover:text-[#E94E1B] ${
-              active ? 'text-[#E94E1B]' : 'text-gray-900'
+            const cls = `whitespace-nowrap text-[13px] 2xl:text-[14px] font-semibold tracking-tight transition-colors hover:text-[#D60101] ${
+              active ? 'text-[#D60101]' : 'text-gray-900'
             }`
             return (
               <li key={link.key}>
@@ -365,7 +365,7 @@ export default function MarketingNavbar({
           <a
             href="/downloads/TuskaEx.apk"
             download="TuskaEx.apk"
-            className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border border-[#E94E1B] text-[13px] font-semibold text-[#E94E1B] hover:bg-[#E94E1B] hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-full border border-[#D60101] text-[13px] font-semibold text-[#D60101] hover:bg-[#D60101] hover:text-white transition-colors"
           >
             <Download className="w-4 h-4 shrink-0" strokeWidth={2} />
             Download APK
@@ -381,8 +381,8 @@ export default function MarketingNavbar({
               aria-expanded={terminalMenuOpen}
               aria-label="Download Desktop Terminal"
               title="Download Desktop Terminal"
-              className={`inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#E94E1B] transition-colors ${
-                terminalMenuOpen ? 'bg-[#E94E1B] text-white' : 'text-[#E94E1B] hover:bg-[#E94E1B] hover:text-white'
+              className={`inline-flex items-center justify-center w-10 h-10 rounded-full border border-[#D60101] transition-colors ${
+                terminalMenuOpen ? 'bg-[#D60101] text-white' : 'text-[#D60101] hover:bg-[#D60101] hover:text-white'
               }`}
             >
               <Monitor className="w-4 h-4 shrink-0" strokeWidth={2} />
@@ -410,7 +410,7 @@ export default function MarketingNavbar({
                     download="TuskaExTerminal-Setup.exe"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-[#E94E1B]/10 hover:text-[#E94E1B] transition-colors"
+                    className="flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-[#D60101]/10 hover:text-[#D60101] transition-colors"
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
                       <path d="M3 5.6 10.3 4.6v6.9H3V5.6Zm0 12.8 7.3 1v-6.8H3v5.8Zm8.2 1.1L21 21V12.4h-9.8v7.1Zm0-14.9v7.1H21V3l-9.8 1.6Z" />
@@ -466,7 +466,7 @@ export default function MarketingNavbar({
             aria-label={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
             title={`Switch language to ${lang === 'fr' ? 'English' : 'Français'}`}
           >
-            <Globe className="w-4 h-4 text-[#E94E1B]" strokeWidth={2} />
+            <Globe className="w-4 h-4 text-[#D60101]" strokeWidth={2} />
             <span className="font-semibold uppercase">{lang === 'fr' ? 'FR' : 'EN'}</span>
           </button>
         </div>
@@ -519,7 +519,7 @@ export default function MarketingNavbar({
             {NAV_LINKS.map((link) => {
               const active = link.key === activePage
               const cls = `block text-sm font-semibold py-1 ${
-                active ? 'text-[#E94E1B]' : 'text-gray-900/80'
+                active ? 'text-[#D60101]' : 'text-gray-900/80'
               }`
               return (
                 <li key={link.key}>
@@ -567,7 +567,7 @@ export default function MarketingNavbar({
                 href="/downloads/TuskaEx.apk"
                 download="TuskaEx.apk"
                 onClick={() => setOpen(false)}
-                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#E94E1B] text-[#E94E1B] text-sm font-semibold hover:bg-[#E94E1B] hover:text-white transition-colors"
+                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#D60101] text-[#D60101] text-sm font-semibold hover:bg-[#D60101] hover:text-white transition-colors"
               >
                 <Download className="w-4 h-4" strokeWidth={2} />
                 Download APK
@@ -578,7 +578,7 @@ export default function MarketingNavbar({
                 href="/downloads/TuskaExTerminal-Setup-1.0.1.exe"
                 download="TuskaExTerminal-Setup.exe"
                 onClick={() => setOpen(false)}
-                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#E94E1B] text-[#E94E1B] text-sm font-semibold hover:bg-[#E94E1B] hover:text-white transition-colors"
+                className="inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border border-[#D60101] text-[#D60101] text-sm font-semibold hover:bg-[#D60101] hover:text-white transition-colors"
               >
                 <Monitor className="w-4 h-4" strokeWidth={2} />
                 Terminal for Windows
@@ -632,7 +632,7 @@ export default function MarketingNavbar({
       <style>{`
         .marketing-dropdown-accent-currency {
           background:
-            radial-gradient(circle at 78% 60%, rgba(233,78,27,0.18) 0, transparent 35%),
+            radial-gradient(circle at 78% 60%, rgba(214,1,1,0.18) 0, transparent 35%),
             radial-gradient(circle at 88% 30%, rgba(30,80,200,0.18) 0, transparent 30%),
             radial-gradient(circle at 70% 80%, rgba(199,62,17,0.18) 0, transparent 30%);
         }
@@ -643,7 +643,7 @@ export default function MarketingNavbar({
         }
         .marketing-dropdown-accent-crypto {
           background:
-            radial-gradient(circle at 75% 45%, rgba(233,78,27,0.30) 0, transparent 32%),
+            radial-gradient(circle at 75% 45%, rgba(214,1,1,0.30) 0, transparent 32%),
             radial-gradient(circle at 90% 75%, rgba(212,175,55,0.30) 0, transparent 30%),
             radial-gradient(circle at 70% 75%, rgba(30,80,200,0.18) 0, transparent 28%);
         }
@@ -654,7 +654,7 @@ export default function MarketingNavbar({
         }
         .marketing-dropdown-accent-news {
           background:
-            radial-gradient(circle at 80% 55%, rgba(233,78,27,0.22) 0, transparent 36%);
+            radial-gradient(circle at 80% 55%, rgba(214,1,1,0.22) 0, transparent 36%);
         }
         .marketing-dropdown-accent-pricing {
           background:

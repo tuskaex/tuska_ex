@@ -557,7 +557,7 @@ export default function OrderPanel() {
                     </span>
                     <span
                       className={clsx(
-                        'font-mono font-bold tabular-nums text-[#E94E1B] leading-tight',
+                        'font-mono font-bold tabular-nums text-[#D60101] leading-tight',
                         isTradingTerminal ? 'text-[11px]' : 'text-sm',
                       )}
                     >

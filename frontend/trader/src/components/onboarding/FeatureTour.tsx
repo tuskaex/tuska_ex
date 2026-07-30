@@ -253,7 +253,7 @@ export default function FeatureTour() {
           rest of the screen through the "hole"). */}
       {rect && (
         <div
-          className="pointer-events-none absolute rounded-xl ring-2 ring-[#E94E1B] transition-all duration-200"
+          className="pointer-events-none absolute rounded-xl ring-2 ring-[#D60101] transition-all duration-200"
           style={{
             top: rect.top - HIGHLIGHT_PAD,
             left: rect.left - HIGHLIGHT_PAD,
@@ -288,7 +288,7 @@ export default function FeatureTour() {
               key={s.key}
               className={
                 i === index
-                  ? 'h-1.5 w-4 rounded-full bg-[#E94E1B] transition-all'
+                  ? 'h-1.5 w-4 rounded-full bg-[#D60101] transition-all'
                   : 'h-1.5 w-1.5 rounded-full bg-[#E5E5E5] transition-all'
               }
             />
@@ -317,7 +317,7 @@ export default function FeatureTour() {
             <button
               type="button"
               onClick={next}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#E94E1B] px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-[#C73E11] transition-colors"
+              className="inline-flex items-center gap-1 rounded-lg bg-[#D60101] px-3.5 py-1.5 text-sm font-semibold text-white hover:bg-[#A30000] transition-colors"
             >
               {isLast ? 'Got it' : 'Next'}
               {!isLast && <ArrowRight size={14} />}

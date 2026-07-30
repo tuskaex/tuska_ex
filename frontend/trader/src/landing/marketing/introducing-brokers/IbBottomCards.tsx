@@ -38,7 +38,7 @@ export default function IbBottomCards() {
               <p className="text-sm text-gray-600 leading-relaxed flex-1">{card.body}</p>
               <a
                 href="#"
-                className="inline-flex items-center gap-1 text-sm font-semibold text-[#E94E1B] hover:underline underline-offset-2 mt-2"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-[#D60101] hover:underline underline-offset-2 mt-2"
               >
                 <span>{card.link}</span>
                 <ChevronRight className="w-4 h-4" strokeWidth={2.5} />

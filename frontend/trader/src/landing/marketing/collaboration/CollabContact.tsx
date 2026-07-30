@@ -47,11 +47,11 @@ export default function CollabContact() {
         <div className="mt-6 flex justify-end items-center gap-3">
           <span className="flex gap-1.5">
             <span className="w-2 h-2 rounded-full bg-gray-200" />
-            <span className="w-2 h-2 rounded-full bg-[#E94E1B]" />
+            <span className="w-2 h-2 rounded-full bg-[#D60101]" />
           </span>
           <button
             type="button"
-            className="w-9 h-9 rounded-full bg-[#E94E1B] text-white flex items-center justify-center hover:bg-[#E94E1B] transition-colors"
+            className="w-9 h-9 rounded-full bg-[#D60101] text-white flex items-center justify-center hover:bg-[#D60101] transition-colors"
             aria-label="Next"
           >
             <ChevronRight className="w-4 h-4" strokeWidth={2.5} />

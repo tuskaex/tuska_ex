@@ -10,12 +10,12 @@ const DARK_TEXT = '#ffffff';
 
 // Brand orange → black glow for dark mode. A warm radial bloom anchored at
 // the top of the viewport that fades into pure black — keeps the TuskaEx
-// orange (#E94E1B) present without washing out chart/panel surfaces.
+// orange (#D60101) present without washing out chart/panel surfaces.
 const DARK_BG_IMAGE =
-  'radial-gradient(125% 75% at 50% -10%, rgba(233,78,27,0.30) 0%, rgba(150,55,16,0.13) 28%, rgba(10,10,10,0) 60%)';
+  'radial-gradient(125% 75% at 50% -10%, rgba(214,1,1,0.30) 0%, rgba(150,55,16,0.13) 28%, rgba(10,10,10,0) 60%)';
 // Light mode is a clean white surface with a whisper of orange at the top.
 const LIGHT_BG_IMAGE =
-  'radial-gradient(120% 70% at 50% -10%, rgba(233,78,27,0.06) 0%, rgba(255,255,255,0) 45%)';
+  'radial-gradient(120% 70% at 50% -10%, rgba(214,1,1,0.06) 0%, rgba(255,255,255,0) 45%)';
 
 /**
  * Forces theme on html, body, and wrapper so every element gets correct CSS variables.

@@ -41,12 +41,12 @@ export default function MarketsPage() {
     <div className="bg-white text-gray-900">
       <section className="bg-gradient-to-b from-white to-gray-50 pt-24 pb-16 md:pt-28 md:pb-20">
         <div className="max-w-5xl mx-auto px-6 lg:px-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E94E1B]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
             Markets
           </p>
           <h1 className="mt-4 text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight leading-[1.05] text-gray-900">
             Every asset class.<br />
-            <span className="text-[#E94E1B]">One account.</span>
+            <span className="text-[#D60101]">One account.</span>
           </h1>
           <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed max-w-3xl mx-auto">
             From precious metals that have anchored wealth for centuries to crypto that
@@ -63,9 +63,9 @@ export default function MarketsPage() {
               <Link
                 key={title}
                 href={href}
-                className="group bg-gray-50 hover:bg-white rounded-2xl p-7 border border-gray-200/60 hover:border-[#E94E1B]/40 hover:shadow-lg transition-all flex flex-col gap-4"
+                className="group bg-gray-50 hover:bg-white rounded-2xl p-7 border border-gray-200/60 hover:border-[#D60101]/40 hover:shadow-lg transition-all flex flex-col gap-4"
               >
-                <span className="w-11 h-11 rounded-xl bg-[#E94E1B]/10 text-[#E94E1B] flex items-center justify-center">
+                <span className="w-11 h-11 rounded-xl bg-[#D60101]/10 text-[#D60101] flex items-center justify-center">
                   <Icon className="w-5 h-5" strokeWidth={2} />
                 </span>
                 <h2 className="text-xl font-bold text-gray-900">{title}</h2>

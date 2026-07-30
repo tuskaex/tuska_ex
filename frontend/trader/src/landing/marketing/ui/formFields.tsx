@@ -4,10 +4,10 @@ import { type ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 export const inputClasses =
-  'w-full h-11 px-3 bg-white border border-gray-200 rounded-md text-sm text-gray-900 placeholder:text-gray-600/70 focus:outline-none focus:border-[#E94E1B] transition-colors'
+  'w-full h-11 px-3 bg-white border border-gray-200 rounded-md text-sm text-gray-900 placeholder:text-gray-600/70 focus:outline-none focus:border-[#D60101] transition-colors'
 
 export const textareaClasses =
-  'w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-900 placeholder:text-gray-600/70 focus:outline-none focus:border-[#E94E1B] transition-colors resize-y'
+  'w-full px-3 py-2 bg-white border border-gray-200 rounded-md text-sm text-gray-900 placeholder:text-gray-600/70 focus:outline-none focus:border-[#D60101] transition-colors resize-y'
 
 interface FieldProps {
   label?: ReactNode
@@ -21,7 +21,7 @@ export function Field({ label, required = false, children, className = '' }: Fie
     <label className={`flex flex-col gap-1.5 ${className}`}>
       {label !== undefined && label !== '' && (
         <span className="text-xs font-medium text-gray-900">
-          {required && <span className="text-[#E94E1B] mr-0.5">*</span>}
+          {required && <span className="text-[#D60101] mr-0.5">*</span>}
           {label}
         </span>
       )}

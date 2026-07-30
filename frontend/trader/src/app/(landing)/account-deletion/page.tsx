@@ -41,7 +41,7 @@ export default function AccountDeletionPage() {
             <Sub title="Option 2 — By email">
               Send an email from your registered email address to{' '}
               <a href="mailto:support@tuskaex.com?subject=Account%20Deletion%20Request"
-                 className="text-[#E94E1B] hover:underline">support@tuskaex.com</a>{' '}
+                 className="text-[#D60101] hover:underline">support@tuskaex.com</a>{' '}
               with the subject line <span className="font-semibold text-gray-700">&quot;Account Deletion Request&quot;</span>.
               Please include the email address (and, if known, the account number) tied to your
               TuskaEx account so we can locate and verify it.
@@ -142,7 +142,7 @@ function ContactBox({ team, email }: { team: string; email: string }) {
       <p className="text-gray-500">Email: {email}</p>
       <p className="text-gray-500">
         Phone:{' '}
-        <a href="tel:+33759159987" className="text-gray-900 hover:text-[#E94E1B] transition-colors">
+        <a href="tel:+33759159987" className="text-gray-900 hover:text-[#D60101] transition-colors">
           +33 7 59 15 99 87
         </a>
       </p>

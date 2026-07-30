@@ -25,8 +25,8 @@ export default function CtProfit() {
             className="mt-12 md:mt-16 relative rounded-2xl p-7 md:p-10 overflow-hidden"
             style={{
               background:
-                'linear-gradient(160deg, rgba(233,78,27,0.06) 0%, var(--fx-bg-elev-2) 60%)',
-              border: '1px solid rgba(233,78,27,0.22)',
+                'linear-gradient(160deg, rgba(214,1,1,0.06) 0%, var(--fx-bg-elev-2) 60%)',
+              border: '1px solid rgba(214,1,1,0.22)',
             }}
           >
             <div className="absolute inset-0 fx-grid-bg" />
@@ -57,8 +57,8 @@ export default function CtProfit() {
               <div className="flex-1">
                 <FlowCard
                   icon={Crown}
-                  iconColor="#F58A60"
-                  ring="rgba(233,78,27,0.45)"
+                  iconColor="#F14A4A"
+                  ring="rgba(214,1,1,0.45)"
                   label="Master Trader"
                   title="Earns share"
                   sub="% of follower profit"

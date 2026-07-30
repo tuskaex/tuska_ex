@@ -12,7 +12,7 @@ export default function LandingNotFound() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-6 py-20">
       <div className="max-w-md w-full text-center">
-        <p className="text-[120px] font-bold leading-none text-[#E94E1B] mb-2">404</p>
+        <p className="text-[120px] font-bold leading-none text-[#D60101] mb-2">404</p>
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Page not found</h1>
         <p className="text-gray-500 mb-8 leading-relaxed">
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
@@ -20,14 +20,14 @@ export default function LandingNotFound() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white font-semibold px-6 py-3 rounded-lg transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white font-semibold px-6 py-3 rounded-lg transition-colors"
           >
             <Home className="w-4 h-4" />
             Home
           </Link>
           <Link
             href="/auth/login"
-            className="inline-flex items-center justify-center gap-2 border border-gray-300 hover:border-[#E94E1B] text-gray-900 font-medium px-6 py-3 rounded-lg transition-colors"
+            className="inline-flex items-center justify-center gap-2 border border-gray-300 hover:border-[#D60101] text-gray-900 font-medium px-6 py-3 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Sign in

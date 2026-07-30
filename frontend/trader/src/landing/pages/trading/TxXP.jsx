@@ -69,8 +69,8 @@ export default function TxXP() {
                     style={{
                       top: 22,
                       background:
-                        'linear-gradient(90deg, rgba(233,78,27,0.18) 0%, rgba(233,78,27,0.65) 50%, rgba(233,78,27,1) 100%)',
-                      boxShadow: '0 0 18px rgba(233,78,27,0.45)',
+                        'linear-gradient(90deg, rgba(214,1,1,0.18) 0%, rgba(214,1,1,0.65) 50%, rgba(214,1,1,1) 100%)',
+                      boxShadow: '0 0 18px rgba(214,1,1,0.45)',
                     }}
                   />
 
@@ -81,7 +81,7 @@ export default function TxXP() {
                       background: 'linear-gradient(135deg, var(--fx-gold-light), var(--fx-gold))',
                       color: '#1a1408',
                       letterSpacing: '0.08em',
-                      boxShadow: '0 6px 18px rgba(233,78,27,0.45)',
+                      boxShadow: '0 6px 18px rgba(214,1,1,0.45)',
                     }}
                   >
                     XP
@@ -100,10 +100,10 @@ export default function TxXP() {
                                 ? 'linear-gradient(135deg, var(--fx-gold-light), var(--fx-gold))'
                                 : 'var(--fx-bg-elev-2)',
                               border: isLast
-                                ? '2px solid rgba(233,78,27,0.85)'
-                                : '2px solid rgba(233,78,27,0.55)',
+                                ? '2px solid rgba(214,1,1,0.85)'
+                                : '2px solid rgba(214,1,1,0.55)',
                               color: isLast ? '#1a1408' : 'var(--fx-gold-light)',
-                              boxShadow: isLast ? '0 0 14px rgba(233,78,27,0.6)' : 'none',
+                              boxShadow: isLast ? '0 0 14px rgba(214,1,1,0.6)' : 'none',
                             }}
                           >
                             {lv.tier}

@@ -142,7 +142,7 @@ function ContactBox({ team, email }: { team: string; email: string }) {
       <p className="text-gray-500">Email: {email}</p>
       <p className="text-gray-500">
         Phone:{' '}
-        <a href="tel:+33759159987" className="text-gray-900 hover:text-[#E94E1B] transition-colors">
+        <a href="tel:+33759159987" className="text-gray-900 hover:text-[#D60101] transition-colors">
           +33 7 59 15 99 87
         </a>
       </p>

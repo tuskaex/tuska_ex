@@ -37,8 +37,8 @@ export default function TxLeverage() {
               <div
                 className="rounded-xl p-5 mb-6"
                 style={{
-                  background: 'rgba(233,78,27,0.05)',
-                  border: '1px solid rgba(233,78,27,0.22)',
+                  background: 'rgba(214,1,1,0.05)',
+                  border: '1px solid rgba(214,1,1,0.22)',
                 }}
               >
                 <div className="grid grid-cols-3 gap-3 text-center">
@@ -86,8 +86,8 @@ export default function TxLeverage() {
               className="relative h-full rounded-2xl p-7 md:p-8 overflow-hidden"
               style={{
                 background:
-                  'linear-gradient(160deg, rgba(233,78,27,0.06) 0%, var(--fx-bg-elev-2) 60%)',
-                border: '1px solid rgba(233,78,27,0.22)',
+                  'linear-gradient(160deg, rgba(214,1,1,0.06) 0%, var(--fx-bg-elev-2) 60%)',
+                border: '1px solid rgba(214,1,1,0.22)',
               }}
             >
               <div className="absolute inset-0 fx-grid-bg" />
@@ -99,8 +99,8 @@ export default function TxLeverage() {
                 {/* Timeline node 1 */}
                 <TimelineNode
                   icon={Clock}
-                  iconColor="#F58A60"
-                  ring="rgba(233,78,27,0.45)"
+                  iconColor="#F14A4A"
+                  ring="rgba(214,1,1,0.45)"
                   title="Open Trade"
                   desc="Leverage activated, no fee yet."
                   showLine
@@ -108,7 +108,7 @@ export default function TxLeverage() {
 
                 {/* Branch row â€” Day vs Night */}
                 <div className="grid grid-cols-2 gap-4 my-1 ml-[44px] pl-3"
-                     style={{ borderLeft: '2px dashed rgba(233,78,27,0.35)' }}>
+                     style={{ borderLeft: '2px dashed rgba(214,1,1,0.35)' }}>
                   {/* Day branch */}
                   <div
                     className="rounded-xl p-4"
@@ -185,7 +185,7 @@ function TimelineNode({ icon: Icon, iconColor, ring, title, desc, showLine }) {
         {showLine && (
           <div
             className="w-px h-6 mt-1"
-            style={{ background: 'rgba(233,78,27,0.35)' }}
+            style={{ background: 'rgba(214,1,1,0.35)' }}
           />
         )}
       </div>

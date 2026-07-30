@@ -8,7 +8,7 @@ export default function InstitutionalHero() {
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 pt-10 pb-16 md:pt-14 md:pb-20">
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           <div className="lg:col-span-7 order-2 lg:order-1">
-            <h1 className={`${TEXT_DISPLAY} text-[#E94E1B] leading-[0.95]`}>
+            <h1 className={`${TEXT_DISPLAY} text-[#D60101] leading-[0.95]`}>
               Creating
               <br />
               success.

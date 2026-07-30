@@ -30,7 +30,7 @@ const PILLARS: PillarData[] = [
 function Pillar({ title, body }: PillarData) {
   return (
     <div className="bg-white/15 rounded-xl p-4 md:p-5 flex flex-col gap-2">
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white text-[#E94E1B]">
+      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white text-[#D60101]">
         <Check className="w-4 h-4" strokeWidth={3} />
       </span>
       <h4 className="text-sm font-bold text-white">{title}</h4>
@@ -43,7 +43,7 @@ export default function Sustainability() {
   return (
     <section className="bg-white">
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 py-12 md:py-16">
-        <div className="relative rounded-3xl bg-[#E94E1B] text-white overflow-hidden">
+        <div className="relative rounded-3xl bg-[#D60101] text-white overflow-hidden">
           <div className="grid lg:grid-cols-12 gap-6 items-stretch">
             <div className="lg:col-span-8 p-8 md:p-10 lg:p-12">
               <Eyebrow className="text-white/85">Sustainability</Eyebrow>
@@ -72,7 +72,7 @@ export default function Sustainability() {
               <ImagePlaceholder
                 label="Sustainability"
                 rounded="rounded-none"
-                className="absolute inset-0 w-full h-full border-0 bg-[#E94E1B]/40"
+                className="absolute inset-0 w-full h-full border-0 bg-[#D60101]/40"
               />
             </div>
           </div>

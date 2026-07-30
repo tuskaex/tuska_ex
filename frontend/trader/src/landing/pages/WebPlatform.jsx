@@ -107,7 +107,7 @@ const WebPlatform = () => {
                   className="aspect-video rounded-t-lg overflow-hidden"
                   style={{
                     background:
-                      'radial-gradient(ellipse 70% 60% at 50% 30%, rgba(233,78,27,0.28), transparent 65%), ' +
+                      'radial-gradient(ellipse 70% 60% at 50% 30%, rgba(214,1,1,0.28), transparent 65%), ' +
                       'linear-gradient(135deg, #0F1530 0%, #0B0F1A 100%)',
                   }}
                 />

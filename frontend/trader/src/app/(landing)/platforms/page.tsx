@@ -21,7 +21,7 @@ export default function PlatformsPage() {
           <span
             key={i}
             aria-hidden="true"
-            className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#E94E1B]/15 to-[#E94E1B]/5 border border-[#E94E1B]/15"
+            className="hidden md:block absolute rounded-full bg-gradient-to-br from-[#D60101]/15 to-[#D60101]/5 border border-[#D60101]/15"
             style={{
               width: bubble.size,
               height: bubble.size,
@@ -33,12 +33,12 @@ export default function PlatformsPage() {
         ))}
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 text-center">
-          <span className="inline-block bg-[#FCE6DD] text-[#E94E1B] text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
+          <span className="inline-block bg-[#FDE3E3] text-[#D60101] text-xs font-semibold px-4 py-1.5 rounded-full mb-6">
             Cross-Platform Trading
           </span>
           <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
             Professional Trading Terminals<br />
-            <span className="text-[#E94E1B]">for All Traders</span>
+            <span className="text-[#D60101]">for All Traders</span>
           </h1>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
             Access institutional-grade platforms on desktop, web, and mobile. 100+ chart tools, 50+ indicators, and execution speeds under 40ms.
@@ -147,8 +147,8 @@ export default function PlatformsPage() {
               >
                 {/* top row: circular icon + status pill */}
                 <div className="flex items-start justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FCE6DD] ring-1 ring-[#E94E1B]/15">
-                    <Icon className="h-6 w-6 text-[#E94E1B]" />
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#FDE3E3] ring-1 ring-[#D60101]/15">
+                    <Icon className="h-6 w-6 text-[#D60101]" />
                   </div>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
                     <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -209,13 +209,13 @@ export default function PlatformsPage() {
           <div className="flex flex-wrap justify-center gap-4">
             <a
               href="/auth/register"
-              className="bg-[#E94E1B] hover:bg-[#C73E11] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
+              className="bg-[#D60101] hover:bg-[#A30000] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
             >
               Open Live Account
             </a>
             <a
               href="/auth/login"
-              className="border border-gray-300 hover:border-[#E94E1B] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
+              className="border border-gray-300 hover:border-[#D60101] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
             >
               Try Demo
             </a>

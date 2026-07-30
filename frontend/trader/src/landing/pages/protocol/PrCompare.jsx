@@ -78,9 +78,9 @@ export default function PrCompare() {
               className="relative h-full p-7 md:p-8 rounded-2xl overflow-hidden"
               style={{
                 background:
-                  'linear-gradient(180deg, rgba(233,78,27,0.10) 0%, rgba(233,78,27,0.02) 60%), var(--fx-bg-elev)',
-                border: '1px solid rgba(233,78,27,0.35)',
-                boxShadow: '0 24px 60px -28px rgba(233,78,27,0.35)',
+                  'linear-gradient(180deg, rgba(214,1,1,0.10) 0%, rgba(214,1,1,0.02) 60%), var(--fx-bg-elev)',
+                border: '1px solid rgba(214,1,1,0.35)',
+                boxShadow: '0 24px 60px -28px rgba(214,1,1,0.35)',
               }}
             >
               <div className="flex items-center gap-3 mb-5">
@@ -118,7 +118,7 @@ export default function PrCompare() {
                   'linear-gradient(180deg, var(--fx-gold-light), var(--fx-gold) 70%, var(--fx-gold-dark))',
                 color: '#1a1408',
                 boxShadow:
-                  '0 0 0 6px rgba(8,9,11,1), 0 0 0 7px rgba(233,78,27,0.45), 0 16px 40px -12px rgba(233,78,27,0.45)',
+                  '0 0 0 6px rgba(8,9,11,1), 0 0 0 7px rgba(214,1,1,0.45), 0 16px 40px -12px rgba(214,1,1,0.45)',
               }}
             >
               VS

@@ -1271,8 +1271,8 @@ function SocialPageInner() {
             {/* Total Invested */}
             <div className="rounded-2xl p-4 bg-bg-card border border-border-primary">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-                  <DollarSign size={18} className="text-[#E94E1B]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+                  <DollarSign size={18} className="text-[#D60101]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-semibold">Total Invested</p>
@@ -1286,8 +1286,8 @@ function SocialPageInner() {
             {/* Total Profit */}
             <div className="rounded-2xl p-4 bg-bg-card border border-border-primary">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-                  <TrendingUp size={18} className="text-[#E94E1B]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+                  <TrendingUp size={18} className="text-[#D60101]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-semibold">Total Profit</p>
@@ -1301,8 +1301,8 @@ function SocialPageInner() {
             {/* Profit This Month */}
             <div className="rounded-2xl p-4 bg-bg-card border border-border-primary">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-                  <ArrowDownToLine size={18} className="text-[#E94E1B]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+                  <ArrowDownToLine size={18} className="text-[#D60101]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-semibold">Profit This Month</p>
@@ -1316,8 +1316,8 @@ function SocialPageInner() {
             {/* Active Copy Trades */}
             <div className="rounded-2xl p-4 bg-bg-card border border-border-primary">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FCE6DD] flex items-center justify-center shrink-0">
-                  <Users size={18} className="text-[#E94E1B]" />
+                <div className="w-10 h-10 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+                  <Users size={18} className="text-[#D60101]" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-wide text-text-tertiary font-semibold">Active Copy Trades</p>
@@ -1371,10 +1371,10 @@ function SocialPageInner() {
             <h3 className="text-base font-bold text-text-primary mb-4">Why Copy Top Traders?</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {[
-                { icon: Clock, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Save Time', desc: 'No need to analyze the market' },
-                { icon: GraduationCap, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Learn & Grow', desc: 'Learn strategies from top traders' },
-                { icon: ShieldCheck, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Risk Management', desc: 'Diversified portfolio with top traders' },
-                { icon: BarChart2, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Transparent Performance', desc: 'Real-time results and performance tracking' },
+                { icon: Clock, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Save Time', desc: 'No need to analyze the market' },
+                { icon: GraduationCap, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Learn & Grow', desc: 'Learn strategies from top traders' },
+                { icon: ShieldCheck, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Risk Management', desc: 'Diversified portfolio with top traders' },
+                { icon: BarChart2, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Transparent Performance', desc: 'Real-time results and performance tracking' },
               ].map((b) => (
                 <div key={b.title} className="flex items-start gap-3">
                   <div className={clsx('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', b.tile)}>
@@ -1394,9 +1394,9 @@ function SocialPageInner() {
             <h3 className="text-base font-bold text-text-primary mb-4">How Copy Trading Works?</h3>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-2">
               {[
-                { icon: Search, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Choose a Master', desc: 'Select a top trader' },
-                { icon: DollarSign, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Set Your Amount', desc: 'Invest any amount' },
-                { icon: ArrowDownToLine, tile: 'bg-[#FCE6DD]', fg: 'text-[#E94E1B]', title: 'Start Copying', desc: 'We copy trades for you' },
+                { icon: Search, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Choose a Master', desc: 'Select a top trader' },
+                { icon: DollarSign, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Set Your Amount', desc: 'Invest any amount' },
+                { icon: ArrowDownToLine, tile: 'bg-[#FDE3E3]', fg: 'text-[#D60101]', title: 'Start Copying', desc: 'We copy trades for you' },
               ].map((s, idx, arr) => (
                 <div key={s.title} className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-1 min-w-0">

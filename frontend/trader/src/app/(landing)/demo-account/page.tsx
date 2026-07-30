@@ -37,12 +37,12 @@ export default function DemoAccountPage() {
     <div className="bg-white text-gray-900">
       <section className="relative bg-gradient-to-b from-white to-gray-50 pt-24 pb-16 md:pt-28 md:pb-20 overflow-hidden">
         <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#E94E1B]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
             Demo Account
           </p>
           <h1 className="mt-4 text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight leading-[1.05]">
             Trade the platform.<br />
-            <span className="text-[#E94E1B]">Risk nothing.</span>
+            <span className="text-[#D60101]">Risk nothing.</span>
           </h1>
           <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed max-w-2xl mx-auto">
             A USD 100,000 virtual account on live market data. Test strategies, learn the
@@ -52,7 +52,7 @@ export default function DemoAccountPage() {
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/auth/register?demo=1"
-              className="inline-flex items-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
             >
               Open a demo <ArrowRight className="w-4 h-4" />
             </Link>
@@ -71,7 +71,7 @@ export default function DemoAccountPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map(({ icon: Icon, title, body }) => (
               <div key={title} className="bg-gray-50 rounded-2xl p-7 border border-gray-200/60">
-                <span className="w-11 h-11 rounded-xl bg-[#E94E1B]/10 text-[#E94E1B] flex items-center justify-center">
+                <span className="w-11 h-11 rounded-xl bg-[#D60101]/10 text-[#D60101] flex items-center justify-center">
                   <Icon className="w-5 h-5" strokeWidth={2} />
                 </span>
                 <h3 className="mt-4 text-base font-bold text-gray-900">{title}</h3>
@@ -86,13 +86,13 @@ export default function DemoAccountPage() {
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-tight">
-              From sign-up to first trade <span className="text-[#E94E1B]">in three steps</span>
+              From sign-up to first trade <span className="text-[#D60101]">in three steps</span>
             </h2>
           </div>
           <ol className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {STEPS.map((s) => (
               <li key={s.n} className="bg-white rounded-2xl p-7 border border-gray-200/60">
-                <div className="text-5xl font-extrabold text-[#E94E1B]/30 leading-none">{s.n}</div>
+                <div className="text-5xl font-extrabold text-[#D60101]/30 leading-none">{s.n}</div>
                 <h3 className="mt-4 text-lg font-bold text-gray-900">{s.t}</h3>
                 <p className="mt-2 text-sm text-gray-600 leading-relaxed">{s.d}</p>
               </li>
@@ -104,12 +104,12 @@ export default function DemoAccountPage() {
       <section className="bg-white py-12 md:py-16">
         <div className="max-w-3xl mx-auto px-6 lg:px-8 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-tight">
-            Practice today. <span className="text-[#E94E1B]">Trade tomorrow.</span>
+            Practice today. <span className="text-[#D60101]">Trade tomorrow.</span>
           </h2>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link
               href="/auth/register?demo=1"
-              className="inline-flex items-center gap-2 bg-[#E94E1B] hover:bg-[#C73E11] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
+              className="inline-flex items-center gap-2 bg-[#D60101] hover:bg-[#A30000] text-white text-sm font-semibold px-6 py-3 rounded-full transition-colors"
             >
               Open a demo
             </Link>

@@ -16,7 +16,7 @@ export default function AboutUs() {
             <Eyebrow>{t('about.eyebrow')}</Eyebrow>
             <h2 className={`mt-4 ${HEADING_SECTION}`}>
               {t('about.titleA')}{' '}
-              <span className="text-[#E94E1B]">{t('about.titleB')}</span>
+              <span className="text-[#D60101]">{t('about.titleB')}</span>
             </h2>
             <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed">
               {t('about.lead')}
@@ -30,7 +30,7 @@ export default function AboutUs() {
             <div className="relative w-full max-w-[920px] aspect-[4/5] md:aspect-[5/6]">
               <div
                 aria-hidden="true"
-                className="absolute inset-10 rounded-[2.5rem] bg-[#E94E1B]/25 blur-3xl"
+                className="absolute inset-10 rounded-[2.5rem] bg-[#D60101]/25 blur-3xl"
               />
               <Image
                 src="/assets/asianboy.png"

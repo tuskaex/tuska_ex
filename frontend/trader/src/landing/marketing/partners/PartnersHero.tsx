@@ -17,7 +17,7 @@ export default function PartnersHero() {
           </div>
         </div>
 
-        <h1 className={`relative z-10 ${TEXT_DISPLAY} text-[#E94E1B] leading-[0.9]`}>
+        <h1 className={`relative z-10 ${TEXT_DISPLAY} text-[#D60101] leading-[0.9]`}>
           Your clients deserve the best.
         </h1>
 

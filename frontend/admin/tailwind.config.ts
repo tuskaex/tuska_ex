@@ -28,10 +28,21 @@ const config: Config = {
           tertiary: 'rgb(var(--c-text-tertiary) / <alpha-value>)',
           inverse: 'rgb(var(--c-text-inverse) / <alpha-value>)',
         },
-        /* TuskaEx brand orange. Admin generic UI accents resolve
-         * through `accent.*`, and `buy` was historically used as a
-         * generic primary too — so it's repointed to the brand orange
-         * to keep every button/icon on-theme (sell stays red). */
+        /* `buy` DELIBERATELY stays orange and did NOT follow the brand
+         * change to the logo red (#D60101, see `accent` below).
+         *
+         * It is not purely decorative here: analytics/platform-pnl and
+         * the book page render trade direction as
+         * `side === 'buy' ? 'text-buy' : 'text-sell'`, and analytics
+         * colours long vs short exposure the same way. Repointing `buy`
+         * to the brand red would make BUY and SELL near-identical on
+         * screen — an admin reading a trade blotter could misread
+         * direction, so correctness wins over palette consistency.
+         *
+         * `buy` is also (historically) used as a generic primary for
+         * buttons/icons, which is why it is still orange in places that
+         * have nothing to do with trading. Untangling those two roles is
+         * the real fix; until then, do not "harmonise" this value. */
         buy: {
           DEFAULT: '#E94E1B',
           light: '#FB7B4E',
@@ -45,7 +56,8 @@ const config: Config = {
           dark: '#dc2626',
           bg: 'rgba(239,68,68,0.07)',
         },
-        accent: { DEFAULT: '#E94E1B', light: '#FB7B4E', dark: '#C73E11' },
+        /* Brand accent — red sampled from the TuskaEx logo mark. */
+        accent: { DEFAULT: '#D60101', light: '#F14A4A', dark: '#A30000' },
         success: '#22c55e',
         warning: '#FFB300',
         info: '#29B6F6',

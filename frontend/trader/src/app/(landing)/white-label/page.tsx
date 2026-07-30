@@ -9,13 +9,13 @@ export default function WhiteLabelPage() {
       <section className="bg-gradient-to-b from-white to-gray-50 pt-16 pb-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 bg-[#FCE6DD] text-[#E94E1B] text-sm font-semibold px-4 py-2 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 bg-[#FDE3E3] text-[#D60101] text-sm font-semibold px-4 py-2 rounded-full mb-6">
               <Building2 className="w-4 h-4" />
               Enterprise Solutions
             </div>
             <h1 className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight mb-6">
               Launch Your Brand<br />
-              <span className="text-[#E94E1B]">in 72 Hours</span>
+              <span className="text-[#D60101]">in 72 Hours</span>
             </h1>
             <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-2xl mx-auto">
               Build your own branded brokerage with TuskaEx&apos;s institutional-grade white-label solution. Full technology stack, liquidity, and 24/7 support included.
@@ -23,13 +23,13 @@ export default function WhiteLabelPage() {
             <div className="flex flex-wrap justify-center gap-4 mb-12">
               <a
                 href="/auth/register"
-                className="bg-[#E94E1B] hover:bg-[#C73E11] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
+                className="bg-[#D60101] hover:bg-[#A30000] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
               >
                 Request Demo
               </a>
               <a
                 href="/contact"
-                className="border border-gray-300 hover:border-[#E94E1B] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
+                className="border border-gray-300 hover:border-[#D60101] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
               >
                 Contact Sales
               </a>
@@ -82,8 +82,8 @@ export default function WhiteLabelPage() {
             ].map(({ icon: Icon, title, desc }) => (
               <div key={title} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-[#FCE6DD] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-6 h-6 text-[#E94E1B]" />
+                  <div className="w-12 h-12 bg-[#FDE3E3] rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-6 h-6 text-[#D60101]" />
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
@@ -115,7 +115,7 @@ export default function WhiteLabelPage() {
                   'Admin Back Office',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-[#E94E1B] rounded-full" />
+                    <div className="w-2 h-2 bg-[#D60101] rounded-full" />
                     <span className="text-gray-700">{item}</span>
                   </li>
                 ))}
@@ -133,7 +133,7 @@ export default function WhiteLabelPage() {
                   'Ongoing Technical Support',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3">
-                    <div className="w-2 h-2 bg-[#E94E1B] rounded-full" />
+                    <div className="w-2 h-2 bg-[#D60101] rounded-full" />
                     <span className="text-gray-700">{item}</span>
                   </li>
                 ))}
@@ -157,7 +157,7 @@ export default function WhiteLabelPage() {
               { step: '4', title: 'Launch', desc: 'Go live with training and support.' },
             ].map(({ step, title, desc }) => (
               <div key={title} className="text-center">
-                <div className="w-12 h-12 bg-[#E94E1B] text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-4">
+                <div className="w-12 h-12 bg-[#D60101] text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-4">
                   {step}
                 </div>
                 <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
@@ -178,13 +178,13 @@ export default function WhiteLabelPage() {
           <div className="flex flex-wrap justify-center gap-4">
             <a
               href="/auth/register"
-              className="bg-[#E94E1B] hover:bg-[#C73E11] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
+              className="bg-[#D60101] hover:bg-[#A30000] text-white font-semibold px-8 py-3.5 rounded-lg transition-colors inline-flex items-center gap-2"
             >
               Schedule Consultation
             </a>
             <a
               href="/contact"
-              className="border border-gray-300 hover:border-[#E94E1B] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
+              className="border border-gray-300 hover:border-[#D60101] text-gray-900 font-semibold px-8 py-3.5 rounded-lg transition-colors"
             >
               Learn More
             </a>

@@ -28,8 +28,8 @@ export default function PrFundsFlow() {
             className="mt-12 md:mt-16 rounded-2xl p-6 md:p-10 overflow-x-auto"
             style={{
               background:
-                'linear-gradient(160deg, rgba(233,78,27,0.06) 0%, var(--fx-bg-elev-2) 60%)',
-              border: '1px solid rgba(233,78,27,0.22)',
+                'linear-gradient(160deg, rgba(214,1,1,0.06) 0%, var(--fx-bg-elev-2) 60%)',
+              border: '1px solid rgba(214,1,1,0.22)',
             }}
           >
             <div className="flex items-center gap-3 md:gap-2 min-w-max md:min-w-0 justify-center md:justify-between">
@@ -43,9 +43,9 @@ export default function PrFundsFlow() {
                         className="w-12 h-12 rounded-xl flex items-center justify-center"
                         style={{
                           background:
-                            'rgba(233,78,27,0.08)',
-                          border: '1px solid rgba(233,78,27,0.32)',
-                          boxShadow: '0 12px 32px -16px rgba(233,78,27,0.4)',
+                            'rgba(214,1,1,0.08)',
+                          border: '1px solid rgba(214,1,1,0.32)',
+                          boxShadow: '0 12px 32px -16px rgba(214,1,1,0.4)',
                         }}
                       >
                         <Icon size={20} style={{ color: 'var(--fx-gold-light)' }} />

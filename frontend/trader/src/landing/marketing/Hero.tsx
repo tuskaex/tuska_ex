@@ -12,10 +12,10 @@ export default function Hero() {
       <div className="grid grid-cols-1 md:grid-cols-2 min-h-[640px] md:min-h-[720px] lg:min-h-[760px]">
         <div className="relative flex items-center bg-white px-6 md:px-10 lg:px-16 py-16 md:py-20 lg:py-24">
           <div className="w-full max-w-2xl">
-            <Eyebrow className="text-[#E94E1B]">{t('hero.eyebrow')}</Eyebrow>
+            <Eyebrow className="text-[#D60101]">{t('hero.eyebrow')}</Eyebrow>
             <h1 className="mt-5 font-extrabold uppercase tracking-[-0.02em] leading-[0.98] text-gray-900 text-[clamp(2.6rem,5.4vw,5.5rem)]">
               {t('hero.headlineA')}<br />
-              <span className="text-[#E94E1B]">{t('hero.headlineB')}</span><br />
+              <span className="text-[#D60101]">{t('hero.headlineB')}</span><br />
               {t('hero.headlineC')}
             </h1>
             <p className="mt-7 text-base md:text-lg text-gray-700 leading-relaxed max-w-xl">
@@ -32,11 +32,11 @@ export default function Hero() {
           <div className="relative w-full h-full max-w-[680px]">
             <div
               aria-hidden="true"
-              className="absolute inset-6 md:inset-8 rounded-full bg-[#E94E1B]/30 blur-3xl"
+              className="absolute inset-6 md:inset-8 rounded-full bg-[#D60101]/30 blur-3xl"
             />
             <div
               aria-hidden="true"
-              className="absolute inset-12 md:inset-16 rounded-full bg-[#E94E1B]/20 blur-2xl"
+              className="absolute inset-12 md:inset-16 rounded-full bg-[#D60101]/20 blur-2xl"
             />
             <Image
               src="/assets/hero page.png"
@@ -44,7 +44,7 @@ export default function Hero() {
               fill
               priority
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="relative object-contain drop-shadow-[0_30px_50px_rgba(233,78,27,0.35)]"
+              className="relative object-contain drop-shadow-[0_30px_50px_rgba(214,1,1,0.35)]"
             />
           </div>
         </div>

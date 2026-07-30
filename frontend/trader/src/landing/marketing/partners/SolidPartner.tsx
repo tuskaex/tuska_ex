@@ -56,7 +56,7 @@ function useVisibleCount(): number {
 function FeatureCard({ title, body }: Feature) {
   return (
     <div className="bg-white rounded-xl p-5 md:p-6 flex flex-col gap-3 shadow-sm h-full">
-      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#E94E1B] text-white">
+      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#D60101] text-white">
         <Check className="w-4 h-4" strokeWidth={3} />
       </span>
       <h3 className="text-base font-bold text-gray-900">{title}</h3>
@@ -87,7 +87,7 @@ export default function SolidPartner() {
           </h2>
         </div>
 
-        <div className="mt-12 relative rounded-3xl bg-[#E94E1B] text-white overflow-hidden">
+        <div className="mt-12 relative rounded-3xl bg-[#D60101] text-white overflow-hidden">
           <div className="p-6 md:p-10 lg:p-12">
             <p className="max-w-3xl text-sm md:text-[15px] leading-relaxed text-white/95">
               As a leader in digital trading, TuskaEx offers reliability, innovation
@@ -132,7 +132,7 @@ export default function SolidPartner() {
                   onClick={prev}
                   disabled={index === 0}
                   aria-label="Previous"
-                  className="w-9 h-9 rounded-full bg-white text-[#E94E1B] flex items-center justify-center transition-opacity hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-9 h-9 rounded-full bg-white text-[#D60101] flex items-center justify-center transition-opacity hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4" strokeWidth={2.5} />
                 </button>
@@ -141,7 +141,7 @@ export default function SolidPartner() {
                   onClick={next}
                   disabled={index >= maxIndex}
                   aria-label="Next"
-                  className="w-9 h-9 rounded-full bg-white text-[#E94E1B] flex items-center justify-center transition-opacity hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-9 h-9 rounded-full bg-white text-[#D60101] flex items-center justify-center transition-opacity hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-4 h-4" strokeWidth={2.5} />
                 </button>
