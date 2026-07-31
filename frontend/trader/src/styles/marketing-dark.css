@@ -57,23 +57,6 @@
   color: var(--mktd-ink);
 }
 
-/* ── Opt-out ─────────────────────────────────────────────────────
-   `.mkt-keep-light` freezes a subtree at its light-mode palette.
-
-   Needed because a few surfaces are NOT on the page canvas and so must
-   not follow it. The clearest case is the footer logo chip: it sits on
-   the brand-red disclosure band, which is red in BOTH modes, and it is
-   white specifically so the black logo artwork is legible on red.
-   Remapping it to #121212 put black artwork on a near-black chip — the
-   logo vanished. That was a real regression this sheet introduced.
-
-   Reach for this whenever an element's background is chosen relative to
-   something OTHER than the page canvas. It is not a general escape
-   hatch for "the dark version looks a bit off". */
-.mkt-dark .mkt-keep-light,
-.mkt-dark .mkt-keep-light .bg-white  { background-color: #fff; }
-.mkt-dark .mkt-keep-light .text-gray-900 { color: #111827; }
-
 /* ── Surfaces ────────────────────────────────────────────────── */
 .mkt-dark .bg-white       { background-color: var(--mktd-surface); }
 .mkt-dark .bg-gray-50     { background-color: var(--mktd-canvas); }
@@ -172,3 +155,55 @@
    The remaining marketing photography is shot on white. Knocking a
    little brightness off stops it glowing against the dark canvas. */
 .mkt-dark img:not([src*=".svg"]) { filter: brightness(0.92) contrast(1.02); }
+
+/* ══════════════════════════════════════════════════════════════
+   Opt-out — MUST STAY LAST IN THIS FILE
+   ══════════════════════════════════════════════════════════════
+   `.mkt-keep-light` freezes an element at its light-mode palette, for
+   surfaces that are NOT on the page canvas and so must not follow it.
+
+   The case that forced this: the logo chip on the brand-red disclosure
+   band. That band is red in BOTH themes, and the chip is white
+   precisely so the black logo artwork reads against red. The blanket
+   `bg-white -> #121212` remap put black artwork on a near-black chip
+   and the mark disappeared.
+
+   TWO THINGS MAKE THIS WORK, AND BOTH ARE LOAD-BEARING:
+
+   1. COMPOUND selectors (`.mkt-keep-light.bg-white`, specificity 0,3,0)
+      rather than descendant ones (`.mkt-keep-light .bg-white`, 0,2,0).
+      The first attempt used descendant selectors, which TIED with
+      `.mkt-dark .bg-white` at 0,2,0 — and on a tie the later rule in
+      the stylesheet wins. The surface rules are declared above, so the
+      opt-out silently lost and the logo stayed invisible in production.
+
+   2. This block sits at the END of the file, so even the descendant
+      forms (needed for children that carry the utility themselves)
+      win on source order.
+
+   Belt and braces on purpose: a fix that depends on ordering alone
+   breaks the moment someone reorganises the file.
+
+   This is not a general "dark looks a bit off" escape hatch. Use it
+   only when the background is chosen relative to something other than
+   the page canvas. */
+
+/* The element itself carries both classes */
+.mkt-dark .mkt-keep-light.bg-white       { background-color: #fff; }
+.mkt-dark .mkt-keep-light.bg-gray-50     { background-color: #f9fafb; }
+.mkt-dark .mkt-keep-light.text-gray-900  { color: #111827; }
+
+/* …or a descendant of an opted-out subtree carries them */
+.mkt-dark .mkt-keep-light .bg-white      { background-color: #fff; }
+.mkt-dark .mkt-keep-light .bg-gray-50    { background-color: #f9fafb; }
+.mkt-dark .mkt-keep-light .bg-gray-100   { background-color: #f3f4f6; }
+.mkt-dark .mkt-keep-light .text-gray-900 { color: #111827; }
+.mkt-dark .mkt-keep-light .text-gray-700 { color: #374151; }
+.mkt-dark .mkt-keep-light .text-gray-600 { color: #4b5563; }
+.mkt-dark .mkt-keep-light .text-gray-500 { color: #6b7280; }
+.mkt-dark .mkt-keep-light .border-gray-200 { border-color: #e5e7eb; }
+
+/* Images inside an opt-out keep their true colours — the global
+   brightness knock-down is for photography on a dark canvas, and a logo
+   on a white chip is neither. */
+.mkt-dark .mkt-keep-light img:not([src*=".svg"]) { filter: none; }
