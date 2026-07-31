@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { PopupProvider } from '@/landing/components/PopupContext'
 import ScrollProgress from '@/landing/components/animations/ScrollProgress'
+import CustomCursor from '@/landing/components/CustomCursor'
 import MarketingNavbar from '@/landing/marketing/Navbar'
 import Footer from '@/landing/components/Footer'
 import LandingFooter from '@/components/landing/LandingFooter'
@@ -191,6 +192,12 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
     <LangProvider defaultLang="en">
     <PopupProvider>
       <ScrollProgress />
+      {/* Marketing-only. Mounted here rather than in the root layout so
+          it can never reach the trading terminal, where a trailing ring
+          over chart drawing tools and one-click order buttons would be a
+          usability regression. Self-disables on touch and under
+          prefers-reduced-motion. */}
+      <CustomCursor />
       {/* Wrapper attributes per mode:
           - `data-mkt`        : dark pages only. Activates marketing.css
                                 scope (`[data-mkt]` token bindings). Light

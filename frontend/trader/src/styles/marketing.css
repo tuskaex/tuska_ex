@@ -151,3 +151,96 @@
     scroll-behavior: auto;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Custom cursor — red ring + black core
+   ══════════════════════════════════════════════════════════════
+   Paired with landing/components/CustomCursor.tsx. Marketing site
+   only; the trader terminal keeps the plain system cursor.
+
+   VISIBILITY ACROSS SURFACES is the hard part. The landing spans a
+   near-black home hero, white marketing pages and solid brand-red
+   bands, so no single flat colour survives everywhere:
+     · the ring is brand red with a dark 1px halo, so it holds its edge
+       on white AND on the red disclosure band
+     · the core is near-black ringed in red — that pairing is what makes
+       it read as "red and black" rather than a plain red dot, and the
+       red rim keeps it findable on the dark hero
+
+   The native cursor is deliberately still visible underneath, so links
+   and buttons keep showing the normal hand pointer. These two layers
+   are decoration on top of it, never a replacement — which is also why
+   `pointer-events: none` is non-negotiable here. */
+.tx-cursor-ring,
+.tx-cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;      /* above the sticky navbar and every modal */
+  pointer-events: none;      /* must never eat a click */
+  opacity: 0;
+  will-change: transform;
+}
+
+.tx-cursor-ring {
+  width: 34px;
+  height: 34px;
+  border-radius: 9999px;
+  border: 2px solid #D60101;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.38),          /* edge on light + red surfaces */
+    0 0 14px rgba(214, 1, 1, 0.55);         /* neon bloom on dark */
+  transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    opacity 0.2s ease;
+  /* transform is NOT transitioned — it is driven every frame by rAF and
+     a transition here would fight the lerp and smear the ring. */
+}
+
+.tx-cursor-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #0A0A0A;
+  box-shadow: 0 0 0 1.5px #D60101;
+  transition: opacity 0.2s ease;
+}
+
+/* Over anything clickable: the ring opens and fills. The native hand
+   pointer appears at the same moment on its own — this is the visual
+   confirmation layered on top of it, not a substitute for it. */
+.tx-cursor-ring[data-hover='true'] {
+  width: 54px;
+  height: 54px;
+  background-color: rgba(214, 1, 1, 0.16);
+  border-color: #F14A4A;
+}
+
+/* Press feedback */
+.tx-cursor-ring[data-down='true'] {
+  width: 26px;
+  height: 26px;
+  background-color: rgba(214, 1, 1, 0.3);
+}
+
+/* Belt and braces for the "pointer on clickable" half of this: a few
+   places in the marketing code attach onClick to a plain div, which the
+   browser gives no pointer for. The component already treats these as
+   interactive for the ring; this makes the native cursor agree. */
+[data-mkt] [role='button'],
+.hk-landing [role='button'],
+[data-mkt] [role='tab'],
+.hk-landing [role='tab'] {
+  cursor: pointer;
+}
+
+/* Touch and reduced-motion users never get the layers mounted (the
+   component bails early), but hide them defensively so a stale ring can
+   never be left painted mid-frame. */
+@media (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .tx-cursor-ring,
+  .tx-cursor-dot { display: none !important; }
+}
