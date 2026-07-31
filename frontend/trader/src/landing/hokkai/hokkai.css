@@ -327,3 +327,74 @@ html:has(.hk-landing) body::-webkit-scrollbar {
 @media (prefers-reduced-motion: reduce) {
   .hk-landing .sakura-layer { display: none; }
 }
+
+/* ── Quote marquee — continuous horizontal scroll ───────────────
+   Used by home/QuoteTicker.jsx. Kept separate from the older
+   `.ticker-*` rules above so the two can be timed independently.
+
+   HOW THE SEAMLESS LOOP WORKS: the track holds the chip list twice and
+   slides by exactly -50%. At the instant it snaps back to 0, the second
+   copy occupies the position the first started from, so there is no
+   visible jump. The 50% and the duplication in the JSX are one
+   mechanism — change either and you must change both.
+
+   Translating a percentage of the track (not a pixel value) is what
+   keeps it correct at any viewport width and with any number of chips.
+   `width: max-content` stops flex from compressing the groups to fit,
+   which would break the 50% relationship. */
+.hk-landing .quote-marquee {
+  position: relative;
+  overflow: hidden;
+  /* Fade both edges so chips dissolve rather than being guillotined at
+     the viewport boundary. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.hk-landing .quote-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: hk-quote-marquee 55s linear infinite;
+  will-change: transform;
+}
+
+.hk-landing .quote-marquee-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-right: 0.75rem;   /* keeps the seam spacing equal to the gap */
+}
+
+/* Pause on hover: the chips are readable numbers, and a price a user is
+   trying to read should not slide out from under them. */
+.hk-landing .quote-marquee:hover .quote-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes hk-quote-marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Reduced motion: stop the scroll outright and let the row wrap, so the
+   quotes are all still reachable — the information is the point, the
+   movement is not. Auto-scrolling text is one of the clearest cases
+   this preference exists for. */
+@media (prefers-reduced-motion: reduce) {
+  .hk-landing .quote-marquee {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .hk-landing .quote-marquee-track {
+    animation: none;
+    width: 100%;
+    justify-content: center;
+  }
+  .hk-landing .quote-marquee-group {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  /* The duplicate exists only to make the loop seamless; with no loop it
+     is just every quote printed twice. */
+  .hk-landing .quote-marquee-group[aria-hidden='true'] { display: none; }
+}
