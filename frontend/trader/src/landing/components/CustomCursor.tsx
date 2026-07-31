@@ -11,12 +11,23 @@ import { useEffect, useRef } from 'react'
  * cursor being exactly where the user thinks it is. A lagging decorative
  * ring there would be a usability regression, not a flourish.
  *
- * THE NATIVE CURSOR IS NOT HIDDEN. Most implementations of this effect
- * set `cursor: none` and draw everything themselves, which throws away
- * the browser's own affordances — the hand over links, the I-beam over
- * text, the resize arrows. Keeping the native cursor means clickable
- * things still show the pointer automatically, and this ring is purely
- * additive on top of it.
+ * THE NATIVE CURSOR IS HIDDEN, WITH EXCEPTIONS. The arrow is suppressed
+ * so only the ring shows; the hand returns over anything clickable and
+ * the I-beam over text fields. That makes the pointer an affordance
+ * again — if you see a hand, it responds to a click — rather than
+ * something that appears over every pixel regardless.
+ *
+ * The suppression lives in styles/marketing.css under
+ * `html:has(.tx-cursor-ring)`, keyed off this component's own markup,
+ * and inside a `(pointer: fine) and (prefers-reduced-motion:
+ * no-preference)` query that mirrors the early return below. If you
+ * change the bail-out conditions here, change that query too — losing
+ * the ring while the system cursor stays hidden leaves the user with no
+ * pointer at all.
+ *
+ * The INTERACTIVE list below and the pointer selectors in that stylesheet
+ * are two halves of one rule. Keep them in step, or the ring will open
+ * on things the cursor does not acknowledge.
  *
  * PERFORMANCE: pointer position never enters React state. A mousemove
  * fires ~60-120x/sec and a setState per event would re-render the tree
@@ -99,11 +110,13 @@ export default function CustomCursor() {
     function onUp() { ringEl!.dataset.down = 'false' }
 
     function frame() {
-      /* Lerp toward the pointer. 0.18 gives a follower that reads as
-         attached rather than sluggish; the dot is pinned exactly so
-         there is always something precise under the hand. */
-      ring.current.x += (target.current.x - ring.current.x) * 0.18
-      ring.current.y += (target.current.y - ring.current.y) * 0.18
+      /* Lerp toward the pointer. Raised from 0.18 to 0.3 when the system
+         arrow was hidden: the ring stopped being decoration over a real
+         cursor and became the cursor, and at 0.18 it visibly trailed
+         behind where the user was actually clicking. The dot is still
+         pinned exactly, so precision never depends on this easing. */
+      ring.current.x += (target.current.x - ring.current.x) * 0.3
+      ring.current.y += (target.current.y - ring.current.y) * 0.3
 
       ringEl!.style.transform = `translate3d(${ring.current.x}px, ${ring.current.y}px, 0) translate(-50%, -50%)`
       dotEl!.style.transform = `translate3d(${target.current.x}px, ${target.current.y}px, 0) translate(-50%, -50%)`

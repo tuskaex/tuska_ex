@@ -183,8 +183,8 @@
 }
 
 .tx-cursor-ring {
-  width: 34px;
-  height: 34px;
+  width: 22px;
+  height: 22px;
   border-radius: 9999px;
   border: 2px solid #D60101;
   box-shadow:
@@ -213,28 +213,82 @@
    pointer appears at the same moment on its own — this is the visual
    confirmation layered on top of it, not a substitute for it. */
 .tx-cursor-ring[data-hover='true'] {
-  width: 54px;
-  height: 54px;
+  width: 36px;
+  height: 36px;
   background-color: rgba(214, 1, 1, 0.16);
   border-color: #F14A4A;
 }
 
 /* Press feedback */
 .tx-cursor-ring[data-down='true'] {
-  width: 26px;
-  height: 26px;
+  width: 16px;
+  height: 16px;
   background-color: rgba(214, 1, 1, 0.3);
 }
 
-/* Belt and braces for the "pointer on clickable" half of this: a few
-   places in the marketing code attach onClick to a plain div, which the
-   browser gives no pointer for. The component already treats these as
-   interactive for the ring; this makes the native cursor agree. */
-[data-mkt] [role='button'],
-.hk-landing [role='button'],
-[data-mkt] [role='tab'],
-.hk-landing [role='tab'] {
-  cursor: pointer;
+/* ── Native cursor: hidden by default, pointer only on clickables ──
+   The ring is the cursor now. The arrow is suppressed everywhere so
+   only the circle shows, and the hand appears solely over things that
+   actually respond to a click — which makes the pointer itself the
+   affordance rather than just decoration.
+
+   SCOPING. There is no single class on every landing wrapper: light
+   marketing pages get no `data-mkt`, and `.hk-landing` is the home page
+   only. `html:has(.tx-cursor-ring)` keys off the cursor component's own
+   markup instead, which by construction exists on exactly the pages
+   that mount it — and nowhere near the trading terminal. The codebase
+   already relies on :has() this way in hokkai.css.
+
+   THE MEDIA QUERY IS LOAD-BEARING. CustomCursor renders its two divs
+   unconditionally and only the rAF loop bails, so the :has() selector
+   matches on touch and reduced-motion too. Without these conditions we
+   would hide the system cursor on machines where the ring never moves,
+   leaving the user with no pointer at all. The conditions mirror the
+   component's own early-return exactly. */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  html:has(.tx-cursor-ring),
+  html:has(.tx-cursor-ring) body,
+  html:has(.tx-cursor-ring) *:not(input):not(textarea):not([contenteditable='true']) {
+    cursor: none;
+  }
+
+  /* Clickables — the hand comes back. Mirrors the INTERACTIVE selector
+     list in CustomCursor.tsx; keep the two in step or the ring will
+     open on things the cursor does not acknowledge, or vice versa. */
+  html:has(.tx-cursor-ring) a[href],
+  html:has(.tx-cursor-ring) button:not(:disabled),
+  html:has(.tx-cursor-ring) select,
+  html:has(.tx-cursor-ring) label[for],
+  html:has(.tx-cursor-ring) summary,
+  html:has(.tx-cursor-ring) [role='button'],
+  html:has(.tx-cursor-ring) [role='link'],
+  html:has(.tx-cursor-ring) [role='menuitem'],
+  html:has(.tx-cursor-ring) [role='tab'],
+  html:has(.tx-cursor-ring) [class*='cursor-pointer'] {
+    cursor: pointer;
+  }
+
+  /* Text fields keep the I-beam. Typing into a field with no caret
+     cursor is genuinely worse, not stylish — this is the one deliberate
+     exception to "only the circle". */
+  html:has(.tx-cursor-ring) input,
+  html:has(.tx-cursor-ring) textarea,
+  html:has(.tx-cursor-ring) [contenteditable='true'] {
+    cursor: text;
+  }
+  html:has(.tx-cursor-ring) input[type='checkbox'],
+  html:has(.tx-cursor-ring) input[type='radio'],
+  html:has(.tx-cursor-ring) input[type='submit'],
+  html:has(.tx-cursor-ring) input[type='button'],
+  html:has(.tx-cursor-ring) input[type='file'] {
+    cursor: pointer;
+  }
+
+  /* A disabled control should not promise a click. */
+  html:has(.tx-cursor-ring) button:disabled,
+  html:has(.tx-cursor-ring) [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
 }
 
 /* Touch and reduced-motion users never get the layers mounted (the
