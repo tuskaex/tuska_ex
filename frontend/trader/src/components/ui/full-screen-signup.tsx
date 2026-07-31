@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 
 import { useAuthStore } from '@/stores/authStore';
 import api from '@/lib/api/client';
+import AuthPanelArt from '@/components/ui/AuthPanelArt';
 import { scorePassword } from '@/lib/passwordStrength';
 
 type Mode = 'login' | 'signup';
@@ -240,6 +241,14 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
               className="h-8 w-auto"
             />
           </Link>
+          {/* Fills the gap between the logo and the headline, which was
+              an empty black rectangle on a 36rem-tall card. `flex-1`
+              lets it take exactly the leftover space, so it grows and
+              shrinks with the card instead of forcing a height.
+              Hidden below md: the mobile panel collapses to ~20rem and
+              the art would crowd the headline out. */}
+          <AuthPanelArt className="relative z-10 hidden flex-1 items-center py-6 md:flex" />
+
           <h1 className="text-2xl md:text-3xl font-medium leading-tight tracking-tight relative z-10">
             {copy.hero}
           </h1>

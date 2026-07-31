@@ -10,6 +10,7 @@
  */
 
 import Link from 'next/link';
+import AuthPanelArt from '@/components/ui/AuthPanelArt';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 
@@ -41,6 +42,12 @@ export default function LoginPortalPage() {
               className="h-8 w-auto"
             />
           </Link>
+          {/* Same treatment as the signup/login card — this panel is a
+              copy of that one, and leaving one of the pair as an empty
+              black rectangle would make the auth flow look half-built as
+              the user moves between them. */}
+          <AuthPanelArt className="relative z-10 hidden flex-1 items-center py-6 md:flex" />
+
           <h1 className="text-2xl md:text-3xl font-medium leading-tight tracking-tight relative z-10">
             A precision-engineered trading platform for serious investors.
           </h1>

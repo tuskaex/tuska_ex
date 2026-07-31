@@ -950,3 +950,25 @@ html {
   0%   { transform: translateX(-40%); }
   100% { transform: translateX(340%); }
 }
+
+/* ── AuthPanelArt ───────────────────────────────────────────────
+   Keyframes for the animated chart in the auth card's left panel
+   (components/ui/AuthPanelArt.tsx). Declared here rather than in the
+   Tailwind config because they are consumed through arbitrary-value
+   utilities (`animate-[apa-draw_...]`), and Tailwind only emits
+   keyframes it can see declared in theme.extend. */
+@keyframes apa-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes apa-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Candles grow up out of the baseline. `transform-box: fill-box` is set
+   on the element — without it an SVG child's transform-origin resolves
+   against the whole viewBox, and the candles would scale from the
+   canvas corner instead of their own feet. */
+@keyframes apa-rise {
+  from { opacity: 0; transform: scaleY(0.1) translateY(6px); }
+  to   { opacity: 1; transform: scaleY(1) translateY(0); }
+}
