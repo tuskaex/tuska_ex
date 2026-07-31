@@ -938,3 +938,15 @@ html {
 /* Legacy AppHeader override removed — the new sticky AppNavbar is
    already flat / hairline-bordered, so the per-page reset is no
    longer needed. */
+
+/* ── BrandLoader sweep ──────────────────────────────────────────
+   The indeterminate bar under the logo in components/ui/BrandLoader.
+   Lives here rather than in the Tailwind config because it is used by
+   an arbitrary-value utility (`animate-[brandloader-sweep_...]`), and
+   Tailwind only emits keyframes it can see declared in `theme.extend`.
+   Travels -40%..140% so the highlight fully clears both ends instead of
+   appearing to bounce off them. */
+@keyframes brandloader-sweep {
+  0%   { transform: translateX(-40%); }
+  100% { transform: translateX(340%); }
+}

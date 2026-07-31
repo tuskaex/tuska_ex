@@ -2,17 +2,28 @@
 
 // ============================================
 // TUSKAEX - Hero Section — Cyber-Samurai
-// Cinematic: video + glow + scan lines. Deliberately CONTENT-FREE.
+// Star rain + animated wordmark.
 // ============================================
 //
-// Nothing readable belongs in here. The quote chips and the scroll cue both
-// used to be overlaid on the footage; they were pulled out so the video
-// plays clean. The quotes now live in home/QuoteTicker.jsx, rendered as its
-// own band immediately below this section. If you are about to add a
-// headline, CTA or badge here, that is the decision being reversed — put it
-// in a section under the video instead.
+// HISTORY, because this reverses a documented decision:
+//
+// This section used to be a 7.7 MB background video and was marked
+// "deliberately CONTENT-FREE" — the quote chips and scroll cue had been
+// pulled off the footage so it played clean, and the note said that
+// adding a headline here would be reversing that.
+//
+// It is now reversed, deliberately. The video is gone (replaced by the
+// StarRain canvas, which costs a few KB instead of 7.7 MB and renders at
+// any size), and with no footage to obscure there is nothing left for a
+// headline to compete with. The wordmark IS the hero now.
+//
+// The quote ticker still lives in home/QuoteTicker.jsx as its own band
+// below — that half of the original decision stands. Do not move it back
+// on top of this section.
 
 import React from 'react'
+import StarRain from '../components/StarRain'
+import HeroWordmark from '../components/HeroWordmark'
 import { SakuraLayer, TategakiRail } from '../components/JapaneseMotifs'
 
 export default function HeroSection() {
@@ -30,38 +41,39 @@ export default function HeroSection() {
        the footage rather than being covered by it. */
     <section className="relative min-h-screen overflow-hidden -mt-[76px] md:-mt-[84px]">
 
-      {/* ── Background Video ── */}
-      <video
-        className="absolute inset-0 w-full h-full object-cover"
-        src="/tuskaex/hero.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-      />
-
-      {/* ── Multi-layer Cyber Gradient Overlay ──
-          Lightened twice now: 0.55/0.65/0.92 → 0.26/0.40/0.80 → the values
-          below. The footage is the point of the hero, so the overlay only
-          has to earn its keep where text actually sits.
-
-          The stops are NOT uniform on purpose:
-          • top stays the lightest — nothing sits there but the video, and
-            the navbar is a solid pill with its own background.
-          • the middle only bridges the two ends. No text rides anywhere in
-            this section any more, so no stop is carrying legibility.
-          • the bottom stays heaviest. That is a seam, not decoration — the
-            quote ticker below opens on a near-black band, and fading into
-            it here is what stops a visible horizontal edge at the hero's
-            base. Do not flatten this stop to match the others. */}
+      {/* ── Night sky base ──
+          A flat, near-black canvas for the rain to fall through. This
+          replaces the <video>: the sky is painted, not filmed. */}
       <div
         className="absolute inset-0"
         style={{
+          background:
+            'radial-gradient(ellipse 120% 90% at 50% 0%, #0b1020 0%, #05070d 45%, #010203 100%)',
+        }}
+      />
+
+      {/* ── 星の雨 — continuous star rain ── */}
+      <StarRain />
+
+      {/* ── Depth / legibility overlay ──
+          The stops are NOT uniform on purpose:
+          • top stays lightest — the navbar is a solid pill with its own
+            background and needs no help.
+          • the middle is now doing real work: the wordmark sits there, so
+            this stop is what keeps it legible against a bright streak
+            passing behind it. It was 0.26 when nothing rode here.
+          • the bottom stays heaviest. That is a seam, not decoration —
+            the quote ticker below opens on a near-black band, and fading
+            into it here is what stops a visible horizontal edge at the
+            hero's base. Do not flatten this stop to match the others. */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
           background: `
             linear-gradient(to bottom,
-              rgba(5,7,10,0.14) 0%,
-              rgba(1,2,3,0.26) 55%,
-              rgba(1,2,3,0.70) 100%
+              rgba(5,7,10,0.10) 0%,
+              rgba(1,2,3,0.42) 55%,
+              rgba(1,2,3,0.72) 100%
             )
           `,
         }}
@@ -138,11 +150,19 @@ export default function HeroSection() {
         牙
       </div>
 
+      {/* ── The wordmark ──
+          Centred over the rain. `min-h-screen` is on the section and the
+          negative top margin pulls it under the navbar, so the padding
+          here re-centres the mark in the visible area rather than in the
+          section box — without it the wordmark sits ~40px high. */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center pt-[76px] md:pt-[84px]">
+        <HeroWordmark />
+      </div>
+
       {/* ── 桜吹雪 — drifting petals ──
-          Pure atmosphere. This section is deliberately content-free
-          (see the header note), so everything added here has to be
-          non-readable: petals, patterns and vertical rails qualify,
-          a headline or badge would not. */}
+          Kept alongside the star rain: petals drift and sway on their own
+          timing while the streaks fall fast and straight, so the two read
+          as separate layers of weather rather than one confused effect. */}
       <SakuraLayer />
 
       {/* ── 縦書き rails ── */}
