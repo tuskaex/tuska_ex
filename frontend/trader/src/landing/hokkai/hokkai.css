@@ -345,10 +345,23 @@ html:has(.hk-landing) body::-webkit-scrollbar {
 .hk-landing .quote-marquee {
   position: relative;
   overflow: hidden;
-  /* Fade both edges so chips dissolve rather than being guillotined at
-     the viewport boundary. */
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+
+  /* A CENTRED WINDOW SHOWING ~FOUR CHIPS, not a full-bleed band.
+     Chips run roughly 170-210px depending on how long the price and
+     percentage are, plus a 12px gap — so ~840px lands on four across
+     without ever slicing a fifth in half at the fade.
+     `width: 100%` keeps it responsive below that: on a phone the window
+     simply shows fewer chips and the same scroll carries the rest. */
+  width: 100%;
+  max-width: 840px;
+  margin-inline: auto;
+
+  /* Fade both edges so chips dissolve rather than being guillotined.
+     Fixed pixels, not percentages: the window is now a fixed width, and
+     a 6% fade would scale with it — narrow viewports would get a fade so
+     wide it ate most of a chip. 44px is constant at every size. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 44px, #000 calc(100% - 44px), transparent);
 }
 
 .hk-landing .quote-marquee-track {
@@ -384,6 +397,9 @@ html:has(.hk-landing) body::-webkit-scrollbar {
   .hk-landing .quote-marquee {
     -webkit-mask-image: none;
     mask-image: none;
+    /* Release the four-chip window: with no scroll, that width would
+       squeeze fifteen wrapped chips into a tall narrow column. */
+    max-width: 1200px;
   }
   .hk-landing .quote-marquee-track {
     animation: none;
