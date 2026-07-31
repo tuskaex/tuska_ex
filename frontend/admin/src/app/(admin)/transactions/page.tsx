@@ -62,7 +62,7 @@ function typeIcon(type: string) {
     case 'withdrawal':
       return <ArrowUpCircle size={14} className="text-danger" />;
     case 'adjustment':
-      return <Receipt size={14} className="text-buy" />;
+      return <Receipt size={14} className="text-accent" />;
     case 'credit':
       return <CreditCard size={14} className="text-warning" />;
     case 'ib_commission':
@@ -79,7 +79,7 @@ function typeBadge(type: string) {
     case 'withdrawal':
       return 'bg-danger/15 text-danger';
     case 'adjustment':
-      return 'bg-buy/15 text-buy';
+      return 'bg-accent/15 text-accent';
     case 'credit':
       return 'bg-warning/15 text-warning';
     case 'ib_commission':
@@ -209,7 +209,7 @@ export default function TransactionsPage() {
       label: 'Fund Adjustments',
       value: summary?.type_breakdown?.adjustment?.count ?? 0,
       amount: summary?.type_breakdown?.adjustment?.total_amount ?? 0,
-      color: 'text-buy',
+      color: 'text-accent',
       icon: Receipt,
     },
     {
@@ -343,7 +343,7 @@ export default function TransactionsPage() {
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search user, account, description..."
-                  className="pl-8 pr-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary w-72 transition-fast focus:border-buy"
+                  className="pl-8 pr-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary w-72 transition-fast focus:border-accent"
                 />
                 {search && (
                   <button

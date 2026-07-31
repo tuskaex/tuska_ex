@@ -181,7 +181,7 @@ export default function IBDetailPage() {
           r.source_trade_id ? r.source_trade_id.slice(0, 12) + '...' : '-',
         ]),
         styles: { fontSize: 8, cellPadding: 4 },
-        headStyles: { fillColor: [255, 138, 0], textColor: 255 },  // orange to match the UI accent
+        headStyles: { fillColor: [214, 1, 1], textColor: 255 },   // #D60101 — TuskaEx logo red
         columnStyles: {
           4: { halign: 'right' },
           5: { halign: 'right', fontStyle: 'bold' },
@@ -259,7 +259,7 @@ export default function IBDetailPage() {
                 <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-bg-tertiary/40 border border-border-primary text-xxs">
                   <Hash size={11} className="text-text-tertiary" />
                   <span className="text-text-tertiary">Referral Code:</span>
-                  <span className="text-buy font-mono font-semibold">{ib.referral_code}</span>
+                  <span className="text-accent font-mono font-semibold">{ib.referral_code}</span>
                 </div>
               </div>
             </div>

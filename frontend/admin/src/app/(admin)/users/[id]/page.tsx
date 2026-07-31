@@ -154,7 +154,7 @@ function typeColor(t: string) {
   if (x === 'withdrawal') return 'bg-danger/15 text-danger';
   if (x === 'profit') return 'bg-emerald-500/15 text-emerald-400';
   if (x === 'loss') return 'bg-rose-500/15 text-rose-400';
-  if (x === 'bonus' || x === 'bonus_release' || x === 'credit') return 'bg-buy/15 text-buy';
+  if (x === 'bonus' || x === 'bonus_release' || x === 'credit') return 'bg-accent/15 text-accent';
   if (x === 'adjustment' || x === 'admin_commission') return 'bg-warning/15 text-warning';
   if (x === 'transfer') return 'bg-text-tertiary/15 text-text-secondary';
   return 'bg-text-tertiary/15 text-text-tertiary';
@@ -320,8 +320,8 @@ export default function UserDetailPage() {
         </button>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-14 h-14 rounded-full bg-buy/10 border-2 border-buy/20 flex items-center justify-center shrink-0">
-              <UserRound size={28} className="text-buy" />
+            <div className="w-14 h-14 rounded-full bg-accent/10 border-2 border-accent/20 flex items-center justify-center shrink-0">
+              <UserRound size={28} className="text-accent" />
             </div>
             <div className="min-w-0">
               <h1 className="text-xl font-bold text-text-primary truncate">{name}</h1>
@@ -356,7 +356,7 @@ export default function UserDetailPage() {
                 className={cn(
                   'flex items-center gap-2 px-4 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-fast',
                   active
-                    ? 'border-buy text-buy'
+                    ? 'border-accent text-accent'
                     : 'border-transparent text-text-tertiary hover:text-text-primary hover:border-border-primary',
                 )}
               >
@@ -374,7 +374,7 @@ export default function UserDetailPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard label="Total Deposits" value={`$${fmt(total_deposit)}`} icon={DollarSign} color="text-success" />
             <StatCard label="Total Withdrawals" value={`$${fmt(total_withdrawal)}`} icon={Wallet} color="text-warning" />
-            <StatCard label="Total Trades" value={total_trades.toLocaleString()} icon={CreditCard} color="text-buy" />
+            <StatCard label="Total Trades" value={total_trades.toLocaleString()} icon={CreditCard} color="text-accent" />
             <StatCard label="Open Positions" value={open_positions.toLocaleString()} icon={Shield} color="text-text-primary" />
             <StatCard label="Gross Profit" value={grossProfit != null ? `$${fmt(grossProfit)}` : '—'} icon={TrendingUp} color="text-emerald-400" hint={trades.length === 0 ? 'Open Trade History' : undefined} />
             <StatCard label="Net P&L" value={netPnl != null ? `${netPnl >= 0 ? '+' : ''}$${fmt(netPnl)}` : '—'} icon={netPnl != null && netPnl < 0 ? TrendingDown : TrendingUp} color={netPnl != null && netPnl < 0 ? 'text-danger' : 'text-success'} hint={grossLoss != null ? `Losses: $${fmt(grossLoss)}` : undefined} />
@@ -442,7 +442,7 @@ export default function UserDetailPage() {
             <span className="font-mono tabular-nums text-text-secondary">{p.open_price}</span>,
             <span className="font-mono tabular-nums">{p.close_price ?? '—'}</span>,
             <span className={cn('font-mono tabular-nums', p.stop_loss != null ? 'text-sell' : 'text-text-tertiary')}>{p.stop_loss ?? '—'}</span>,
-            <span className={cn('font-mono tabular-nums', p.take_profit != null ? 'text-buy' : 'text-text-tertiary')}>{p.take_profit ?? '—'}</span>,
+            <span className={cn('font-mono tabular-nums', p.take_profit != null ? 'text-accent' : 'text-text-tertiary')}>{p.take_profit ?? '—'}</span>,
             <span className={cn('font-mono tabular-nums font-semibold', p.profit >= 0 ? 'text-success' : 'text-danger')}>{p.profit >= 0 ? '+' : ''}${fmt(p.profit)}</span>,
             <span className="text-text-tertiary font-mono text-xxs">{p.account_number || '—'}</span>,
             <span className="text-text-tertiary text-xxs">{formatDate(p.created_at)}</span>,
@@ -476,7 +476,7 @@ export default function UserDetailPage() {
               <span className="font-mono tabular-nums text-text-secondary">{t.open_price}</span>,
               <span className="font-mono tabular-nums text-text-secondary">{t.close_price}</span>,
               <span className={cn('font-mono tabular-nums', t.stop_loss != null ? 'text-sell' : 'text-text-tertiary')}>{t.stop_loss ?? '—'}</span>,
-              <span className={cn('font-mono tabular-nums', t.take_profit != null ? 'text-buy' : 'text-text-tertiary')}>{t.take_profit ?? '—'}</span>,
+              <span className={cn('font-mono tabular-nums', t.take_profit != null ? 'text-accent' : 'text-text-tertiary')}>{t.take_profit ?? '—'}</span>,
               <span className={cn('font-mono tabular-nums font-semibold', t.profit >= 0 ? 'text-success' : 'text-danger')}>{t.profit >= 0 ? '+' : ''}${fmt(t.profit)}</span>,
               <span className={cn('inline-flex px-2 py-0.5 rounded text-xxs font-semibold capitalize', typeColor(t.close_reason || 'manual'))}>{t.close_reason || 'manual'}</span>,
             ])}

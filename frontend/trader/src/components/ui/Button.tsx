@@ -14,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variants: Record<Variant, string> = {
-  // Brand orange — used for every CTA outside the trading terminal. `buy`
+  // Brand red — used for every CTA outside the trading terminal. `buy`
   // stays blue because in trading-context blue=buy is a semantic convention,
   // not a brand choice.
   primary: 'bg-[#D60101] hover:bg-[#A30000] active:bg-[#A6320A] text-white font-semibold transition-colors',

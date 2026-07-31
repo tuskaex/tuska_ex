@@ -249,7 +249,7 @@ export default function BanksPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="p-2 rounded-md bg-bg-tertiary border border-border-primary shrink-0">
-                      <Building2 size={16} className="text-buy" />
+                      <Building2 size={16} className="text-accent" />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">
@@ -385,7 +385,7 @@ export default function BanksPage() {
                     value={form[f.key] as string}
                     onChange={(e) => updateField(f.key, e.target.value)}
                     placeholder={f.placeholder}
-                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-buy"
+                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-accent"
                   />
                 </div>
               ))}
@@ -403,7 +403,7 @@ export default function BanksPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-text-secondary truncate">QR code uploaded</p>
                       <div className="flex gap-2 mt-2">
-                        <label className="inline-flex items-center gap-1 px-2 py-1 text-xxs text-buy border border-buy/30 rounded-md hover:bg-buy/10 transition-fast cursor-pointer">
+                        <label className="inline-flex items-center gap-1 px-2 py-1 text-xxs text-accent border border-accent/30 rounded-md hover:bg-accent/10 transition-fast cursor-pointer">
                           <Upload size={11} />
                           Replace
                           <input
@@ -432,8 +432,8 @@ export default function BanksPage() {
                     className={cn(
                       'flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-md cursor-pointer transition-fast',
                       uploading
-                        ? 'border-buy/40 bg-buy/5'
-                        : 'border-border-primary hover:border-buy/50 hover:bg-buy/5',
+                        ? 'border-accent/40 bg-accent/5'
+                        : 'border-border-primary hover:border-accent/50 hover:bg-accent/5',
                     )}
                     onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     onDrop={(e) => {
@@ -444,7 +444,7 @@ export default function BanksPage() {
                     }}
                   >
                     {uploading ? (
-                      <Loader2 size={24} className="animate-spin text-buy" />
+                      <Loader2 size={24} className="animate-spin text-accent" />
                     ) : (
                       <div className="p-3 rounded-full bg-bg-tertiary border border-border-primary">
                         <ImageIcon size={20} className="text-text-tertiary" />
@@ -504,7 +504,7 @@ export default function BanksPage() {
                 disabled={saving}
                 onClick={handleSave}
                 className={cn(
-                  'px-3 py-1.5 text-xs font-medium bg-buy text-white rounded-md hover:bg-buy-dark transition-fast inline-flex items-center gap-1.5',
+                  'px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-dark transition-fast inline-flex items-center gap-1.5',
                   saving && 'opacity-50 pointer-events-none',
                 )}
               >

@@ -93,7 +93,7 @@ export default function AuditLogsPage() {
     <div className="p-6 space-y-4">
       <div>
         <h1 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-          <ScrollText size={18} className="text-buy" />
+          <ScrollText size={18} className="text-accent" />
           Audit logs
         </h1>
         <p className="text-xxs text-text-tertiary mt-0.5">
@@ -208,7 +208,7 @@ export default function AuditLogsPage() {
                           row.action_type === 'REGISTER' && 'bg-info/15 text-info',
                           row.action_type === 'LOGIN' && 'bg-success/15 text-success',
                           row.action_type === 'LOGOUT' && 'bg-text-tertiary/15 text-text-tertiary',
-                          row.action_type === 'ORDER_PLACED' && 'bg-buy/15 text-buy',
+                          row.action_type === 'ORDER_PLACED' && 'bg-accent/15 text-accent',
                           !['REGISTER', 'LOGIN', 'LOGOUT', 'ORDER_PLACED'].includes(row.action_type) &&
                             'bg-bg-hover text-text-secondary',
                         )}

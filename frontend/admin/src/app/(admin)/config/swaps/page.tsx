@@ -192,7 +192,7 @@ export default function SwapsPage() {
                     <td className="px-3 py-2"><input type="number" step="0.01" value={r.swap_short} onChange={e => updateRow(k, 'swap_short', parseFloat(e.target.value) || 0)} className="w-16 px-1.5 py-1 text-xs bg-bg-input border border-border-primary rounded font-mono tabular-nums text-text-primary" /></td>
                     <td className="px-3 py-2"><select value={r.triple_swap_day} onChange={e => updateRow(k, 'triple_swap_day', parseInt(e.target.value))} className="text-xs py-1 pl-1.5 pr-5 appearance-none bg-bg-input border border-border-primary rounded text-text-primary w-16">{DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></td>
                     <td className="px-3 py-2"><button onClick={() => updateRow(k, 'swap_free', !r.swap_free)} className={cn('w-8 h-4 rounded-full transition-fast relative', r.swap_free ? 'bg-success' : 'bg-bg-hover border border-border-primary')}><span className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-fast', r.swap_free ? 'left-[16px]' : 'left-0.5')} /></button></td>
-                    <td className="px-3 py-2"><button onClick={() => updateRow(k, 'is_enabled', !r.is_enabled)} className={cn('w-8 h-4 rounded-full transition-fast relative', r.is_enabled ? 'bg-buy' : 'bg-bg-hover border border-border-primary')}><span className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-fast', r.is_enabled ? 'left-[16px]' : 'left-0.5')} /></button></td>
+                    <td className="px-3 py-2"><button onClick={() => updateRow(k, 'is_enabled', !r.is_enabled)} className={cn('w-8 h-4 rounded-full transition-fast relative', r.is_enabled ? 'bg-accent' : 'bg-bg-hover border border-border-primary')}><span className={cn('absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-fast', r.is_enabled ? 'left-[16px]' : 'left-0.5')} /></button></td>
                     <td className="px-3 py-2"><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void removeRow(k); }} className="p-1 text-text-tertiary hover:text-danger transition-fast" title="Delete rule"><Trash2 size={12} /></button></td>
                   </tr>
                 );
@@ -216,7 +216,7 @@ export default function SwapsPage() {
               skip charges entirely.
             </p>
           </div>
-          <button onClick={saveAll} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-buy rounded-md hover:bg-buy-light disabled:opacity-50 transition-fast">
+          <button onClick={saveAll} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-accent rounded-md hover:bg-accent-light disabled:opacity-50 transition-fast">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} Save All
           </button>
         </div>

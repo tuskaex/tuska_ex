@@ -160,7 +160,7 @@ export default function CreateTradePage() {
                   onChange={e => setUserSearch(e.target.value)}
                   onFocus={() => { if (userResults.length) setShowUserDropdown(true); }}
                   placeholder="Search by email or name..."
-                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast"
                 />
                 {userSearchLoading && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-text-tertiary" />}
                 {showUserDropdown && userResults.length > 0 && (
@@ -191,7 +191,7 @@ export default function CreateTradePage() {
                 <ChevronDown size={12} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
               </div>
             ) : (
-              <input type="text" value={accountId} onChange={e => setAccountId(e.target.value)} placeholder="Enter account ID" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="text" value={accountId} onChange={e => setAccountId(e.target.value)} placeholder="Enter account ID" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast" />
             )}
           </div>
 
@@ -201,11 +201,11 @@ export default function CreateTradePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Symbol <span className="text-danger">*</span></label>
-              <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="e.g. EURUSD" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md uppercase placeholder:text-text-tertiary focus:border-buy transition-fast font-medium" />
+              <input type="text" value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="e.g. EURUSD" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md uppercase placeholder:text-text-tertiary focus:border-accent transition-fast font-medium" />
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Lots <span className="text-danger">*</span></label>
-              <input type="number" step="0.01" min="0.01" value={lots} onChange={e => setLots(e.target.value)} placeholder="0.01" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="0.01" min="0.01" value={lots} onChange={e => setLots(e.target.value)} placeholder="0.01" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
 
@@ -235,7 +235,7 @@ export default function CreateTradePage() {
               {['market', 'limit', 'stop'].map(t => (
                 <button key={t} onClick={() => setOrderType(t)} className={cn(
                   'py-2.5 rounded-md text-xs font-medium border transition-fast capitalize',
-                  orderType === t ? 'bg-buy/15 text-buy border-buy/30' : 'bg-bg-input text-text-secondary border-border-primary hover:border-border-secondary',
+                  orderType === t ? 'bg-accent/15 text-accent border-accent/30' : 'bg-bg-input text-text-secondary border-border-primary hover:border-border-secondary',
                 )}>{t}</button>
               ))}
             </div>
@@ -245,7 +245,7 @@ export default function CreateTradePage() {
           {orderType !== 'market' && (
             <div>
               <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Price <span className="text-danger">*</span></label>
-              <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00000" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} placeholder="0.00000" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           )}
 
@@ -253,11 +253,11 @@ export default function CreateTradePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Stop Loss</label>
-              <input type="number" step="any" value={sl} onChange={e => setSl(e.target.value)} placeholder="Optional" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={sl} onChange={e => setSl(e.target.value)} placeholder="Optional" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Take Profit</label>
-              <input type="number" step="any" value={tp} onChange={e => setTp(e.target.value)} placeholder="Optional" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={tp} onChange={e => setTp(e.target.value)} placeholder="Optional" className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
 
@@ -266,7 +266,7 @@ export default function CreateTradePage() {
           {/* Reason */}
           <div>
             <label className="block text-xxs text-text-tertiary mb-1.5 uppercase tracking-wide">Reason <span className="text-danger">*</span></label>
-            <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Why is this trade being created? This is required for audit purposes." className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast resize-none" />
+            <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} placeholder="Why is this trade being created? This is required for audit purposes." className="w-full px-3 py-2.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast resize-none" />
           </div>
 
           {/* Submit */}
@@ -274,7 +274,7 @@ export default function CreateTradePage() {
             <Link href="/trades" className="text-xs text-text-tertiary hover:text-text-primary transition-fast">Cancel</Link>
             <button onClick={handleSubmit} disabled={submitting} className={cn(
               'px-6 py-2 rounded-md text-xs font-medium transition-fast',
-              'bg-buy text-white hover:bg-buy-light disabled:opacity-50',
+              'bg-accent text-white hover:bg-accent-light disabled:opacity-50',
             )}>
               Review & Submit
             </button>
@@ -326,7 +326,7 @@ export default function CreateTradePage() {
 
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowConfirm(false)} className="px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Go Back</button>
-              <button onClick={confirmSubmit} disabled={submitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-buy text-white hover:bg-buy-light disabled:opacity-50 transition-fast">
+              <button onClick={confirmSubmit} disabled={submitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-accent text-white hover:bg-accent-light disabled:opacity-50 transition-fast">
                 {submitting ? <Loader2 size={14} className="animate-spin" /> : 'Confirm & Create'}
               </button>
             </div>

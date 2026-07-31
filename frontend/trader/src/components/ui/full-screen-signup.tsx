@@ -216,7 +216,7 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
   return (
     <div className="min-h-screen flex items-center justify-center overflow-hidden bg-[#FAFAFA] p-4">
       <div className="w-full relative max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl ring-1 ring-black/5">
-        {/* Decorative orange ball + blurred bands behind the left panel */}
+        {/* Decorative brand-red ball + blurred bands behind the left panel */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent to-black/60" />
           <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#D60101] rounded-full opacity-90" />

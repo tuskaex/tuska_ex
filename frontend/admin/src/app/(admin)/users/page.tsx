@@ -425,7 +425,7 @@ export default function UsersPage() {
 
   const SortIcon = ({ col }: { col: SortKey }) => {
     if (sortKey !== col) return <ArrowUpDown size={10} className="text-text-tertiary opacity-0 group-hover:opacity-100 transition-fast" />;
-    return sortDir === 'asc' ? <ArrowUp size={10} className="text-buy" /> : <ArrowDown size={10} className="text-buy" />;
+    return sortDir === 'asc' ? <ArrowUp size={10} className="text-accent" /> : <ArrowDown size={10} className="text-accent" />;
   };
 
   const isFundAction = (t: ModalType): t is FundAction => !!t && t in FUND_LABELS;
@@ -461,7 +461,7 @@ export default function UsersPage() {
               placeholder="Search name, email, or ID..."
               className={cn(
                 'w-full pl-11 pr-4 py-3 text-sm bg-bg-input border border-border-primary rounded-lg',
-                'placeholder:text-text-tertiary transition-fast focus:border-buy',
+                'placeholder:text-text-tertiary transition-fast focus:border-accent',
               )}
             />
           </div>
@@ -513,10 +513,10 @@ export default function UsersPage() {
                   <tr key={u.id} className="border-b border-border-primary/40 transition-fast hover:bg-bg-hover/60 group/row">
                     <td className="px-3 py-3 text-text-tertiary font-mono tabular-nums whitespace-nowrap" title={u.id}>{u.id.slice(0, 8)}…</td>
                     <td className="px-3 py-3 whitespace-nowrap">
-                      <Link href={`/users/${u.id}`} className="inline-flex items-center gap-2 hover:text-buy transition-fast">
+                      <Link href={`/users/${u.id}`} className="inline-flex items-center gap-2 hover:text-accent transition-fast">
                         <div className="relative shrink-0">
-                          <div className="w-7 h-7 rounded-full bg-buy/10 border border-buy/20 flex items-center justify-center">
-                            <UserRound size={13} className="text-buy" />
+                          <div className="w-7 h-7 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                            <UserRound size={13} className="text-accent" />
                           </div>
                           <span
                             title={u.is_online ? 'Online' : 'Offline'}
@@ -576,8 +576,8 @@ export default function UsersPage() {
                 <div className="flex items-start justify-between gap-3">
                   <Link href={`/users/${u.id}`} className="flex items-center gap-2.5 min-w-0">
                     <div className="relative shrink-0">
-                      <div className="w-9 h-9 rounded-full bg-buy/10 border border-buy/20 flex items-center justify-center">
-                        <UserRound size={16} className="text-buy" />
+                      <div className="w-9 h-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
+                        <UserRound size={16} className="text-accent" />
                       </div>
                       <span
                         className={cn(
@@ -654,7 +654,7 @@ export default function UsersPage() {
                 return (
                   <button key={p} onClick={() => setPage(p)} className={cn(
                     'min-w-[36px] h-9 px-2 rounded-lg text-sm font-medium transition-fast',
-                    page === p ? 'bg-buy/15 text-buy border border-buy/30' : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
+                    page === p ? 'bg-accent/15 text-accent border border-accent/30' : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
                   )}>
                     {p}
                   </button>
@@ -727,10 +727,10 @@ export default function UsersPage() {
 
           {/* Add Fund: goes to Main Wallet — inform admin */}
           {modalType === 'add-fund' && (
-            <div className="p-3.5 rounded-lg bg-buy/10 border border-buy/25 flex items-start gap-2.5">
-              <DollarSign size={15} className="text-buy mt-0.5 shrink-0" />
+            <div className="p-3.5 rounded-lg bg-accent/10 border border-accent/25 flex items-start gap-2.5">
+              <DollarSign size={15} className="text-accent mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-buy">Funds go to Main Wallet</p>
+                <p className="text-sm font-semibold text-accent">Funds go to Main Wallet</p>
                 <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">
                   The amount will be credited to the user&apos;s <strong>main wallet</strong>. The user must then transfer funds to their trading account from the Wallet page.
                 </p>
@@ -804,12 +804,12 @@ export default function UsersPage() {
             <label className="block text-xs font-medium text-text-tertiary mb-1.5">Amount (USD)</label>
             <div className="relative">
               <DollarSign size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" />
-              <input type="number" min="0" step="0.01" value={modalAmount} onChange={e => setModalAmount(e.target.value)} placeholder="0.00" className="w-full pl-11 pr-4 py-3 text-sm bg-bg-input border border-border-primary rounded-lg font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" min="0" step="0.01" value={modalAmount} onChange={e => setModalAmount(e.target.value)} placeholder="0.00" className="w-full pl-11 pr-4 py-3 text-sm bg-bg-input border border-border-primary rounded-lg font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-text-tertiary mb-1.5">Reason</label>
-            <textarea value={modalReason} onChange={e => setModalReason(e.target.value)} rows={2} placeholder="Optional reason..." className="w-full px-4 py-3 text-sm bg-bg-input border border-border-primary rounded-lg placeholder:text-text-tertiary focus:border-buy transition-fast resize-none" />
+            <textarea value={modalReason} onChange={e => setModalReason(e.target.value)} rows={2} placeholder="Optional reason..." className="w-full px-4 py-3 text-sm bg-bg-input border border-border-primary rounded-lg placeholder:text-text-tertiary focus:border-accent transition-fast resize-none" />
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={closeModal} className="px-5 py-2.5 rounded-lg text-sm font-medium text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
@@ -817,7 +817,7 @@ export default function UsersPage() {
               type="button"
               onClick={submitFundAction}
               disabled={modalSubmitting || (modalType !== 'add-fund' && !modalAccountId)}
-              className={cn('px-5 py-2.5 rounded-lg text-sm font-medium transition-fast inline-flex items-center gap-2', 'bg-buy text-white hover:bg-buy-light disabled:opacity-50')}
+              className={cn('px-5 py-2.5 rounded-lg text-sm font-medium transition-fast inline-flex items-center gap-2', 'bg-accent text-white hover:bg-accent-light disabled:opacity-50')}
             >
               {modalSubmitting && <Loader2 size={14} className="animate-spin" />}
               Confirm

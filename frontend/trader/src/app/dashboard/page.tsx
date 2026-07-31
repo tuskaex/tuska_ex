@@ -231,7 +231,7 @@ function BrokerHome() {
           </div>
         </div>
 
-        {/* Open P/L — value stays green/up red/down; icon tile is brand orange */}
+        {/* Open P/L — value stays green/up red/down; icon tile is brand red */}
         <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">

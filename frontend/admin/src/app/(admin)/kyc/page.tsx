@@ -179,7 +179,7 @@ export default function KYCPage() {
               >
                 {t.label}
                 {t.badge > 0 && (
-                  <span className="ml-1.5 px-1 py-0.5 text-xxs bg-buy/15 text-buy rounded-sm tabular-nums">
+                  <span className="ml-1.5 px-1 py-0.5 text-xxs bg-accent/15 text-accent rounded-sm tabular-nums">
                     {t.badge}
                   </span>
                 )}
@@ -337,7 +337,7 @@ export default function KYCPage() {
                         type="button"
                         onClick={() => void openKycDocument(doc.id)}
                         disabled={openingDocId === doc.id}
-                        className="text-xxs text-buy hover:underline inline-flex items-center gap-1 disabled:opacity-50"
+                        className="text-xxs text-accent hover:underline inline-flex items-center gap-1 disabled:opacity-50"
                       >
                         {openingDocId === doc.id ? <Loader2 size={10} className="animate-spin" /> : <Eye size={10} />}
                         {openingDocId === doc.id ? 'Opening…' : 'View Document'}

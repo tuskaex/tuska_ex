@@ -129,7 +129,7 @@ export default function AccountTypesPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            <Layers size={18} className="text-buy" />
+            <Layers size={18} className="text-accent" />
             Account types
           </h1>
           <p className="text-xxs text-text-tertiary mt-0.5 max-w-xl">
@@ -141,7 +141,7 @@ export default function AccountTypesPage() {
           <button
             type="button"
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast"
           >
             <Plus size={14} /> New type
           </button>
@@ -310,7 +310,7 @@ export default function AccountTypesPage() {
                 type="button"
                 disabled={submitting}
                 onClick={() => void save()}
-                className="px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 disabled:opacity-50"
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 disabled:opacity-50"
               >
                 {submitting ? 'Saving…' : editId ? 'Update' : 'Create'}
               </button>

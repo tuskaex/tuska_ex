@@ -178,7 +178,7 @@ export default function BonusPage() {
           </div>
           <div className="flex items-center gap-2">
             {tab === 'offers' && (
-              <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast">
+              <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast">
                 <Plus size={14} /> New Offer
               </button>
             )}
@@ -243,7 +243,7 @@ export default function BonusPage() {
                                 </div>
                               </td>
                               <td className="px-4 py-2.5">
-                                <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium bg-buy/15 text-buy">{offer.bonus_type || '—'}</span>
+                                <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium bg-accent/15 text-accent">{offer.bonus_type || '—'}</span>
                               </td>
                               <td className="px-4 py-2.5 text-xs text-text-primary text-right font-mono tabular-nums">{valueLabel}</td>
                               <td className="px-4 py-2.5 text-xs text-text-secondary text-right font-mono tabular-nums">${formatMoney(offer.min_deposit)}</td>
@@ -301,7 +301,7 @@ export default function BonusPage() {
                             <td className="px-4 py-2.5">
                               <div className="flex items-center gap-2">
                                 <div className="w-20 h-1.5 bg-bg-tertiary rounded-full overflow-hidden">
-                                  <div className="h-full bg-buy rounded-full" style={{ width: `${progress}%` }} />
+                                  <div className="h-full bg-accent rounded-full" style={{ width: `${progress}%` }} />
                                 </div>
                                 <span className="text-xxs text-text-tertiary font-mono tabular-nums">{a.lots_traded}/{a.lots_required}</span>
                               </div>
@@ -309,7 +309,7 @@ export default function BonusPage() {
                             <td className="px-4 py-2.5">
                               <span className={cn('inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium',
                                 a.status === 'released' || a.status === 'completed' ? 'bg-success/15 text-success' :
-                                a.status === 'active' ? 'bg-buy/15 text-buy' :
+                                a.status === 'active' ? 'bg-accent/15 text-accent' :
                                 a.status === 'cancelled' || a.status === 'expired' ? 'bg-danger/15 text-danger' :
                                 'bg-warning/15 text-warning'
                               )}>
@@ -400,7 +400,7 @@ export default function BonusPage() {
             </div>
             <div className="px-5 py-3 border-t border-border-primary flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="px-3 py-1.5 rounded-md text-xs text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
-              <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50">
                 {submitting ? 'Saving...' : editId ? 'Update' : 'Create'}
               </button>
             </div>

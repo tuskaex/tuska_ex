@@ -260,7 +260,7 @@ function BookTab() {
         className={cn(
           'flex flex-col gap-1 px-4 py-2.5 rounded-md border text-xs',
           lpConnected
-            ? 'bg-buy/10 border-buy/30 text-buy'
+            ? 'bg-accent/10 border-accent/30 text-accent'
             : 'bg-sell/10 border-sell/30 text-sell',
         )}
       >
@@ -375,9 +375,9 @@ function BookTab() {
       {stats && (
         <div className="grid grid-cols-4 gap-3">
           {[
-            { label: 'A-Book Users', value: stats.a_book_users, icon: Users, color: 'text-buy' },
+            { label: 'A-Book Users', value: stats.a_book_users, icon: Users, color: 'text-accent' },
             { label: 'B-Book Users', value: stats.b_book_users, icon: Users, color: 'text-sell' },
-            { label: 'A-Book Trades', value: stats.a_book_trades, icon: TrendingUp, color: 'text-buy' },
+            { label: 'A-Book Trades', value: stats.a_book_trades, icon: TrendingUp, color: 'text-accent' },
             { label: 'B-Book Trades', value: stats.b_book_trades, icon: BarChart3, color: 'text-sell' },
           ].map((c) => (
             <div key={c.label} className="bg-bg-secondary border border-border-primary rounded-md p-3">
@@ -421,7 +421,7 @@ function BookTab() {
           <button
             onClick={() => handleBulk('A')}
             disabled={bulkLoading}
-            className="flex items-center gap-1 px-2.5 py-1 rounded bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast text-xxs font-medium disabled:opacity-50"
+            className="flex items-center gap-1 px-2.5 py-1 rounded bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast text-xxs font-medium disabled:opacity-50"
           >
             <ArrowLeftRight size={10} /> Move to A-Book
           </button>
@@ -482,7 +482,7 @@ function BookTab() {
                 <td className="px-3 py-2 text-center">
                   <span className={cn(
                     'inline-block px-2 py-0.5 rounded text-xxs font-bold',
-                    u.book_type === 'A' ? 'bg-buy/15 text-buy' : 'bg-sell/15 text-sell',
+                    u.book_type === 'A' ? 'bg-accent/15 text-accent' : 'bg-sell/15 text-sell',
                   )}>
                     {u.book_type}-Book
                   </span>
@@ -495,7 +495,7 @@ function BookTab() {
                       'px-2 py-1 rounded text-xxs font-medium transition-fast disabled:opacity-50',
                       u.book_type === 'A'
                         ? 'bg-sell/10 text-sell border border-sell/20 hover:bg-sell/20'
-                        : 'bg-buy/10 text-buy border border-buy/20 hover:bg-buy/20',
+                        : 'bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20',
                     )}
                   >
                     {togglingId === u.id ? <Loader2 size={10} className="animate-spin inline-block" /> : `→ ${u.book_type === 'A' ? 'B' : 'A'}-Book`}
@@ -665,7 +665,7 @@ function ABookHistory() {
                 <td className="px-3 py-2 text-right font-mono">{t.lots}</td>
                 <td className="px-3 py-2 text-right font-mono">{t.open_price}</td>
                 <td className="px-3 py-2 text-right font-mono">{t.close_price ?? '—'}</td>
-                <td className={cn('px-3 py-2 text-right font-mono font-bold', t.profit >= 0 ? 'text-buy' : 'text-sell')}>
+                <td className={cn('px-3 py-2 text-right font-mono font-bold', t.profit >= 0 ? 'text-success' : 'text-sell')}>
                   {t.profit >= 0 ? '+' : ''}{t.profit.toFixed(2)}
                 </td>
                 <td className="px-3 py-2 text-center text-text-tertiary uppercase text-xxs">{t.close_reason || '—'}</td>

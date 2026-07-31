@@ -108,7 +108,7 @@ function RevenueChart({ points }: { points: RevenuePoint[] }) {
                 style={{ height: '180px' }}
               >
                 <div
-                  className="w-[45%] rounded-t-sm bg-buy/70 min-h-[2px] transition-all group-hover:bg-buy"
+                  className="w-[45%] rounded-t-sm bg-accent/70 min-h-[2px] transition-all group-hover:bg-accent"
                   style={{ height: `${Math.max(hDep, p.deposits > 0 ? 4 : 0)}%` }}
                   title={`Deposits: $${p.deposits.toFixed(2)}`}
                 />
@@ -129,7 +129,7 @@ function RevenueChart({ points }: { points: RevenuePoint[] }) {
       </div>
       <div className="flex flex-wrap items-center justify-center gap-4 mt-2 text-xxs text-text-tertiary">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-sm bg-buy/70" /> Deposits
+          <span className="w-2 h-2 rounded-sm bg-accent/70" /> Deposits
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-sm bg-sell/60" /> Withdrawals
@@ -276,7 +276,7 @@ export default function DashboardPage() {
                   className={cn(
                     'text-base sm:text-lg font-semibold tabular-nums font-mono break-all',
                     loading && 'animate-pulse',
-                    s.pnl && val != null && val >= 0 ? 'text-buy' : '',
+                    s.pnl && val != null && val >= 0 ? 'text-success' : '',
                     s.pnl && val != null && val < 0 ? 'text-sell' : '',
                     !s.pnl ? 'text-text-primary' : '',
                     s.highlight && val != null && val > 0 ? 'text-warning' : '',
@@ -341,7 +341,7 @@ export default function DashboardPage() {
                           : ''}
                       </span>
                     </div>
-                    <span className="font-mono text-buy font-medium shrink-0">
+                    <span className="font-mono text-accent font-medium shrink-0">
                       ${Number(d.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -446,7 +446,7 @@ export default function DashboardPage() {
                       <td
                         className={cn(
                           'py-2 pr-2 text-right font-medium',
-                          p.profit >= 0 ? 'text-buy' : 'text-sell',
+                          p.profit >= 0 ? 'text-success' : 'text-sell',
                         )}
                       >
                         {p.profit >= 0 ? '+' : ''}

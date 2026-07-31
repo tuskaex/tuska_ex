@@ -165,12 +165,12 @@ export default function ConfigPage() {
           {CONFIG_LINKS.map((l) => {
             const Icon = l.icon;
             return (
-              <Link key={l.href} href={l.href} className="bg-bg-secondary border border-border-primary rounded-md p-3 flex items-center gap-3 transition-fast hover:border-buy/30 hover:bg-bg-hover/30 group">
+              <Link key={l.href} href={l.href} className="bg-bg-secondary border border-border-primary rounded-md p-3 flex items-center gap-3 transition-fast hover:border-accent/30 hover:bg-bg-hover/30 group">
                 <div className="p-2 rounded-md bg-bg-tertiary border border-border-primary">
-                  <Icon size={14} className="text-buy" />
+                  <Icon size={14} className="text-accent" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-text-primary group-hover:text-buy transition-fast">{l.title}</p>
+                  <p className="text-xs font-semibold text-text-primary group-hover:text-accent transition-fast">{l.title}</p>
                   <p className="text-xxs text-text-tertiary">{l.desc}</p>
                 </div>
               </Link>
@@ -204,14 +204,14 @@ export default function ConfigPage() {
               <button
                 type="button"
                 onClick={() => fetchData()}
-                className="text-xxs px-2 py-1.5 rounded-md border border-border-primary text-text-secondary hover:text-buy"
+                className="text-xxs px-2 py-1.5 rounded-md border border-border-primary text-text-secondary hover:text-accent"
               >
                 Apply
               </button>
               <button
                 type="button"
                 onClick={() => setShowAdd(true)}
-                className="text-xxs px-3 py-1.5 rounded-md bg-buy text-white font-semibold hover:opacity-90"
+                className="text-xxs px-3 py-1.5 rounded-md bg-accent text-white font-semibold hover:opacity-90"
               >
                 Add Instrument
               </button>
@@ -280,9 +280,9 @@ export default function ConfigPage() {
 
                         if (isEditing && editState) {
                           return (
-                            <tr key={inst.id} className="border-b border-buy/20 bg-buy/[0.03]">
+                            <tr key={inst.id} className="border-b border-accent/20 bg-accent/[0.03]">
                               <td className="px-3 py-1.5">
-                                <span className="text-xs text-buy font-semibold">{inst.symbol}</span>
+                                <span className="text-xs text-accent font-semibold">{inst.symbol}</span>
                                 <span className="text-xxs text-text-tertiary ml-1">{inst.display_name}</span>
                               </td>
                               <td className="px-3 py-1.5">

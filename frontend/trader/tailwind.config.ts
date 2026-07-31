@@ -16,10 +16,14 @@ const config: Config = {
         'dark-600': '#0c1018',
         'dark-500': '#0f1420',
         'dark-400': '#131a28',
-        'red-accent': '#e11d48',
-        'red-light': '#f43f5e',
-        'red-dark': '#be123c',
-        'cyber-crimson': '#e11d48',
+        /* Repointed from the rose ramp (#e11d48 / #f43f5e / #be123c) to
+         * the TuskaEx logo red. The class names are used ~25× across
+         * src/landing/hokkai/*, so changing the VALUES rebrands the
+         * marketing home page without touching a single component. */
+        'red-accent': '#D60101',
+        'red-light': '#F14A4A',
+        'red-dark': '#A30000',
+        'cyber-crimson': '#D60101',
         'green-accent': '#00d4aa',
         'green-light': '#00f5c4',
         // Japanese palette — 日本の色
@@ -93,15 +97,10 @@ const config: Config = {
         warning: '#F59E0B',
         info: '#29B6F6',
         danger: '#DC2626',
-        rainbow: {
-          red: '#FF6B6B',
-          orange: '#FFA94D',
-          yellow: '#FFD43B',
-          green: '#69DB7C',
-          blue: '#4DABF7',
-          purple: '#9775FA',
-          pink: '#F06595',
-        },
+        /* The `rainbow.*` palette was removed in the TuskaEx rebrand: it
+         * carried the last orange token (#FFA94D) and nothing consumed
+         * it. The `.rainbow-card-N` classes in globals.css are plain CSS
+         * with their own hard-coded greys — unrelated to these tokens. */
         /* Landing-page palette — TuskaEx brand */
         'primary': {
           bg: '#FFFFFF',
@@ -137,7 +136,7 @@ const config: Config = {
           line:        'var(--mkt-line)',
           'line-dark': 'var(--mkt-line-dark)',
           /* Accent + signal — use sparingly per design-system rules */
-          accent:    'var(--mkt-accent)',     /* antique gold */
+          accent:    'var(--mkt-accent)',     /* TuskaEx logo red */
           positive:  'var(--mkt-positive)',   /* up-move green */
           negative:  'var(--mkt-negative)',   /* down-move red */
         },
@@ -233,28 +232,28 @@ const config: Config = {
         slideDown: { '0%': { opacity: '0', transform: 'translateY(-8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         flashBlue: { '0%': { backgroundColor: 'rgba(41,98,255,0.22)' }, '100%': { backgroundColor: 'transparent' } },
         flashRed: { '0%': { backgroundColor: 'rgba(239,68,68,0.2)' }, '100%': { backgroundColor: 'transparent' } },
-        glowPulse: { '0%, 100%': { boxShadow: '0 0 20px rgba(99,102,241,0.18)' }, '50%': { boxShadow: '0 0 40px rgba(99,102,241,0.32)' } },
+        glowPulse: { '0%, 100%': { boxShadow: '0 0 20px rgba(214, 1, 1,0.18)' }, '50%': { boxShadow: '0 0 40px rgba(214, 1, 1,0.32)' } },
         float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
         shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
         walletNeonTabGlow: {
           '0%, 100%': {
             boxShadow:
-              '0 -1px 20px rgba(99, 102, 241, 0.22), 0 0 32px rgba(99, 102, 241, 0.12), inset 0 0 24px rgba(99, 102, 241, 0.04)',
+              '0 -1px 20px rgba(214, 1, 1, 0.22), 0 0 32px rgba(214, 1, 1, 0.12), inset 0 0 24px rgba(214, 1, 1, 0.04)',
           },
           '50%': {
             boxShadow:
-              '0 -1px 36px rgba(99, 102, 241, 0.45), 0 0 52px rgba(99, 102, 241, 0.22), inset 0 0 32px rgba(99, 102, 241, 0.08)',
+              '0 -1px 36px rgba(214, 1, 1, 0.45), 0 0 52px rgba(214, 1, 1, 0.22), inset 0 0 32px rgba(214, 1, 1, 0.08)',
           },
         },
         /** Deposit / Withdraw main tabs — stronger pulsing glow */
         walletMainTabGlow: {
           '0%, 100%': {
             boxShadow:
-              '0 -6px 40px rgba(99, 102, 241, 0.38), 0 0 56px rgba(99, 102, 241, 0.2), inset 0 1px 0 rgba(99, 102, 241, 0.14)',
+              '0 -6px 40px rgba(214, 1, 1, 0.38), 0 0 56px rgba(214, 1, 1, 0.2), inset 0 1px 0 rgba(214, 1, 1, 0.14)',
           },
           '50%': {
             boxShadow:
-              '0 -10px 64px rgba(99, 102, 241, 0.62), 0 0 88px rgba(99, 102, 241, 0.32), inset 0 1px 0 rgba(99, 102, 241, 0.22)',
+              '0 -10px 64px rgba(214, 1, 1, 0.62), 0 0 88px rgba(214, 1, 1, 0.32), inset 0 1px 0 rgba(214, 1, 1, 0.22)',
           },
         },
         walletMainTabText: {
@@ -295,8 +294,8 @@ const config: Config = {
         'skeu':          'inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.3)',
         'glow-blue':     '0 0 20px rgba(41,98,255,0.28), 0 0 60px rgba(41,98,255,0.1)',
         'glow-red':      '0 0 20px rgba(239,68,68,0.3), 0 0 60px rgba(239,68,68,0.1)',
-        'neon-green-sm': '0 0 20px rgba(99, 102, 241, 0.25), 0 0 48px rgba(99, 102, 241, 0.08)',
-        'neon-green-lg': '0 0 28px rgba(99, 102, 241, 0.4), 0 0 64px rgba(99, 102, 241, 0.15)',
+        'neon-green-sm': '0 0 20px rgba(214, 1, 1, 0.25), 0 0 48px rgba(214, 1, 1, 0.08)',
+        'neon-green-lg': '0 0 28px rgba(214, 1, 1, 0.4), 0 0 64px rgba(214, 1, 1, 0.15)',
       },
     },
   },

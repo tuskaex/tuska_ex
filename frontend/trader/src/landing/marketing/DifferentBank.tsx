@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import BrandPanel from './ui/BrandPanel'
 import ExploreLink from './ui/ExploreLink'
 import { HEADING_SECTION } from './ui/headings'
 import { useLang } from '@/landing/i18n/LangProvider'
@@ -24,12 +24,11 @@ export default function DifferentBank() {
                   aria-hidden="true"
                   className="absolute inset-6 rounded-[2rem] bg-[#D60101]/20 blur-3xl"
                 />
-                <Image
-                  src="/assets/bull.png"
-                  alt="TuskaEx — bullish on your future"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 680px"
-                  className="relative object-contain drop-shadow-[0_28px_48px_rgba(214,1,1,0.28)]"
+                {/* Was /assets/bull.png — a SwissCresta-branded render
+                    (their flag, F1 livery and billboard). See BrandPanel. */}
+                <BrandPanel
+                  className="relative drop-shadow-[0_28px_48px_rgba(214,1,1,0.28)]"
+                  chips={['Precious metals', 'Currency pairs', 'CFDs']}
                 />
               </div>
             </div>

@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <StatBox label="Total Deposits" value={`$${fmt(data.total_deposits)}`} color="text-success" icon={DollarSign} />
             <StatBox label="Total Withdrawals" value={`$${fmt(data.total_withdrawals)}`} color="text-danger" icon={DollarSign} />
-            <StatBox label="Net Deposits" value={`$${fmt(data.net_deposits)}`} color="text-buy" icon={TrendingUp} />
+            <StatBox label="Net Deposits" value={`$${fmt(data.net_deposits)}`} color="text-accent" icon={TrendingUp} />
             <StatBox label="Admin Commission (Total)" value={`$${fmt(data.total_admin_commission || 0)}`} color="text-success" icon={DollarSign} />
             <StatBox label="Open / Closed Trades" value={`${data.open_positions} / ${data.closed_trades}`} icon={BarChart3} />
           </div>
@@ -210,8 +210,8 @@ export default function AnalyticsPage() {
                 <p className="text-xxs text-text-tertiary mt-0.5">Commission paid to IBs and sub-brokers from user trades</p>
               </div>
               <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                <StatBox label="Active IBs" value={String(data.total_ibs || 0)} color="text-buy" icon={Users} />
-                <StatBox label="Sub-Brokers" value={String(data.total_sub_brokers || 0)} color="text-buy" icon={GitBranch} />
+                <StatBox label="Active IBs" value={String(data.total_ibs || 0)} color="text-accent" icon={Users} />
+                <StatBox label="Sub-Brokers" value={String(data.total_sub_brokers || 0)} color="text-accent" icon={GitBranch} />
                 <StatBox label="Total IB Commission Paid" value={`$${fmt(data.total_ib_commission || 0)}`} color="text-warning" icon={DollarSign} />
                 <StatBox label="IB Pending Payout" value={`$${fmt(data.ib_pending_commission || 0)}`} color="text-text-tertiary" icon={DollarSign} />
               </div>
@@ -227,11 +227,11 @@ export default function AnalyticsPage() {
               <p className="text-xxs text-text-tertiary mt-0.5">Signal providers, managed accounts, and copy trade performance</p>
             </div>
             <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-              <StatBox label="Active Masters" value={String(data.active_masters || 0)} color="text-buy" icon={Users} />
+              <StatBox label="Active Masters" value={String(data.active_masters || 0)} color="text-accent" icon={Users} />
               <StatBox label="Total Followers" value={String(data.total_followers || 0)} icon={Users} />
               <StatBox label="Total AUM" value={`$${fmt(data.total_aum || 0)}`} color="text-success" icon={DollarSign} />
               <StatBox label="Copy Trades (Total)" value={String(data.total_copy_trades || 0)} icon={BarChart3} />
-              <StatBox label="Active Copies" value={String(data.active_copies || 0)} color={data.active_copies > 0 ? 'text-buy' : undefined} icon={TrendingUp} />
+              <StatBox label="Active Copies" value={String(data.active_copies || 0)} color={data.active_copies > 0 ? 'text-accent' : undefined} icon={TrendingUp} />
               <StatBox label="Master Earnings" value={`$${fmt(data.master_earnings_total || 0)}`} color="text-warning" icon={DollarSign} />
               <StatBox label="PAMM Admin Commission" value={`$${fmt(data.pamm_admin_commission || 0)}`} color="text-success" icon={DollarSign} />
               <StatBox label="Copy Trade Admin Revenue" value={`$${fmt(data.copy_trade_revenue || 0)}`} color="text-success" icon={DollarSign} />
@@ -272,9 +272,9 @@ export default function AnalyticsPage() {
                   {exposure.map(r => (
                     <tr key={r.symbol} className="border-b border-border-primary/50 hover:bg-bg-hover">
                       <td className="px-4 py-2 text-xs text-text-primary font-medium">{r.symbol}</td>
-                      <td className="px-4 py-2 text-xs text-buy text-right font-mono">{r.total_long.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-xs text-accent text-right font-mono">{r.total_long.toFixed(2)}</td>
                       <td className="px-4 py-2 text-xs text-sell text-right font-mono">{r.total_short.toFixed(2)}</td>
-                      <td className={cn('px-4 py-2 text-xs text-right font-mono', r.net_exposure >= 0 ? 'text-buy' : 'text-sell')}>{r.net_exposure >= 0 ? '+' : ''}{r.net_exposure.toFixed(2)}</td>
+                      <td className={cn('px-4 py-2 text-xs text-right font-mono', r.net_exposure >= 0 ? 'text-success' : 'text-sell')}>{r.net_exposure >= 0 ? '+' : ''}{r.net_exposure.toFixed(2)}</td>
                       <td className="px-4 py-2"><span className={cn('px-1.5 py-0.5 rounded-sm text-xxs font-medium uppercase', riskBadge(r.risk_level))}>{r.risk_level}</span></td>
                     </tr>
                   ))}
@@ -337,10 +337,10 @@ export default function AnalyticsPage() {
                   value={pnlSearchInput}
                   onChange={(e) => setPnlSearchInput(e.target.value)}
                   placeholder="Search email or name…"
-                  className="text-xs pl-7 pr-2 py-1.5 bg-bg-input border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary focus:border-buy outline-none w-56"
+                  className="text-xs pl-7 pr-2 py-1.5 bg-bg-input border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary focus:border-accent outline-none w-56"
                 />
               </div>
-              <button type="submit" className="px-3 py-1.5 text-xs font-medium bg-buy text-white rounded-md hover:bg-buy/80 transition-fast">Search</button>
+              <button type="submit" className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent/80 transition-fast">Search</button>
               {pnlSearch && (
                 <button
                   type="button"
@@ -515,7 +515,7 @@ function SortHeader({
         className={cn(
           'inline-flex items-center gap-1 hover:text-text-primary transition-fast',
           align === 'right' && 'ml-auto',
-          active && 'text-buy',
+          active && 'text-accent',
         )}
       >
         {label}

@@ -49,7 +49,7 @@ const HOME_SUBNAV_LEFT = [
   {
     label: 'Inspire',
     href: '/',
-    featured: { title: 'INSPIRE', body: 'In finance, patience pays and knowledge wins. Stay sharp, stay ahead.', accent: 'orange' as const },
+    featured: { title: 'INSPIRE', body: 'In finance, patience pays and knowledge wins. Stay sharp, stay ahead.', accent: 'brand' as const },
     groups: [
       { title: 'EXPERT INSIGHTS', items: ['Morning News', 'Youtube', 'Podcasts', 'eBooks', 'TradingView'] },
       { title: 'WEBINARS & EVENTS', items: ['Webinars'] },
@@ -61,7 +61,7 @@ const HOME_SUBNAV_RIGHT = [
   {
     label: 'Pricing',
     href: '/',
-    featured: { title: 'PRICING', body: 'Fair pricing for unlimited finances. Discover what you pay, before you trade.', accent: 'orange' as const },
+    featured: { title: 'PRICING', body: 'Fair pricing for unlimited finances. Discover what you pay, before you trade.', accent: 'brand' as const },
     groups: [
       { title: 'TRADING PRICING', items: ['Account types', 'Trading conditions', 'Execution'] },
     ],
@@ -69,7 +69,7 @@ const HOME_SUBNAV_RIGHT = [
   {
     label: 'Platforms',
     href: '/',
-    featured: { title: 'FOREX & CFDS', body: "Platforms that put the world's largest market at your fingertips.", accent: 'orange' as const },
+    featured: { title: 'FOREX & CFDS', body: "Platforms that put the world's largest market at your fingertips.", accent: 'brand' as const },
     groups: [
       { title: 'PLATFORMS', items: ['CFXD', 'MetaTrader 4', 'MetaTrader 5'] },
       { title: 'SOLUTIONS', items: ['FIX API', 'TradingView'] },

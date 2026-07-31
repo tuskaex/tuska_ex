@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 /* ═══════════════════════════════════════════════════════════
-   TuskaEx Admin — light + orange (matches the trader app's
-   Vantage palette). The dark token block is preserved as a
-   fallback for anything that explicitly opts in via .dark, but
-   :root is light by default so the whole admin renders white.
+   TuskaEx Admin — light surfaces + the brand red (#D60101,
+   sampled from the TuskaEx logo mark). The dark token block is
+   preserved as a fallback for anything that explicitly opts in
+   via .dark, but :root is light by default so the whole admin
+   renders white.
    ═══════════════════════════════════════════════════════════ */
 
 /* —— Light theme (default) —— */

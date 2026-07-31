@@ -210,7 +210,7 @@ export default function BannersPage() {
             <button
               type="button"
               onClick={openCreate}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast"
             >
               <Plus size={14} /> New Banner
             </button>
@@ -267,7 +267,7 @@ export default function BannersPage() {
                 <div className="p-3 space-y-2">
                   <h3 className="text-xs font-medium text-text-primary truncate">{b.title}</h3>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium bg-buy/15 text-buy">
+                    <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium bg-accent/15 text-accent">
                       {b.position}
                     </span>
                     <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium bg-accent/15 text-accent">
@@ -437,7 +437,7 @@ export default function BannersPage() {
                 type="button"
                 onClick={() => void handleSubmit()}
                 disabled={submitting}
-                className="px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50"
+                className="px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50"
               >
                 {submitting ? 'Saving…' : editId ? 'Update' : 'Create'}
               </button>

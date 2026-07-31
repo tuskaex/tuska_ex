@@ -10,9 +10,9 @@ const CARDS = [
     description: 'Manage Introducing Broker applications, commissions, and referral networks',
     icon: Users,
     href: '/business/ib',
-    color: 'text-buy',
-    bgColor: 'bg-buy/10',
-    borderColor: 'border-buy/20',
+    color: 'text-accent',
+    bgColor: 'bg-accent/10',
+    borderColor: 'border-accent/20',
   },
   {
     title: 'Sub-Broker Management',

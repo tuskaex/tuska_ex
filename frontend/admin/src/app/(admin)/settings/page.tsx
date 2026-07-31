@@ -195,7 +195,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving || !settings}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50"
           >
             <Save size={14} />
             {saving ? 'Saving...' : 'Save Settings'}
@@ -337,7 +337,7 @@ export default function SettingsPage() {
                           onChange={(e) => field.set(e.target.value)}
                           required
                           placeholder="••••••••"
-                          className="w-full pl-3 pr-8 py-2 text-xs bg-bg-input border border-border-primary rounded-md focus:border-buy transition-fast"
+                          className="w-full pl-3 pr-8 py-2 text-xs bg-bg-input border border-border-primary rounded-md focus:border-accent transition-fast"
                         />
                         <button
                           type="button"
@@ -354,7 +354,7 @@ export default function SettingsPage() {
                   <button
                     type="submit"
                     disabled={pwSaving || !pwCurrent || !pwNew || !pwConfirm}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50"
                   >
                     {pwSaving ? <Loader2 size={13} className="animate-spin" /> : <Lock size={13} />}
                     {pwSaving ? 'Updating...' : 'Update Password'}

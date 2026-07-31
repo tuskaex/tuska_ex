@@ -61,7 +61,7 @@ function RailBtn({
       className={clsx(
         'w-9 h-9 rounded-md flex items-center justify-center transition-colors shrink-0',
         active
-          ? 'bg-accent/15 text-accent shadow-[inset_0_0_0_1px_rgba(99,102,241,0.25)]'
+          ? 'bg-accent/15 text-accent shadow-[inset_0_0_0_1px_rgba(214, 1, 1,0.25)]'
           : 'text-text-tertiary hover:text-text-primary hover:bg-bg-hover',
       )}
     >

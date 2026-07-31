@@ -45,7 +45,7 @@ function priorityBadgeClass(p: string) {
 
 function statusBadgeClass(s: string) {
   switch (s) {
-    case 'open': return 'bg-buy/15 text-buy';
+    case 'open': return 'bg-accent/15 text-accent';
     case 'in_progress': return 'bg-warning/15 text-warning';
     case 'resolved': case 'closed': return 'bg-success/15 text-success';
     default: return 'bg-text-tertiary/15 text-text-tertiary';
@@ -194,10 +194,10 @@ export default function SupportPage() {
                 <div className="text-center text-xs text-text-tertiary py-8">No messages</div>
               ) : (
                 messages.map((msg) => (
-                  <div key={msg.id} className={cn('p-3 rounded-md border max-w-[80%]', msg.is_internal_note ? 'bg-warning/5 border-warning/20 ml-auto' : msg.sender_type === 'admin' ? 'bg-buy/5 border-buy/20 ml-auto' : 'bg-bg-tertiary border-border-primary')}>
+                  <div key={msg.id} className={cn('p-3 rounded-md border max-w-[80%]', msg.is_internal_note ? 'bg-warning/5 border-warning/20 ml-auto' : msg.sender_type === 'admin' ? 'bg-accent/5 border-accent/20 ml-auto' : 'bg-bg-tertiary border-border-primary')}>
                     <div className="flex items-center gap-2 mb-1">
                       {msg.is_internal_note && <Lock size={10} className="text-warning" />}
-                      <span className={cn('text-xxs font-medium', msg.sender_type === 'admin' ? 'text-buy' : 'text-text-primary')}>{msg.sender_name}</span>
+                      <span className={cn('text-xxs font-medium', msg.sender_type === 'admin' ? 'text-accent' : 'text-text-primary')}>{msg.sender_name}</span>
                       <span className="text-xxs text-text-tertiary font-mono tabular-nums">{msg.created_at}</span>
                       {msg.is_internal_note && <span className="text-xxs text-warning">(Internal)</span>}
                     </div>
@@ -225,7 +225,7 @@ export default function SupportPage() {
                 <button
                   onClick={handleReply}
                   disabled={sending || !replyText.trim()}
-                  className="self-end px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50"
+                  className="self-end px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50"
                 >
                   <Send size={14} />
                 </button>

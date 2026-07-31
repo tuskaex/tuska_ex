@@ -178,11 +178,11 @@ export default function SocialPage() {
         {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Active Masters', value: String(masters.length), icon: Users, color: 'text-buy' },
+            { label: 'Active Masters', value: String(masters.length), icon: Users, color: 'text-accent' },
             { label: 'Total Followers', value: String(totalFollowers), icon: Users, color: 'text-text-primary' },
             { label: 'Total AUM', value: `$${fmt(totalAUM)}`, icon: DollarSign, color: 'text-success' },
             { label: 'Copy Trades', value: String(totalCopyTrades), icon: TrendingUp, color: 'text-text-primary' },
-            { label: 'Live Positions', value: String(totalLive), icon: TrendingUp, color: totalLive > 0 ? 'text-buy' : 'text-text-tertiary' },
+            { label: 'Live Positions', value: String(totalLive), icon: TrendingUp, color: totalLive > 0 ? 'text-accent' : 'text-text-tertiary' },
             { label: 'Master P&L', value: `$${fmt(totalMasterPnl)}`, icon: DollarSign, color: totalMasterPnl >= 0 ? 'text-success' : 'text-danger' },
             { label: 'Admin Revenue', value: `$${fmt(totalAdminRev)}`, icon: TrendingUp, color: 'text-warning' },
             { label: 'Master Earnings', value: `$${fmt(totalMasterEarnings)}`, icon: DollarSign, color: 'text-success' },
@@ -207,7 +207,7 @@ export default function SocialPage() {
             ].map(t => (
               <button key={t.id} onClick={() => setTab(t.id)} className={cn('px-3 py-1.5 rounded-md text-xs font-medium transition-fast', tab === t.id ? 'bg-bg-hover text-text-primary border border-border-primary' : 'text-text-secondary hover:text-text-primary')}>
                 {t.label}
-                {t.badge > 0 && <span className="ml-1.5 px-1 py-0.5 text-xxs bg-buy/15 text-buy rounded-sm tabular-nums">{t.badge}</span>}
+                {t.badge > 0 && <span className="ml-1.5 px-1 py-0.5 text-xxs bg-accent/15 text-accent rounded-sm tabular-nums">{t.badge}</span>}
               </button>
             ))}
           </div>
@@ -231,7 +231,7 @@ export default function SocialPage() {
                         <td className="px-3 py-2"><p className="text-xs text-text-primary">{r.user_name}</p><p className="text-xxs text-text-tertiary">{r.user_email}</p></td>
                         <td className="px-3 py-2 text-xs text-text-secondary font-mono">{r.account_number}</td>
                         <td className="px-3 py-2 text-xs text-text-primary font-mono tabular-nums">${fmt(r.account_balance)}</td>
-                        <td className="px-3 py-2"><span className="text-xxs px-1.5 py-0.5 rounded-sm bg-buy/15 text-buy font-medium capitalize">{r.master_type?.replace('_', ' ')}</span></td>
+                        <td className="px-3 py-2"><span className="text-xxs px-1.5 py-0.5 rounded-sm bg-accent/15 text-accent font-medium capitalize">{r.master_type?.replace('_', ' ')}</span></td>
                         <td className="px-3 py-2 text-xs text-text-secondary">{r.performance_fee_pct}%</td>
                         <td className="px-3 py-2 text-xs text-text-secondary font-mono">${fmt(r.min_investment)}</td>
                         <td className="px-3 py-2 text-xxs text-text-tertiary">{r.created_at ? fmtDate(r.created_at) : '—'}</td>
@@ -264,12 +264,12 @@ export default function SocialPage() {
                       return (
                       <tr key={m.id} className="border-b border-border-primary/50 hover:bg-bg-hover transition-fast">
                         <td className="px-2 py-2"><p className="text-xs text-text-primary">{m.user_name}</p><p className="text-xxs text-text-tertiary">{m.user_email}</p></td>
-                        <td className="px-2 py-2"><span className="text-xxs px-1.5 py-0.5 rounded-sm bg-buy/15 text-buy font-medium capitalize">{m.master_type?.replace('_', ' ')}</span></td>
+                        <td className="px-2 py-2"><span className="text-xxs px-1.5 py-0.5 rounded-sm bg-accent/15 text-accent font-medium capitalize">{m.master_type?.replace('_', ' ')}</span></td>
                         <td className="px-2 py-2 text-xs text-text-primary font-mono">{m.active_investors}<span className="text-text-tertiary">/{m.max_investors}</span></td>
                         <td className="px-2 py-2 text-xs text-right font-mono tabular-nums text-success">${fmt(m.aum)}</td>
                         <td className="px-2 py-2 text-xs text-text-primary font-mono tabular-nums">{ma.total_master_trades || 0}</td>
                         <td className="px-2 py-2 text-xs text-text-secondary font-mono tabular-nums">{ma.total_copy_trades || 0}</td>
-                        <td className="px-2 py-2 text-xs font-mono tabular-nums">{ma.live_positions > 0 ? <span className="text-buy font-medium">{ma.live_positions}</span> : <span className="text-text-tertiary">0</span>}</td>
+                        <td className="px-2 py-2 text-xs font-mono tabular-nums">{ma.live_positions > 0 ? <span className="text-accent font-medium">{ma.live_positions}</span> : <span className="text-text-tertiary">0</span>}</td>
                         <td className={cn('px-2 py-2 text-xs text-right font-mono tabular-nums font-medium', (ma.master_pnl || 0) >= 0 ? 'text-success' : 'text-danger')}>{(ma.master_pnl || 0) >= 0 ? '+' : ''}${fmt(ma.master_pnl || 0)}</td>
                         <td className="px-2 py-2 text-xs text-text-secondary">{m.performance_fee_pct}%</td>
                         <td className="px-2 py-2 text-xs text-warning font-medium">{m.admin_commission_pct}%</td>
@@ -280,7 +280,7 @@ export default function SocialPage() {
                             <button onClick={() => setHistoryModal(m)} className="px-2 py-1 text-xxs font-medium bg-accent/15 text-accent border border-accent/30 rounded hover:bg-accent/25 transition-fast inline-flex items-center gap-1" title="View earnings history">
                               <History size={11} /> History
                             </button>
-                            <button onClick={() => { setEditModal(m); setEditCommission(String(m.admin_commission_pct)); setEditMaxInv(String(m.max_investors)); }} className="px-2 py-1 text-xxs font-medium bg-buy/15 text-buy border border-buy/30 rounded hover:bg-buy/25 transition-fast inline-flex items-center gap-1">
+                            <button onClick={() => { setEditModal(m); setEditCommission(String(m.admin_commission_pct)); setEditMaxInv(String(m.max_investors)); }} className="px-2 py-1 text-xxs font-medium bg-accent/15 text-accent border border-accent/30 rounded hover:bg-accent/25 transition-fast inline-flex items-center gap-1">
                               <Edit3 size={11} /> Edit
                             </button>
                             <button onClick={() => setDeleteModal(m)} className="px-2 py-1 text-xxs font-medium bg-danger/15 text-danger border border-danger/30 rounded hover:bg-danger/25 transition-fast inline-flex items-center gap-1">
@@ -305,7 +305,7 @@ export default function SocialPage() {
                 {/* Summary */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { label: 'PAMM Pools', value: String(pammAnalytics.summary.total_pamm_pools), icon: BarChart2, color: 'text-buy' },
+                    { label: 'PAMM Pools', value: String(pammAnalytics.summary.total_pamm_pools), icon: BarChart2, color: 'text-accent' },
                     { label: 'Trade Masters', value: String(pammAnalytics.summary.total_mam_managers), icon: Users, color: 'text-text-primary' },
                     { label: 'Total Investor Capital', value: `$${fmt(pammAnalytics.summary.total_investor_capital)}`, icon: DollarSign, color: 'text-success' },
                     { label: 'Admin Fee Revenue', value: `$${fmt(pammAnalytics.summary.admin_fee_revenue)}`, icon: TrendingUp, color: 'text-warning' },
@@ -537,7 +537,7 @@ export default function SocialPage() {
             </div>
             <div className="px-4 py-3 border-t border-border-primary flex justify-end gap-2">
               <button onClick={() => setEditModal(null)} className="px-3 py-1.5 text-xs text-text-secondary border border-border-primary rounded-md hover:bg-bg-hover transition-fast">Cancel</button>
-              <button onClick={handleEdit} disabled={editLoading} className="px-3 py-1.5 text-xs font-medium text-white bg-buy rounded-md hover:bg-buy/80 disabled:opacity-50 transition-fast inline-flex items-center gap-1.5">
+              <button onClick={handleEdit} disabled={editLoading} className="px-3 py-1.5 text-xs font-medium text-white bg-accent rounded-md hover:bg-accent/80 disabled:opacity-50 transition-fast inline-flex items-center gap-1.5">
                 {editLoading ? <Loader2 size={12} className="animate-spin" /> : <Edit3 size={12} />} Save Changes
               </button>
             </div>
@@ -625,7 +625,7 @@ function MasterHistoryModal({ master, onClose }: { master: ActiveMaster; onClose
   const typeLabel = (t: string) => {
     switch (t) {
       case 'ib_commission':
-        return { text: 'Commission', cls: 'bg-buy/15 text-buy border-buy/30' };
+        return { text: 'Commission', cls: 'bg-accent/15 text-accent border-accent/30' };
       case 'withdrawal':
         return { text: 'Withdrawal', cls: 'bg-danger/15 text-danger border-danger/30' };
       case 'transfer':
@@ -679,7 +679,7 @@ function MasterHistoryModal({ master, onClose }: { master: ActiveMaster; onClose
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-5 py-3 border-b border-border-primary bg-bg-tertiary/30">
             <div>
               <p className="text-xxs text-text-tertiary uppercase tracking-wider">Total Commission</p>
-              <p className="text-sm font-bold font-mono tabular-nums text-buy">${fmt(data.summary.total_commission)}</p>
+              <p className="text-sm font-bold font-mono tabular-nums text-accent">${fmt(data.summary.total_commission)}</p>
             </div>
             <div>
               <p className="text-xxs text-text-tertiary uppercase tracking-wider">Total Withdrawn</p>
@@ -749,7 +749,7 @@ function MasterHistoryModal({ master, onClose }: { master: ActiveMaster; onClose
                           )}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <span className={cn('text-xs font-mono font-bold tabular-nums', t.amount >= 0 ? 'text-buy' : 'text-danger')}>
+                          <span className={cn('text-xs font-mono font-bold tabular-nums', t.amount >= 0 ? 'text-success' : 'text-danger')}>
                             {t.amount >= 0 ? '+' : ''}${fmt(Math.abs(t.amount))}
                           </span>
                         </td>
@@ -768,7 +768,7 @@ function MasterHistoryModal({ master, onClose }: { master: ActiveMaster; onClose
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xxs">
                               <div>
                                 <p className="text-text-tertiary uppercase tracking-wider mb-0.5">Follower P/L (Gross)</p>
-                                <p className={cn('font-mono font-bold text-sm', (t.gross_profit ?? 0) >= 0 ? 'text-buy' : 'text-danger')}>
+                                <p className={cn('font-mono font-bold text-sm', (t.gross_profit ?? 0) >= 0 ? 'text-success' : 'text-danger')}>
                                   {(t.gross_profit ?? 0) >= 0 ? '+' : ''}${fmt(t.gross_profit ?? 0)}
                                 </p>
                               </div>
@@ -782,7 +782,7 @@ function MasterHistoryModal({ master, onClose }: { master: ActiveMaster; onClose
                               </div>
                               <div>
                                 <p className="text-text-tertiary uppercase tracking-wider mb-0.5">Master Net</p>
-                                <p className="font-mono font-bold text-sm text-buy">+${fmt(t.master_net ?? 0)}</p>
+                                <p className="font-mono font-bold text-sm text-accent">+${fmt(t.master_net ?? 0)}</p>
                               </div>
                               <div>
                                 <p className="text-text-tertiary uppercase tracking-wider mb-0.5">Follower ID</p>

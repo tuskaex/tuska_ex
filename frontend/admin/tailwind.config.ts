@@ -28,27 +28,28 @@ const config: Config = {
           tertiary: 'rgb(var(--c-text-tertiary) / <alpha-value>)',
           inverse: 'rgb(var(--c-text-inverse) / <alpha-value>)',
         },
-        /* `buy` DELIBERATELY stays orange and did NOT follow the brand
-         * change to the logo red (#D60101, see `accent` below).
+        /* `buy` is now ONLY trade direction — never a generic primary.
          *
-         * It is not purely decorative here: analytics/platform-pnl and
-         * the book page render trade direction as
-         * `side === 'buy' ? 'text-buy' : 'text-sell'`, and analytics
-         * colours long vs short exposure the same way. Repointing `buy`
-         * to the brand red would make BUY and SELL near-identical on
-         * screen — an admin reading a trade blotter could misread
-         * direction, so correctness wins over palette consistency.
+         * It used to be the SwissCresta orange (#E94E1B) doing two jobs
+         * at once: the BUY side of a blotter AND the default accent for
+         * buttons/icons that have nothing to do with trading. That dual
+         * role is why orange survived the rebrand in ~340 places. The
+         * two roles are now split:
          *
-         * `buy` is also (historically) used as a generic primary for
-         * buttons/icons, which is why it is still orange in places that
-         * have nothing to do with trading. Untangling those two roles is
-         * the real fix; until then, do not "harmonise" this value. */
+         *   buy    → direction only (blue, matches the trader terminal's
+         *            #1E66F5 so BUY reads the same on both apps)
+         *   accent → the brand red, every generic primary/CTA/icon
+         *
+         * Blue-vs-red also keeps BUY and SELL unmistakable in a trade
+         * blotter, which repointing `buy` to the brand red would not:
+         * `accent` (#D60101) and `sell` (#ef4444) are too close to carry
+         * direction. Do not "harmonise" `buy` into the brand palette. */
         buy: {
-          DEFAULT: '#E94E1B',
-          light: '#FB7B4E',
-          dark: '#C73E11',
-          bg: 'rgba(233,78,27,0.08)',
-          glow: 'rgba(233,78,27,0.25)',
+          DEFAULT: '#1E66F5',
+          light: '#5B8CFF',
+          dark: '#0D3FA3',
+          bg: 'rgba(30,102,245,0.08)',
+          glow: 'rgba(30,102,245,0.25)',
         },
         sell: {
           DEFAULT: '#ef4444',
@@ -56,10 +57,14 @@ const config: Config = {
           dark: '#dc2626',
           bg: 'rgba(239,68,68,0.07)',
         },
-        /* Brand accent — red sampled from the TuskaEx logo mark. */
+        /* Brand accent — red sampled from the TuskaEx logo mark
+         * (the "T" glyph and the "EX" of the wordmark are #D60101).
+         * This is the admin's primary: CTAs, active nav, stat icons. */
         accent: { DEFAULT: '#D60101', light: '#F14A4A', dark: '#A30000' },
         success: '#22c55e',
-        warning: '#FFB300',
+        /* Amber, kept as a STATUS colour (pending / needs-review), not a
+         * brand colour. Matches the trader app's `warning` exactly. */
+        warning: '#F59E0B',
         info: '#29B6F6',
         danger: '#ef4444',
         card: 'rgb(var(--c-bg-card) / <alpha-value>)',
@@ -100,7 +105,7 @@ const config: Config = {
         slideDown: { '0%': { opacity: '0', transform: 'translateY(-8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         slideUp: { '0%': { opacity: '0', transform: 'translateY(12px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         pageFadeIn: { '0%': { opacity: '0', transform: 'translateY(6px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-        glowPulse: { '0%,100%': { boxShadow: '0 0 8px rgba(99,102,241,0.15)' }, '50%': { boxShadow: '0 0 20px rgba(99,102,241,0.3)' } },
+        glowPulse: { '0%,100%': { boxShadow: '0 0 8px rgba(214, 1, 1,0.15)' }, '50%': { boxShadow: '0 0 20px rgba(214, 1, 1,0.3)' } },
         shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
       },
       boxShadow: {
@@ -108,8 +113,8 @@ const config: Config = {
         dropdown: 'var(--shadow-dropdown)',
         glass: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.03)',
         'glass-lg': '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
-        'glow-green': '0 0 20px rgba(99,102,241,0.2), 0 0 60px rgba(99,102,241,0.08)',
-        'neon-sm': '0 0 6px rgba(236,198,87,0.15), 0 0 12px rgba(99,102,241,0.08)',
+        'glow-green': '0 0 20px rgba(214, 1, 1,0.2), 0 0 60px rgba(214, 1, 1,0.08)',
+        'neon-sm': '0 0 6px rgba(236,198,87,0.15), 0 0 12px rgba(214, 1, 1,0.08)',
       },
       backdropBlur: {
         glass: '16px',

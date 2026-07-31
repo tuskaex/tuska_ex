@@ -564,7 +564,7 @@ export default function TradesPage() {
             else if (page >= totalPages - 2) p = totalPages - 4 + i;
             else p = page - 2 + i;
             return (
-              <button key={p} onClick={() => onPageChange(p)} className={cn('min-w-[28px] h-7 px-1 rounded-md text-xs font-medium transition-fast', page === p ? 'bg-buy/15 text-buy border border-buy/30' : 'text-text-secondary hover:bg-bg-hover')}>
+              <button key={p} onClick={() => onPageChange(p)} className={cn('min-w-[28px] h-7 px-1 rounded-md text-xs font-medium transition-fast', page === p ? 'bg-accent/15 text-accent border border-accent/30' : 'text-text-secondary hover:bg-bg-hover')}>
                 {p}
               </button>
             );
@@ -594,8 +594,8 @@ export default function TradesPage() {
               Full Form
             </Link>
             <button type="button" onClick={openCreateModal} className={cn(
-              'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-buy/30',
-              'bg-buy/15 text-xs font-medium text-buy transition-fast hover:bg-buy/25',
+              'inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md border border-accent/30',
+              'bg-accent/15 text-xs font-medium text-accent transition-fast hover:bg-accent/25',
             )}>
               <Plus size={14} /> Create Trade
             </button>
@@ -606,9 +606,9 @@ export default function TradesPage() {
         <div className="flex flex-wrap gap-3">
           <div className="relative max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
-            <input type="search" value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Filter by user..." className="w-full pl-9 pr-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast" />
+            <input type="search" value={searchFilter} onChange={e => setSearchFilter(e.target.value)} placeholder="Filter by user..." className="w-full pl-9 pr-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast" />
           </div>
-          <input type="text" value={symbolFilter} onChange={e => setSymbolFilter(e.target.value)} placeholder="Symbol..." className="w-28 px-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast uppercase" />
+          <input type="text" value={symbolFilter} onChange={e => setSymbolFilter(e.target.value)} placeholder="Symbol..." className="w-28 px-3 py-1.5 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast uppercase" />
         </div>
 
         {/* Tabs & Tables */}
@@ -620,7 +620,7 @@ export default function TradesPage() {
                 activeTab === t.id ? 'bg-bg-hover text-text-primary border border-border-primary' : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover/60',
               )}>
                 {t.label}
-                {t.id === 'open' && posTotal > 0 && <span className="ml-1.5 px-1 py-0.5 text-xxs bg-buy/15 text-buy rounded-sm tabular-nums">{posTotal}</span>}
+                {t.id === 'open' && posTotal > 0 && <span className="ml-1.5 px-1 py-0.5 text-xxs bg-accent/15 text-accent rounded-sm tabular-nums">{posTotal}</span>}
                 {t.id === 'pending' && ordersTotal > 0 && <span className="ml-1.5 px-1 py-0.5 text-xxs bg-warning/15 text-warning rounded-sm tabular-nums">{ordersTotal}</span>}
               </button>
             ))}
@@ -680,7 +680,7 @@ export default function TradesPage() {
                         </td>
                         <td className="px-3 py-2 text-xxs text-text-tertiary font-mono tabular-nums">{p.commission ? formatMoney(p.commission) : '0'}</td>
                         <td className="px-3 py-2 text-xs text-sell font-mono tabular-nums">{p.stop_loss != null ? p.stop_loss : '—'}</td>
-                        <td className="px-3 py-2 text-xs text-buy font-mono tabular-nums">{p.take_profit != null ? p.take_profit : '—'}</td>
+                        <td className="px-3 py-2 text-xs text-accent font-mono tabular-nums">{p.take_profit != null ? p.take_profit : '—'}</td>
                         <td className="px-3 py-2 text-xxs text-text-tertiary whitespace-nowrap">{formatDate(p.created_at)}</td>
                         <td className="px-3 py-2 whitespace-nowrap">
                           <div className="flex items-center gap-1">
@@ -692,7 +692,7 @@ export default function TradesPage() {
                                 A-book · LP
                               </span>
                             ) : (
-                              <button onClick={() => openModifyModal(p)} className="px-2 py-1 text-xxs font-medium text-text-secondary bg-bg-hover border border-border-primary rounded hover:text-buy hover:border-buy/30 transition-fast" title="Edit Trade">
+                              <button onClick={() => openModifyModal(p)} className="px-2 py-1 text-xxs font-medium text-text-secondary bg-bg-hover border border-border-primary rounded hover:text-accent hover:border-accent/30 transition-fast" title="Edit Trade">
                                 <Edit3 size={11} className="inline mr-0.5" />Edit
                               </button>
                             )}
@@ -802,7 +802,7 @@ export default function TradesPage() {
                         <td className="px-4 py-2.5 text-xs text-text-secondary text-right font-mono tabular-nums">{t.open_price}</td>
                         <td className="px-4 py-2.5 text-xs text-text-secondary text-right font-mono tabular-nums">{t.close_price}</td>
                         <td className={cn('px-4 py-2.5 text-xs text-right font-mono tabular-nums', t.stop_loss != null ? 'text-sell' : 'text-text-tertiary')}>{slDisplay}</td>
-                        <td className={cn('px-4 py-2.5 text-xs text-right font-mono tabular-nums', t.take_profit != null ? 'text-buy' : 'text-text-tertiary')}>{tpDisplay}</td>
+                        <td className={cn('px-4 py-2.5 text-xs text-right font-mono tabular-nums', t.take_profit != null ? 'text-accent' : 'text-text-tertiary')}>{tpDisplay}</td>
                         <td className={cn('px-4 py-2.5 text-xs text-right font-mono tabular-nums font-medium', (t.profit || 0) >= 0 ? 'text-success' : 'text-danger')}>
                           {(t.profit || 0) >= 0 ? '+' : ''}{formatMoney(t.profit)}
                         </td>
@@ -853,7 +853,7 @@ export default function TradesPage() {
                 className={cn(
                   'px-3 py-2 text-xs font-bold rounded-md border transition-fast',
                   modifySide === 'buy'
-                    ? 'bg-buy/20 border-buy text-buy'
+                    ? 'bg-accent/20 border-accent text-accent'
                     : 'bg-bg-input border-border-primary text-text-tertiary hover:bg-bg-hover',
                 )}
               >
@@ -884,11 +884,11 @@ export default function TradesPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Open Price</label>
-              <input type="number" step="any" value={modifyOpenPrice} onChange={e => setModifyOpenPrice(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={modifyOpenPrice} onChange={e => setModifyOpenPrice(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Lots</label>
-              <input type="number" step="0.01" min="0.01" value={modifyLots} onChange={e => setModifyLots(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="0.01" min="0.01" value={modifyLots} onChange={e => setModifyLots(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -898,30 +898,30 @@ export default function TradesPage() {
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Take Profit</label>
-              <input type="number" step="any" value={modifyTp} onChange={e => setModifyTp(e.target.value)} placeholder="None" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={modifyTp} onChange={e => setModifyTp(e.target.value)} placeholder="None" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Commission</label>
-              <input type="number" step="any" value={modifyCommission} onChange={e => setModifyCommission(e.target.value)} placeholder="0" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={modifyCommission} onChange={e => setModifyCommission(e.target.value)} placeholder="0" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Swap</label>
-              <input type="number" step="any" value={modifySwap} onChange={e => setModifySwap(e.target.value)} placeholder="0" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={modifySwap} onChange={e => setModifySwap(e.target.value)} placeholder="0" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
           <div>
             <label className="block text-xxs text-text-tertiary mb-1">Open Time</label>
-            <input type="datetime-local" value={modifyOpenTime} onChange={e => setModifyOpenTime(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md text-text-primary focus:border-buy transition-fast" />
+            <input type="datetime-local" value={modifyOpenTime} onChange={e => setModifyOpenTime(e.target.value)} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md text-text-primary focus:border-accent transition-fast" />
           </div>
           <div>
             <label className="block text-xxs text-text-tertiary mb-1">Reason</label>
-            <textarea value={actionReason} onChange={e => setActionReason(e.target.value)} rows={2} placeholder="Reason for modification..." className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast resize-none" />
+            <textarea value={actionReason} onChange={e => setActionReason(e.target.value)} rows={2} placeholder="Reason for modification..." className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast resize-none" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
-            <button onClick={submitModify} disabled={modalSubmitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-buy text-white hover:bg-buy-light disabled:opacity-50 transition-fast">
+            <button onClick={submitModify} disabled={modalSubmitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-accent text-white hover:bg-accent-light disabled:opacity-50 transition-fast">
               {modalSubmitting ? <Loader2 size={14} className="animate-spin" /> : 'Save Changes'}
             </button>
           </div>
@@ -951,13 +951,13 @@ export default function TradesPage() {
               <div><p className="text-xxs text-text-tertiary">P&L</p><p className={cn('font-mono font-bold', livePnl >= 0 ? 'text-success' : 'text-danger')}>{livePnl >= 0 ? '+' : ''}{formatMoney(livePnl)}</p></div>
               <div><p className="text-xxs text-text-tertiary">User</p><p className="text-text-primary truncate">{selectedPosition.user_email}</p></div>
               <div><p className="text-xxs text-text-tertiary">SL</p><p className="text-sell font-mono">{selectedPosition.stop_loss != null ? selectedPosition.stop_loss : '—'}</p></div>
-              <div><p className="text-xxs text-text-tertiary">TP</p><p className="text-buy font-mono">{selectedPosition.take_profit != null ? selectedPosition.take_profit : '—'}</p></div>
+              <div><p className="text-xxs text-text-tertiary">TP</p><p className="text-accent font-mono">{selectedPosition.take_profit != null ? selectedPosition.take_profit : '—'}</p></div>
             </div>
             );
           })()}
           <div>
             <label className="block text-xxs text-text-tertiary mb-1">Reason</label>
-            <textarea value={actionReason} onChange={e => setActionReason(e.target.value)} rows={2} placeholder="Reason for closing..." className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast resize-none" />
+            <textarea value={actionReason} onChange={e => setActionReason(e.target.value)} rows={2} placeholder="Reason for closing..." className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast resize-none" />
           </div>
           <div className="flex justify-end gap-2">
             <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
@@ -1016,7 +1016,7 @@ export default function TradesPage() {
                     value={createUserSearch}
                     onChange={(e) => searchUsers(e.target.value)}
                     placeholder="Search and add users by email or name..."
-                    className="w-full pl-9 pr-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast"
+                    className="w-full pl-9 pr-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast"
                   />
                   {createUsers.length > 0 && (
                     <div className="absolute left-0 right-0 top-full mt-1 z-10 max-h-40 overflow-y-auto border border-border-primary rounded-md bg-bg-secondary shadow-dropdown">
@@ -1060,7 +1060,7 @@ export default function TradesPage() {
                       onChange={e => { setInstrumentSearch(e.target.value); setShowInstrumentDropdown(true); }}
                       onFocus={() => setShowInstrumentDropdown(true)}
                       placeholder="Search instruments..."
-                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md uppercase placeholder:text-text-tertiary focus:border-buy transition-fast"
+                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md uppercase placeholder:text-text-tertiary focus:border-accent transition-fast"
                     />
                     {showInstrumentDropdown && (
                       <div className="absolute left-0 right-0 top-full mt-1 z-20 max-h-48 overflow-y-auto border border-border-primary rounded-md bg-bg-secondary shadow-dropdown">
@@ -1083,7 +1083,7 @@ export default function TradesPage() {
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Lots</label>
-              <input type="number" step="0.01" min="0.01" value={createLots} onChange={e => setCreateLots(e.target.value)} placeholder="0.01" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="0.01" min="0.01" value={createLots} onChange={e => setCreateLots(e.target.value)} placeholder="0.01" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
 
@@ -1112,7 +1112,7 @@ export default function TradesPage() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-text-tertiary">Ask</p>
-                  <p className="text-xs font-mono tabular-nums font-semibold text-buy">{tick.ask.toFixed(5)}</p>
+                  <p className="text-xs font-mono tabular-nums font-semibold text-accent">{tick.ask.toFixed(5)}</p>
                 </div>
               </div>
             );
@@ -1132,7 +1132,7 @@ export default function TradesPage() {
             <label className="block text-xxs text-text-tertiary mb-1">Order Type</label>
             <div className="flex gap-2">
               {['market', 'limit', 'stop'].map(t => (
-                <button key={t} onClick={() => setCreateType(t)} className={cn('flex-1 py-2 rounded-md text-xs font-medium border transition-fast capitalize', createType === t ? 'bg-buy/15 text-buy border-buy/30' : 'bg-bg-input text-text-secondary border-border-primary hover:border-border-secondary')}>{t}</button>
+                <button key={t} onClick={() => setCreateType(t)} className={cn('flex-1 py-2 rounded-md text-xs font-medium border transition-fast capitalize', createType === t ? 'bg-accent/15 text-accent border-accent/30' : 'bg-bg-input text-text-secondary border-border-primary hover:border-border-secondary')}>{t}</button>
               ))}
             </div>
           </div>
@@ -1149,7 +1149,7 @@ export default function TradesPage() {
                   ? (livePx != null ? `Auto · ${livePx.toFixed(5)}` : 'Auto (live price)')
                   : (livePx != null ? livePx.toFixed(5) : '0.00');
               return (
-                <input type="number" step="any" value={createPrice} onChange={e => setCreatePrice(e.target.value)} placeholder={placeholder} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+                <input type="number" step="any" value={createPrice} onChange={e => setCreatePrice(e.target.value)} placeholder={placeholder} className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
               );
             })()}
           </div>
@@ -1157,22 +1157,22 @@ export default function TradesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Stop Loss</label>
-              <input type="number" step="any" value={createSl} onChange={e => setCreateSl(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={createSl} onChange={e => setCreateSl(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
             <div>
               <label className="block text-xxs text-text-tertiary mb-1">Take Profit</label>
-              <input type="number" step="any" value={createTp} onChange={e => setCreateTp(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-buy transition-fast" />
+              <input type="number" step="any" value={createTp} onChange={e => setCreateTp(e.target.value)} placeholder="Optional" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md font-mono tabular-nums placeholder:text-text-tertiary focus:border-accent transition-fast" />
             </div>
           </div>
 
           <div>
             <label className="block text-xxs text-text-tertiary mb-1">Reason <span className="text-danger">*</span></label>
-            <textarea value={createReason} onChange={e => setCreateReason(e.target.value)} rows={2} placeholder="Required — why this trade is being created" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast resize-none" />
+            <textarea value={createReason} onChange={e => setCreateReason(e.target.value)} rows={2} placeholder="Required — why this trade is being created" className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast resize-none" />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button onClick={closeModal} className="px-3 py-1.5 rounded-md text-xs font-medium text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
-            <button onClick={submitCreateTrade} disabled={modalSubmitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-buy text-white hover:bg-buy-light disabled:opacity-50 transition-fast">
+            <button onClick={submitCreateTrade} disabled={modalSubmitting} className="px-4 py-1.5 rounded-md text-xs font-medium bg-accent text-white hover:bg-accent-light disabled:opacity-50 transition-fast">
               {modalSubmitting ? <Loader2 size={14} className="animate-spin" /> : 'Create Trade'}
             </button>
           </div>
@@ -1305,7 +1305,7 @@ export default function TradesPage() {
                     </div>
                     <div className="flex justify-between gap-2">
                       <span className="text-text-tertiary">Take Profit</span>
-                      <span className={cn('font-mono tabular-nums', t.take_profit != null ? 'text-buy' : 'text-text-tertiary')}>
+                      <span className={cn('font-mono tabular-nums', t.take_profit != null ? 'text-accent' : 'text-text-tertiary')}>
                         {t.take_profit != null ? t.take_profit : '— (not set)'}
                       </span>
                     </div>
@@ -1365,7 +1365,7 @@ export default function TradesPage() {
                     <button
                       type="button"
                       onClick={() => { void navigator.clipboard.writeText(t.id); }}
-                      className="text-text-primary font-mono text-[10px] break-all text-right sm:text-left hover:text-buy"
+                      className="text-text-primary font-mono text-[10px] break-all text-right sm:text-left hover:text-accent"
                       title="Click to copy"
                     >
                       {t.id}
@@ -1376,7 +1376,7 @@ export default function TradesPage() {
                     <button
                       type="button"
                       onClick={() => { if (t.account_id) void navigator.clipboard.writeText(t.account_id); }}
-                      className="text-text-primary font-mono text-[10px] break-all text-right sm:text-left hover:text-buy disabled:cursor-not-allowed"
+                      className="text-text-primary font-mono text-[10px] break-all text-right sm:text-left hover:text-accent disabled:cursor-not-allowed"
                       disabled={!t.account_id}
                       title={t.account_id ? 'Click to copy' : undefined}
                     >

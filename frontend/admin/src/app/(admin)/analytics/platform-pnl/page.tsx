@@ -195,7 +195,7 @@ export default function PlatformPnlPage() {
       <div className="bg-bg-secondary border border-border-primary rounded-md">
         <div className="px-4 py-3 border-b border-border-primary">
           <h2 className="text-sm font-medium text-text-primary flex items-center gap-2">
-            <Activity size={14} className="text-buy" />
+            <Activity size={14} className="text-accent" />
             Recent Big Trades (last 30 days)
           </h2>
           <p className="text-xxs text-text-tertiary mt-0.5">

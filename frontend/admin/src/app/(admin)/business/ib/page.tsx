@@ -497,7 +497,7 @@ export default function IBPage() {
                               </div>
                               <p className="text-xxs text-text-tertiary mt-0.5">{agent.user_email}</p>
                             </td>
-                            <td className="px-4 py-2.5 text-xs text-buy font-mono tabular-nums">{agent.referral_code}</td>
+                            <td className="px-4 py-2.5 text-xs text-accent font-mono tabular-nums">{agent.referral_code}</td>
                             <td className="px-4 py-2.5 text-xs text-text-primary">L{agent.level}</td>
                             <td className="px-4 py-2.5 text-xs text-text-primary font-mono tabular-nums">{agent.referral_count}</td>
                             <td className="px-4 py-2.5 text-xs text-success text-right font-mono tabular-nums">${formatMoney(agent.total_earned)}</td>
@@ -645,7 +645,7 @@ export default function IBPage() {
                               <td className="px-4 py-2.5 text-right">
                                 <button
                                   onClick={() => { setTransferModal({ userId: u.user_id, userName: u.name || u.email }); setTransferTargetIb(''); }}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xxs font-medium bg-buy/10 text-buy border border-buy/25 hover:bg-buy/20 transition-fast"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xxs font-medium bg-accent/10 text-accent border border-accent/25 hover:bg-accent/20 transition-fast"
                                 >
                                   <ArrowRightLeft size={11} /> Assign to IB
                                 </button>
@@ -817,7 +817,7 @@ export default function IBPage() {
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-xs font-semibold text-text-primary truncate">{plan.name}</span>
                             {plan.is_default && (
-                              <span className="inline-flex items-center gap-0.5 text-xxs px-1.5 py-0.5 rounded-sm bg-buy/15 text-buy font-medium">
+                              <span className="inline-flex items-center gap-0.5 text-xxs px-1.5 py-0.5 rounded-sm bg-accent/15 text-accent font-medium">
                                 <Star size={10} /> Default
                               </span>
                             )}
@@ -840,7 +840,7 @@ export default function IBPage() {
                       </div>
                     ))
                   )}
-                  <button onClick={() => openPlanEditor('new')} className="w-full mt-2 px-3 py-2 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast inline-flex items-center justify-center gap-1.5">
+                  <button onClick={() => openPlanEditor('new')} className="w-full mt-2 px-3 py-2 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast inline-flex items-center justify-center gap-1.5">
                     <Plus size={14} /> New Plan
                   </button>
                 </div>
@@ -878,7 +878,7 @@ export default function IBPage() {
                   <div className="pt-2">
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xxs text-text-tertiary uppercase tracking-wide">MLM Levels — % per level</label>
-                      <button onClick={addLevel} disabled={planForm.mlm_distribution.length >= 20} className="text-xxs px-2 py-1 rounded bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 inline-flex items-center gap-1 disabled:opacity-50">
+                      <button onClick={addLevel} disabled={planForm.mlm_distribution.length >= 20} className="text-xxs px-2 py-1 rounded bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 inline-flex items-center gap-1 disabled:opacity-50">
                         <Plus size={10} /> Add Level
                       </button>
                     </div>
@@ -894,7 +894,7 @@ export default function IBPage() {
                           />
                           <span className="text-xxs text-text-tertiary">%</span>
                           <div className="flex-1 h-1.5 bg-bg-tertiary rounded-full overflow-hidden">
-                            <div className="h-full bg-buy rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                            <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
                           </div>
                           <button
                             onClick={() => removeLevel(idx)}
@@ -1075,7 +1075,7 @@ function IBTreeNodeRow({
             </span>
           )}
           {hasChildren && (
-            <span className="text-xxs px-1.5 py-0.5 rounded-sm bg-buy/10 text-buy border border-buy/20">
+            <span className="text-xxs px-1.5 py-0.5 rounded-sm bg-accent/10 text-accent border border-accent/20">
               {node.children.length} sub-IB{node.children.length !== 1 ? 's' : ''}
             </span>
           )}

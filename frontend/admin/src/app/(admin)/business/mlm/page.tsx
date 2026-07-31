@@ -90,7 +90,7 @@ export default function MLMPage() {
             disabled={saving || isOverLimit}
             className={cn(
               'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-fast disabled:opacity-50',
-              'bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25',
+              'bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25',
             )}
           >
             <Save size={14} />
@@ -122,7 +122,7 @@ export default function MLMPage() {
                     {levels.map((lvl, idx) => (
                       <tr key={lvl.level} className="border-b border-border-primary/50">
                         <td className="px-3 py-3">
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xxs font-semibold bg-buy/15 text-buy">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xxs font-semibold bg-accent/15 text-accent">
                             {lvl.level}
                           </span>
                         </td>
@@ -142,7 +142,7 @@ export default function MLMPage() {
                           <div className="flex items-center justify-end gap-2">
                             <div className="w-32 h-2 bg-bg-tertiary rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-buy rounded-full transition-all duration-300"
+                                className="h-full bg-accent rounded-full transition-all duration-300"
                                 style={{ width: `${Math.min(lvl.distribution_pct, 100)}%` }}
                               />
                             </div>
@@ -169,7 +169,7 @@ export default function MLMPage() {
                 <button
                   onClick={addLevel}
                   disabled={levels.length >= 20}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xxs font-medium bg-buy/10 text-buy border border-buy/25 hover:bg-buy/20 transition-fast disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-3 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xxs font-medium bg-accent/10 text-accent border border-accent/25 hover:bg-accent/20 transition-fast disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={12} /> Add Level
                 </button>
@@ -203,7 +203,7 @@ export default function MLMPage() {
                       <div
                         className={cn(
                           'h-full rounded-md transition-all duration-300',
-                          lvl.level === 1 ? 'bg-buy' : lvl.level === 2 ? 'bg-buy/80' : lvl.level === 3 ? 'bg-buy/60' : lvl.level === 4 ? 'bg-buy/40' : 'bg-buy/20',
+                          lvl.level === 1 ? 'bg-accent' : lvl.level === 2 ? 'bg-accent/80' : lvl.level === 3 ? 'bg-accent/60' : lvl.level === 4 ? 'bg-accent/40' : 'bg-accent/20',
                         )}
                         style={{ width: `${Math.min(lvl.distribution_pct, 100)}%` }}
                       />

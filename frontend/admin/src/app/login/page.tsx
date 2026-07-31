@@ -3,7 +3,7 @@
 /**
  * Admin sign-in (TuskaEx Admin) — two-panel card matching the
  * trader auth page: dark hero on the left, white form on the right,
- * orange accent. Functional layer unchanged: email + password against
+ * brand-red accent. Functional layer unchanged: email + password against
  * the admin JWT store; redirect to /dashboard on success; the
  * security context (audit-logged, isolated JWT, IP-fingerprinted) is
  * surfaced as chips on the hero panel.
@@ -56,7 +56,7 @@ export default function AdminLoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center overflow-hidden bg-[#FAFAFA] p-4">
       <div className="w-full relative max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl ring-1 ring-black/5">
-        {/* Decorative orange ball behind the left panel */}
+        {/* Decorative brand-red ball behind the left panel */}
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent to-black/60" />
           <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#D60101] rounded-full opacity-90" />

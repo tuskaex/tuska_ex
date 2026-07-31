@@ -4,12 +4,14 @@
 
 /* ============================================================
    TuskaEx — Landing Design System
-   Brand: indigo + amber on deep navy-black. Modern fintech.
+   Brand: the logo red (#D60101) on deep navy-black, with amber
+   reserved for "earn"/reward highlights. Modern fintech.
    Tokens are scoped under .landing-root so they never leak
    into the trader app shell. The variable names still read
    `--fx-gold*` for backward compat with all the components
-   that already reference them — the hex values are now the
-   TuskaEx indigo palette.
+   that already reference them — the hex values are the TuskaEx
+   red palette. (The names are a fossil of two rebrands: gold →
+   indigo → TuskaEx red. Renaming them is a safe follow-up.)
    ============================================================ */
 
 .landing-root {
@@ -21,17 +23,21 @@
   --fx-line:         rgba(255, 255, 255, 0.06);
   --fx-line-strong:  rgba(255, 255, 255, 0.10);
 
-  /* Accent palette — indigo primary, amber highlight.
+  /* Accent palette — the TuskaEx logo red, amber highlight.
      Names kept as --fx-gold* so existing components still
      compile without a per-file rewrite. */
-  --fx-gold:         #D60101;   /* primary accent — TuskaEx indigo */
+  --fx-gold:         #D60101;   /* primary accent — TuskaEx logo red */
   --fx-gold-light:   #F14A4A;   /* highlight / hover */
-  --fx-gold-dark:    #A30000;   /* deep indigo (pressed / borders) */
-  --fx-gold-soft:    rgba(99, 102, 241, 0.12);
+  --fx-gold-dark:    #A30000;   /* deep red (pressed / borders) */
+  /* Was rgba(214, 1, 1,.12) — a leftover indigo tint from the
+     previous brand that never got repointed, so every soft-accent
+     surface on the landing page was washing red text over a blue
+     wash. Now a soft tint of --fx-gold itself. */
+  --fx-gold-soft:    rgba(214, 1, 1, 0.12);
 
   /* Secondary accent for "earn" / highlight chips. Used by
      the gamification + rewards sections to break up the
-     indigo without introducing a third hue. */
+     red without introducing a third hue. */
   --fx-amber:        #F59E0B;
   --fx-amber-soft:   rgba(245, 158, 11, 0.12);
 
@@ -93,9 +99,9 @@
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      rgba(99, 102, 241,0.55) 25%,
-      rgba(129, 140, 248,0.95) 50%,
-      rgba(99, 102, 241,0.55) 75%,
+      rgba(214, 1, 1,0.55) 25%,
+      rgba(241, 74, 74,0.95) 50%,
+      rgba(214, 1, 1,0.55) 75%,
       transparent);
     opacity: .55;
     pointer-events: none;
@@ -109,24 +115,24 @@
     position: absolute;
     top: -1px; left: 0; right: 0;
     height: 36px;
-    background: radial-gradient(60% 100% at 50% 0%, rgba(99, 102, 241,0.22), transparent 80%);
+    background: radial-gradient(60% 100% at 50% 0%, rgba(214, 1, 1,0.22), transparent 80%);
     pointer-events: none;
     opacity: 0;
     transition: opacity .35s ease;
   }
   .fx-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(99, 102, 241,0.28);
+    border-color: rgba(214, 1, 1,0.28);
     box-shadow:
       0 26px 55px -22px rgba(0,0,0,0.75),
-      0 0 0 1px rgba(99, 102, 241,0.08) inset;
+      0 0 0 1px rgba(214, 1, 1,0.08) inset;
   }
   .fx-card:hover::before { left: 0; right: 0; opacity: 1; }
   .fx-card:hover::after  { opacity: 1; }
 
   .fx-card-gold {
-    background: linear-gradient(180deg, rgba(99, 102, 241,0.06) 0%, rgba(99, 102, 241,0) 60%), var(--fx-bg-elev);
-    border: 1px solid rgba(99, 102, 241, 0.18);
+    background: linear-gradient(180deg, rgba(214, 1, 1,0.06) 0%, rgba(214, 1, 1,0) 60%), var(--fx-bg-elev);
+    border: 1px solid rgba(214, 1, 1, 0.18);
     border-radius: 1rem;
   }
 
@@ -139,7 +145,7 @@
     padding: .75rem 1.4rem;
     border-radius: 9999px;
     border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 24px rgba(99, 102, 241,0.25);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 24px rgba(214, 1, 1,0.25);
     transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
   }
   .fx-btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
@@ -155,7 +161,7 @@
     border: 1px solid var(--fx-line-strong);
     transition: background .2s ease, border-color .2s ease;
   }
-  .fx-btn-ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(99, 102, 241,0.4); }
+  .fx-btn-ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(214, 1, 1,0.4); }
 
   .fx-btn-link {
     display: inline-flex; align-items: center; gap: .35rem;
@@ -166,10 +172,10 @@
   .fx-btn-link:hover { color: var(--fx-gold); }
 
   /* ── Squishy 3D "Explore" pill ─────────────────────────────
-     Cream face sitting on a solid orange base + soft drop, so it
+     Cream face sitting on a solid brand-red base + soft drop, so it
      reads as a physical, pressable button. On :active the face
-     drops into its base (the "squish"). Orange theme = #D60101;
-     base/drop use a darker orange (#B23A12) instead of black. */
+     drops into its base (the "squish"). Brand red = #D60101;
+     base/drop use the darker brand red (#A30000) instead of black. */
   .fx-explore-btn {
     display: inline-flex; align-items: center; gap: .5rem;
     background: #FBF8F2;
@@ -179,8 +185,8 @@
     padding: .7rem 1.5rem;
     border-radius: 9999px;
     border: 2px solid #D60101;
-    box-shadow: 0 2px 0 0 #B23A12,
-                0 6px 12px -5px rgba(178,58,18,0.45);
+    box-shadow: 0 2px 0 0 #A30000,
+                0 6px 12px -5px rgba(163,0,0,0.45);
     transform: translateY(0);
     transition: transform .12s cubic-bezier(.2,.8,.3,1.2),
                 box-shadow .12s ease, background .12s ease;
@@ -189,8 +195,8 @@
   .fx-explore-btn:hover { background: #FFFDF8; }
   .fx-explore-btn:active {
     transform: translateY(2px);
-    box-shadow: 0 0 0 0 #B23A12,
-                0 2px 6px -2px rgba(178,58,18,0.40);
+    box-shadow: 0 0 0 0 #A30000,
+                0 2px 6px -2px rgba(163,0,0,0.40);
   }
 
   /* ── Type ──────────────────────────────────────────────── */
@@ -253,8 +259,8 @@
     pointer-events: none;
     z-index: 0;
     background:
-      radial-gradient(60% 50% at 85% 0%,  rgba(99, 102, 241,0.06) 0%, rgba(99, 102, 241,0) 60%),
-      radial-gradient(45% 40% at 10% 100%, rgba(99, 102, 241,0.05) 0%, rgba(99, 102, 241,0) 60%);
+      radial-gradient(60% 50% at 85% 0%,  rgba(214, 1, 1,0.06) 0%, rgba(214, 1, 1,0) 60%),
+      radial-gradient(45% 40% at 10% 100%, rgba(214, 1, 1,0.05) 0%, rgba(214, 1, 1,0) 60%);
   }
   .fx-section > *,
   .section-padding > * { position: relative; z-index: 1; }
@@ -270,7 +276,7 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(99, 102, 241,0.35), transparent);
+    background: linear-gradient(90deg, transparent, rgba(214, 1, 1,0.35), transparent);
     pointer-events: none;
     z-index: 1;
   }
@@ -292,14 +298,14 @@
     border-radius: 1.5rem;
     padding: 2rem 1.5rem;
     background:
-      radial-gradient(120% 90% at 0% 0%, rgba(99, 102, 241,0.05), rgba(99, 102, 241,0) 55%),
-      radial-gradient(110% 80% at 100% 100%, rgba(99, 102, 241,0.03), rgba(99, 102, 241,0) 60%),
+      radial-gradient(120% 90% at 0% 0%, rgba(214, 1, 1,0.05), rgba(214, 1, 1,0) 55%),
+      radial-gradient(110% 80% at 100% 100%, rgba(214, 1, 1,0.03), rgba(214, 1, 1,0) 60%),
       linear-gradient(180deg, rgba(22,24,28,0.96) 0%, rgba(13,14,17,0.96) 100%);
     border: 1px solid rgba(255,255,255,0.06);
     box-shadow:
       0 1px 0 rgba(255,255,255,0.04) inset,
       0 30px 80px -40px rgba(0,0,0,0.85),
-      0 0 0 1px rgba(99, 102, 241,0.04);
+      0 0 0 1px rgba(214, 1, 1,0.04);
     overflow: hidden;
   }
   .fx-section-frame::before {
@@ -310,9 +316,9 @@
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      rgba(99, 102, 241,0.45) 30%,
-      rgba(129, 140, 248,0.7) 50%,
-      rgba(99, 102, 241,0.45) 70%,
+      rgba(214, 1, 1,0.45) 30%,
+      rgba(241, 74, 74,0.7) 50%,
+      rgba(214, 1, 1,0.45) 70%,
       transparent);
     opacity: .55;
     pointer-events: none;
@@ -343,7 +349,7 @@
     width: 100%;
     border-radius: 1rem;
     background:
-      radial-gradient(110% 80% at 50% 30%, rgba(99, 102, 241,0.10), rgba(99, 102, 241,0) 65%),
+      radial-gradient(110% 80% at 50% 30%, rgba(214, 1, 1,0.10), rgba(214, 1, 1,0) 65%),
       linear-gradient(180deg, rgba(28,30,34,1) 0%, rgba(16,17,20,1) 100%);
     border: 1px solid rgba(255,255,255,0.06);
     overflow: hidden;
@@ -355,7 +361,7 @@
     position: absolute;
     width: 22px;
     height: 22px;
-    border-color: rgba(99, 102, 241,0.45);
+    border-color: rgba(214, 1, 1,0.45);
     border-style: solid;
     border-width: 0;
     pointer-events: none;
@@ -374,8 +380,8 @@
   }
   .fx-image-slot:hover {
     transform: translateY(-2px);
-    border-color: rgba(99, 102, 241,0.25);
-    box-shadow: 0 24px 60px -28px rgba(99, 102, 241,0.20);
+    border-color: rgba(214, 1, 1,0.25);
+    box-shadow: 0 24px 60px -28px rgba(214, 1, 1,0.20);
   }
   /* Aspect ratios for slot variants. */
   .fx-image-slot-4x3   { aspect-ratio: 4 / 3; }
@@ -398,9 +404,9 @@
     aspect-ratio: 3 / 1;
     border-radius: 1rem;
     background:
-      radial-gradient(120% 90% at 50% 0%, rgba(99, 102, 241,0.10), rgba(99, 102, 241,0) 60%),
+      radial-gradient(120% 90% at 50% 0%, rgba(214, 1, 1,0.10), rgba(214, 1, 1,0) 60%),
       linear-gradient(180deg, rgba(20,22,26,1) 0%, rgba(12,13,16,1) 100%);
-    border: 1px dashed rgba(99, 102, 241,0.22);
+    border: 1px dashed rgba(214, 1, 1,0.22);
     overflow: hidden;
     margin: 2rem 0 0;
     transition: transform .35s cubic-bezier(.2,.7,.2,1), border-color .35s ease, box-shadow .35s ease;
@@ -417,7 +423,7 @@
     position: absolute;
     width: 20px;
     height: 20px;
-    border-color: rgba(99, 102, 241,0.45);
+    border-color: rgba(214, 1, 1,0.45);
     border-style: solid;
     border-width: 0;
     pointer-events: none;
@@ -435,9 +441,9 @@
     border-bottom-right-radius: 6px;
   }
   .fx-section-banner:hover {
-    border-color: rgba(99, 102, 241,0.40);
+    border-color: rgba(214, 1, 1,0.40);
     transform: translateY(-2px);
-    box-shadow: 0 24px 60px -28px rgba(99, 102, 241,0.20);
+    box-shadow: 0 24px 60px -28px rgba(214, 1, 1,0.20);
   }
   .fx-section-banner > span {
     position: absolute;
@@ -445,7 +451,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(99, 102, 241,0.55);
+    color: rgba(214, 1, 1,0.55);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.28em;
@@ -462,7 +468,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    color: rgba(99, 102, 241,0.55);
+    color: rgba(214, 1, 1,0.55);
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.28em;
@@ -500,7 +506,7 @@
     position: absolute;
     top: 0; left: 0; right: 30%;
     height: 1px;
-    background: linear-gradient(90deg, rgba(99, 102, 241,0.45), rgba(99, 102, 241,0));
+    background: linear-gradient(90deg, rgba(214, 1, 1,0.45), rgba(214, 1, 1,0));
   }
 
   /* ── Decorative ────────────────────────────────────────── */
@@ -515,8 +521,8 @@
     inset: 0;
     pointer-events: none;
     background:
-      radial-gradient(60% 50% at 80% 30%, rgba(99, 102, 241,0.18) 0%, rgba(99, 102, 241,0) 60%),
-      radial-gradient(40% 40% at 20% 90%, rgba(99, 102, 241,0.08) 0%, rgba(99, 102, 241,0) 60%);
+      radial-gradient(60% 50% at 80% 30%, rgba(214, 1, 1,0.18) 0%, rgba(214, 1, 1,0) 60%),
+      radial-gradient(40% 40% at 20% 90%, rgba(214, 1, 1,0.08) 0%, rgba(214, 1, 1,0) 60%);
   }
 
   .fx-grid-bg {
@@ -565,9 +571,9 @@
     height: 1px;
     background: linear-gradient(90deg,
       transparent,
-      rgba(99, 102, 241,0.55) 25%,
-      rgba(129, 140, 248,0.95) 50%,
-      rgba(99, 102, 241,0.55) 75%,
+      rgba(214, 1, 1,0.55) 25%,
+      rgba(241, 74, 74,0.95) 50%,
+      rgba(214, 1, 1,0.55) 75%,
       transparent);
     opacity: .55;
     pointer-events: none;
@@ -581,17 +587,17 @@
     position: absolute;
     top: -1px; left: 0; right: 0;
     height: 36px;
-    background: radial-gradient(60% 100% at 50% 0%, rgba(99, 102, 241,0.22), transparent 80%);
+    background: radial-gradient(60% 100% at 50% 0%, rgba(214, 1, 1,0.22), transparent 80%);
     pointer-events: none;
     opacity: 0;
     transition: opacity .35s ease;
   }
   .glass-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(99, 102, 241,0.28);
+    border-color: rgba(214, 1, 1,0.28);
     box-shadow:
       0 26px 55px -22px rgba(0,0,0,0.75),
-      0 0 0 1px rgba(99, 102, 241,0.08) inset;
+      0 0 0 1px rgba(214, 1, 1,0.08) inset;
   }
   .glass-card:hover::before { left: 0; right: 0; opacity: 1; }
   .glass-card:hover::after  { opacity: 1; }
@@ -604,13 +610,13 @@
     align-items: center;
     justify-content: center;
     background:
-      radial-gradient(120% 90% at 0% 0%, rgba(99, 102, 241,0.22), rgba(99, 102, 241,0.06) 60%),
-      rgba(99, 102, 241,0.08);
+      radial-gradient(120% 90% at 0% 0%, rgba(214, 1, 1,0.22), rgba(214, 1, 1,0.06) 60%),
+      rgba(214, 1, 1,0.08);
     color: var(--fx-gold-light);
-    border: 1px solid rgba(99, 102, 241,0.28);
+    border: 1px solid rgba(214, 1, 1,0.28);
     box-shadow:
       0 1px 0 rgba(255,255,255,0.06) inset,
-      0 8px 24px -10px rgba(99, 102, 241,0.30);
+      0 8px 24px -10px rgba(214, 1, 1,0.30);
   }
   .feature-icon::after {
     content: '';
@@ -632,9 +638,9 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     background:
-      linear-gradient(180deg, rgba(99, 102, 241,0.18), rgba(99, 102, 241,0.06));
+      linear-gradient(180deg, rgba(214, 1, 1,0.18), rgba(214, 1, 1,0.06));
     color: var(--fx-gold-light);
-    border: 1px solid rgba(99, 102, 241,0.32);
+    border: 1px solid rgba(214, 1, 1,0.32);
     box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
   }
 
@@ -646,7 +652,7 @@
     padding: .625rem 1.25rem;
     border-radius: 9999px;
     border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 24px rgba(99, 102, 241,0.25);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 8px 24px rgba(214, 1, 1,0.25);
     font-size: 0.875rem;
     transition: transform .15s ease, filter .15s ease;
   }
@@ -666,7 +672,7 @@
   }
   .btn-ghost:hover, .btn-outline:hover {
     background: rgba(255,255,255,0.04);
-    border-color: rgba(99, 102, 241,0.4);
+    border-color: rgba(214, 1, 1,0.4);
   }
 
   .gradient-text {

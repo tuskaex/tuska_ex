@@ -1,8 +1,8 @@
 import Script from 'next/script';
 
-// Admin runs in light-orange mode only — matches the trader app's Vantage
-// palette. The persisted toggle is ignored; we always set `light` here so a
-// stale localStorage value can't drag the user back to the dark theme.
+// Admin runs in light mode only, on the TuskaEx brand red. The persisted
+// toggle is ignored; we always set `light` here so a stale localStorage
+// value can't drag the user back to the dark theme.
 const INIT = `
 (function(){
   try {

@@ -195,7 +195,7 @@ export default function EmployeesPage() {
       case 'finance': return 'bg-warning/15 text-warning';
       case 'risk_manager': return 'bg-sell/15 text-sell';
       case 'marketing': return 'bg-success/15 text-success';
-      case 'support': return 'bg-buy/15 text-buy';
+      case 'support': return 'bg-accent/15 text-accent';
       default: return 'bg-text-tertiary/15 text-text-tertiary';
     }
   }
@@ -219,7 +219,7 @@ export default function EmployeesPage() {
         {/* Shareable login link — admin copies it to hand to new employees */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-md border border-border-primary bg-bg-secondary px-3 py-2">
           <div className="flex items-center gap-2 shrink-0">
-            <LogIn size={14} className="text-buy" />
+            <LogIn size={14} className="text-accent" />
             <span className="text-xs font-medium text-text-primary">Employee login link</span>
           </div>
           <input
@@ -231,7 +231,7 @@ export default function EmployeesPage() {
           <button
             type="button"
             onClick={copyLoginLink}
-            className="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-md text-xxs font-semibold border transition-fast bg-buy/10 border-buy/30 text-buy hover:bg-buy/20"
+            className="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-md text-xxs font-semibold border transition-fast bg-accent/10 border-accent/30 text-accent hover:bg-accent/20"
             title="Copy login link"
           >
             {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
@@ -244,7 +244,7 @@ export default function EmployeesPage() {
             <p className="text-xxs text-text-tertiary mt-0.5">Manage admin employees, roles, and activity</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast">
+            <button onClick={openCreate} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast">
               <Plus size={14} /> Add Employee
             </button>
             <button onClick={fetchData} className="p-1.5 rounded-md border border-border-primary text-text-secondary hover:bg-bg-hover transition-fast">
@@ -308,7 +308,7 @@ export default function EmployeesPage() {
                                 }, 500);
                               }
                             } catch (e: any) { toast.error(e.message || 'Failed to login as employee'); }
-                          }} className="px-2 py-1 rounded-md text-xxs font-medium text-buy border border-buy/30 hover:bg-buy/15 transition-fast" title="Login As Employee">
+                          }} className="px-2 py-1 rounded-md text-xxs font-medium text-accent border border-accent/30 hover:bg-accent/15 transition-fast" title="Login As Employee">
                             <LogIn size={11} className="inline mr-0.5" />Login
                           </button>
                           <button onClick={() => openPermissions(emp)} className="p-1 rounded-md text-accent border border-accent/30 hover:bg-accent/10 transition-fast" title="Permissions">
@@ -378,7 +378,7 @@ export default function EmployeesPage() {
             </div>
             <div className="px-5 py-3 border-t border-border-primary flex justify-end gap-2">
               <button onClick={() => setShowModal(false)} className="px-3 py-1.5 rounded-md text-xs text-text-secondary border border-border-primary hover:bg-bg-hover transition-fast">Cancel</button>
-              <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 rounded-md text-xs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast disabled:opacity-50">
+              <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 rounded-md text-xs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast disabled:opacity-50">
                 {submitting ? 'Saving...' : editId ? 'Update' : 'Create'}
               </button>
             </div>

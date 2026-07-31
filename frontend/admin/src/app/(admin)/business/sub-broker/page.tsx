@@ -201,7 +201,7 @@ export default function SubBrokerPage() {
                             </div>
                             <p className="text-xxs text-text-tertiary mt-0.5">{b.user_email}</p>
                           </td>
-                          <td className="px-4 py-2.5 text-xs text-buy font-mono tabular-nums">{b.referral_code}</td>
+                          <td className="px-4 py-2.5 text-xs text-accent font-mono tabular-nums">{b.referral_code}</td>
                           <td className="px-4 py-2.5 text-xs text-text-primary font-mono tabular-nums">{b.clients_count}</td>
                           <td className="px-4 py-2.5 text-xs text-success text-right font-mono tabular-nums">${formatMoney(b.total_earned || 0)}</td>
                           <td className="px-4 py-2.5 text-xs text-text-tertiary">{b.created_at ? new Date(b.created_at).toLocaleDateString() : '—'}</td>

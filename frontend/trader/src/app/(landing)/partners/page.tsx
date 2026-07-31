@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import IBPoster from '@/landing/marketing/ui/IBPoster'
 import Link from 'next/link'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 import {
@@ -72,15 +72,8 @@ export default function PartnersPage() {
               aria-hidden="true"
               className="absolute inset-8 rounded-[2.5rem] bg-[#D60101]/25 blur-3xl"
             />
-            <div className="relative w-full aspect-[4/5] md:aspect-[5/6] max-w-[640px] mx-auto">
-              <Image
-                src="/assets/ib.png"
-                alt="TuskaEx Introducing Broker programme"
-                fill
-                priority
-                sizes="(max-width: 768px) 100vw, 640px"
-                className="object-contain drop-shadow-[0_36px_60px_rgba(214,1,1,0.28)]"
-              />
+            <div className="relative w-full aspect-[4/5] md:aspect-[5/6] max-w-[640px] mx-auto drop-shadow-[0_36px_60px_rgba(214,1,1,0.28)]">
+              <IBPoster />
             </div>
           </div>
           <div className="order-1 md:order-2">

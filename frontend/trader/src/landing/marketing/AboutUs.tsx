@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import BrandPanel from './ui/BrandPanel'
 import Eyebrow from './ui/Eyebrow'
 import ExploreLink from './ui/ExploreLink'
 import { HEADING_SECTION } from './ui/headings'
@@ -32,12 +32,11 @@ export default function AboutUs() {
                 aria-hidden="true"
                 className="absolute inset-10 rounded-[2.5rem] bg-[#D60101]/25 blur-3xl"
               />
-              <Image
-                src="/assets/asianboy.png"
-                alt="TuskaEx trader"
-                fill
-                sizes="(max-width: 768px) 100vw, 920px"
-                className="relative object-contain drop-shadow-[0_36px_60px_rgba(0,0,0,0.28)]"
+              {/* Was /assets/asianboy.png — a SwissCresta lifestyle render
+                  with their logo, wordmark and tagline on the wall. */}
+              <BrandPanel
+                className="relative drop-shadow-[0_36px_60px_rgba(0,0,0,0.28)]"
+                chips={['Forex', 'Indices', 'Commodities', 'Crypto']}
               />
             </div>
           </div>

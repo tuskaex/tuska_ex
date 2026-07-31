@@ -51,11 +51,17 @@ export default function PlatformsPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {[
+              /* `gradient` used to be a pastel placeholder that `image`
+                 overrode. The three images were SwissCresta product shots
+                 — a laptop showing their dashboard, an App Store listing
+                 for "SwissCresta — Smart Trading Platform", and a laptop
+                 with their logo on screen — so `image` is gone and the
+                 banner is now a brand-red surface carrying the platform's
+                 own glyph. */
               {
                 icon: Monitor,
                 title: 'Desktop Terminal',
-                image: '/assets/Platforms_card1.png',
-                gradient: 'linear-gradient(120deg, #a5c8ff 0%, #e9b8ff 45%, #ffd9b3 100%)',
+                gradient: 'radial-gradient(120% 100% at 20% 0%, #F14A4A 0%, #D60101 45%, #A30000 100%)',
                 availability: 'Windows & macOS',
                 cta: 'Launch',
                 features: ['100+ Chart Tools', '50+ Indicators', 'Algorithmic Trading', 'Custom Workspaces'],
@@ -63,8 +69,7 @@ export default function PlatformsPage() {
               {
                 icon: Smartphone,
                 title: 'Mobile Trading',
-                image: '/assets/Platforms_card2.png',
-                gradient: 'linear-gradient(120deg, #b5f0e0 0%, #c3b8ff 50%, #ffc8e0 100%)',
+                gradient: 'radial-gradient(130% 110% at 80% 10%, #F14A4A 0%, #C50101 50%, #8E0000 100%)',
                 availability: 'iOS & Android',
                 cta: 'Get app',
                 features: ['Real-time Quotes', 'Push Notifications', 'One-Click Trading', 'Biometric Login'],
@@ -72,23 +77,33 @@ export default function PlatformsPage() {
               {
                 icon: Globe,
                 title: 'Web Platform',
-                image: '/assets/Platforms_card3.png',
-                gradient: 'linear-gradient(120deg, #ffd1a8 0%, #ffb8d9 50%, #c3c8ff 100%)',
+                gradient: 'radial-gradient(120% 100% at 50% 110%, #F14A4A 0%, #D60101 50%, #A30000 100%)',
                 availability: 'Any browser',
                 cta: 'Launch',
                 features: ['Browser-based', 'No Installation', 'Full Features', 'Secure Trading'],
               },
-            ].map(({ icon: Icon, title, image, gradient, availability, cta, features }) => (
+            ].map(({ icon: Icon, title, gradient, availability, cta, features }) => (
               <div
                 key={title}
                 className="flex flex-col rounded-3xl bg-white p-3 ring-1 ring-gray-100 shadow-[0_20px_50px_-22px_rgba(0,0,0,0.30)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_-24px_rgba(0,0,0,0.35)]"
               >
-                {/* image banner — space reserved for artwork; gradient is the
-                    placeholder until a real image path is set above */}
+                {/* Banner: brand-red surface + the platform's own glyph,
+                    drawn rather than photographed. */}
                 <div
-                  className="h-44 rounded-2xl bg-cover bg-center"
-                  style={{ backgroundImage: image ? `url(${image})` : gradient }}
-                />
+                  className="relative h-44 overflow-hidden rounded-2xl"
+                  style={{ background: gradient }}
+                >
+                  {/* top sheen — stops the flat fill reading as a swatch */}
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_-10%,rgba(255,255,255,0.22),transparent_60%)]"
+                  />
+                  <Icon
+                    aria-hidden="true"
+                    className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 text-white/90"
+                    strokeWidth={1.25}
+                  />
+                </div>
 
                 <div className="px-3 pb-2 pt-4">
                   <h3 className="text-2xl font-extrabold text-gray-900">{title}</h3>

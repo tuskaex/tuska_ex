@@ -177,7 +177,7 @@ export default function DepositWalletsPage() {
                       value={draft.address}
                       onChange={(e) => setField(n.key, 'address', e.target.value)}
                       placeholder={n.addressHint}
-                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-buy transition-fast font-mono tabular-nums"
+                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary focus:border-accent transition-fast font-mono tabular-nums"
                     />
                     {active && active.updated_at && (
                       <p className="text-[10px] text-text-tertiary mt-1">
@@ -199,7 +199,7 @@ export default function DepositWalletsPage() {
                         onChange={(e) =>
                           setField(n.key, 'min_confirmations', parseInt(e.target.value) || 0)
                         }
-                        className="w-24 px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md focus:border-buy transition-fast tabular-nums"
+                        className="w-24 px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md focus:border-accent transition-fast tabular-nums"
                       />
                       <button
                         type="button"
@@ -207,7 +207,7 @@ export default function DepositWalletsPage() {
                         disabled={saving === n.key}
                         className={cn(
                           'inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium border transition-fast',
-                          'bg-buy/15 text-buy border-buy/30 hover:bg-buy/25 disabled:opacity-60',
+                          'bg-accent/15 text-accent border-accent/30 hover:bg-accent/25 disabled:opacity-60',
                         )}
                       >
                         {saving === n.key ? (

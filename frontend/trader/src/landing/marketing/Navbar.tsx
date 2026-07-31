@@ -24,7 +24,7 @@ import { useAuthStore } from '@/stores/authStore'
  */
 
 type CardAccent = 'currency' | 'metals' | 'crypto' | 'platform' | 'news' | 'pricing'
-type FeaturedAccent = 'orange' | 'image' | 'plain'
+type FeaturedAccent = 'brand' | 'image' | 'plain'
 
 export interface DropdownCardItem {
   title: string
@@ -208,7 +208,7 @@ interface FeaturedHeroProps {
   accent?: FeaturedAccent
 }
 
-function FeaturedHero({ title, body, accent = 'orange' }: FeaturedHeroProps) {
+function FeaturedHero({ title, body, accent = 'brand' }: FeaturedHeroProps) {
   const href = `#${slugify(title)}`
   if (accent === 'image') {
     return (
@@ -243,7 +243,7 @@ function FeaturedHero({ title, body, accent = 'orange' }: FeaturedHeroProps) {
     <a
       href={href}
       className={`group relative block rounded-2xl overflow-hidden p-6 h-full min-h-[420px] ${
-        accent === 'orange' ? 'bg-[#D60101] text-white' : 'bg-gray-50 text-gray-900'
+        accent === 'brand' ? 'bg-[#D60101] text-white' : 'bg-gray-50 text-gray-900'
       }`}
     >
       <h3 className="text-3xl font-extrabold uppercase tracking-tight relative z-10">{title}</h3>

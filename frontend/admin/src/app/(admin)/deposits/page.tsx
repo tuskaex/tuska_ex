@@ -666,7 +666,7 @@ export default function DepositsPage() {
                                             toast.error(e?.message || 'Failed to approve');
                                           }
                                         }}
-                                        className="px-2 py-1 rounded-md text-xxs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast"
+                                        className="px-2 py-1 rounded-md text-xxs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast"
                                         title="Approve the request — user picks the amount and pays via Razorpay"
                                       >
                                         Approve & Razorpay
@@ -790,7 +790,7 @@ export default function DepositsPage() {
                                     void navigator.clipboard.writeText(w.crypto_address as string);
                                     toast.success('Wallet address copied');
                                   }}
-                                  className="text-xs font-mono text-text-primary break-all text-left hover:text-buy"
+                                  className="text-xs font-mono text-text-primary break-all text-left hover:text-accent"
                                   title="Click to copy"
                                 >
                                   {w.crypto_address}
@@ -801,7 +801,7 @@ export default function DepositsPage() {
                             </td>
                             <td className="px-4 py-2.5 text-xs">
                               {w.wallet_chain_snapshot ? (
-                                <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium uppercase bg-buy/15 text-buy border border-buy/30">
+                                <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium uppercase bg-accent/15 text-accent border border-accent/30">
                                   {w.wallet_chain_snapshot}
                                 </span>
                               ) : (
@@ -839,7 +839,7 @@ export default function DepositsPage() {
                                     void navigator.clipboard.writeText(w.crypto_tx_hash as string);
                                     toast.success('TX hash copied');
                                   }}
-                                  className="text-xxs font-mono text-text-secondary break-all text-left hover:text-buy"
+                                  className="text-xxs font-mono text-text-secondary break-all text-left hover:text-accent"
                                   title="Click to copy"
                                 >
                                   {w.crypto_tx_hash}
@@ -902,7 +902,7 @@ export default function DepositsPage() {
                                       network: w.wallet_chain_snapshot ?? null,
                                     })
                                   }
-                                  className="px-2 py-1 rounded-md text-xxs font-medium bg-buy/15 text-buy border border-buy/30 hover:bg-buy/25 transition-fast"
+                                  className="px-2 py-1 rounded-md text-xxs font-medium bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25 transition-fast"
                                 >
                                   Mark Paid
                                 </button>
@@ -1051,7 +1051,7 @@ export default function DepositsPage() {
                         void navigator.clipboard.writeText(actionModal.cryptoAddress as string);
                         toast.success('Address copied');
                       }}
-                      className="text-xs text-text-primary font-mono break-all text-left hover:text-buy"
+                      className="text-xs text-text-primary font-mono break-all text-left hover:text-accent"
                       title="Click to copy"
                     >
                       {actionModal.cryptoAddress}
@@ -1061,7 +1061,7 @@ export default function DepositsPage() {
                 {actionModal.network && (
                   <div>
                     <p className="text-xxs text-text-tertiary">Network</p>
-                    <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium uppercase bg-buy/15 text-buy border border-buy/30">
+                    <span className="inline-flex px-1.5 py-0.5 rounded-sm text-xxs font-medium uppercase bg-accent/15 text-accent border border-accent/30">
                       {actionModal.network}
                     </span>
                   </div>
@@ -1078,7 +1078,7 @@ export default function DepositsPage() {
                     onChange={(e) => setActionNote(e.target.value)}
                     rows={3}
                     placeholder="Add an optional note..."
-                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-buy resize-none"
+                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-accent resize-none"
                   />
                 </div>
               ) : actionModal.type === 'mark-paid' ? (
@@ -1092,7 +1092,7 @@ export default function DepositsPage() {
                       value={actionTxHash}
                       onChange={(e) => setActionTxHash(e.target.value)}
                       placeholder="0x… (on-chain tx) or bank reference"
-                      className="w-full px-3 py-2 text-xs font-mono bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-buy"
+                      className="w-full px-3 py-2 text-xs font-mono bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-accent"
                     />
                     <p className="text-xxs text-text-tertiary mt-1">
                       This is shown to the user as proof of payment. Paste the on-chain
@@ -1108,7 +1108,7 @@ export default function DepositsPage() {
                       onChange={(e) => setActionNote(e.target.value)}
                       rows={2}
                       placeholder="Visible only in the audit log"
-                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-buy resize-none"
+                      className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-accent resize-none"
                     />
                   </div>
                 </div>
@@ -1122,7 +1122,7 @@ export default function DepositsPage() {
                     onChange={(e) => setActionReason(e.target.value)}
                     rows={3}
                     placeholder="Provide a reason for rejection..."
-                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-buy resize-none"
+                    className="w-full px-3 py-2 text-xs bg-bg-input border border-border-primary rounded-md placeholder:text-text-tertiary transition-fast focus:border-accent resize-none"
                   />
                 </div>
               )}
@@ -1150,7 +1150,7 @@ export default function DepositsPage() {
                   actionModal.type === 'approve'
                     ? 'bg-success text-white hover:bg-success/80'
                     : actionModal.type === 'mark-paid'
-                      ? 'bg-buy text-white hover:bg-buy/80'
+                      ? 'bg-accent text-white hover:bg-accent/80'
                       : 'bg-danger text-white hover:bg-danger/80',
                   actionLoading && 'opacity-50 pointer-events-none',
                 )}

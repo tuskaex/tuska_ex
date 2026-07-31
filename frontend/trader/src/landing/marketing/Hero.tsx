@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import BrandCard from './ui/BrandCard'
 import Button from './ui/Button'
 import Eyebrow from './ui/Eyebrow'
 import { useLang } from '@/landing/i18n/LangProvider'
@@ -38,14 +38,10 @@ export default function Hero() {
               aria-hidden="true"
               className="absolute inset-12 md:inset-16 rounded-full bg-[#D60101]/20 blur-2xl"
             />
-            <Image
-              src="/assets/hero page.png"
-              alt="TuskaEx trading platform"
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="relative object-contain drop-shadow-[0_30px_50px_rgba(214,1,1,0.35)]"
-            />
+            {/* Was /assets/hero page.png — a stock shot of a model holding
+                a card with SwissCresta's logo printed on it. Rebuilt as
+                markup (see BrandCard) so it carries our wordmark. */}
+            <BrandCard className="relative" />
           </div>
         </div>
       </div>
