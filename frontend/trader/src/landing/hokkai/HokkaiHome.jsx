@@ -26,7 +26,6 @@ import PlatformSection from './home/PlatformSection'
 import AccountsSection from './home/AccountsSection'
 import ConditionsSection from './home/ConditionsSection'
 import ToolsSection from './home/ToolsSection'
-import EducationSection from './home/EducationSection'
 import BottomSection from './home/BottomSection'
 
 // Stat Counter
@@ -131,10 +130,13 @@ function Home() {
       {/* 10. Tools */}
       <ToolsSection />
 
-      {/* 11. Education */}
-      <EducationSection />
+      {/* 11. Education — REMOVED.
+             Advertised beginner guides, forex basics, advanced strategy
+             courses, video tutorials, weekly live webinars and e-books.
+             None of it exists: no route, no table, no endpoint. Restore
+             the section only once there is something behind the links. */}
 
-      {/* 12. Bottom (Testimonials + FAQ + CTA) */}
+      {/* 12. Bottom (FAQ + CTA) */}
       <BottomSection />
 
       </div>

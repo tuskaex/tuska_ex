@@ -14,7 +14,7 @@ const MARKETS = [
     href: '/currency-pairs',
     icon: Globe,
     title: 'Currency Pairs',
-    body: 'The global FX market at your fingertips. Majors, minors, exotics — over 80 pairs with tight spreads and clean execution.',
+    body: 'The global FX market at your fingertips. Majors, minors and crosses — 29 pairs, priced from a live institutional feed.',
   },
   {
     href: '/cfds',
@@ -32,7 +32,7 @@ const MARKETS = [
     href: '/',
     icon: Bitcoin,
     title: 'Crypto',
-    body: '52 cryptocurrencies on the TuskaEx-developed exchange. Trade 24/7 with institutional-grade security.',
+    body: '8 major digital assets, traded on the same account and margin pool as the rest of the book.',
   },
 ]
 

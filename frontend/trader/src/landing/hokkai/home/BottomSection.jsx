@@ -3,10 +3,10 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FiArrowRight, FiPlay, FiStar, FiChevronDown, FiTrendingUp } from 'react-icons/fi'
-import AnimatedSection, { StaggerContainer, StaggerItem } from '../components/AnimatedSection'
+import { FiArrowRight, FiPlay, FiChevronDown, FiTrendingUp } from 'react-icons/fi'
+import AnimatedSection from '../components/AnimatedSection'
 import SectionHeader from '../components/SectionHeader'
-import { testimonials, faqs } from '../HomeData'
+import { faqs } from '../HomeData'
 
 function Kanji({ char, className = '' }) {
   return <span className={`jp-kanji select-none pointer-events-none ${className}`} aria-hidden="true">{char}</span>
@@ -37,46 +37,16 @@ function FAQItem({ q, a, index }) {
 export default function BottomSection() {
   return (
     <>
-      {/* TESTIMONIALS */}
-      <section className="section-padding bg-dark-900 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <Kanji char="声" className="absolute -right-4 top-1/2 -translate-y-1/2 text-[200px] text-white/[0.02] font-black" />
-        </div>
-        <div className="section-container relative z-10">
-          <SectionHeader
-            kanji="声"
-            reading="koe"
-            badge="Testimonials"
-            title="What Our Clients Say"
-            highlight="Clients Say"
-            subtitle="Trusted by thousands of traders worldwide."
-          />
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-14">
-            {testimonials.map((t, i) => (
-              <StaggerItem key={i}>
-                <div className="card jp-card h-full flex flex-col relative overflow-hidden">
-                  <div className="absolute top-3 right-3 jp-kanji text-2xl text-white/[0.04] font-black">声</div>
-                  <div className="flex gap-1 mb-4">
-                    {Array.from({ length: t.rating }).map((_, j) => (
-                      <FiStar key={j} size={14} style={{ color: '#c9a84c', fill: '#c9a84c' }} />
-                    ))}
-                  </div>
-                  <p className="text-gray-300 text-sm leading-relaxed flex-1 mb-5 italic">"{t.quote}"</p>
-                  <div className="flex items-center gap-3 pt-4 border-t border-white/5">
-                    <div className="w-9 h-9 rounded-full bg-red-accent/20 flex items-center justify-center text-red-accent font-bold text-sm">
-                      {t.author[0]}
-                    </div>
-                    <div>
-                      <div className="text-white font-semibold text-sm">{t.author}</div>
-                      <div className="text-gray-500 text-xs">{t.role}</div>
-                    </div>
-                  </div>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
+      {/* TESTIMONIALS — REMOVED, DO NOT RESTORE WITHOUT REAL CLIENTS.
+          This section rendered three five-star reviews from "Michael R.",
+          "Sarah K." and "David L.", one of whom claimed to have traded
+          with us "for over a year", under a subtitle reading "Trusted by
+          thousands of traders worldwide".
+          None of them existed. The users table held four rows.
+          Testimonials go back only when they come from real, consenting
+          clients — invented social proof is a fabricated endorsement,
+          and in a regulated industry it is the kind that gets acted on.
+          The FAQ below is unaffected. */}
 
       {/* FAQ */}
       <section className="section-padding bg-dark-800 relative overflow-hidden">
@@ -120,12 +90,16 @@ export default function BottomSection() {
           </AnimatedSection>
           <AnimatedSection animation="slideUp" delay={0.1}>
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
-              Ready to Trade with <span className="text-red-gradient">Institutional Precision?</span>
+              Ready to open your <span className="text-red-gradient">first position?</span>
             </h2>
           </AnimatedSection>
           <AnimatedSection animation="fadeIn" delay={0.2}>
+            {/* Was "Join thousands of traders who trust TuskaEx…". There
+                were four users. Replaced with the offer itself, which is
+                true today and does not expire as the platform grows. */}
             <p className="text-gray-400 text-lg mb-8 max-w-xl mx-auto">
-              Join thousands of traders who trust TuskaEx for professional-grade execution, transparent pricing, and competitive conditions.
+              59 instruments, leverage to 1:100, and a demo account on live prices
+              that costs nothing and needs no deposit.
             </p>
           </AnimatedSection>
           <AnimatedSection animation="slideUp" delay={0.3}>

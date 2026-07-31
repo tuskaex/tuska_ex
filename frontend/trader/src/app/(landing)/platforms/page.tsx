@@ -42,7 +42,7 @@ export default function PlatformsPage() {
             <span className="text-[#D60101]">for All Traders</span>
           </h1>
           <p className="text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed">
-            Access institutional-grade platforms on desktop, web, and mobile. 100+ chart tools, 50+ indicators, and execution speeds under 40ms.
+            Trade 59 instruments in any browser, on TradingView Advanced Charts &mdash; or point your own bot at the account over our documented API.
           </p>
         </div>
       </section>
@@ -59,32 +59,44 @@ export default function PlatformsPage() {
                  with their logo on screen. They were replaced first by a
                  single large glyph (honest, but an empty banner) and now
                  by drawn device mockups: see ui/PlatformArt. */
+              /* These three cards used to be "Desktop Terminal
+                 (Windows & macOS)", "Mobile Trading (iOS & Android)"
+                 and "Web Platform". Two of the three did not exist:
+                 there is no desktop build and no mobile app, and the
+                 navbar's download links for both returned HTTP 404
+                 because no /downloads directory is on the server. The
+                 mobile card additionally promised push notifications
+                 and biometric login.
+
+                 Replaced with the three surfaces a user can genuinely
+                 reach today. The artwork is illustrative of each
+                 surface, not a screenshot of it. */
+              {
+                art: WebArt,
+                icon: Globe,
+                title: 'Web Terminal',
+                gradient: 'radial-gradient(120% 100% at 20% 0%, #F14A4A 0%, #D60101 45%, #A30000 100%)',
+                availability: 'Any browser',
+                cta: 'Launch',
+                features: ['TradingView Advanced Charts', 'Multi-Chart Layout', 'One-Click Trading', 'No install required'],
+              },
               {
                 art: DesktopArt,
                 icon: Monitor,
-                title: 'Desktop Terminal',
-                gradient: 'radial-gradient(120% 100% at 20% 0%, #F14A4A 0%, #D60101 45%, #A30000 100%)',
-                availability: 'Windows & macOS',
-                cta: 'Launch',
-                features: ['100+ Chart Tools', '50+ Indicators', 'Algorithmic Trading', 'Custom Workspaces'],
+                title: 'Algo Connector',
+                gradient: 'radial-gradient(130% 110% at 80% 10%, #F14A4A 0%, #C50101 50%, #8E0000 100%)',
+                availability: 'REST + WebSocket',
+                cta: 'Read the docs',
+                features: ['Place & close orders', 'Read balance and margin', 'Live tick stream', 'Key + secret auth'],
               },
               {
                 art: MobileArt,
                 icon: Smartphone,
-                title: 'Mobile Trading',
-                gradient: 'radial-gradient(130% 110% at 80% 10%, #F14A4A 0%, #C50101 50%, #8E0000 100%)',
-                availability: 'iOS & Android',
-                cta: 'Get app',
-                features: ['Real-time Quotes', 'Push Notifications', 'One-Click Trading', 'Biometric Login'],
-              },
-              {
-                art: WebArt,
-                icon: Globe,
-                title: 'Web Platform',
+                title: 'Copy Trading & PAMM',
                 gradient: 'radial-gradient(120% 100% at 50% 110%, #F14A4A 0%, #D60101 50%, #A30000 100%)',
-                availability: 'Any browser',
-                cta: 'Launch',
-                features: ['Browser-based', 'No Installation', 'Full Features', 'Secure Trading'],
+                availability: 'Built into the dashboard',
+                cta: 'Explore',
+                features: ['Follow a master account', 'Mirror trades automatically', 'PAMM by NAV units', 'Track from one dashboard'],
               },
             ].map(({ art: Art, icon: Icon, title, gradient, availability, cta, features }) => (
               <div
@@ -153,12 +165,25 @@ export default function PlatformsPage() {
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
-              { icon: Zap, label: 'Execution', meta: 'Core', title: 'Lightning Fast', desc: 'Execute trades in under 40ms with our optimized infrastructure.', tags: ['Low latency', 'Optimized routing'], stat: '<40ms', statLabel: 'Order execution' },
-              { icon: BarChart3, label: 'Analysis', meta: 'Pro', title: 'Advanced Charting', desc: '100+ drawing tools and 50+ technical indicators.', tags: ['100+ tools', '50+ indicators'], stat: '150+', statLabel: 'Tools & indicators' },
-              { icon: Shield, label: 'Security', meta: 'Core', title: 'Secure Trading', desc: 'Bank-level security with 2FA and encryption.', tags: ['2FA', 'Encryption'], stat: 'AES-256', statLabel: 'Bank-level security' },
-              { icon: Monitor, label: 'Workspace', meta: 'Pro', title: 'Multi-Monitor', desc: 'Support for up to 4 monitors with customizable layouts.', tags: ['Custom layouts', 'Detachable'], stat: 'Up to 4', statLabel: 'Monitors supported' },
-              { icon: Smartphone, label: 'Mobility', meta: 'Core', title: 'Mobile Sync', desc: 'Seamless synchronization across all devices.', tags: ['Real-time', 'Cross-device'], stat: 'Instant', statLabel: 'Sync across devices' },
-              { icon: Globe, label: 'Markets', meta: 'Core', title: 'Global Markets', desc: 'Access 50+ forex pairs, crypto, metals, and indices.', tags: ['Forex', 'Crypto & metals'], stat: '50+', statLabel: 'Tradable instruments' },
+              /* Rewritten against the shipped product. What went:
+                   "<40ms order execution"  — nothing measures latency;
+                                              the figure was invented.
+                   "150+ Tools & indicators" — a made-up total on top of
+                                              two other made-up numbers.
+                   "Up to 4 monitors"        — there is no desktop build
+                                              to detach panels onto.
+                   "Mobile Sync across all devices" — there is no mobile
+                                              app; the APK link 404s.
+                   "50+ forex pairs"         — there are 29.
+                 What stayed is verifiable: TradingView Advanced Charts
+                 really does ship the indicator library, 2FA is real
+                 (user_2fa_backup_codes), and 59 is a row count. */
+              { icon: BarChart3, label: 'Analysis', meta: 'Core', title: 'TradingView Charts', desc: 'The terminal runs TradingView Advanced Charts — the full built-in indicator and drawing-tool library, on saveable layouts.', tags: ['Indicators', 'Drawing tools'], stat: 'Advanced', statLabel: 'TradingView charting' },
+              { icon: Globe, label: 'Markets', meta: 'Core', title: 'Global Markets', desc: 'Forex, indices, commodities, energies, share CFDs and crypto — all on one balance and one margin pool.', tags: ['6 asset classes', 'One account'], stat: '59', statLabel: 'Tradable instruments' },
+              { icon: Zap, label: 'Automation', meta: 'Pro', title: 'Algo Trading API', desc: 'Documented HTTPS JSON API plus a live WebSocket tick stream, so your own bot trades the account directly.', tags: ['REST', 'WebSocket'], stat: 'Open API', statLabel: 'Bring your own bot' },
+              { icon: Shield, label: 'Security', meta: 'Core', title: 'Account Security', desc: 'Two-factor authentication with backup codes, email verification, and session and IP audit logging.', tags: ['2FA', 'Audit log'], stat: '2FA', statLabel: 'On every account' },
+              { icon: Monitor, label: 'Workspace', meta: 'Pro', title: 'Multi-Chart Layout', desc: 'Several charts side by side in one browser tab, with one-click trading from the ticket.', tags: ['Multi-chart', 'One-click'], stat: 'Multi', statLabel: 'Charts per workspace' },
+              { icon: Smartphone, label: 'Risk', meta: 'Core', title: 'Automatic Stop-Out', desc: 'Margin call at 80% and automatic position closure at 50%, recalculated by the risk engine on every tick.', tags: ['Margin call 80%', 'Stop-out 50%'], stat: '1:100', statLabel: 'Maximum leverage' },
             ].map(({ icon: Icon, label, meta, title, desc, tags, stat, statLabel }) => (
               <div
                 key={title}

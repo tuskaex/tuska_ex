@@ -12,21 +12,38 @@ const PAIRS = [
   { symbol: 'USD/CAD', name: 'US Dollar / Canadian Dollar', spread: 'from 0.4', leverage: 'up to 1:500' },
 ]
 
+/* All three of these were fabricated infrastructure claims:
+ *
+ *   "Sub-30 ms execution — co-located matching infrastructure inside
+ *    LD4 and NY4, median fill latency under 30 ms, 99.9% under 80 ms"
+ *      TuskaEx runs on a single VPS. There is no LD4 or NY4 presence,
+ *      and no latency instrumentation exists to measure any of it.
+ *
+ *   "Tier-1 prime brokerage relationships across 16 liquidity
+ *    providers … no last-look practices"
+ *      There are zero liquidity providers. This is a B-book: the house
+ *      is the counterparty. CORECEN_LP_ENABLED is unset.
+ *
+ *   "Negative balance protection"
+ *      Not implemented. No such rule exists in the risk engine.
+ *
+ * Replaced with three things the platform actually does, each of which
+ * can be pointed at in the code or the database. */
 const FEATURES = [
   {
     icon: Zap,
-    title: 'Sub-30 ms execution',
-    body: 'Co-located matching infrastructure inside LD4 and NY4. Median fill latency under 30 milliseconds, 99.9% under 80 ms.',
+    title: 'Live institutional pricing',
+    body: 'Quotes stream from an institutional market-data feed over a WebSocket, so the price on your ticket is the price the engine fills against.',
   },
   {
     icon: Activity,
-    title: 'Deep aggregated liquidity',
-    body: 'Tier-1 prime brokerage relationships across 16 liquidity providers. No single point of failure, no last-look practices.',
+    title: '29 pairs, one account',
+    body: 'Majors, minors and crosses alongside indices, metals, energies, share CFDs and crypto — all on a single balance and margin pool.',
   },
   {
     icon: ShieldCheck,
-    title: 'Negative balance protection',
-    body: 'Retail clients are protected from owing more than their account balance, even in gap or flash events.',
+    title: 'Automatic risk controls',
+    body: 'Stop Loss and Take Profit on every order, a margin call at 80%, and automatic stop-out at 50% enforced by the risk engine on every tick.',
   },
 ]
 

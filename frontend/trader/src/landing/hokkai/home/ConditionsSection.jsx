@@ -41,7 +41,17 @@ export default function ConditionsSection() {
           badge="Trading Conditions"
           title="Professional Trading Conditions"
           highlight="Trading Conditions"
-          subtitle="TuskaEx follows a No Dealing Desk (NDD) execution model to ensure transparent and conflict-free trading."
+          /* Was: "TuskaEx follows a No Dealing Desk (NDD) execution model
+             to ensure transparent and conflict-free trading."
+             That was false in both halves. TuskaEx executes as principal
+             — services/b-book-engine/matching_engine.py states plainly
+             that "the admin/house is the counterparty to every trade",
+             and CORECEN_LP_ENABLED is unset in production, so nothing is
+             routed out. Describing that as NDD, and as conflict-FREE,
+             inverted the actual conflict of interest.
+             The honest framing is to name the model and point at the
+             controls that constrain it, which is what this now does. */
+          subtitle="TuskaEx executes as principal: we are the counterparty to your trades rather than routing them to a third party. Pricing comes from an institutional feed, and every fill, swap and charge is itemised in your trade history."
         />
 
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
@@ -77,7 +87,13 @@ export default function ConditionsSection() {
             </h4>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {['Stop Loss & Take Profit', 'Trailing Stop', 'Negative Balance Protection', 'Margin Call Alerts'].map((tool) => (
+              {/* "Trailing Stop" and "Negative Balance Protection" were
+                  listed here and neither is implemented — grep the
+                  backend and there is no trailing-stop engine and no
+                  negative-balance rule anywhere. Replaced with the two
+                  controls the risk engine genuinely enforces, at the
+                  exact thresholds configured in .env. */}
+              {['Stop Loss & Take Profit', 'Margin Call at 80%', 'Auto Stop-Out at 50%', 'Max 200 Open Positions'].map((tool) => (
                 <div
                   key={tool}
                   className="flex items-center gap-2 p-3 rounded-lg border border-white/5 hover:border-[#00d4aa]/20 transition-all duration-200"

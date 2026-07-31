@@ -29,8 +29,15 @@ export default function AboutPage() {
             <p className="text-gray-500 leading-relaxed">
               TuskaEx was founded with a simple belief: trading should be accessible, transparent, and fair for everyone. We saw traders struggling with high fees, slow withdrawals, and limited access to global markets. We decided to change that.
             </p>
+            {/* Was: "Today, TuskaEx serves thousands of traders across
+                150+ countries…". The users table held four rows. A new
+                platform saying so is not a weakness; claiming scale it
+                does not have is the thing that costs trust later. */}
             <p className="text-gray-500 leading-relaxed">
-              Today, TuskaEx serves thousands of traders across 150+ countries, providing them with the tools and freedom they deserve. We're not just a broker—we're a movement toward financial independence.
+              TuskaEx is a new platform, and we would rather say so than inflate a
+              number. What we have built is real: 59 instruments across six asset
+              classes, a professional web terminal, copy trading and PAMM, and an
+              open API for anyone who would rather let their own code trade.
             </p>
             <p className="text-gray-500 leading-relaxed">
               Our commitment is simple: provide the best trading experience with zero compromises on security, speed, or transparency.
@@ -74,11 +81,17 @@ export default function AboutPage() {
             <h2 className="text-3xl font-extrabold text-gray-900 mb-4">By the Numbers</h2>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Was 150+ countries / 50K+ active traders / $500M+ daily
+                volume / 99.9% uptime. Against the production database:
+                four users, two trading accounts, eleven trades in total,
+                and no uptime instrumentation of any kind. Every figure
+                below is instead a platform capability that is true on
+                day one and does not quietly expire. */}
             {[
-              { value: '150+', label: 'Countries Served' },
-              { value: '50K+', label: 'Active Traders' },
-              { value: '$500M+', label: 'Daily Volume' },
-              { value: '99.9%', label: 'Uptime' },
+              { value: '59', label: 'Tradable Instruments' },
+              { value: '6', label: 'Asset Classes' },
+              { value: '1:100', label: 'Maximum Leverage' },
+              { value: '200', label: 'Max Open Positions' },
             ].map(({ value, label }) => (
               <div key={label} className="text-center">
                 <div className="text-4xl font-extrabold text-[#D60101] mb-2">{value}</div>

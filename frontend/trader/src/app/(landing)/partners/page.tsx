@@ -16,13 +16,13 @@ import {
 export const metadata = {
   title: 'Partners & Introducing Brokers — TuskaEx',
   description:
-    'Earn USD 16 per standard lot with the TuskaEx Introducing Broker programme. Transparent payouts, lifetime client value, institutional-grade counterparty.',
+    'Refer traders to TuskaEx and earn a rebate on the volume they trade. Transparent payouts, lifetime client value, and a partner dashboard that shows the accrual daily.',
 }
 
 const HIGHLIGHTS = [
   {
     icon: DollarSign,
-    title: 'USD 16 per standard lot',
+    title: 'Volume-based rebate',
     body: 'A flat, transparent rebate on every standard FX lot your clients trade. No tiers to game. No clawbacks. No undisclosed haircuts.',
   },
   {
@@ -46,7 +46,7 @@ const WHY = [
   {
     icon: Globe2,
     title: 'Multi-asset offering',
-    body: 'Forex, indices, commodities, metals, single-stock CFDs and 52 crypto pairs — one account, one platform, one rebate stream.',
+    body: 'Forex, indices, commodities, energies, single-stock CFDs and crypto — 59 instruments, one account, one rebate stream.',
   },
   {
     icon: Users,
@@ -58,7 +58,7 @@ const WHY = [
 const STEPS = [
   { n: '01', t: 'Apply', d: 'Submit the partner application. We review and respond within two business days.' },
   { n: '02', t: 'Get your IB code', d: 'Receive your unique referral link and access to the partner dashboard.' },
-  { n: '03', t: 'Refer clients', d: 'Share your link. Every client that funds and trades a standard lot generates USD 16 to your wallet.' },
+  { n: '03', t: 'Refer clients', d: 'Share your link. Every standard lot your referred clients trade accrues a rebate to your partner wallet.' },
   { n: '04', t: 'Get paid', d: 'Withdraw weekly to bank wire, card, or crypto. No minimum threshold.' },
 ]
 
@@ -81,23 +81,31 @@ export default function PartnersPage() {
               Introducing Broker Programme
             </p>
             <h1 className="mt-4 text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight leading-[1.04]">
-              Earn <span className="text-[#D60101]">USD 16</span>
+              Earn on every
               <br />
-              per standard lot.
+              <span className="text-[#D60101]">lot they trade.</span>
             </h1>
             <p className="mt-6 text-base md:text-lg text-gray-700 leading-relaxed max-w-xl">
-              Refer traders to TuskaEx and earn a flat USD 16 rebate on every
-              standard FX lot they trade — for the life of the account. No tiered
-              spreadsheets, no undisclosed haircuts, no clawbacks.
+              Refer traders to TuskaEx and earn a rebate on every standard lot they
+              trade — for the life of the account. No undisclosed haircuts, no
+              clawbacks, and the accrual is visible in your dashboard daily.
             </p>
-            <div className="mt-6 inline-flex items-baseline gap-2 bg-white rounded-2xl border border-[#D60101]/25 shadow-[0_8px_24px_rgba(214,1,1,0.12)] px-5 py-3">
+            {/* Was a "USD 16 / standard lot" price tag. The
+                ib_commission_plans table is empty — no rate has been
+                configured, so no rate can be published. The panel now
+                states what the programme actually gives a partner
+                today, all of which is backed by real tables:
+                ib_profiles, referrals, ib_commissions. */}
+            <div className="mt-6 inline-flex flex-col gap-1 bg-white rounded-2xl border border-[#D60101]/25 shadow-[0_8px_24px_rgba(214,1,1,0.12)] px-5 py-4">
               <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-                Rebate
+                Rebate rate
               </span>
-              <span className="text-3xl md:text-4xl font-extrabold text-[#D60101] leading-none tracking-tight">
-                USD 16
+              <span className="text-lg md:text-xl font-extrabold text-[#D60101] leading-tight tracking-tight">
+                Agreed per partner
               </span>
-              <span className="text-xs font-medium text-gray-600">/ standard lot</span>
+              <span className="text-xs font-medium text-gray-600">
+                Set with the partner desk before you start referring
+              </span>
             </div>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -143,31 +151,38 @@ export default function PartnersPage() {
 
       <section className="bg-gray-50 py-16 md:py-20">
         <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          {/* This was an earnings table — 50 lots/mo → USD 800, 250 →
+              USD 4,000, 1,000 → USD 16,000 — under the heading "What
+              volume actually pays". Every figure derived from a USD 16
+              rate that was never configured, so the table projected
+              income from a number that did not exist. An italic
+              "illustrative figures" line underneath does not repair a
+              headline promising what volume ACTUALLY pays.
+
+              Replaced with how the programme mechanically works, which
+              is true regardless of the rate eventually agreed. */}
           <div className="text-center mb-10">
             <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-tight">
-              What volume <span className="text-[#D60101]">actually pays</span>
+              How the rebate <span className="text-[#D60101]">is calculated</span>
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { lots: '50 lots / mo', earn: 'USD 800' },
-              { lots: '250 lots / mo', earn: 'USD 4,000' },
-              { lots: '1,000 lots / mo', earn: 'USD 16,000' },
+              { k: 'Per standard lot', v: 'Your agreed rate accrues on every standard lot a referred client closes.' },
+              { k: 'For the life of the account', v: 'The referral link is bound to the client, not to a campaign window.' },
+              { k: 'Visible daily', v: 'Accrued commission and per-client volume update in your partner dashboard.' },
             ].map((row) => (
-              <div key={row.lots} className="bg-white rounded-2xl p-7 border border-gray-200/60 text-center">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
-                  {row.lots}
+              <div key={row.k} className="bg-white rounded-2xl p-7 border border-gray-200/60">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#D60101]">
+                  {row.k}
                 </p>
-                <div className="mt-3 text-3xl md:text-4xl font-extrabold text-[#D60101]">
-                  {row.earn}
-                </div>
-                <p className="mt-2 text-xs text-gray-500">Estimated monthly rebate</p>
+                <p className="mt-3 text-sm text-gray-600 leading-relaxed">{row.v}</p>
               </div>
             ))}
           </div>
           <p className="mt-6 text-xs italic text-gray-500 text-center max-w-2xl mx-auto">
-            Illustrative figures assuming USD 16 per standard lot. Actual earnings depend
-            on client activity, instrument mix, and partnership tier.
+            Your rate is agreed with the partner desk before you begin. Actual earnings
+            depend on client activity and instrument mix.
           </p>
         </div>
       </section>
@@ -220,7 +235,7 @@ export default function PartnersPage() {
             </p>
             <ul className="mt-5 space-y-2 text-sm text-white/90">
               {[
-                'USD 16 per standard lot, paid weekly',
+                'A rebate rate agreed with you before you start',
                 'Lifetime rebates — no expiry on referred accounts',
                 'Sub-IB structure with full reporting',
                 'Dedicated partner desk, 24/7',
