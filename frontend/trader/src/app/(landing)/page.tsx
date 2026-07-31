@@ -3,7 +3,7 @@
  *
  * Ported from the standalone Hokkai Markets Vite site; the components
  * live in `src/landing/hokkai/`. The visual language — crimson
- * #e11d48, Michroma display type, Japanese kanji motifs — is kept
+ * the TuskaEx logo red #D60101, Michroma display type, Japanese kanji motifs — is kept
  * as-is; only the brand name was changed to TuskaEx.
  *
  * The previous Swistrade-derived landing is preserved next to this

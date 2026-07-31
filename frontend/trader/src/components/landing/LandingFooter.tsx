@@ -5,7 +5,7 @@ import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
 
 /* Same structure in both themes — only the palette swaps. Dark exists for the
    cyber-samurai home page, where a white footer ended the page on a bright
-   slab after eleven dark sections. It uses that page's crimson (#e11d48)
+   slab after eleven dark sections. It uses that page's brand red (#D60101)
    rather than the light chrome's #D60101, matching the navbar's dark mode. */
 const FOOTER_THEME = {
   light: {
@@ -24,7 +24,7 @@ const FOOTER_THEME = {
     strong: 'text-slate-100',
     heading: 'text-slate-100',
     link: 'text-slate-400',
-    linkHover: 'hover:text-[#e11d48]',
+    linkHover: 'hover:text-[#D60101]',
     rule: 'border-white/10',
     muted: 'text-slate-500',
   },

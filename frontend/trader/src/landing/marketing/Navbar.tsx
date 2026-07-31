@@ -71,9 +71,12 @@ export interface NavbarProps {
    ternaries through the JSX, so "what does dark mode look like" is a single
    thing to read and there is no way to theme one control and forget another.
 
-   Dark uses the crimson #e11d48 that the cyber-samurai landing is built on,
-   not the #D60101 of the light chrome. Two different reds in one viewport
-   reads as a mistake, and on that page the hero sets the reference. */
+   Both themes now use the TuskaEx logo red #D60101. They used to differ:
+   dark carried the cyber-samurai landing's rose #e11d48 while light used
+   the brand red, on the reasoning that the hero set the reference for
+   that page. That stopped being true once the landing itself was
+   repointed to #D60101 — the rose was the PREVIOUS brand's crimson, not
+   a deliberate second accent. One red, everywhere. */
 const NAV_THEME = {
   light: {
     shell:
@@ -108,18 +111,18 @@ const NAV_THEME = {
     shell:
       'bg-[#080a0e]/70 ring-1 ring-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.55)] supports-[backdrop-filter]:bg-[#080a0e]/55',
     link: 'text-slate-200',
-    linkHover: 'hover:text-[#e11d48]',
-    linkActive: 'text-[#e11d48]',
-    accent: '#e11d48',
+    linkHover: 'hover:text-[#D60101]',
+    linkActive: 'text-[#D60101]',
+    accent: '#D60101',
     outlineBtn:
-      'border-[#e11d48] text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
+      'border-[#D60101] text-[#D60101] hover:bg-[#D60101] hover:text-white',
     loginBtn: 'border-white/25 text-white hover:bg-white hover:text-[#080a0e]',
-    signupBtn: 'border-[#e11d48] bg-[#e11d48] text-white hover:bg-[#be123c]',
-    iconBtnOn: 'bg-[#e11d48] text-white',
-    iconBtnOff: 'text-[#e11d48] hover:bg-[#e11d48] hover:text-white',
+    signupBtn: 'border-[#D60101] bg-[#D60101] text-white hover:bg-[#A30000]',
+    iconBtnOn: 'bg-[#D60101] text-white',
+    iconBtnOff: 'text-[#D60101] hover:bg-[#D60101] hover:text-white',
     langBtn: 'border-white/15 text-slate-200 hover:bg-white/10',
     panel: 'border-white/10 bg-[#0b0e13]',
-    panelItem: 'text-slate-200 hover:bg-[#e11d48]/15 hover:text-[#e11d48]',
+    panelItem: 'text-slate-200 hover:bg-[#D60101]/15 hover:text-[#D60101]',
     panelMuted: 'text-slate-500',
     panelBadge: 'bg-white/10 text-slate-400',
     divider: 'border-white/10',
@@ -469,9 +472,9 @@ export default function MarketingNavbar({
               aria-expanded={terminalMenuOpen}
               aria-label="Download Desktop Terminal"
               title="Download Desktop Terminal"
-              className={`inline-flex items-center justify-center w-9 ${CONTROL_H} rounded-full border transition-colors ${
-                theme === 'dark' ? 'border-[#e11d48]' : 'border-[#D60101]'
-              } ${terminalMenuOpen ? c.iconBtnOn : c.iconBtnOff}`}
+              className={`inline-flex items-center justify-center w-9 ${CONTROL_H} rounded-full border border-[#D60101] transition-colors ${
+                terminalMenuOpen ? c.iconBtnOn : c.iconBtnOff
+              }`}
             >
               <Monitor className="w-4 h-4 shrink-0" strokeWidth={2} />
             </button>
