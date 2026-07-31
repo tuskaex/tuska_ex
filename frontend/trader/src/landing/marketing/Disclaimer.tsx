@@ -20,8 +20,14 @@ export default function Disclaimer({ minimal = false }: DisclaimerProps) {
   return (
     <footer className="bg-[#D60101] text-white/85 text-xs">
       <div className="w-full mx-auto px-6 md:px-10 lg:px-16 py-12 md:py-16">
+        {/* `mkt-keep-light` is load-bearing, not decoration.
+            This chip sits on the brand-red band, which is red in BOTH
+            themes, and it is white so the black logo artwork reads
+            against that red. Without the opt-out, marketing-dark.css
+            remaps `bg-white` to #121212 and the black mark disappears
+            into a near-black chip. Do not remove it. */}
         <Link href="/" aria-label="TuskaEx home" className="inline-block mb-8">
-          <span className="inline-flex items-center bg-white rounded-xl px-4 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)]">
+          <span className="mkt-keep-light inline-flex items-center bg-white rounded-xl px-4 py-2 shadow-[0_8px_20px_rgba(0,0,0,0.12)]">
             <Image
               src="/marketing/tuskaex-logo.png"
               alt="TuskaEx"

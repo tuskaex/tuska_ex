@@ -57,6 +57,23 @@
   color: var(--mktd-ink);
 }
 
+/* ── Opt-out ─────────────────────────────────────────────────────
+   `.mkt-keep-light` freezes a subtree at its light-mode palette.
+
+   Needed because a few surfaces are NOT on the page canvas and so must
+   not follow it. The clearest case is the footer logo chip: it sits on
+   the brand-red disclosure band, which is red in BOTH modes, and it is
+   white specifically so the black logo artwork is legible on red.
+   Remapping it to #121212 put black artwork on a near-black chip — the
+   logo vanished. That was a real regression this sheet introduced.
+
+   Reach for this whenever an element's background is chosen relative to
+   something OTHER than the page canvas. It is not a general escape
+   hatch for "the dark version looks a bit off". */
+.mkt-dark .mkt-keep-light,
+.mkt-dark .mkt-keep-light .bg-white  { background-color: #fff; }
+.mkt-dark .mkt-keep-light .text-gray-900 { color: #111827; }
+
 /* ── Surfaces ────────────────────────────────────────────────── */
 .mkt-dark .bg-white       { background-color: var(--mktd-surface); }
 .mkt-dark .bg-gray-50     { background-color: var(--mktd-canvas); }

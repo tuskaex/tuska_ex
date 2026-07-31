@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronRight, Globe, Menu, X, Moon, Sun } from 'lucide-react'
+import { ChevronRight, Globe, Menu, X, Monitor, Moon, Sun } from 'lucide-react'
 import { slugify } from './ui/slugify'
 import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
 import { useLang } from '@/landing/i18n/LangProvider'
@@ -398,6 +398,8 @@ export default function MarketingNavbar({
   const c = NAV_THEME[theme]
   const [open, setOpen] = useState(false)
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
+  // Desktop-terminal download dropdown (Windows / macOS choice on click).
+  const [terminalMenuOpen, setTerminalMenuOpen] = useState(false)
   const { lang, toggleLang, t } = useLang()
 
   // Marketing pages don't live inside an auth provider, so the store
@@ -484,21 +486,76 @@ export default function MarketingNavbar({
               )}
             </button>
           )}
-          {/* The desktop-terminal download picker was REMOVED here, and the
-              "Download APK" pill below it with the same problem.
-
-              Both pointed at files that are not on the server:
-                /downloads/TuskaExTerminal-Setup-1.0.1.exe  -> HTTP 404
-                /downloads/TuskaEx.apk                      -> HTTP 404
-              There is no /opt/tuskaex/downloads directory at all, so every
-              visitor who clicked either control got a 404 page. Advertising
-              a desktop app and an Android app we do not ship is the same
-              class of problem as the invented statistics elsewhere on this
-              site, with the added insult of a broken link.
-
-              To bring them back: put the builds in /opt/tuskaex/downloads
-              on the host (nginx serves that path), then restore this block
-              and the mobile-drawer entries from git history. */}
+          {/* RESTORED by request.
+              Caveat that has not gone away: /downloads/TuskaExTerminal-Setup-1.0.1.exe
+              is not on the server. There is no /opt/tuskaex/downloads directory, so
+              this link returns HTTP 404 until an installer is uploaded there. That is
+              why it was removed; it is back because the control is wanted. Drop the
+              build into that directory and it works with no code change. */}
+          {/* Desktop-terminal download: icon button opens a Windows / macOS
+              picker on click. Windows ships the signed-later .exe installer;
+              macOS ships a .dmg (coming soon until a Mac build is provided). */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setTerminalMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={terminalMenuOpen}
+              aria-label="Download Desktop Terminal"
+              title="Download Desktop Terminal"
+              className={`inline-flex items-center justify-center w-9 ${CONTROL_H} rounded-full border border-[#D60101] transition-colors ${
+                terminalMenuOpen ? c.iconBtnOn : c.iconBtnOff
+              }`}
+            >
+              <Monitor className="w-4 h-4 shrink-0" strokeWidth={2} />
+            </button>
+            {terminalMenuOpen && (
+              <>
+                {/* click-outside backdrop */}
+                <button
+                  type="button"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onClick={() => setTerminalMenuOpen(false)}
+                  className="fixed inset-0 z-40 cursor-default"
+                />
+                <div
+                  role="menu"
+                  className={`absolute right-0 top-full mt-2 z-50 w-60 rounded-xl border p-1.5 shadow-xl ${c.panel}`}
+                >
+                  <div className={`px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-widest ${c.panelMuted}`}>
+                    Desktop Terminal
+                  </div>
+                  {/* Windows */}
+                  <a
+                    href="/downloads/TuskaExTerminal-Setup-1.0.1.exe"
+                    download="TuskaExTerminal-Setup.exe"
+                    role="menuitem"
+                    onClick={() => setTerminalMenuOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold transition-colors ${c.panelItem}`}
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
+                      <path d="M3 5.6 10.3 4.6v6.9H3V5.6Zm0 12.8 7.3 1v-6.8H3v5.8Zm8.2 1.1L21 21V12.4h-9.8v7.1Zm0-14.9v7.1H21V3l-9.8 1.6Z" />
+                    </svg>
+                    Download for Windows
+                  </a>
+                  {/* macOS — coming soon until a Mac-built .dmg is provided */}
+                  <div
+                    role="menuitem"
+                    aria-disabled="true"
+                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold cursor-not-allowed ${c.panelMuted}`}
+                    title="macOS build coming soon"
+                  >
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
+                      <path d="M16.4 12.9c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.6.8-3.3.8-.7 0-1.7-.8-2.8-.8-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.5 2.2 2.6 2.2 1 0 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.6 1.1 0 1.8-1 2.5-2 .8-1.2 1.1-2.3 1.1-2.3s-2.1-.8-2.1-3.2ZM14.3 6.3c.6-.7 1-1.7.9-2.7-.8 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6.9.1 1.8-.5 2.5-1.2Z" />
+                    </svg>
+                    <span className="flex-1">Download for macOS</span>
+                    <span className={`text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${c.panelBadge}`}>Soon</span>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
             onClick={toggleLang}
@@ -653,12 +710,27 @@ export default function MarketingNavbar({
                 </button>
               </li>
             )}
-            {/* The mobile drawer's "Download APK", "Terminal for Windows"
-                and "Terminal for macOS (Soon)" rows were removed for the
-                same reason as their desktop counterparts: both live links
-                returned HTTP 404, and the third advertised a macOS build
-                that has never existed. See the note in the desktop
-                utility cluster above for how to restore them. */}
+            {/* Terminal download, mobile counterpart of the desktop picker.
+                Restored alongside it so the control is not desktop-only.
+
+                "Download APK" and the macOS row stay removed: there is no
+                Android build either, and macOS never had one at all — the
+                desktop picker still shows macOS as "Soon", which is enough
+                of a signal without repeating it here.
+
+                Same caveat as the desktop link: this 404s until an
+                installer is placed in /opt/tuskaex/downloads. */}
+            <li className={`pt-3 border-t ${c.dividerStrong}`}>
+              <a
+                href="/downloads/TuskaExTerminal-Setup-1.0.1.exe"
+                download="TuskaExTerminal-Setup.exe"
+                onClick={() => setOpen(false)}
+                className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
+              >
+                <Monitor className="w-4 h-4" strokeWidth={2} />
+                Terminal for Windows
+              </a>
+            </li>
             {showCta && (
               <li className={`flex items-center gap-3 pt-3 border-t ${c.dividerStrong}`}>
                 {showAppLink ? (
