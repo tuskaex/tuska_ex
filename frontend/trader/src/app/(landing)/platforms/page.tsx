@@ -1,5 +1,6 @@
 import { Monitor, Smartphone, Globe, Zap, BarChart3, Shield, Check, ArrowRight } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
+import { DesktopArt, MobileArt, WebArt } from '@/landing/marketing/ui/PlatformArt'
 
 export const metadata = { title: 'Trading Platforms — TuskaEx' }
 
@@ -51,14 +52,15 @@ export default function PlatformsPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              /* `gradient` used to be a pastel placeholder that `image`
-                 overrode. The three images were SwissCresta product shots
+              /* `gradient` used to be a pastel placeholder that an `image`
+                 key overrode. Those images were SwissCresta product shots
                  — a laptop showing their dashboard, an App Store listing
                  for "SwissCresta — Smart Trading Platform", and a laptop
-                 with their logo on screen — so `image` is gone and the
-                 banner is now a brand-red surface carrying the platform's
-                 own glyph. */
+                 with their logo on screen. They were replaced first by a
+                 single large glyph (honest, but an empty banner) and now
+                 by drawn device mockups: see ui/PlatformArt. */
               {
+                art: DesktopArt,
                 icon: Monitor,
                 title: 'Desktop Terminal',
                 gradient: 'radial-gradient(120% 100% at 20% 0%, #F14A4A 0%, #D60101 45%, #A30000 100%)',
@@ -67,6 +69,7 @@ export default function PlatformsPage() {
                 features: ['100+ Chart Tools', '50+ Indicators', 'Algorithmic Trading', 'Custom Workspaces'],
               },
               {
+                art: MobileArt,
                 icon: Smartphone,
                 title: 'Mobile Trading',
                 gradient: 'radial-gradient(130% 110% at 80% 10%, #F14A4A 0%, #C50101 50%, #8E0000 100%)',
@@ -75,6 +78,7 @@ export default function PlatformsPage() {
                 features: ['Real-time Quotes', 'Push Notifications', 'One-Click Trading', 'Biometric Login'],
               },
               {
+                art: WebArt,
                 icon: Globe,
                 title: 'Web Platform',
                 gradient: 'radial-gradient(120% 100% at 50% 110%, #F14A4A 0%, #D60101 50%, #A30000 100%)',
@@ -82,15 +86,17 @@ export default function PlatformsPage() {
                 cta: 'Launch',
                 features: ['Browser-based', 'No Installation', 'Full Features', 'Secure Trading'],
               },
-            ].map(({ icon: Icon, title, gradient, availability, cta, features }) => (
+            ].map(({ art: Art, icon: Icon, title, gradient, availability, cta, features }) => (
               <div
                 key={title}
                 className="flex flex-col rounded-3xl bg-white p-3 ring-1 ring-gray-100 shadow-[0_20px_50px_-22px_rgba(0,0,0,0.30)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_-24px_rgba(0,0,0,0.35)]"
               >
-                {/* Banner: brand-red surface + the platform's own glyph,
-                    drawn rather than photographed. */}
+                {/* Banner: brand-red surface carrying a drawn mockup of the
+                    platform itself. The artwork scales with the card and
+                    lifts slightly on hover, so the whole tile reads as one
+                    object rather than a picture glued to a panel. */}
                 <div
-                  className="relative h-44 overflow-hidden rounded-2xl"
+                  className="group/art relative h-44 overflow-hidden rounded-2xl"
                   style={{ background: gradient }}
                 >
                   {/* top sheen — stops the flat fill reading as a swatch */}
@@ -98,11 +104,9 @@ export default function PlatformsPage() {
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_-10%,rgba(255,255,255,0.22),transparent_60%)]"
                   />
-                  <Icon
-                    aria-hidden="true"
-                    className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 text-white/90"
-                    strokeWidth={1.25}
-                  />
+                  <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover/art:scale-[1.04]">
+                    <Art />
+                  </div>
                 </div>
 
                 <div className="px-3 pb-2 pt-4">
