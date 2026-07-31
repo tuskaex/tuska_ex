@@ -3,7 +3,7 @@ import GptwBadge from './GptwBadge'
 import { TEXT_DISPLAY } from '../ui/headings'
 
 const TILES = [
-  { bg: '#E76F3B' },
+  { bg: '#D60101' },   // was #E76F3B orange — brand red keeps the mosaic multicoloured
   { bg: '#F4C53A' },
   { bg: '#3F88C5' },
   { bg: '#F2A6C8' },

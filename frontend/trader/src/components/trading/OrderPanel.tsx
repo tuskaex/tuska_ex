@@ -353,7 +353,7 @@ export default function OrderPanel() {
           <div className="relative flex items-center gap-1.5 min-w-0" ref={dropdownRef}>
             <div
               className={clsx('rounded-full shrink-0', isTradingTerminal ? 'w-3.5 h-3.5' : 'w-4 h-4')}
-              style={{ background: 'linear-gradient(135deg, #ffb300, #42a5f5)' }}
+              style={{ background: 'linear-gradient(135deg, #D60101, #42a5f5)' }}
               aria-hidden
             />
             <button

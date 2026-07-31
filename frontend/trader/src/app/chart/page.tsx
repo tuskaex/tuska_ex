@@ -35,7 +35,7 @@ function ChartSpinner({ dark }: { dark: boolean }) {
     >
       <div
         className="animate-spin"
-        style={{ width: 34, height: 34, borderRadius: '50%', border: '3px solid rgba(242,106,31,0.25)', borderTopColor: '#f26a1f' }}
+        style={{ width: 34, height: 34, borderRadius: '50%', border: '3px solid rgba(214,1,1,0.25)', borderTopColor: '#D60101' }}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Shield, FileText, AlertTriangle, BugPlay, ArrowRight, Scale } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
+import PolicyHeroVisual from '@/landing/marketing/ui/PolicyHeroVisual'
 
 export const metadata = {
   title: 'Policies & Legal — TuskaEx',
@@ -51,11 +52,16 @@ const REGULATORY = [
 export default function PolicyPage() {
   return (
     <div className="bg-white text-gray-900">
-      <section
-        className="flex min-h-screen items-center bg-white bg-cover bg-center pt-24 pb-16 md:pt-28 md:pb-20"
-        style={{ backgroundImage: 'url(/assets/Policy_hero_bg3.png)' }}
-      >
-        <div className="w-full max-w-7xl mx-auto px-6 lg:px-8">
+      {/* Was a bare `url(/assets/Policy_hero_bg3.png)` cover image — a flat
+          orange smear that filled the empty right-hand grid column. The
+          bitmap is gone; the glow is now a brand-red radial and the right
+          column carries an actual visual. */}
+      <section className="relative flex min-h-screen items-center overflow-hidden bg-white pt-24 pb-16 md:pt-28 md:pb-20">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-[10%] top-1/2 h-[120%] w-[70%] -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(214,1,1,0.18),transparent_65%)]"
+        />
+        <div className="relative w-full max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid items-center gap-10 lg:grid-cols-2">
             {/* Left — copy + CTAs */}
             <div className="-translate-y-10 md:-translate-y-16">
@@ -89,6 +95,12 @@ export default function PolicyPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Right — document stack. Previously an empty grid cell that
+                showed nothing but the background image. */}
+            <div className="hidden lg:block">
+              <PolicyHeroVisual />
+            </div>
           </div>
         </div>
       </section>
@@ -102,7 +114,7 @@ export default function PolicyPage() {
                 <Link
                   key={title}
                   href={href}
-                  className="group relative block rounded-3xl bg-gradient-to-b from-[#D60101] to-[#ff9b6b] shadow-[0_18px_45px_-20px_rgba(214,1,1,0.55)] transition-transform duration-300 hover:-translate-y-1"
+                  className="group relative block rounded-3xl bg-gradient-to-b from-[#D60101] to-[#F14A4A] shadow-[0_18px_45px_-20px_rgba(214,1,1,0.55)] transition-transform duration-300 hover:-translate-y-1"
                 >
                   {/* white face shifted to expose a colored accent bar on one side */}
                   <div
@@ -119,7 +131,7 @@ export default function PolicyPage() {
 
                     {/* gradient icon badge (opposite corner to the number) */}
                     <span
-                      className={`absolute top-7 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#D60101] to-[#ff8a50] text-white shadow-md ${onLeft ? 'right-6' : 'left-6'}`}
+                      className={`absolute top-7 flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#D60101] to-[#F14A4A] text-white shadow-md ${onLeft ? 'right-6' : 'left-6'}`}
                     >
                       <Icon className="h-5 w-5" strokeWidth={2} />
                     </span>
