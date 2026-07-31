@@ -126,6 +126,7 @@ interface TradingState {
   removePosition: (id: string) => void;
   removeAccount: (id: string) => void;
   refreshPositions: () => Promise<void>;
+  refreshPendingOrders: () => Promise<void>;
   refreshAccount: () => Promise<void>;
   placeOrder: (data: {
     account_id: string;
@@ -282,6 +283,58 @@ export const useTradingStore = create<TradingState>()((set, get) => ({
       accounts: s.accounts.filter((a) => a.id !== id),
       activeAccount: s.activeAccount?.id === id ? null : s.activeAccount,
     })),
+
+  /* Pending orders had NO refresh path at all. They were fetched exactly
+   * once, by the effect in app/trading/layout.tsx that runs on mount and
+   * on account/route change, and nothing ever refetched them.
+   *
+   * That produced the bug a client reported: cancelling a pending order
+   * succeeded on the server, but the row stayed on screen because only
+   * `refreshPositions()` was called afterwards — and that endpoint is
+   * /positions/, which knows nothing about orders. Clicking Cancel on
+   * the still-visible row then hit an order the backend had already
+   * cancelled, and answered "Can only cancel pending orders" (400).
+   * Reloading the page re-ran the mount effect, which is exactly the
+   * "we need to close and open" the client described.
+   *
+   * The same gap hid NEW pending orders until a reload, and left FILLED
+   * ones sitting in the list after the b-book engine converted them to
+   * positions.
+   *
+   * Deliberately does not clear the list on failure: a network blip
+   * should leave the last known orders on screen, not appear to cancel
+   * everything. */
+  refreshPendingOrders: async () => {
+    const account = get().activeAccount;
+    if (!account) return;
+    try {
+      const rows = await api.get<Record<string, unknown>[]>(`/orders/`, {
+        account_id: account.id,
+        status: 'pending',
+      });
+      const list = Array.isArray(rows) ? rows : [];
+      set({
+        pendingOrders: list.map((row) => {
+          const o = row as Record<string, unknown>;
+          return {
+            id: String(o.id),
+            account_id: String(o.account_id),
+            symbol: String(o.symbol || (o.instrument as { symbol?: string })?.symbol || ''),
+            order_type: String(o.order_type),
+            side: o.side as 'buy' | 'sell',
+            status: String(o.status),
+            lots: Number(o.lots) || 0,
+            price: Number(o.price) || 0,
+            stop_loss: o.stop_loss != null ? Number(o.stop_loss) : undefined,
+            take_profit: o.take_profit != null ? Number(o.take_profit) : undefined,
+            created_at: String(o.created_at ?? ''),
+          };
+        }),
+      });
+    } catch {
+      /* keep the last good list */
+    }
+  },
 
   refreshPositions: async () => {
     const account = get().activeAccount;
@@ -497,7 +550,17 @@ export const useTradingStore = create<TradingState>()((set, get) => ({
 
       // Still reconcile in the background for server-authoritative numbers
       // (margin, equity, swap) — but the UI no longer waits on it.
-      Promise.all([get().refreshPositions(), get().refreshAccount()]).catch(() => {});
+      //
+      // refreshPendingOrders is in here because a limit/stop order creates
+      // NO position: the optimistic path above has nothing to show, so
+      // without this the order the user just placed is invisible until a
+      // reload. That was the first half of the reported bug — "we need to
+      // close and open then it's showing".
+      Promise.all([
+        get().refreshPositions(),
+        get().refreshPendingOrders(),
+        get().refreshAccount(),
+      ]).catch(() => {});
 
       return res;
     } catch (err) {

@@ -51,6 +51,7 @@ function TradingSession({ children }: { children: React.ReactNode }) {
   const setAccounts = useTradingStore((s) => s.setAccounts);
   const setPositions = useTradingStore((s) => s.setPositions);
   const setPendingOrders = useTradingStore((s) => s.setPendingOrders);
+  const refreshPendingOrders = useTradingStore((s) => s.refreshPendingOrders);
   const setInstruments = useTradingStore((s) => s.setInstruments);
   const refreshPositions = useTradingStore((s) => s.refreshPositions);
   const refreshAccount = useTradingStore((s) => s.refreshAccount);
@@ -153,12 +154,24 @@ function TradingSession({ children }: { children: React.ReactNode }) {
       await refreshAccount();
     }, 1500);
 
+    // Pending orders on a slower cadence than positions. Every event that
+    // changes them locally (place, cancel, fill) refreshes them directly,
+    // so this is only the safety net for changes made ELSEWHERE — another
+    // device, or an admin acting on the account. 6s rather than 1.5s
+    // because that is a third request on every tick otherwise, for a list
+    // that changes far less than open positions do.
+    const orderPoll = setInterval(() => {
+      if (document.hidden) return;
+      void refreshPendingOrders();
+    }, 6000);
+
     // Returning to a hidden tab: reconcile immediately instead of waiting for
     // the next interval slot.
     const onVisible = () => {
       if (document.hidden) return;
       void pollPricesFromApi();
       void refreshPositions();
+      void refreshPendingOrders();
       void refreshAccount();
     };
     document.addEventListener('visibilitychange', onVisible);
@@ -169,9 +182,10 @@ function TradingSession({ children }: { children: React.ReactNode }) {
       unsub();
       document.removeEventListener('visibilitychange', onVisible);
       clearInterval(positionPoll);
+      clearInterval(orderPoll);
       clearInterval(pricePoll);
     };
-  }, [setAccounts, setInstruments, updatePrices, refreshPositions, refreshAccount]);
+  }, [setAccounts, setInstruments, updatePrices, refreshPositions, refreshPendingOrders, refreshAccount]);
 
   /* Picker vs terminal: active account + positions. */
   useEffect(() => {
@@ -295,6 +309,9 @@ function TradingSession({ children }: { children: React.ReactNode }) {
       // appear live, and refresh balance/margin.
       if (evt.type === 'order_filled') {
         void refreshPositions();
+        // The fill converts the order into a position; without this the
+        // order also stays in the Pending tab until a reload.
+        void refreshPendingOrders();
         void refreshAccount();
         return;
       }

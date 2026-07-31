@@ -320,6 +320,7 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
   const accounts = useTradingStore((s) => s.accounts);
   const removePosition = useTradingStore((s) => s.removePosition);
   const refreshPositions = useTradingStore((s) => s.refreshPositions);
+  const refreshPendingOrders = useTradingStore((s) => s.refreshPendingOrders);
   const refreshAccount = useTradingStore((s) => s.refreshAccount);
   const instruments = useTradingStore((s) => s.instruments);
   const [activeTab, setActiveTab] = useState<TabId>('open');
@@ -1397,6 +1398,10 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                                 try {
                                   await api.delete(`/orders/${order.id}`);
                                   toast.success('Order cancelled');
+                                  // Orders live in a different slice than
+                                  // positions — refreshPositions() alone left
+                                  // the cancelled row on screen.
+                                  refreshPendingOrders();
                                   refreshPositions();
                                 } catch (e: unknown) {
                                   toast.error(e instanceof Error ? e.message : 'Failed');
@@ -1461,6 +1466,9 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                                   try {
                                     await api.delete(`/orders/${order.id}`);
                                     toast.success('Order cancelled');
+                                    // See the mobile card above — orders and
+                                    // positions are separate slices.
+                                    refreshPendingOrders();
                                     refreshPositions();
                                   } catch (e: unknown) {
                                     toast.error(e instanceof Error ? e.message : 'Failed');
