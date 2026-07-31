@@ -81,7 +81,12 @@ export default function HeroWordmark() {
             className={`inline-block leading-none ${accent ? 'text-[#D60101]' : 'text-white'}`}
             style={{
               fontFamily: 'var(--font-michroma), Michroma, sans-serif',
-              fontSize: 'clamp(2.6rem, 11vw, 9rem)',
+              /* Was clamp(2.6rem, 11vw, 9rem), which ran the mark nearly
+                 edge to edge and left the footage with no room to be
+                 seen. Dropped to ~65% of that: the wordmark still leads,
+                 but the scene behind it is now part of the composition
+                 rather than something peeking out around the letters. */
+              fontSize: 'clamp(1.9rem, 7vw, 5.5rem)',
               letterSpacing: '0.06em',
               textShadow: accent
                 ? '0 0 28px rgba(214,1,1,0.55), 0 0 70px rgba(214,1,1,0.28)'

@@ -6,13 +6,18 @@
 // ============================================
 //
 // LAYER ORDER IS THE WHOLE DESIGN. Back to front:
-//   1. night-sky gradient base
-//   2. StarRain canvas          — continuous, the background weather
-//   3. hero.mp4                 — foreground footage, blended (see below)
-//   4. depth / legibility wash
+//   1. night-sky gradient base  — fallback while the video streams
+//   2. hero.mp4                 — full opacity, no blend
+//   3. StarRain canvas          — transparent, so it costs the video
+//                                 nothing while staying fully visible
+//   4. depth / legibility wash  — light; just enough to hold the type
 //   5. HeroWordmark (z-10)      — animated TUSKAEX, always on top
-// Moving the video above the wash, or below the rain, breaks one of the
-// two things this hero is meant to show at once.
+//
+// The rain sits ABOVE the video, and that ordering is the fix, not an
+// accident. The reverse (rain behind, video blended at 55% so the rain
+// showed through) was tried first and produced a washed-out haze where
+// the footage should be. Transparent-canvas-over-opaque-video shows
+// both at full strength; blending shows neither properly.
 //
 // HISTORY, because this section has now reversed a documented decision
 // twice and the next person deserves the trail:
@@ -54,10 +59,9 @@ export default function HeroSection() {
     <section className="relative min-h-screen overflow-hidden -mt-[76px] md:-mt-[84px]">
 
       {/* ── Night sky base ──
-          A flat, near-black canvas for the rain to fall through, and the
-          backdrop the footage above screens against. It has to stay dark:
-          `mix-blend-mode: screen` only lightens, so a light base here
-          would blow the whole composite out. */}
+          Now only a fallback: it is what shows while the 7.7 MB video is
+          still streaming, and behind the letterboxed edges on extreme
+          aspect ratios. The footage covers it once playing. */}
       <div
         className="absolute inset-0"
         style={{
@@ -66,31 +70,23 @@ export default function HeroSection() {
         }}
       />
 
-      {/* ── 星の雨 — continuous star rain ── */}
-      <StarRain />
+      {/* ── Footage ──
+          Plays at full opacity with NO blend mode.
 
-      {/* ── Foreground footage ──
-          The original hero video, restored and layered IN FRONT of the
-          star rain rather than replacing it.
+          It used to run at `mix-blend-mode: screen` and 0.55 so the star
+          rain behind it could show through the dark parts. That did keep
+          both visible, but screen only ever lightens — it washed the
+          footage into a flat red haze instead of showing it, and the
+          lanterns barely read.
 
-          `mix-blend-mode: screen` is what makes both readable at once.
-          Screen can only lighten: wherever the footage is black it
-          contributes nothing and the rain shows through untouched, and
-          wherever it is bright it burns through over the top. A plain
-          opaque video here would simply cover the rain, which is the one
-          thing the hero was asked to keep.
+          The fix was not to push the opacity of a blended layer, it was
+          to stop stacking them in that order. The rain now draws ON TOP
+          (see below), so the video can simply be itself: real colours,
+          full strength, nothing subtracted.
 
-          TWO KNOBS, if this needs balancing:
-            opacity  — how present the footage is (lower = more rain)
-            blend    — 'screen' composites; drop to 'normal' + lower
-                       opacity if the footage reads too hot
-          Both live on the style object below, nowhere else.
-
-          preload="metadata" because this file is 7.7 MB. Deleting it was
-          what made the hero cheap; bringing it back reintroduces that
-          cost, so at least do not block first paint on it — the browser
-          fetches the header, paints the star rain immediately, and
-          streams the rest. */}
+          preload="metadata" because this file is 7.7 MB. Do not block
+          first paint on it — the browser takes the header, paints the
+          sky and rain immediately, and streams the rest. */}
       <video
         className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
         src="/tuskaex/hero.mp4"
@@ -100,16 +96,31 @@ export default function HeroSection() {
         playsInline
         preload="metadata"
         aria-hidden="true"
-        style={{ mixBlendMode: 'screen', opacity: 0.55 }}
       />
 
+      {/* ── 星の雨 — continuous star rain, now IN FRONT of the footage ──
+          Moved above the video deliberately. The canvas is transparent
+          except for the streaks, so putting it here costs the footage
+          nothing while the rain stays fully visible at all times —
+          which is what the earlier arrangement could only fake by
+          dimming the video to 55%.
+
+          It also simply reads better: rain falling in front of a lit
+          street at night is what rain does. */}
+      <StarRain />
+
       {/* ── Depth / legibility overlay ──
+          Lightened across the board now that the footage plays at full
+          strength — the mid stop was 0.42, which was the other half of
+          why the video looked murky. It is now 0.26: still enough of a
+          scrim to hold the wordmark, but the lanterns come through.
+
           The stops are NOT uniform on purpose:
           • top stays lightest — the navbar is a solid pill with its own
             background and needs no help.
-          • the middle is now doing real work: the wordmark sits there, so
-            this stop is what keeps it legible against a bright streak
-            passing behind it. It was 0.26 when nothing rode here.
+          • the middle carries the wordmark, so this stop is what keeps
+            white type legible when a bright lantern passes behind it.
+            Do not take it to zero.
           • the bottom stays heaviest. That is a seam, not decoration —
             the quote ticker below opens on a near-black band, and fading
             into it here is what stops a visible horizontal edge at the
@@ -119,9 +130,9 @@ export default function HeroSection() {
         style={{
           background: `
             linear-gradient(to bottom,
-              rgba(5,7,10,0.10) 0%,
-              rgba(1,2,3,0.42) 55%,
-              rgba(1,2,3,0.72) 100%
+              rgba(5,7,10,0.06) 0%,
+              rgba(1,2,3,0.26) 55%,
+              rgba(1,2,3,0.68) 100%
             )
           `,
         }}
