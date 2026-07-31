@@ -36,6 +36,8 @@ export default function ConditionsSection() {
 
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="条件"
+          reading="jouken"
           badge="Trading Conditions"
           title="Professional Trading Conditions"
           highlight="Trading Conditions"
@@ -47,7 +49,7 @@ export default function ConditionsSection() {
             <StaggerItem key={item.title}>
               <div className="card jp-card group h-full text-center">
                 <div className={`feature-icon ${item.bg} ${item.color} mb-4 mx-auto`}>{item.icon}</div>
-                <h3 className="text-white font-semibold mb-2 group-hover:text-[#f43f5e] transition-colors">{item.title}</h3>
+                <h3 className="text-white font-semibold mb-2 group-hover:text-[#F14A4A] transition-colors">{item.title}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{item.desc}</p>
               </div>
             </StaggerItem>

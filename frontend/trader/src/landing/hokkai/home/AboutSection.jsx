@@ -42,7 +42,7 @@ export default function AboutSection() {
       {/* Left accent line */}
       <div
         className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
-        style={{ background: 'linear-gradient(180deg, transparent, rgba(225,29,72,0.2), transparent)' }}
+        style={{ background: 'linear-gradient(180deg, transparent, rgba(214, 1, 1,0.2), transparent)' }}
       />
 
       <div className="section-container relative z-10">
@@ -71,7 +71,7 @@ export default function AboutSection() {
 
                 {/* Central kanji watermark */}
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <Kanji char="北海" className="text-[130px] text-white/[0.06] font-black" />
+                  <Kanji char="牙" className="text-[130px] text-white/[0.06] font-black" />
                 </div>
 
                 {/* Katana SVG art — monochromatic */}
@@ -91,17 +91,17 @@ export default function AboutSection() {
                 </div>
 
                 {/* Neon corner accents */}
-                <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-[#e11d48]/50" />
-                <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-[#e11d48]/50" />
-                <div className="absolute bottom-4 left-4 w-5 h-5 border-b border-l border-[#e11d48]/50" />
-                <div className="absolute bottom-4 right-4 w-5 h-5 border-b border-r border-[#e11d48]/50" />
+                <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-[#D60101]/50" />
+                <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-[#D60101]/50" />
+                <div className="absolute bottom-4 left-4 w-5 h-5 border-b border-l border-[#D60101]/50" />
+                <div className="absolute bottom-4 right-4 w-5 h-5 border-b border-r border-[#D60101]/50" />
 
                 {/* Floating glass chips */}
                 <div
-                  className="absolute top-6 left-6 rounded-xl p-3 border border-[#e11d48]/20"
+                  className="absolute top-6 left-6 rounded-xl p-3 border border-[#D60101]/20"
                   style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)' }}
                 >
-                  <div className="text-[#e11d48] text-xs font-semibold font-mono uppercase tracking-wider">Our Vision</div>
+                  <div className="text-[#D60101] text-xs font-semibold font-mono uppercase tracking-wider">Our Vision</div>
                   <div className="text-white text-xs mt-1">Globally trusted partner</div>
                 </div>
 
@@ -121,8 +121,8 @@ export default function AboutSection() {
                   {['Transparency', 'Innovation', 'Integrity', 'Client-Centric'].map(val => (
                     <div key={val} className="text-white text-xs flex items-center gap-1.5 mb-0.5">
                       <span
-                        className="w-1 h-1 rounded-full bg-[#e11d48] flex-shrink-0"
-                        style={{ boxShadow: '0 0 4px rgba(225,29,72,0.7)' }}
+                        className="w-1 h-1 rounded-full bg-[#D60101] flex-shrink-0"
+                        style={{ boxShadow: '0 0 4px rgba(214, 1, 1,0.7)' }}
                       />
                       {val}
                     </div>
@@ -132,13 +132,13 @@ export default function AboutSection() {
 
               {/* Mon decoration */}
               <div
-                className="absolute -top-3 -right-3 w-12 h-12 rounded-full border border-[#e11d48]/25 flex items-center justify-center"
+                className="absolute -top-3 -right-3 w-12 h-12 rounded-full border border-[#D60101]/25 flex items-center justify-center"
                 style={{ background: '#05070a' }}
               >
-                <div className="w-8 h-8 rounded-full border border-[#e11d48]/15 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border border-[#D60101]/15 flex items-center justify-center">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ background: 'rgba(225,29,72,0.3)', boxShadow: '0 0 6px rgba(225,29,72,0.4)' }}
+                    style={{ background: 'rgba(214, 1, 1,0.3)', boxShadow: '0 0 6px rgba(214, 1, 1,0.4)' }}
                   />
                 </div>
               </div>
@@ -149,9 +149,9 @@ export default function AboutSection() {
           <AnimatedSection animation="slideRight" delay={0.2}>
             {/* Badge */}
             <div className="inline-flex items-center gap-2 mb-5">
-              <div className="w-5 h-px bg-[#e11d48]" />
-              <span className="text-[#e11d48] text-xs font-bold uppercase tracking-[0.2em] font-mono">About TuskaEx</span>
-              <div className="w-5 h-px bg-[#e11d48]" />
+              <div className="w-5 h-px bg-[#D60101]" />
+              <span className="text-[#D60101] text-xs font-bold uppercase tracking-[0.2em] font-mono">About TuskaEx</span>
+              <div className="w-5 h-px bg-[#D60101]" />
             </div>
 
             {/* Heading */}
@@ -162,7 +162,7 @@ export default function AboutSection() {
               Built on{' '}
               <span
                 style={{
-                  background: 'linear-gradient(135deg, #e11d48, #f43f5e)',
+                  background: 'linear-gradient(135deg, #D60101, #F14A4A)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   backgroundClip: 'text',
@@ -176,7 +176,7 @@ export default function AboutSection() {
             {/* Neon divider */}
             <div
               className="w-16 h-px mb-6"
-              style={{ background: 'linear-gradient(90deg, #e11d48, transparent)', boxShadow: '0 0 6px rgba(225,29,72,0.4)' }}
+              style={{ background: 'linear-gradient(90deg, #D60101, transparent)', boxShadow: '0 0 6px rgba(214, 1, 1,0.4)' }}
             />
 
             <div className="space-y-4 mb-8">
@@ -193,12 +193,12 @@ export default function AboutSection() {
               {pillars.map((p) => (
                 <div
                   key={p.label}
-                  className="text-center p-4 rounded-xl border border-white/8 transition-all duration-300 hover:border-[#e11d48]/30 hover:-translate-y-0.5 group"
+                  className="text-center p-4 rounded-xl border border-white/8 transition-all duration-300 hover:border-[#D60101]/30 hover:-translate-y-0.5 group"
                   style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(8px)' }}
                 >
                   <div
                     className="text-xl mb-1"
-                    style={{ fontFamily: "'Noto Serif JP', serif", color: 'rgba(225,29,72,0.6)' }}
+                    style={{ fontFamily: "'Noto Serif JP', serif", color: 'rgba(214, 1, 1,0.6)' }}
                   >
                     {p.kanji}
                   </div>
@@ -211,11 +211,11 @@ export default function AboutSection() {
               to="/about"
               className="inline-flex items-center gap-2 px-6 py-3 text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:-translate-y-0.5"
               style={{
-                background: '#e11d48',
-                boxShadow: '0 0 18px rgba(225,29,72,0.35)',
+                background: '#D60101',
+                boxShadow: '0 0 18px rgba(214, 1, 1,0.35)',
               }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(225,29,72,0.6)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 18px rgba(225,29,72,0.35)'}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(214, 1, 1,0.6)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 18px rgba(214, 1, 1,0.35)'}
             >
               Learn More About Us <FiArrowRight size={15} />
             </Link>

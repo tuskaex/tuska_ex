@@ -35,6 +35,8 @@ export default function WhySection() {
 
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="革新"
+          reading="kakushin"
           badge="Why Choose Us"
           title="Why Choose TuskaEx"
           highlight="TuskaEx"
@@ -56,7 +58,7 @@ export default function WhySection() {
                 {/* Icon */}
                 <div className={`feature-icon ${f.bg} ${f.color} mb-4`}>{f.icon}</div>
 
-                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-[#f43f5e] transition-colors">
+                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-[#F14A4A] transition-colors">
                   {f.title}
                 </h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>

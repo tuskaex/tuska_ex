@@ -7,12 +7,22 @@
 
 import React from 'react'
 import AnimatedSection from './AnimatedSection'
+import { KanjiMark } from './JapaneseMotifs'
 
+/**
+ * `kanji` / `reading` are optional. Each section already paints its own
+ * kanji as a background watermark, but that runs at ~1.8% opacity — it
+ * is texture, not something you can actually read. Passing the SAME
+ * character here surfaces it legibly above the badge, so the section
+ * gets a Japanese anchor without introducing a second, unrelated word.
+ */
 function SectionHeader({
   badge,
   title,
   highlight,
   subtitle,
+  kanji,
+  reading,
   align = 'center',
   className = '',
 }) {
@@ -31,13 +41,22 @@ function SectionHeader({
   return (
     <div className={`${align === 'center' ? 'text-center' : 'text-left'} ${className}`}>
 
+      {/* Kanji mark */}
+      {kanji && (
+        <AnimatedSection animation="fadeIn" delay={0}>
+          <div className={`mb-4 flex ${align === 'center' ? 'justify-center' : 'justify-start'}`}>
+            <KanjiMark char={kanji} reading={reading} />
+          </div>
+        </AnimatedSection>
+      )}
+
       {/* Badge */}
       {badge && (
         <AnimatedSection animation="slideDown" delay={0}>
           <div className={`inline-flex items-center gap-2 mb-5 ${align === 'center' ? 'mx-auto' : ''}`}>
-            <div className="w-5 h-px bg-[#e11d48]" />
-            <span className="text-[#e11d48] text-xs font-semibold uppercase tracking-[0.2em] font-mono">{badge}</span>
-            <div className="w-5 h-px bg-[#e11d48]" />
+            <div className="w-5 h-px bg-[#D60101]" />
+            <span className="text-[#D60101] text-xs font-semibold uppercase tracking-[0.2em] font-mono">{badge}</span>
+            <div className="w-5 h-px bg-[#D60101]" />
           </div>
         </AnimatedSection>
       )}
@@ -56,7 +75,7 @@ function SectionHeader({
       <AnimatedSection animation="scaleIn" delay={0.2}>
         <div
           className={`w-14 h-0.5 mb-5 rounded-full ${align === 'center' ? 'mx-auto' : ''}`}
-          style={{ background: 'linear-gradient(90deg, #e11d48, #f43f5e)', boxShadow: '0 0 8px rgba(225,29,72,0.5)' }}
+          style={{ background: 'linear-gradient(90deg, #D60101, #F14A4A)', boxShadow: '0 0 8px rgba(214, 1, 1,0.5)' }}
         />
       </AnimatedSection>
 

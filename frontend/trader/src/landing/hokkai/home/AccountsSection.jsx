@@ -35,6 +35,8 @@ export default function AccountsSection() {
 
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="口座"
+          reading="kouza"
           badge="Accounts"
           title="Account Types"
           highlight="Account Types"
@@ -47,15 +49,15 @@ export default function AccountsSection() {
               <div
                 className={`relative rounded-2xl p-6 h-full flex flex-col transition-all duration-300 hover:-translate-y-2 ${
                   acc.highlight
-                    ? 'border border-[#e11d48]/40'
+                    ? 'border border-[#D60101]/40'
                     : 'border border-white/8 hover:border-white/20'
                 }`}
                 style={
                   acc.highlight
                     ? {
-                        background: 'linear-gradient(145deg, rgba(225,29,72,0.12) 0%, rgba(5,7,10,0.9) 100%)',
+                        background: 'linear-gradient(145deg, rgba(214, 1, 1,0.12) 0%, rgba(5,7,10,0.9) 100%)',
                         backdropFilter: 'blur(12px)',
-                        boxShadow: '0 8px 40px rgba(225,29,72,0.15)',
+                        boxShadow: '0 8px 40px rgba(214, 1, 1,0.15)',
                       }
                     : {
                         background: 'rgba(255,255,255,0.04)',
@@ -69,8 +71,8 @@ export default function AccountsSection() {
                     <span
                       className="px-4 py-1 text-white text-xs font-bold rounded-full uppercase tracking-wider"
                       style={{
-                        background: '#e11d48',
-                        boxShadow: '0 0 14px rgba(225,29,72,0.5)',
+                        background: '#D60101',
+                        boxShadow: '0 0 14px rgba(214, 1, 1,0.5)',
                         fontFamily: "var(--font-michroma), Michroma, sans-serif",
                       }}
                     >
@@ -99,8 +101,8 @@ export default function AccountsSection() {
                   className="text-2xl font-bold mb-1"
                   style={{
                     fontFamily: "var(--font-michroma), Michroma, sans-serif",
-                    color: acc.highlight ? '#ffffff' : '#e11d48',
-                    textShadow: acc.highlight ? 'none' : '0 0 10px rgba(225,29,72,0.4)',
+                    color: acc.highlight ? '#ffffff' : '#D60101',
+                    textShadow: acc.highlight ? 'none' : '0 0 10px rgba(214, 1, 1,0.4)',
                   }}
                 >
                   {acc.minDeposit}
@@ -129,7 +131,7 @@ export default function AccountsSection() {
                 <ul className="space-y-2 mb-6">
                   {acc.features.map((f) => (
                     <li key={f} className={`flex items-center gap-2 text-xs ${acc.highlight ? 'text-white/85' : 'text-slate-400'}`}>
-                      <FiCheck size={11} className={acc.highlight ? 'text-white' : 'text-[#e11d48]'} />
+                      <FiCheck size={11} className={acc.highlight ? 'text-white' : 'text-[#D60101]'} />
                       {f}
                     </li>
                   ))}
@@ -139,8 +141,8 @@ export default function AccountsSection() {
                   to="/accounts"
                   className={`w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 ${
                     acc.highlight
-                      ? 'bg-white text-[#e11d48] hover:bg-white/90'
-                      : 'border border-[#e11d48]/30 text-[#e11d48] hover:bg-[#e11d48]/10'
+                      ? 'bg-white text-[#D60101] hover:bg-white/90'
+                      : 'border border-[#D60101]/30 text-[#D60101] hover:bg-[#D60101]/10'
                   }`}
                 >
                   {acc.cta}

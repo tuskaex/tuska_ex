@@ -20,6 +20,8 @@ export default function EducationSection() {
       </div>
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="教育"
+          reading="kyouiku"
           badge="Education Center"
           title="Education Center"
           highlight="Education Center"

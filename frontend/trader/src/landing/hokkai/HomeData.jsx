@@ -1,6 +1,6 @@
 'use client'
 
-// TUSKAEX - Home Page Data 北海マーケット
+// TUSKAEX - Home Page Data タスカEX
 import React from 'react'
 import { FiZap, FiShield, FiGlobe, FiCpu, FiTarget, FiDroplet, FiActivity, FiDollarSign, FiLayers, FiMonitor, FiSmartphone, FiServer } from 'react-icons/fi'
 

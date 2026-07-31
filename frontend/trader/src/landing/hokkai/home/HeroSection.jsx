@@ -13,6 +13,7 @@
 // in a section under the video instead.
 
 import React from 'react'
+import { SakuraLayer, TategakiRail } from '../components/JapaneseMotifs'
 
 export default function HeroSection() {
   return (
@@ -72,7 +73,7 @@ export default function HeroSection() {
         style={{
           background: `
             radial-gradient(ellipse 70% 50% at 50% 55%,
-              rgba(225,29,72,0.13) 0%,
+              rgba(214, 1, 1,0.13) 0%,
               transparent 70%
             )
           `,
@@ -94,32 +95,37 @@ export default function HeroSection() {
       {/* ── Side Accent Lines ── */}
       <div
         className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
-        style={{ background: 'linear-gradient(180deg, transparent, rgba(225,29,72,0.35), transparent)' }}
+        style={{ background: 'linear-gradient(180deg, transparent, rgba(214, 1, 1,0.35), transparent)' }}
       />
       <div
         className="absolute right-0 top-0 bottom-0 w-px pointer-events-none"
-        style={{ background: 'linear-gradient(180deg, transparent, rgba(225,29,72,0.15), transparent)' }}
+        style={{ background: 'linear-gradient(180deg, transparent, rgba(214, 1, 1,0.15), transparent)' }}
       />
 
       {/* ── Decorative corner brackets ── */}
       {/* Top-left */}
       <div className="absolute top-24 left-6 md:left-12 pointer-events-none opacity-40">
-        <div className="w-8 h-8 border-t border-l border-[#e11d48]/60" />
+        <div className="w-8 h-8 border-t border-l border-[#D60101]/60" />
       </div>
       {/* Top-right */}
       <div className="absolute top-24 right-6 md:right-12 pointer-events-none opacity-40">
-        <div className="w-8 h-8 border-t border-r border-[#e11d48]/60" />
+        <div className="w-8 h-8 border-t border-r border-[#D60101]/60" />
       </div>
       {/* Bottom-left */}
       <div className="absolute bottom-24 left-6 md:left-12 pointer-events-none opacity-40">
-        <div className="w-8 h-8 border-b border-l border-[#e11d48]/60" />
+        <div className="w-8 h-8 border-b border-l border-[#D60101]/60" />
       </div>
       {/* Bottom-right */}
       <div className="absolute bottom-24 right-6 md:right-12 pointer-events-none opacity-40">
-        <div className="w-8 h-8 border-b border-r border-[#e11d48]/60" />
+        <div className="w-8 h-8 border-b border-r border-[#D60101]/60" />
       </div>
 
-      {/* ── Decorative Kanji watermark ── */}
+      {/* ── Decorative Kanji watermark ──
+          牙 (kiba) — "tusk". The house mark, and a literal reading of
+          the Tusk in TuskaEx. It replaced 北海 ("Hokkai"), which was
+          the PREVIOUS brand's name sitting in 220px type on our own
+          home page — invisible to a text search for "Hokkai" because
+          it was written in kanji. */}
       <div
         className="absolute right-8 top-1/2 -translate-y-1/2 text-[220px] font-black pointer-events-none select-none hidden xl:block"
         style={{
@@ -129,8 +135,31 @@ export default function HeroSection() {
         }}
         aria-hidden="true"
       >
-        北海
+        牙
       </div>
+
+      {/* ── 桜吹雪 — drifting petals ──
+          Pure atmosphere. This section is deliberately content-free
+          (see the header note), so everything added here has to be
+          non-readable: petals, patterns and vertical rails qualify,
+          a headline or badge would not. */}
+      <SakuraLayer />
+
+      {/* ── 縦書き rails ── */}
+      <TategakiRail text="外国為替取引" side="left" />
+      <TategakiRail text="タスカEX" side="right" />
+
+      {/* ── 青海波 — wave band along the hero's base ──
+          Masked to fade upward so the pattern emerges out of the
+          existing dark seam rather than starting on a hard edge. */}
+      <div
+        aria-hidden="true"
+        className="seigaiha-bg pointer-events-none absolute inset-x-0 bottom-0 h-28 opacity-70"
+        style={{
+          WebkitMaskImage: 'linear-gradient(to top, #000 0%, transparent 100%)',
+          maskImage: 'linear-gradient(to top, #000 0%, transparent 100%)',
+        }}
+      />
 
     </section>
   )

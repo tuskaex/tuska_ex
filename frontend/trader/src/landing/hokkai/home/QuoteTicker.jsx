@@ -110,7 +110,7 @@ export default function QuoteTicker() {
           stop so the two sections read as one transition. */}
       <div
         className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-        style={{ background: 'linear-gradient(90deg, transparent, rgba(225,29,72,0.3), transparent)' }}
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(214, 1, 1,0.3), transparent)' }}
       />
 
       <div className="flex flex-wrap items-center justify-center gap-3 px-4">
@@ -145,7 +145,7 @@ export default function QuoteTicker() {
               ) : (
                 <span
                   className={`flex items-center gap-0.5 text-xs font-mono font-semibold tabular-nums ${
-                    up ? 'text-[#00d4aa]' : 'text-[#e11d48]'
+                    up ? 'text-[#00d4aa]' : 'text-[#D60101]'
                   }`}
                 >
                   {up ? <FiTrendingUp size={9} /> : <FiTrendingDown size={9} />}

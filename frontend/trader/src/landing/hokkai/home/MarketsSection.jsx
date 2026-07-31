@@ -37,6 +37,8 @@ export default function MarketsSection() {
 
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="取引"
+          reading="torihiki"
           badge="Markets"
           title="Global Markets Access"
           highlight="Global Markets"
@@ -57,7 +59,7 @@ export default function MarketsSection() {
 
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-3xl">{asset.icon}</span>
-                  <h3 className="text-white font-semibold text-lg group-hover:text-[#f43f5e] transition-colors">
+                  <h3 className="text-white font-semibold text-lg group-hover:text-[#F14A4A] transition-colors">
                     {asset.label}
                   </h3>
                 </div>
@@ -69,10 +71,10 @@ export default function MarketsSection() {
           {/* CTA card */}
           <StaggerItem>
             <div
-              className="card jp-card h-full flex flex-col items-center justify-center text-center border-dashed border-[#e11d48]/20 hover:border-[#e11d48]/40 min-h-[160px]"
+              className="card jp-card h-full flex flex-col items-center justify-center text-center border-dashed border-[#D60101]/20 hover:border-[#D60101]/40 min-h-[160px]"
             >
               <div
-                className="text-4xl mb-3 text-[#e11d48]/40"
+                className="text-4xl mb-3 text-[#D60101]/40"
                 style={{ fontFamily: "'Noto Serif JP', serif" }}
               >
                 他

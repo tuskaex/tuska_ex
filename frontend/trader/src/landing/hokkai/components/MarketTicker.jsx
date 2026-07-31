@@ -41,16 +41,16 @@ function TickerItem({ item }) {
       {/* Change with glow dot */}
       <span
         className={`flex items-center gap-1 text-xs font-mono font-semibold ${
-          item.positive ? 'text-[#00d4aa]' : 'text-[#e11d48]'
+          item.positive ? 'text-[#00d4aa]' : 'text-[#D60101]'
         }`}
       >
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
-            background: item.positive ? '#00d4aa' : '#e11d48',
+            background: item.positive ? '#00d4aa' : '#D60101',
             boxShadow: item.positive
               ? '0 0 5px rgba(0,212,170,0.8)'
-              : '0 0 5px rgba(225,29,72,0.8)',
+              : '0 0 5px rgba(214, 1, 1,0.8)',
           }}
         />
         {item.positive ? <FiTrendingUp size={9} /> : <FiTrendingDown size={9} />}
@@ -72,8 +72,8 @@ function MarketTicker() {
         {/* Live indicator */}
         <div className="flex items-center gap-2 px-4 flex-shrink-0 border-r border-white/10">
           <span
-            className="w-1.5 h-1.5 rounded-full bg-[#e11d48] animate-pulse"
-            style={{ boxShadow: '0 0 6px rgba(225,29,72,0.9)' }}
+            className="w-1.5 h-1.5 rounded-full bg-[#D60101] animate-pulse"
+            style={{ boxShadow: '0 0 6px rgba(214, 1, 1,0.9)' }}
           />
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] font-mono whitespace-nowrap">
             Live

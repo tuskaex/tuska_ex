@@ -19,6 +19,8 @@ export default function ToolsSection() {
       </div>
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="道具"
+          reading="dougu"
           badge="Tools & Research"
           title="Professional Tools & Research"
           highlight="Tools & Research"

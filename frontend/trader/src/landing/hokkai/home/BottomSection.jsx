@@ -44,6 +44,8 @@ export default function BottomSection() {
         </div>
         <div className="section-container relative z-10">
           <SectionHeader
+            kanji="声"
+            reading="koe"
             badge="Testimonials"
             title="What Our Clients Say"
             highlight="Clients Say"
@@ -81,6 +83,8 @@ export default function BottomSection() {
         <div className="absolute inset-0 shoji-bg opacity-20 pointer-events-none" />
         <div className="section-container relative z-10">
           <SectionHeader
+            kanji="質問"
+            reading="shitsumon"
             badge="FAQ"
             title="Frequently Asked Questions"
             highlight="Frequently Asked"
@@ -138,7 +142,7 @@ export default function BottomSection() {
           {/* Japanese decorative divider at bottom */}
           <div className="flex items-center justify-center gap-3 mt-12 opacity-30">
             <div className="w-16 h-px bg-red-accent" />
-            <div className="jp-kanji text-red-accent text-sm">北海マーケット</div>
+            <div className="jp-kanji text-red-accent text-sm">タスカEX</div>
             <div className="w-16 h-px bg-red-accent" />
           </div>
         </div>

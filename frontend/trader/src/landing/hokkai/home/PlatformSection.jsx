@@ -36,6 +36,8 @@ export default function PlatformSection() {
 
       <div className="section-container relative z-10">
         <SectionHeader
+          kanji="技術"
+          reading="gijutsu"
           badge="Platform"
           title="Next-Generation Trading Platform"
           highlight="Next-Generation"
@@ -49,7 +51,7 @@ export default function PlatformSection() {
               <div className={`card jp-card group h-full border ${p.border} hover:shadow-lg`}>
                 <div className={`feature-icon ${p.bg} ${p.color} mb-4`}>{p.icon}</div>
                 <span className={`badge ${p.bg} ${p.color} text-xs mb-3 inline-block`}>{p.tag}</span>
-                <h3 className="text-white font-semibold text-lg mb-3 group-hover:text-[#f43f5e] transition-colors">{p.name}</h3>
+                <h3 className="text-white font-semibold text-lg mb-3 group-hover:text-[#F14A4A] transition-colors">{p.name}</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">{p.desc}</p>
               </div>
             </StaggerItem>
@@ -81,14 +83,14 @@ export default function PlatformSection() {
               {platformFeatures.map((f) => (
                 <div
                   key={f}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-white/5 hover:border-[#e11d48]/20 transition-all duration-200"
+                  className="flex items-center gap-3 p-3 rounded-lg border border-white/5 hover:border-[#D60101]/20 transition-all duration-200"
                   style={{ background: 'rgba(255,255,255,0.02)' }}
                 >
                   <div
                     className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(225,29,72,0.15)' }}
+                    style={{ background: 'rgba(214, 1, 1,0.15)' }}
                   >
-                    <FiCheck size={11} className="text-[#e11d48]" />
+                    <FiCheck size={11} className="text-[#D60101]" />
                   </div>
                   <span className="text-slate-300 text-sm">{f}</span>
                 </div>

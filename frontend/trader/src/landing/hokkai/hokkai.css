@@ -12,7 +12,7 @@
    terminal and every other marketing page. Scoping keeps the
    blast radius to this one page.
 
-   The crimson (#e11d48) accent and the Japanese motifs are kept
+   The crimson (#D60101) accent and the Japanese motifs are kept
    deliberately — only the brand NAME was changed to TuskaEx.
    ============================================================ */
 
@@ -43,17 +43,17 @@
 
 /* ── Buttons ────────────────────────────────────────────────── */
 .hk-landing .btn-primary {
-  @apply inline-flex items-center justify-center px-6 py-3 bg-[#e11d48] text-white font-semibold rounded-lg transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0;
-  box-shadow: 0 0 18px rgba(225, 29, 72, 0.35);
+  @apply inline-flex items-center justify-center px-6 py-3 bg-[#D60101] text-white font-semibold rounded-lg transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0;
+  box-shadow: 0 0 18px rgba(214, 1, 1, 0.35);
 }
 .hk-landing .btn-primary:hover {
-  box-shadow: 0 0 32px rgba(225, 29, 72, 0.6), 0 0 60px rgba(225, 29, 72, 0.2);
+  box-shadow: 0 0 32px rgba(214, 1, 1, 0.6), 0 0 60px rgba(214, 1, 1, 0.2);
 }
 .hk-landing .btn-secondary {
-  @apply inline-flex items-center justify-center px-6 py-3 border border-[#e11d48] text-[#e11d48] font-semibold rounded-lg transition-all duration-300 hover:bg-[#e11d48]/10 hover:-translate-y-0.5 active:translate-y-0;
+  @apply inline-flex items-center justify-center px-6 py-3 border border-[#D60101] text-[#D60101] font-semibold rounded-lg transition-all duration-300 hover:bg-[#D60101]/10 hover:-translate-y-0.5 active:translate-y-0;
 }
 .hk-landing .btn-secondary:hover {
-  box-shadow: 0 0 20px rgba(225, 29, 72, 0.2);
+  box-shadow: 0 0 20px rgba(214, 1, 1, 0.2);
 }
 .hk-landing .btn-outline {
   @apply inline-flex items-center justify-center px-6 py-3 border border-white/20 text-white font-semibold rounded-lg transition-all duration-300 hover:border-white/50 hover:bg-white/5 hover:-translate-y-0.5;
@@ -65,7 +65,7 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 .hk-landing .card:hover {
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(225, 29, 72, 0.08);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(214, 1, 1, 0.08);
 }
 
 /* Cyber card hover — top border sweep */
@@ -80,7 +80,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(225, 29, 72, 0.7), transparent);
+  background: linear-gradient(90deg, transparent, rgba(214, 1, 1, 0.7), transparent);
   transform: scaleX(0);
   transition: transform 0.4s ease;
 }
@@ -98,7 +98,7 @@
   pointer-events: none;
 }
 .hk-landing .jp-wave-bg {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60' viewBox='0 0 200 60'%3E%3Cpath d='M0 30 C25 10, 50 10, 75 30 C100 50, 125 50, 150 30 C175 10, 200 10, 200 30' stroke='rgba(225,29,72,0.06)' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0 45 C25 25, 50 25, 75 45 C100 65, 125 65, 150 45 C175 25, 200 25, 200 45' stroke='rgba(225,29,72,0.03)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='60' viewBox='0 0 200 60'%3E%3Cpath d='M0 30 C25 10, 50 10, 75 30 C100 50, 125 50, 150 30 C175 10, 200 10, 200 30' stroke='rgba(214, 1, 1,0.06)' stroke-width='1.5' fill='none'/%3E%3Cpath d='M0 45 C25 25, 50 25, 75 45 C100 65, 125 65, 150 45 C175 25, 200 25, 200 45' stroke='rgba(214, 1, 1,0.03)' stroke-width='1' fill='none'/%3E%3C/svg%3E");
   background-size: 200px 60px;
   background-repeat: repeat-x;
   background-position: bottom;
@@ -107,18 +107,18 @@
 /* ── Background patterns ────────────────────────────────────── */
 .hk-landing .shoji-bg {
   background-image:
-    linear-gradient(rgba(225, 29, 72, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(225, 29, 72, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(214, 1, 1, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 1, 1, 0.03) 1px, transparent 1px);
   background-size: 24px 24px;
 }
 .hk-landing .dot-bg {
-  background-image: radial-gradient(rgba(225, 29, 72, 0.07) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(214, 1, 1, 0.07) 1px, transparent 1px);
   background-size: 30px 30px;
 }
 .hk-landing .grid-bg {
   background-image:
-    linear-gradient(rgba(225, 29, 72, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(225, 29, 72, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(214, 1, 1, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(214, 1, 1, 0.04) 1px, transparent 1px);
   background-size: 50px 50px;
 }
 
@@ -162,17 +162,17 @@
   left: 0;
   width: 0;
   height: 1px;
-  background: linear-gradient(135deg, #e11d48, #f43f5e);
+  background: linear-gradient(135deg, #D60101, #F14A4A);
   transition: width 0.3s ease;
 }
 .hk-landing .animated-underline:hover::after {
   width: 100%;
 }
 .hk-landing .text-shadow-red {
-  text-shadow: 0 0 40px rgba(225, 29, 72, 0.5), 0 0 80px rgba(225, 29, 72, 0.2);
+  text-shadow: 0 0 40px rgba(214, 1, 1, 0.5), 0 0 80px rgba(214, 1, 1, 0.2);
 }
 .hk-landing .text-positive { color: #00d4aa; }
-.hk-landing .text-negative { color: #e11d48; }
+.hk-landing .text-negative { color: #D60101; }
 .hk-landing .bg-white\/2 { background-color: rgba(255, 255, 255, 0.02); }
 .hk-landing .bg-white\/3 { background-color: rgba(255, 255, 255, 0.03); }
 .hk-landing .cyber-section-dark {
@@ -208,4 +208,122 @@ html:has(.hk-landing) body::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;                /* Chrome / Safari */
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Japanese pattern layer — 和柄 (wagara)
+   ══════════════════════════════════════════════════════════════
+   Traditional Japanese textile patterns, drawn as pure CSS so they
+   scale to any viewport and cost no image bytes. All are keyed to
+   the TuskaEx logo red and deliberately run at very low alpha:
+   they are texture behind content, never a foreground element.
+
+   Each is a real, named pattern rather than generic "asian-ish"
+   decoration:
+     seigaiha 青海波 — "blue sea wave", overlapping fans. Edo-period,
+                       the classic wave motif. Used for water/flow.
+     kagome   籠目   — woven-basket triangular lattice.
+     ichimatsu 市松  — the checkerboard from Tokyo 2020.
+   ────────────────────────────────────────────────────────────── */
+
+/* 青海波 — overlapping wave fans. Three radial gradients anchored to
+   the bottom of a 72×36 cell: one centred, two straddling the edges,
+   so consecutive tiles interlock into continuous rows of fans. */
+.hk-landing .seigaiha-bg {
+  background-image:
+    radial-gradient(circle at 50% 100%,
+      transparent 20%, rgba(214,1,1,0.16) 21%, rgba(214,1,1,0.16) 23%,
+      transparent 24%, transparent 34%, rgba(214,1,1,0.16) 35%, rgba(214,1,1,0.16) 37%,
+      transparent 38%, transparent 48%, rgba(214,1,1,0.16) 49%, rgba(214,1,1,0.16) 51%,
+      transparent 52%),
+    radial-gradient(circle at 0% 100%,
+      transparent 20%, rgba(214,1,1,0.16) 21%, rgba(214,1,1,0.16) 23%,
+      transparent 24%, transparent 34%, rgba(214,1,1,0.16) 35%, rgba(214,1,1,0.16) 37%,
+      transparent 38%, transparent 48%, rgba(214,1,1,0.16) 49%, rgba(214,1,1,0.16) 51%,
+      transparent 52%),
+    radial-gradient(circle at 100% 100%,
+      transparent 20%, rgba(214,1,1,0.16) 21%, rgba(214,1,1,0.16) 23%,
+      transparent 24%, transparent 34%, rgba(214,1,1,0.16) 35%, rgba(214,1,1,0.16) 37%,
+      transparent 38%, transparent 48%, rgba(214,1,1,0.16) 49%, rgba(214,1,1,0.16) 51%,
+      transparent 52%);
+  background-size: 72px 36px;
+}
+
+/* 籠目 — three sets of hairlines at 0°/60°/120° form the woven
+   triangular lattice. Exact by construction, so it never drifts. */
+.hk-landing .kagome-bg {
+  background-image:
+    repeating-linear-gradient(0deg,   rgba(214,1,1,0.10) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(60deg,  rgba(214,1,1,0.10) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(120deg, rgba(214,1,1,0.10) 0 1px, transparent 1px 34px);
+}
+
+/* 市松 — offset checkerboard. Two 45° gradient pairs per cell. */
+.hk-landing .ichimatsu-bg {
+  background-image:
+    linear-gradient(45deg,  rgba(214,1,1,0.07) 25%, transparent 25% 75%, rgba(214,1,1,0.07) 75%),
+    linear-gradient(45deg,  rgba(214,1,1,0.07) 25%, transparent 25% 75%, rgba(214,1,1,0.07) 75%);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+}
+
+/* ── 縦書き (tategaki) — vertical writing ──────────────────────
+   `vertical-rl` is the real CJK vertical flow: lines stack top-to-
+   bottom and columns run right-to-left. `upright` keeps Latin
+   characters from being rotated onto their side. */
+.hk-landing .tategaki {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.28em;
+  white-space: nowrap;
+}
+
+/* ── 印章 (hanko) — the seal stamp ────────────────────────────
+   A carved name-seal: solid red square, rounded corners, white
+   kanji, tilted a few degrees the way a hand-pressed stamp lands.
+   The inset ring is the carved border every real hanko has. */
+.hk-landing .hanko {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #D60101;
+  color: #fff;
+  border-radius: 0.5rem;
+  transform: rotate(-6deg);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55),
+              0 6px 22px -6px rgba(214,1,1,0.75);
+  font-family: 'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho Pro', serif;
+  font-weight: 900;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ── 桜吹雪 (sakura fubuki) — drifting petals ─────────────────
+   Petals fall the height of their container while swaying, so the
+   drift reads as air rather than a straight drop. Each petal gets
+   its own delay/duration inline. The asymmetric border-radius is
+   what makes the square read as a petal.
+
+   Honours prefers-reduced-motion: the whole layer is hidden rather
+   than merely paused, since a frozen petal field mid-fall looks
+   like a rendering bug. */
+.hk-landing .sakura-petal {
+  position: absolute;
+  top: -8%;
+  border-radius: 60% 10% 60% 10%;
+  background: linear-gradient(135deg, rgba(255,183,197,0.85), rgba(214,1,1,0.45));
+  animation-name: hk-sakura-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform, opacity;
+}
+@keyframes hk-sakura-fall {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg);         opacity: 0; }
+  10%  {                                                        opacity: 0.9; }
+  50%  { transform: translate3d(28px, 55vh, 0) rotate(180deg); opacity: 0.7; }
+  90%  {                                                        opacity: 0.25; }
+  100% { transform: translate3d(-14px, 112vh, 0) rotate(360deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hk-landing .sakura-layer { display: none; }
 }

@@ -13,6 +13,7 @@ import { useInView } from 'react-intersection-observer'
 // the trader dashboard, which defines its own versions of those names.
 import './hokkai.css'
 import AnimatedSection, { PageTransition } from './components/AnimatedSection'
+import { Hanko } from './components/JapaneseMotifs'
 import { stats } from './HomeData'
 
 // Section components
@@ -37,11 +38,11 @@ function StatCounter({ value, suffix, label, decimals }) {
         className="text-3xl md:text-4xl font-bold mb-1"
         style={{
           fontFamily: "var(--font-michroma), Michroma, sans-serif",
-          background: 'linear-gradient(135deg, #e11d48 0%, #f43f5e 100%)',
+          background: 'linear-gradient(135deg, #D60101 0%, #F14A4A 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
-          filter: 'drop-shadow(0 0 8px rgba(225,29,72,0.4))',
+          filter: 'drop-shadow(0 0 8px rgba(214, 1, 1,0.4))',
         }}
       >
         {inView
@@ -76,11 +77,23 @@ function Home() {
         {/* Top neon line */}
         <div
           className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(225,29,72,0.3), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(214, 1, 1,0.3), transparent)' }}
         />
         <div className="absolute inset-0 shoji-bg opacity-20 pointer-events-none" />
+        {/* 籠目 — woven lattice, sits over the shoji grid to give the
+            stats band a textile rather than a graph-paper texture. */}
+        <div className="absolute inset-0 kagome-bg opacity-[0.55] pointer-events-none" />
 
         <div className="section-container relative z-10">
+          {/* 印章 — the house seal. The hero is deliberately free of
+              readable marks, so the brand stamp lands here instead, at
+              the top of the first content band. */}
+          <div className="mb-9 flex items-center justify-center gap-4">
+            <span className="h-px w-10 bg-gradient-to-r from-transparent to-[#D60101]/50" />
+            <Hanko char="牙" size={54} />
+            <span className="h-px w-10 bg-gradient-to-l from-transparent to-[#D60101]/50" />
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, i) => (
               <AnimatedSection key={stat.label} animation="slideUp" delay={i * 0.1}>
@@ -93,7 +106,7 @@ function Home() {
         {/* Bottom neon line */}
         <div
           className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(225,29,72,0.3), transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(214, 1, 1,0.3), transparent)' }}
         />
       </section>
 
