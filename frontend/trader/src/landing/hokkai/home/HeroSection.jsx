@@ -2,20 +2,32 @@
 
 // ============================================
 // TUSKAEX - Hero Section — Cyber-Samurai
-// Star rain + animated wordmark.
+// Painted sky -> star rain -> footage -> wordmark.
 // ============================================
 //
-// HISTORY, because this reverses a documented decision:
+// LAYER ORDER IS THE WHOLE DESIGN. Back to front:
+//   1. night-sky gradient base
+//   2. StarRain canvas          — continuous, the background weather
+//   3. hero.mp4                 — foreground footage, blended (see below)
+//   4. depth / legibility wash
+//   5. HeroWordmark (z-10)      — animated TUSKAEX, always on top
+// Moving the video above the wash, or below the rain, breaks one of the
+// two things this hero is meant to show at once.
 //
-// This section used to be a 7.7 MB background video and was marked
-// "deliberately CONTENT-FREE" — the quote chips and scroll cue had been
-// pulled off the footage so it played clean, and the note said that
-// adding a headline here would be reversing that.
+// HISTORY, because this section has now reversed a documented decision
+// twice and the next person deserves the trail:
 //
-// It is now reversed, deliberately. The video is gone (replaced by the
-// StarRain canvas, which costs a few KB instead of 7.7 MB and renders at
-// any size), and with no footage to obscure there is nothing left for a
-// headline to compete with. The wordmark IS the hero now.
+// It began as a bare 7.7 MB background video marked "deliberately
+// CONTENT-FREE" — chips and scroll cue had been pulled off the footage
+// so it played clean, and the note warned that adding a headline would
+// be reversing that.
+//
+// Then the video was removed entirely for the star rain, and the
+// wordmark added, which reversed it.
+//
+// Now the footage is back, composited over the rain rather than instead
+// of it. So the "content-free" rule stays reversed: the wordmark is the
+// hero, and the rain plus footage are its weather.
 //
 // The quote ticker still lives in home/QuoteTicker.jsx as its own band
 // below — that half of the original decision stands. Do not move it back
@@ -42,8 +54,10 @@ export default function HeroSection() {
     <section className="relative min-h-screen overflow-hidden -mt-[76px] md:-mt-[84px]">
 
       {/* ── Night sky base ──
-          A flat, near-black canvas for the rain to fall through. This
-          replaces the <video>: the sky is painted, not filmed. */}
+          A flat, near-black canvas for the rain to fall through, and the
+          backdrop the footage above screens against. It has to stay dark:
+          `mix-blend-mode: screen` only lightens, so a light base here
+          would blow the whole composite out. */}
       <div
         className="absolute inset-0"
         style={{
@@ -54,6 +68,40 @@ export default function HeroSection() {
 
       {/* ── 星の雨 — continuous star rain ── */}
       <StarRain />
+
+      {/* ── Foreground footage ──
+          The original hero video, restored and layered IN FRONT of the
+          star rain rather than replacing it.
+
+          `mix-blend-mode: screen` is what makes both readable at once.
+          Screen can only lighten: wherever the footage is black it
+          contributes nothing and the rain shows through untouched, and
+          wherever it is bright it burns through over the top. A plain
+          opaque video here would simply cover the rain, which is the one
+          thing the hero was asked to keep.
+
+          TWO KNOBS, if this needs balancing:
+            opacity  — how present the footage is (lower = more rain)
+            blend    — 'screen' composites; drop to 'normal' + lower
+                       opacity if the footage reads too hot
+          Both live on the style object below, nowhere else.
+
+          preload="metadata" because this file is 7.7 MB. Deleting it was
+          what made the hero cheap; bringing it back reintroduces that
+          cost, so at least do not block first paint on it — the browser
+          fetches the header, paints the star rain immediately, and
+          streams the rest. */}
+      <video
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover motion-reduce:hidden"
+        src="/tuskaex/hero.mp4"
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+        style={{ mixBlendMode: 'screen', opacity: 0.55 }}
+      />
 
       {/* ── Depth / legibility overlay ──
           The stops are NOT uniform on purpose:
