@@ -1,0 +1,157 @@
+/* ══════════════════════════════════════════════════════════════
+   Marketing dark mode — neutral-palette override layer
+   ══════════════════════════════════════════════════════════════
+
+   WHY THIS EXISTS, AND WHY IT IS NOT `dark:` VARIANTS
+   ---------------------------------------------------
+   The light marketing pages were written light-only: 953 hard-coded
+   neutral utilities (`bg-white`, `text-gray-900`, `border-gray-200`…)
+   across ~40 files, 38 distinct classes. Adding a `dark:` variant to
+   each would be a 953-line diff touching every marketing page, and
+   every future page would have to remember to do it again.
+
+   Instead this sheet remaps the neutral palette once, scoped under
+   `.mkt-dark`. New pages get dark mode for free as long as they use
+   the same Tailwind neutrals the rest of the site uses.
+
+   The trade-off is honest: this is a retrofit, not a designed dark
+   theme. It cannot know that a given `bg-white` is a page canvas
+   rather than a card. Tune the variables below rather than adding
+   one-off overrides downstream.
+
+   WHAT IS DELIBERATELY NOT OVERRIDDEN
+   -----------------------------------
+   `text-white`, `border-white`, `ring-white` — these sit on brand-red
+   and dark surfaces (buttons, seals, the IB poster) where white is
+   already correct. Inverting them would put dark text on a red button.
+
+   Brand colours (#D60101 and friends), success green and warning amber
+   are untouched: they carry meaning and read fine on either canvas.
+   ────────────────────────────────────────────────────────────── */
+
+.mkt-dark {
+  /* Surfaces. `bg-white` and `bg-gray-50` alternate section-to-section
+     on these pages, so they must stay DISTINGUISHABLE from each other,
+     not both collapse to black — otherwise the page loses its rhythm
+     and cards on a bg-white section vanish into the canvas. */
+  --mktd-surface:     #121212;   /* was bg-white      — cards, panels  */
+  --mktd-canvas:      #0B0B0B;   /* was bg-gray-50    — alternating bg */
+  --mktd-surface-2:   #1A1A1A;   /* was bg-gray-100                    */
+  --mktd-surface-3:   #222222;   /* was bg-gray-200                    */
+  --mktd-surface-4:   #2A2A2A;   /* was bg-gray-300                    */
+
+  /* Ink */
+  --mktd-ink:         #F5F5F5;   /* was text-gray-900 */
+  --mktd-ink-2:       #E4E4E4;   /* was text-gray-800 */
+  --mktd-ink-3:       #C6C6C6;   /* was text-gray-700 */
+  --mktd-ink-4:       #ADADAD;   /* was text-gray-600 */
+  --mktd-ink-5:       #8E8E8E;   /* was text-gray-500 */
+  --mktd-ink-6:       #767676;   /* was text-gray-400 */
+
+  /* Hairlines */
+  --mktd-line:        rgba(255, 255, 255, 0.10);
+  --mktd-line-2:      rgba(255, 255, 255, 0.17);
+  --mktd-line-3:      rgba(255, 255, 255, 0.30);
+
+  background-color: var(--mktd-canvas);
+  color: var(--mktd-ink);
+}
+
+/* ── Surfaces ────────────────────────────────────────────────── */
+.mkt-dark .bg-white       { background-color: var(--mktd-surface); }
+.mkt-dark .bg-gray-50     { background-color: var(--mktd-canvas); }
+.mkt-dark .bg-gray-100    { background-color: var(--mktd-surface-2); }
+.mkt-dark .bg-gray-200    { background-color: var(--mktd-surface-3); }
+.mkt-dark .bg-gray-300    { background-color: var(--mktd-surface-4); }
+
+/* `bg-gray-900` is the near-black CTA used all over the light pages
+   ("Read the policies", "Launch", nav pills). On a dark canvas it
+   would disappear, so it becomes the brand red instead — which also
+   means its existing `text-white` stays correct and needs no rule. */
+.mkt-dark .bg-gray-900          { background-color: #D60101; }
+.mkt-dark .hover\:bg-gray-900:hover { background-color: #D60101; }
+.mkt-dark .hover\:bg-black:hover    { background-color: #A30000; }
+.mkt-dark .hover\:bg-gray-50:hover  { background-color: var(--mktd-surface-2); }
+.mkt-dark .hover\:bg-gray-100:hover { background-color: var(--mktd-surface-3); }
+
+/* ── Ink ─────────────────────────────────────────────────────── */
+.mkt-dark .text-gray-900,
+.mkt-dark .text-slate-900   { color: var(--mktd-ink); }
+.mkt-dark .text-gray-800,
+.mkt-dark .text-slate-800   { color: var(--mktd-ink-2); }
+.mkt-dark .text-gray-700,
+.mkt-dark .text-slate-700   { color: var(--mktd-ink-3); }
+.mkt-dark .text-gray-600,
+.mkt-dark .text-slate-600   { color: var(--mktd-ink-4); }
+.mkt-dark .text-gray-500,
+.mkt-dark .text-slate-500   { color: var(--mktd-ink-5); }
+.mkt-dark .text-gray-400,
+.mkt-dark .text-slate-400   { color: var(--mktd-ink-6); }
+
+/* Hover ink — `hover:text-gray-900` is the standard link hover on the
+   light pages and would otherwise hover to near-black on black. */
+.mkt-dark .hover\:text-gray-900:hover { color: var(--mktd-ink); }
+.mkt-dark .group:hover .group-hover\:text-gray-900 { color: var(--mktd-ink); }
+/* …but a hover that flips text to white is usually paired with a red or
+   dark fill appearing behind it, so leave `hover:text-white` alone. */
+
+/* ── Hairlines ───────────────────────────────────────────────── */
+.mkt-dark .border-gray-100,
+.mkt-dark .border-gray-200  { border-color: var(--mktd-line); }
+.mkt-dark .border-gray-300  { border-color: var(--mktd-line-2); }
+.mkt-dark .border-gray-900  { border-color: var(--mktd-line-3); }
+.mkt-dark .hover\:border-gray-300:hover { border-color: var(--mktd-line-2); }
+.mkt-dark .divide-gray-200 > * + * { border-color: var(--mktd-line); }
+
+.mkt-dark .ring-gray-100    { --tw-ring-color: var(--mktd-line); }
+.mkt-dark .ring-gray-200    { --tw-ring-color: var(--mktd-line); }
+.mkt-dark .ring-gray-900    { --tw-ring-color: var(--mktd-line-3); }
+/* `ring-black/5` and `ring-gray-900/[0.07]` are the near-invisible
+   card outlines on white; on dark they need to go the other way. */
+.mkt-dark [class*="ring-black/"] { --tw-ring-color: var(--mktd-line); }
+
+/* ── Gradients ───────────────────────────────────────────────────
+   Section backgrounds are commonly `bg-gradient-to-b from-white
+   to-gray-50`. Only the LIGHT stops are remapped — `from-gray-900`,
+   `via-black` and friends are already dark bands that were designed
+   to contrast against a white page, and they still read on dark. */
+.mkt-dark .from-white {
+  --tw-gradient-from: var(--mktd-surface) var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(18 18 18 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.mkt-dark .to-white  { --tw-gradient-to: var(--mktd-surface) var(--tw-gradient-to-position); }
+.mkt-dark .to-gray-50 { --tw-gradient-to: var(--mktd-canvas) var(--tw-gradient-to-position); }
+.mkt-dark .via-white {
+  --tw-gradient-to: rgb(18 18 18 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--mktd-surface) var(--tw-gradient-via-position), var(--tw-gradient-to);
+}
+
+/* ── Form controls ───────────────────────────────────────────────
+   Inputs inherit the page's light assumptions hardest: a white field
+   with near-black text is unreadable the moment the canvas flips. */
+.mkt-dark input,
+.mkt-dark textarea,
+.mkt-dark select {
+  background-color: var(--mktd-surface-2);
+  color: var(--mktd-ink);
+  border-color: var(--mktd-line);
+}
+.mkt-dark input::placeholder,
+.mkt-dark textarea::placeholder { color: var(--mktd-ink-6); }
+
+/* ── Shadows ─────────────────────────────────────────────────────
+   Tailwind's shadows are tuned for dark-on-light. On a dark canvas a
+   black shadow is invisible, so elevation reads as flat. Deepening
+   them keeps the card edges legible. */
+.mkt-dark .shadow-sm  { box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.6); }
+.mkt-dark .shadow,
+.mkt-dark .shadow-md  { box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.7); }
+.mkt-dark .shadow-lg  { box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.75); }
+.mkt-dark .shadow-xl  { box-shadow: 0 20px 44px -12px rgba(0, 0, 0, 0.8); }
+.mkt-dark .shadow-2xl { box-shadow: 0 28px 64px -16px rgba(0, 0, 0, 0.85); }
+
+/* ── Images ──────────────────────────────────────────────────────
+   The remaining marketing photography is shot on white. Knocking a
+   little brightness off stops it glowing against the dark canvas. */
+.mkt-dark img:not([src*=".svg"]) { filter: brightness(0.92) contrast(1.02); }

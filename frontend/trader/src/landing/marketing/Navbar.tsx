@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ChevronRight, Globe, Menu, X, Download, Monitor } from 'lucide-react'
+import { ChevronRight, Globe, Menu, X, Download, Monitor, Moon, Sun } from 'lucide-react'
 import { slugify } from './ui/slugify'
 import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
 import { useLang } from '@/landing/i18n/LangProvider'
@@ -65,6 +65,11 @@ export interface NavbarProps {
      the white pill it already had. 'dark' is for pages whose hero is dark
      footage — a white slab floats on top of those and blocks the artwork. */
   theme?: 'light' | 'dark'
+  /* Light/dark switch. Omit `onToggleTheme` and the control is not
+     rendered at all — that is how the home route hides it, since that
+     page is a fixed dark cinematic surface and a switch that visibly
+     does nothing is worse than no switch. */
+  onToggleTheme?: () => void
 }
 
 /* Per-theme class strings. Kept as one table rather than sprinkling
@@ -388,6 +393,7 @@ export default function MarketingNavbar({
   subNavLeft = null,
   subNavRight = null,
   theme = 'light',
+  onToggleTheme,
 }: NavbarProps) {
   const c = NAV_THEME[theme]
   const [open, setOpen] = useState(false)
@@ -457,10 +463,29 @@ export default function MarketingNavbar({
         </ul>
 
         <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 ml-auto shrink-0">
-          {/* Order matters here: the two utility controls (desktop-terminal
-              picker, language) sit first, then the calls to action. Grouping
-              the icon-sized controls together stops them reading as debris
-              scattered between the buttons. */}
+          {/* Order matters here: the utility controls (theme switch,
+              desktop-terminal picker, language) sit first, then the calls to
+              action. Grouping the icon-sized controls together stops them
+              reading as debris scattered between the buttons. */}
+          {/* Light / dark switch. Only rendered when the layout supplies a
+              handler — see NavbarProps.onToggleTheme. The icon shows the
+              mode you will GET, not the one you are in, which is the
+              convention every OS switch follows. */}
+          {onToggleTheme && (
+            <button
+              type="button"
+              onClick={onToggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              className={`inline-flex items-center justify-center w-9 ${CONTROL_H} rounded-full border border-[#D60101] transition-colors ${c.iconBtnOff}`}
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 shrink-0" strokeWidth={2} />
+              ) : (
+                <Moon className="w-4 h-4 shrink-0" strokeWidth={2} />
+              )}
+            </button>
+          )}
           {/* Desktop-terminal download: icon button opens a Windows / macOS
               picker on click. Windows ships the signed-later .exe installer;
               macOS ships a .dmg (coming soon until a Mac build is provided). */}
@@ -660,6 +685,33 @@ export default function MarketingNavbar({
                     </li>
                   ))}
                 </ul>
+              </li>
+            )}
+            {/* Theme switch — the desktop control lives in the utility
+                cluster, which is `hidden lg:flex`, so mobile needs its own.
+                Deliberately does NOT close the drawer: you want to see the
+                mode change, and reopening the menu to undo a choice you
+                could not evaluate is a small hostile act. */}
+            {onToggleTheme && (
+              <li className={`pt-3 border-t ${c.dividerStrong}`}>
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                  className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
+                >
+                  {theme === 'dark' ? (
+                    <>
+                      <Sun className="w-4 h-4" strokeWidth={2} />
+                      Light mode
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="w-4 h-4" strokeWidth={2} />
+                      Dark mode
+                    </>
+                  )}
+                </button>
               </li>
             )}
             <li className={`pt-3 border-t ${c.dividerStrong}`}>

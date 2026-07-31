@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { PopupProvider } from '@/landing/components/PopupContext'
 import ScrollProgress from '@/landing/components/animations/ScrollProgress'
@@ -94,6 +94,16 @@ import '@/landing/landing.css'
 // above; both coexist until STEP 3 replaces the chrome and STEP 4
 // rebuilds the home sections.
 import '@/styles/marketing.css'
+/* Neutral-palette remap for the light marketing pages, scoped under
+ * `.mkt-dark`. See the file header for why this is a scoped override
+ * sheet rather than ~953 `dark:` variants across 40 files. */
+import '@/styles/marketing-dark.css'
+
+/* localStorage key for the marketing light/dark preference. Distinct
+ * from the trader app's `tuskaex-ui` (STORAGE_KEY_UI) on purpose: the
+ * marketing site and the logged-in terminal are different surfaces and
+ * a user wanting a dark terminal has not asked for a dark brochure. */
+const MKT_THEME_KEY = 'tuskaex-mkt-theme'
 
 /* Marketing pages rendered on the light TuskaEx canvas (#FFFFFF).
  * The shared Navbar reads `theme="light"` for these and `theme="dark"`
@@ -152,7 +162,49 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
    * being derived from it. Nothing else changes for '/', and no other path
    * is affected at all. */
   const isHome = pathname === '' || pathname === '/'
-  const darkSurface = !isLight || isHome
+
+  /* ── User-controlled light/dark ────────────────────────────────
+   * Applies ONLY to the light marketing track. The home route is a
+   * full-bleed cyber-samurai video and the `/platforms/web`-style
+   * sub-pages are dark by design — forcing those light would not be
+   * "dark mode off", it would be a broken page. So the switch is
+   * offered exactly where both modes are real.
+   *
+   * Initial state is 'light' on BOTH server and client. Reading
+   * localStorage during render would make the server HTML and the
+   * first client render disagree, which React treats as a hydration
+   * mismatch; the stored value is applied in an effect instead. A dark
+   * user therefore sees one light frame — the cost of not shipping a
+   * blocking inline script on every marketing page. */
+  const [mktTheme, setMktTheme] = useState<'light' | 'dark'>('light')
+  const canToggleTheme = isLight && !isHome
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(MKT_THEME_KEY)
+      if (saved === 'dark' || saved === 'light') setMktTheme(saved)
+    } catch {
+      /* Private mode / storage disabled — stay on the 'light' default. */
+    }
+  }, [])
+
+  const toggleTheme = useCallback(() => {
+    setMktTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark'
+      try {
+        window.localStorage.setItem(MKT_THEME_KEY, next)
+      } catch {
+        /* Preference just won't survive the session. Not fatal. */
+      }
+      return next
+    })
+  }, [])
+
+  /* `userDark` is the toggle's effect; `darkSurface` stays the
+   * route-derived fact it always was, now OR'd with the preference. */
+  const userDark = canToggleTheme && mktTheme === 'dark'
+  const darkSurface = !isLight || isHome || userDark
+  const navTheme: 'light' | 'dark' = isHome || userDark ? 'dark' : 'light'
 
   /* Force the html background to match the page surface so overscroll
    * doesn't reveal a stale dark/light stripe. Without this, dark home
@@ -208,7 +260,7 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
                  pin would fight the hero's own gradients. */
               isHome
               ? 'min-h-screen bg-[#08090b] text-[#f5f5f5]'
-              : 'min-h-screen bg-white text-gray-900'
+              : `min-h-screen bg-white text-gray-900${userDark ? ' mkt-dark' : ''}`
             : 'landing-root min-h-screen bg-[#08090b] text-[#f5f5f5]'
         }
       >
@@ -221,10 +273,13 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
              on top of that footage and blocks it. So the navbar theme is
              decided separately from `isLight` rather than derived from it.
              Every other path keeps the light chrome it already had. */
-          theme={isHome ? 'dark' : 'light'}
+          theme={navTheme}
+          /* Undefined on the home + dark-track routes, which is what
+             hides the switch there — see NavbarProps.onToggleTheme. */
+          onToggleTheme={canToggleTheme ? toggleTheme : undefined}
         />
         {children}
-        {isLight ? <LandingFooter theme={isHome ? 'dark' : 'light'} /> : <Footer />}
+        {isLight ? <LandingFooter theme={navTheme} /> : <Footer />}
       </div>
     </PopupProvider>
     </LangProvider>
