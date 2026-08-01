@@ -154,7 +154,9 @@ OrderTicket::OrderTicket(QWidget* parent) : QWidget(parent) {
     headRow->addWidget(m_moreBtn);
 
     auto* lay = new QVBoxLayout(this);
-    lay->setContentsMargins(5, 2, 5, 3);
+    // Tight: the card fill showing around the coloured tiles was reading as a
+    // light outline on the BUY/SELL buttons themselves.
+    lay->setContentsMargins(3, 2, 3, 3);
     lay->setSpacing(2);
     lay->addLayout(headRow);
     lay->addLayout(tiles);
@@ -176,8 +178,15 @@ void OrderTicket::paintEvent(QPaintEvent*) {
 void OrderTicket::applyTheme() {
     const auto& c = Theme::p();
 
-    setStyleSheet(QString("OrderTicket{background:%1; border:1px solid %2; border-radius:4px;}")
-                  .arg(c.panel, c.border));
+    // No outline. The card is still opaque — it floats over the chart canvas and
+    // has to stay legible against candles of any colour — but the 1px border it
+    // used to carry drew a hard box around the BUY/SELL tiles. In light mode the
+    // card (#f4f5f7) sits on a white chart, so that border was the only thing
+    // visible: the strip read as a framed widget stuck onto the chart rather
+    // than part of the toolbar. The fill alone separates it well enough in both
+    // themes, since neither panel colour matches its chart background.
+    setStyleSheet(QString("OrderTicket{background:%1; border:none; border-radius:4px;}")
+                  .arg(c.panel));
     // The global sheet paints every QWidget opaque; the inner container must be
     // transparent or it stamps a window-coloured block across the card.
     m_bracketRow->setStyleSheet("background:transparent;");
@@ -191,11 +200,14 @@ void OrderTicket::applyTheme() {
         l->setStyleSheet(QString("background:transparent; color:%1; font-size:10px;"
                                  "font-weight:700;").arg(c.muted));
 
+    // Ghost chevron: a bordered box here read as a second frame stacked on the
+    // card, which is most of what made the strip look boxed in. It only picks up
+    // a background on hover.
     m_moreBtn->setStyleSheet(QString(
-        "QPushButton{background:%1; color:%2; border:1px solid %3; border-radius:2px;"
+        "QPushButton{background:transparent; color:%1; border:none; border-radius:2px;"
         "font-size:8px; font-weight:800; padding:0;}"
-        "QPushButton:hover{background:%4; color:%5;}")
-        .arg(c.btnBg, c.text, c.btnBorder, c.btnHover, c.textStrong));
+        "QPushButton:hover{background:%2; color:%3;}")
+        .arg(c.muted, c.btnHover, c.textStrong));
 
     const QString input = QString(
         "QDoubleSpinBox{background:%1; color:%2; border:1px solid %3; border-radius:3px;"
