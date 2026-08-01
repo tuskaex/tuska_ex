@@ -141,10 +141,8 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     m_sessionTimer = new QTimer(this);
     m_sessionTimer->setInterval(30 * 60 * 1000);
     connect(m_sessionTimer, &QTimer::timeout, this, [this]() { m_api->refreshSession(); });
-    if (!m_cfg.refreshToken.trimmed().isEmpty()) {
-        m_sessionTimer->start();
-        m_api->refreshSession();
-    }
+    applySessionRenewal();
+    if (!m_cfg.refreshToken.trimmed().isEmpty()) m_api->refreshSession();
 }
 
 // --- menu bar ---------------------------------------------------------------
@@ -576,6 +574,12 @@ void MainWindow::setStatus(const QString& text, bool error) {
 // disk; endpoints and UI preferences (theme, privacy) survive, and the email is
 // kept so the form prefills. Cancelling the sign-in closes the terminal — there
 // is no signed-out state worth showing, only stale numbers.
+void MainWindow::applySessionRenewal() {
+    if (!m_sessionTimer) return;
+    if (m_cfg.refreshToken.trimmed().isEmpty()) m_sessionTimer->stop();
+    else                                        m_sessionTimer->start();
+}
+
 void MainWindow::logout() {
     if (QMessageBox::question(this, tr("Log out"),
             tr("Sign out of this terminal?")) != QMessageBox::Yes)
@@ -617,6 +621,7 @@ void MainWindow::logout() {
     m_stream->setConfig(m_cfg);
     m_stream->start();
     m_accountTimer->start();
+    applySessionRenewal();   // a fresh sign-in brings a fresh refresh token
     m_api->fetchSymbols();
     refreshAll();
     updateIdentity();
@@ -629,6 +634,7 @@ void MainWindow::openSettings() {
         return;
     m_cfg = dlg.config();
     m_api->setConfig(m_cfg);
+    applySessionRenewal();
     m_stream->setConfig(m_cfg);
     m_stream->stop();
     m_stream->start();

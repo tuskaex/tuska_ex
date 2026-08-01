@@ -1,4 +1,5 @@
 #include "core/ApiClient.h"
+#include "core/ApiError.h"
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkCookie>
@@ -261,8 +262,7 @@ static void handlePositionOp(ApiClient* self, QNetworkReply* reply,
             if (ok) {
                 msg = obj.value("message").toString(op == "close" ? "Position closed" : "Updated");
             } else {
-                msg = obj.value("detail").toString();
-                if (msg.isEmpty()) msg = reply->errorString();
+                msg = apiDetail(obj, reply->errorString());
             }
             emit self->positionOpResult(positionId, op, ok, msg);
         });
@@ -300,7 +300,7 @@ void ApiClient::refreshSession() {
         const int http = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
         if (r->error() != QNetworkReply::NoError || http >= 400) {
-            emit sessionRefreshFailed(o.value("detail").toString(r->errorString()));
+            emit sessionRefreshFailed(apiDetail(o, r->errorString()));
             return;
         }
         const QString access = o.value("access_token").toString();
@@ -345,8 +345,7 @@ void ApiClient::handleReply(QNetworkReply* reply, const QString& kind, const QSt
         const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
         if (reply->error() != QNetworkReply::NoError || (http >= 400)) {
-            QString detail = obj.value("detail").toString();
-            if (detail.isEmpty()) detail = reply->errorString();
+            const QString detail = apiDetail(obj, reply->errorString());
             if (kind == "trade") {
                 // Surface trade failures both as a result and an error.
                 TradeResult tr_;

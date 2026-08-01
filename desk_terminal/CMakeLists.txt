@@ -35,6 +35,7 @@ set(HEADERS
     src/core/Models.h
     src/core/Config.h
     src/core/ApiClient.h
+    src/core/ApiError.h
     src/core/PriceStream.h
     src/core/ChartBridge.h
     src/ui/Theme.h

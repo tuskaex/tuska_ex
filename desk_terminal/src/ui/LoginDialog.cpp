@@ -1,4 +1,5 @@
 #include "ui/LoginDialog.h"
+#include "core/ApiError.h"
 #include "ui/Theme.h"
 #include "ui/Icons.h"
 #include <QVBoxLayout>
@@ -559,9 +560,7 @@ void LoginDialog::doKeyLogin() {
         const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
 
         if (reply->error() != QNetworkReply::NoError || http >= 400) {
-            QString detail = o.value("detail").toString();
-            if (detail.isEmpty()) detail = reply->errorString();
-            setStatus(tr("Sign-in failed: %1").arg(detail), true);
+            setStatus(tr("Sign-in failed: %1").arg(apiDetail(o, reply->errorString())), true);
             return;
         }
 
@@ -637,9 +636,7 @@ void LoginDialog::postLogin(const QString& url, const QString& email,
 
         setBusy(false);
         if (reply->error() != QNetworkReply::NoError || http >= 400) {
-            QString detail = o.value("detail").toString();
-            if (detail.isEmpty()) detail = reply->errorString();
-            setStatus(tr("Sign-in failed: %1").arg(detail), true);
+            setStatus(tr("Sign-in failed: %1").arg(apiDetail(o, reply->errorString())), true);
             return;
         }
 
@@ -809,9 +806,8 @@ void LoginDialog::mintAlgoKey() {
                 accept();
                 return;
             }
-            QString detail = o.value("detail").toString();
-            if (detail.isEmpty()) detail = reply->errorString();
-            setStatus(tr("Could not prepare market data: %1").arg(detail), true);
+            setStatus(tr("Could not prepare market data: %1")
+                      .arg(apiDetail(o, reply->errorString())), true);
             return;
         }
 

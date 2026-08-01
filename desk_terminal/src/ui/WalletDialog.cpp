@@ -1,4 +1,5 @@
 #include "ui/WalletDialog.h"
+#include "core/ApiError.h"
 #include "ui/Theme.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -127,24 +128,6 @@ void WalletDialog::setStatus(const QString& text, bool error) {
 double WalletDialog::availableOnAccount() const {
     const QString id = m_account->currentData().toString();
     return m_funds.value(id).free;
-}
-
-// FastAPI answers business errors with {"detail": "text"} but validation errors
-// with {"detail": [{"msg": ..., "loc": [...]}, ...]}. QJsonValue::toString() on
-// that array yields an empty string, so a 422 used to surface as Qt's generic
-// "server replied: Unprocessable Entity" with the actual reason thrown away.
-static QString apiDetail(const QJsonObject& o, const QString& fallback) {
-    const QJsonValue d = o.value("detail");
-    if (d.isString()) return d.toString();
-    if (d.isArray()) {
-        QStringList parts;
-        for (const QJsonValue& v : d.toArray()) {
-            const QString msg = v.toObject().value("msg").toString();
-            if (!msg.isEmpty()) parts << msg;
-        }
-        if (!parts.isEmpty()) return parts.join("; ");
-    }
-    return fallback;
 }
 
 static QNetworkRequest bearerReq(const QString& url, const Config& cfg) {

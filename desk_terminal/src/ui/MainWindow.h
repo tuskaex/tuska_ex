@@ -53,6 +53,11 @@ private:
     void toggleTheme();
     void togglePrivacy();
     void refreshAll();
+    // Starts/stops the JWT renewal timer from whatever is in m_cfg. Every
+    // sign-in path has to call this: the access token dies after ~45 minutes,
+    // and a session that never renews takes the wallet and per-position close
+    // down with it.
+    void applySessionRenewal();
     void updateIdentity();      // the "name | type | account no." line by the logo
     // Money as text, or a mask when privacy mode is on.
     QString money(double v, const QString& currency = QString()) const;
