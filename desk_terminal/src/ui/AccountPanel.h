@@ -23,6 +23,10 @@ public:
 
 public slots:
     void setAccount(const AccountInfo& a);
+    // Unrealised P/L of every open position, summed. Pushed in by MainWindow
+    // from the same positions snapshot the blotter renders, so the strip can
+    // never disagree with the Profit column above it.
+    void setFloatingPL(double pl, int openPositions);
     void setPrivacy(bool on);     // mask the money figures
     void clear();                 // blank every figure (used on log out)
     void applyTheme();
@@ -41,7 +45,12 @@ private:
 
     QHash<QString, QLabel*> m_values;
     QHash<QString, QLabel*> m_keys;    // captions, restyled on theme change
+    void renderFloating();
+
     QPushButton* m_refresh;
     AccountInfo  m_last;   // re-rendered when privacy/theme flips
+    double m_floating = 0.0;
+    int    m_openCount = 0;
+    bool   m_hasFloating = false;   // no positions polled yet -> show a dash
     bool m_privacy = false;
 };

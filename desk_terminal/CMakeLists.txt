@@ -22,6 +22,7 @@ set(SOURCES
     src/ui/LoginDialog.cpp
     src/ui/WatchlistWidget.cpp
     src/ui/WebChartWidget.cpp
+    src/ui/ChartArea.cpp
     src/ui/OrderTicket.cpp
     src/ui/AccountPanel.cpp
     src/ui/PositionsPanel.cpp
@@ -40,6 +41,7 @@ set(HEADERS
     src/ui/LoginDialog.h
     src/ui/WatchlistWidget.h
     src/ui/WebChartWidget.h
+    src/ui/ChartArea.h
     src/ui/OrderTicket.h
     src/ui/AccountPanel.h
     src/ui/PositionsPanel.h

@@ -7,7 +7,7 @@
 class ApiClient;
 class PriceStream;
 class WatchlistWidget;
-class WebChartWidget;
+class ChartArea;
 class OrderTicket;
 class AccountPanel;
 class PositionsPanel;
@@ -15,6 +15,7 @@ class QLabel;
 class QTimer;
 class QMenu;
 class QAction;
+class QActionGroup;
 class QSplitter;
 class QFrame;
 
@@ -62,7 +63,7 @@ private:
     PriceStream* m_stream;
 
     WatchlistWidget* m_watch;
-    WebChartWidget*  m_chart;
+    ChartArea*       m_charts;   // 1 / 2 / 4 chart panes; the watchlist drives the active one
     OrderTicket*     m_ticket;
     AccountPanel*    m_account;
     PositionsPanel*  m_positions;
@@ -74,6 +75,7 @@ private:
     QAction* m_darkAction   = nullptr;
     QAction* m_privacyAction = nullptr;
     QAction* m_bloterAction = nullptr;  // show/hide the trade blotter
+    QActionGroup* m_layoutGroup = nullptr;  // 1 / 2 / 4 chart panes
     QFrame*  m_identityDivider = nullptr;  // hairline before the first menu
     QSplitter* m_centerSplit = nullptr;
 

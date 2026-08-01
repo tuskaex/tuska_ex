@@ -7,6 +7,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QComboBox>
+#include <QDateEdit>
+#include <QLabel>
+#include <QDateTime>
 #include <QFont>
 #include <QColor>
 
@@ -57,6 +61,91 @@ static QTableWidgetItem* ticketCell(const QString& id) {
     return it;
 }
 
+// The API sends "2026-07-17T18:35:00+00:00", sometimes with milliseconds.
+// Qt::ISODate rejects the fractional-second form, so try both.
+static QDateTime parseIso(const QString& iso) {
+    QDateTime dt = QDateTime::fromString(iso, Qt::ISODate);
+    if (!dt.isValid()) dt = QDateTime::fromString(iso, Qt::ISODateWithMs);
+    return dt;
+}
+
+bool PositionsPanel::passes(int tab, const QString& iso) const {
+    const QComboBox* box = m_range[tab];
+    if (!box) return true;                       // called before the bar is built
+    const int mode = box->currentIndex();
+    if (mode == RangeAll) return true;
+
+    const QDateTime dt = parseIso(iso);
+    if (!dt.isValid()) return true;              // see the note in the header
+
+    // Compared in UTC because the Time column displays the server's UTC string
+    // verbatim. Filtering in local time would let "Today" hide a row whose
+    // visible date is today, which reads as data loss rather than a filter.
+    const QDate d     = dt.toUTC().date();
+    const QDate today = QDateTime::currentDateTimeUtc().date();
+
+    switch (mode) {
+    case RangeToday: return d == today;
+    case RangeWeek:  return d >= today.addDays(-(today.dayOfWeek() - 1)) && d <= today;
+    case RangeDay:   return m_date[tab] && d == m_date[tab]->date();
+    }
+    return true;
+}
+
+QWidget* PositionsPanel::buildFilterBar(int tab) {
+    auto* bar = new QWidget;
+    auto* h = new QHBoxLayout(bar);
+    h->setContentsMargins(6, 3, 6, 3);
+    h->setSpacing(6);
+
+    auto* label = new QLabel(tr("Period:"));
+
+    auto* box = new QComboBox;
+    box->setCursor(Qt::PointingHandCursor);
+    box->addItems({tr("Today"), tr("This week"), tr("All"), tr("Date")});
+    // Defaults to All, NOT Today. On the Trade tab a date filter hides open
+    // positions, and a position opened yesterday is still very much open — a
+    // blotter that silently omits live risk on first paint is not acceptable.
+    box->setCurrentIndex(RangeAll);
+
+    auto* date = new QDateEdit(QDate::currentDate());
+    date->setCalendarPopup(true);
+    date->setDisplayFormat(QStringLiteral("yyyy.MM.dd"));
+    date->setVisible(false);                     // only meaningful for "Date"
+
+    m_range[tab] = box;
+    m_date[tab]  = date;
+
+    auto rerender = [this, tab]() {
+        // Re-render from the last snapshot: the stored data is unfiltered, so
+        // widening the range never needs another round-trip.
+        if (tab == 0)      setPositions(m_lastPositions);
+        else if (tab == 1) setOrders(m_lastOrders);
+        else               setHistory(m_lastHistory);
+    };
+    connect(box, &QComboBox::currentIndexChanged, this, [date, rerender](int i) {
+        date->setVisible(i == RangeDay);
+        rerender();
+    });
+    connect(date, &QDateEdit::dateChanged, this, [rerender]() { rerender(); });
+
+    h->addWidget(label);
+    h->addWidget(box);
+    h->addWidget(date);
+    h->addStretch();
+    return bar;
+}
+
+QWidget* PositionsPanel::wrapTable(int tab, QTableWidget* table) {
+    auto* page = new QWidget;
+    auto* v = new QVBoxLayout(page);
+    v->setContentsMargins(0, 0, 0, 0);
+    v->setSpacing(0);
+    v->addWidget(buildFilterBar(tab));
+    v->addWidget(table, 1);
+    return page;
+}
+
 PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_tabs = new QTabWidget;
     m_tabs->setDocumentMode(true);
@@ -76,9 +165,11 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_posTable->horizontalHeader()->setSectionResizeMode(closeCol, QHeaderView::Fixed);
     m_posTable->setColumnWidth(closeCol, 64);
 
-    m_tabs->addTab(m_posTable,   tr("Trade"));
-    m_tabs->addTab(m_orderTable, tr("Pending"));
-    m_tabs->addTab(m_histTable,  tr("History"));
+    // Each tab is table + its own filter bar, so a range chosen on History does
+    // not silently reach into the open-positions tab.
+    m_tabs->addTab(wrapTable(0, m_posTable),   tr("Trade"));
+    m_tabs->addTab(wrapTable(1, m_orderTable), tr("Pending"));
+    m_tabs->addTab(wrapTable(2, m_histTable),  tr("History"));
 
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(0, 0, 0, 0);
@@ -105,18 +196,29 @@ void PositionsPanel::setCollapsed(bool collapsed) {
     m_tabs->setVisible(!collapsed);
 }
 
+// Tab caption: plain count normally, "shown/total" while a filter is hiding
+// rows — otherwise a filtered tab reads as "you have no positions".
+static QString tabCaption(const QString& name, int shown, int total) {
+    return shown == total ? QString("%1 (%2)").arg(name).arg(total)
+                          : QString("%1 (%2/%3)").arg(name).arg(shown).arg(total);
+}
+
 void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
     m_lastPositions = positions;
+    QVector<OpenPosition> shown;
+    for (const OpenPosition& p : positions)
+        if (passes(0, p.openedAt)) shown.append(p);
+
     const auto& c = Theme::p();
-    m_tabs->setTabText(0, tr("Trade (%1)").arg(positions.size()));
-    m_posTable->setRowCount(positions.size());
+    m_tabs->setTabText(0, tabCaption(tr("Trade"), shown.size(), positions.size()));
+    m_posTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;
     // Money columns are masked in privacy mode; prices are not sensitive.
     auto cash = [this](double v) {
         return m_privacy ? QString::fromUtf8(MASK) : fmt(v);
     };
-    for (const OpenPosition& p : positions) {
+    for (const OpenPosition& p : shown) {
         m_posTable->setItem(r, 0, cell(p.symbol));
         m_posTable->setItem(r, 1, ticketCell(p.id));
         m_posTable->setItem(r, 2, cell(shortTime(p.openedAt)));
@@ -140,15 +242,18 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         auto* closeBtn = new QPushButton;
         closeBtn->setFixedSize(22, 18);
         closeBtn->setCursor(Qt::PointingHandCursor);
-        closeBtn->setToolTip(tr("Close all %1 positions").arg(p.symbol));
+        closeBtn->setToolTip(tr("Close this %1 position (%2 lots)").arg(p.symbol).arg(fmt(p.lots)));
         closeBtn->setIcon(Icons::close(QColor(c.down), 12));
         closeBtn->setIconSize(QSize(12, 12));
         closeBtn->setStyleSheet(QString(
             "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
             "QPushButton:hover{background:%2; border-color:%2;}")
             .arg(c.btnBorder, c.down));
-        const QString sym = p.symbol;
-        connect(closeBtn, &QPushButton::clicked, this, [this, sym]() { emit closeSymbol(sym); });
+        // Capture the position's own id: this closes one row, not the symbol.
+        const QString id = p.id, sym = p.symbol;
+        const double lots = p.lots;
+        connect(closeBtn, &QPushButton::clicked, this,
+                [this, id, sym, lots]() { emit closePosition(id, sym, lots); });
 
         // Centred in the cell — a fixed-size widget handed straight to
         // setCellWidget() sticks to the left edge.
@@ -163,12 +268,16 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
 
 void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
     m_lastOrders = orders;
+    QVector<PendingOrder> shown;
+    for (const PendingOrder& o : orders)
+        if (passes(1, o.createdAt)) shown.append(o);
+
     const auto& c = Theme::p();
-    m_tabs->setTabText(1, tr("Pending (%1)").arg(orders.size()));
-    m_orderTable->setRowCount(orders.size());
+    m_tabs->setTabText(1, tabCaption(tr("Pending"), shown.size(), orders.size()));
+    m_orderTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;
-    for (const PendingOrder& o : orders) {
+    for (const PendingOrder& o : shown) {
         m_orderTable->setItem(r, 0, cell(o.symbol));
         m_orderTable->setItem(r, 1, ticketCell(o.id));
         m_orderTable->setItem(r, 2, cell(shortTime(o.createdAt)));
@@ -188,15 +297,19 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
 
 void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
     m_lastHistory = history;
+    QVector<HistoryTrade> shown;
+    for (const HistoryTrade& h : history)
+        if (passes(2, h.closedAt)) shown.append(h);   // closed time, not open
+
     const auto& c = Theme::p();
-    m_tabs->setTabText(2, tr("History (%1)").arg(history.size()));
-    m_histTable->setRowCount(history.size());
+    m_tabs->setTabText(2, tabCaption(tr("History"), shown.size(), history.size()));
+    m_histTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;
     auto cash = [this](double v) {
         return m_privacy ? QString::fromUtf8(MASK) : fmt(v);
     };
-    for (const HistoryTrade& h : history) {
+    for (const HistoryTrade& h : shown) {
         m_histTable->setItem(r, 0, cell(h.symbol));
         m_histTable->setItem(r, 1, ticketCell(h.id));
         m_histTable->setItem(r, 2, cell(shortTime(h.closedAt)));

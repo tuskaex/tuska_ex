@@ -33,6 +33,10 @@ AccountPanel::AccountPanel(QWidget* parent) : QWidget(parent) {
     // Order mirrors MT5's status line exactly.
     addField(row, tr("Balance:"),      "balance");
     addField(row, tr("Equity:"),       "equity");
+    // Sits next to Equity because it is the difference between the two: equity
+    // is balance plus this. MT5 calls it Profit; "Floating P/L" is spelled out
+    // here so it cannot be mistaken for realised, withdrawable money.
+    addField(row, tr("Floating P/L:"), "floating");
     addField(row, tr("Margin:"),       "margin");
     addField(row, tr("Free margin:"),  "free");
     addField(row, tr("Margin level:"), "level");
@@ -76,17 +80,50 @@ void AccountPanel::applyTheme() {
         .arg(c.btnBorder, c.btnHover, c.accent));
 
     setAccount(m_last);   // re-applies the equity colour for the new palette
+    renderFloating();     // ditto for the P/L colour, which the loop above reset
 }
 
 void AccountPanel::setPrivacy(bool on) {
     m_privacy = on;
     setAccount(m_last);
+    renderFloating();
 }
 
 // setAccount() ignores an invalid AccountInfo by design (a failed poll must not
 // blank a good reading), so logging out needs an explicit reset.
+void AccountPanel::setFloatingPL(double pl, int openPositions) {
+    m_floating    = pl;
+    m_openCount   = openPositions;
+    m_hasFloating = true;
+    renderFloating();
+}
+
+void AccountPanel::renderFloating() {
+    const auto& c = Theme::p();
+    QLabel* v = m_values.value("floating");
+    if (!v) return;
+
+    if (!m_hasFloating) { v->setText("—"); return; }
+    v->setText(m_privacy ? QString::fromUtf8(MASK)
+                         : QString("%L1").arg(m_floating, 0, 'f', 2));
+    // Flat is deliberately neutral rather than green: with no positions open
+    // the figure is 0.00, and painting that as profit would be misleading.
+    const QString col = m_openCount == 0 ? c.muted
+                      : m_floating > 0   ? c.up
+                      : m_floating < 0   ? c.down : c.textStrong;
+    v->setStyleSheet(QString("background:transparent; font-size:11px; font-weight:700;"
+                             "font-family:Consolas,monospace; color:%1;").arg(col));
+    v->setToolTip(m_openCount == 0
+                  ? tr("No open positions")
+                  : tr("Unrealised P/L across %n open position(s). Becomes real "
+                       "balance only when the positions close.", "", m_openCount));
+}
+
 void AccountPanel::clear() {
     m_last = AccountInfo{};
+    m_floating = 0.0;
+    m_openCount = 0;
+    m_hasFloating = false;
     const auto& c = Theme::p();
     for (QLabel* v : m_values) {
         v->setText("—");

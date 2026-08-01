@@ -1,6 +1,7 @@
 #include "ui/MainWindow.h"
 #include "ui/WatchlistWidget.h"
 #include "ui/WebChartWidget.h"
+#include "ui/ChartArea.h"
 #include "ui/OrderTicket.h"
 #include "ui/AccountPanel.h"
 #include "ui/PositionsPanel.h"
@@ -14,6 +15,7 @@
 #include <QMenuBar>
 #include <QMenu>
 #include <QAction>
+#include <QActionGroup>
 #include <QLabel>
 #include <QTimer>
 #include <QMessageBox>
@@ -39,7 +41,7 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
 
     // --- widgets ---
     m_watch     = new WatchlistWidget;
-    m_chart     = new WebChartWidget(m_api, m_stream);   // TradingView via WebEngine
+    m_charts    = new ChartArea(m_api, m_stream);        // 1/2/4 TradingView panes
     m_ticket    = new OrderTicket;
     m_account   = new AccountPanel;
     m_positions = new PositionsPanel;
@@ -49,7 +51,7 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
 
     // The one-click strip floats in the chart's toolbar band, in the gap
     // between TradingView's Indicators/undo controls and its icon cluster.
-    m_chart->setOverlayWidget(m_ticket);
+    m_charts->setOverlayWidget(m_ticket);
 
     // ── blotter + the account line beneath it ──
     auto* bottom = new QWidget;
@@ -61,18 +63,18 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
 
     // ── centre column: chart over blotter ──
     m_centerSplit = new QSplitter(Qt::Vertical);
-    m_centerSplit->addWidget(m_chart);
+    m_centerSplit->addWidget(m_charts);
     m_centerSplit->addWidget(bottom);
     // Without explicit floors the web view reports a very large minimum width,
     // the outer splitter can no longer shrink this column, and the market watch
     // gets squeezed off the left edge.
-    m_chart->setMinimumWidth(320);
+    m_charts->setMinimumWidth(320);
     bottom->setMinimumWidth(320);
     // A floor, not a preference: the first sizing pass runs before the window
     // has a real height, and without this the blotter was handed 0px and the
     // chart simply swallowed the whole column.
     bottom->setMinimumHeight(150);
-    m_chart->setMinimumHeight(200);
+    m_charts->setMinimumHeight(200);
     m_centerSplit->setMinimumWidth(320);
     m_centerSplit->setStretchFactor(0, 1);   // chart takes the extra space
     m_centerSplit->setStretchFactor(1, 0);
@@ -161,6 +163,31 @@ void MainWindow::buildMenuBar() {
     m_privacyAction->setChecked(m_cfg.privacy);
     connect(m_privacyAction, &QAction::triggered, this, &MainWindow::togglePrivacy);
 
+    // ── chart layout: 1 / 2 / 4 panes ──
+    view->addSeparator();
+    QMenu* layout = view->addMenu(tr("&Chart layout"));
+    m_layoutGroup = new QActionGroup(this);
+    m_layoutGroup->setExclusive(true);
+    struct { const char* text; int count; } modes[] = {
+        {QT_TR_NOOP("&1 chart"),           1},
+        {QT_TR_NOOP("&2 charts (side by side)"), 2},
+        {QT_TR_NOOP("&4 charts (2 x 2)"),  4},
+    };
+    for (const auto& m : modes) {
+        QAction* a = layout->addAction(tr(m.text));
+        a->setCheckable(true);
+        a->setChecked(m.count == 1);
+        a->setData(m.count);
+        m_layoutGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, c = m.count]() {
+            m_charts->setChartCount(c);
+            // Extra panes are useless in a sliver of height; give the charts
+            // room back from the blotter when the grid grows.
+            if (c > 1 && m_centerSplit->height() > 500)
+                m_centerSplit->setSizes({m_centerSplit->height() - 170, 170});
+        });
+    }
+
     view->addSeparator();
     m_bloterAction = view->addAction(tr("Show &trade panel"));
     m_bloterAction->setCheckable(true);
@@ -240,7 +267,7 @@ void MainWindow::toggleTheme() {
     Theme::setMode(Theme::isDark() ? Theme::Mode::Light : Theme::Mode::Dark);
     m_cfg.theme = Theme::name();
     m_cfg.save();
-    m_chart->setTheme(Theme::name());     // TradingView + the position overlay
+    m_charts->setTheme(Theme::name());    // TradingView + the position overlay
 }
 
 void MainWindow::togglePrivacy() {
@@ -350,14 +377,54 @@ void MainWindow::connectServices() {
     connect(m_account, &AccountPanel::refreshRequested, this, [this]() { m_api->fetchAccount(); });
 
     // Blotter (positions / pending / history)
+    // Floating P/L is summed from the same snapshot the blotter draws rather
+    // than derived from equity-minus-balance: those two come from different
+    // reads and drift apart between polls, which shows up as a status strip
+    // disagreeing with the Profit column right above it.
+    connect(m_api, &ApiClient::positionsReceived, this,
+            [this](const QVector<OpenPosition>& ps) {
+        double pl = 0.0;
+        for (const OpenPosition& p : ps) pl += p.profit;
+        m_account->setFloatingPL(pl, ps.size());
+    });
     connect(m_api, &ApiClient::positionsReceived, m_positions, &PositionsPanel::setPositions);
-    connect(m_api, &ApiClient::positionsReceived, m_chart,     &WebChartWidget::setPositions);
+    connect(m_api, &ApiClient::positionsReceived, m_charts,    &ChartArea::setPositions);
     connect(m_api, &ApiClient::ordersReceived,    m_positions, &PositionsPanel::setOrders);
     connect(m_api, &ApiClient::historyReceived,   m_positions, &PositionsPanel::setHistory);
-    connect(m_positions, &PositionsPanel::closeSymbol, this, [this](const QString& s) {
-        if (QMessageBox::question(this, tr("Close positions"),
-                tr("Close ALL open %1 positions?").arg(s)) == QMessageBox::Yes)
-            m_api->closePositions(s);
+    // One row's ✕ closes THAT position. The symbol-wide close lives on the
+    // one-click strip above, and is the only thing that should ever close more
+    // than the trader pointed at.
+    connect(m_positions, &PositionsPanel::closePosition, this,
+            [this](const QString& id, const QString& sym, double lots) {
+        // Closing one position goes through /api/v1/positions/{id}/close, which
+        // authenticates with the JWT. A session signed in with a pasted API key
+        // has no token, so say why instead of firing a request that 401s with a
+        // message no trader can act on. Never silently fall back to the
+        // symbol-wide close — that is the bug this replaced.
+        if (m_cfg.token.trimmed().isEmpty()) {
+            QMessageBox::information(this, tr("Close position"),
+                tr("Closing a single position needs an email/password sign-in.\n\n"
+                   "This session is authenticated with an API key, which can only "
+                   "close every %1 position at once — use CLOSE on the one-click "
+                   "strip if that is what you want.").arg(sym));
+            return;
+        }
+        if (QMessageBox::question(this, tr("Close position"),
+                tr("Close this %1 position (%2 lots)?")
+                    .arg(sym).arg(QString::number(lots, 'f', 2))) == QMessageBox::Yes)
+            m_api->closePositionById(id);
+    });
+
+    // A close moves a row from Trade to History, but the 4s poll only refreshes
+    // positions and orders — History is otherwise fetched once at startup, so
+    // the trade just closed would not appear there until the next restart.
+    connect(m_api, &ApiClient::positionOpResult, this,
+            [this](const QString&, const QString& op, bool ok, const QString& msg) {
+        if (op != "close") return;
+        if (!ok) { setStatus(msg, true); return; }
+        m_api->fetchPositions();
+        m_api->fetchHistory();
+        m_api->fetchAccount();
     });
 
     // Live stream fan-out
@@ -389,7 +456,7 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
         m_specs.insert(s.symbol, s);
 
     m_watch->setSymbols(symbols);
-    m_chart->setSymbols(symbols);   // feed symbol metadata to the TradingView datafeed
+    m_charts->setSymbols(symbols);  // feed symbol metadata to every pane's datafeed
     // Snapshot prices immediately (before first ticks arrive).
     m_api->fetchPrices({});
 
@@ -412,7 +479,7 @@ void MainWindow::onSymbolActivated(const QString& symbol) {
     m_currentSymbol = symbol;
     if (m_specs.contains(symbol))
         m_ticket->setSymbolSpec(m_specs.value(symbol));
-    m_chart->showSymbol(symbol);
+    m_charts->showSymbol(symbol);   // active pane only
 }
 
 void MainWindow::onTradeResult(const TradeResult& r) {
