@@ -105,7 +105,6 @@ const NAV_THEME = {
     panel: 'border-gray-200 bg-white',
     panelItem: 'text-gray-900 hover:bg-[#D60101]/10 hover:text-[#D60101]',
     panelMuted: 'text-gray-400',
-    panelBadge: 'bg-gray-100 text-gray-400',
     divider: 'border-black/5',
     dividerStrong: 'border-gray-200',
     drawer: 'bg-white/80',
@@ -129,7 +128,6 @@ const NAV_THEME = {
     panel: 'border-white/10 bg-[#0b0e13]',
     panelItem: 'text-slate-200 hover:bg-[#D60101]/15 hover:text-[#D60101]',
     panelMuted: 'text-slate-500',
-    panelBadge: 'bg-white/10 text-slate-400',
     divider: 'border-white/10',
     dividerStrong: 'border-white/10',
     drawer: 'bg-[#080a0e]/90',
@@ -493,8 +491,11 @@ export default function MarketingNavbar({
               why it was removed; it is back because the control is wanted. Drop the
               build into that directory and it works with no code change. */}
           {/* Desktop-terminal download: icon button opens a Windows / macOS
-              picker on click. Windows ships the signed-later .exe installer;
-              macOS ships a .dmg (coming soon until a Mac build is provided). */}
+              picker on click. Windows ships the .exe installer built by
+              installer.iss; macOS ships the .dmg built by package-macos.sh.
+              Both rows are plain links to /downloads — the picker only chooses
+              a file, it does not sniff the visitor's platform, so a trader on
+              either OS can still fetch the other build deliberately. */}
           <div className="relative">
             <button
               type="button"
@@ -539,19 +540,27 @@ export default function MarketingNavbar({
                     </svg>
                     Download for Windows
                   </a>
-                  {/* macOS — coming soon until a Mac-built .dmg is provided */}
-                  <div
+                  {/* macOS.
+                      "universal" in the filename is load-bearing: the dmg holds
+                      an arm64 + x86_64 binary, so it opens on both Apple Silicon
+                      and Intel, and package-macos.sh derives that word from
+                      `lipo -archs` on the built binary rather than from the build
+                      machine. If a single-arch build ever ships, the file it
+                      writes is named -arm64/-x86_64 and this link 404s — which
+                      is the point. A wrong-arch download that fails at launch on
+                      the trader's Mac would be far worse than a missing file. */}
+                  <a
+                    href="/downloads/TuskaExTerminal-1.0.1-universal.dmg"
+                    download="TuskaExTerminal.dmg"
                     role="menuitem"
-                    aria-disabled="true"
-                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold cursor-not-allowed ${c.panelMuted}`}
-                    title="macOS build coming soon"
+                    onClick={() => setTerminalMenuOpen(false)}
+                    className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 text-sm font-semibold transition-colors ${c.panelItem}`}
                   >
                     <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="currentColor" aria-hidden="true">
                       <path d="M16.4 12.9c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.6.8-3.3.8-.7 0-1.7-.8-2.8-.8-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.5 2.2 2.6 2.2 1 0 1.4-.7 2.7-.7 1.2 0 1.6.7 2.7.6 1.1 0 1.8-1 2.5-2 .8-1.2 1.1-2.3 1.1-2.3s-2.1-.8-2.1-3.2ZM14.3 6.3c.6-.7 1-1.7.9-2.7-.8 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6.9.1 1.8-.5 2.5-1.2Z" />
                     </svg>
-                    <span className="flex-1">Download for macOS</span>
-                    <span className={`text-[9px] font-bold uppercase tracking-wide rounded px-1.5 py-0.5 ${c.panelBadge}`}>Soon</span>
-                  </div>
+                    Download for macOS
+                  </a>
                 </div>
               </>
             )}
@@ -713,14 +722,18 @@ export default function MarketingNavbar({
             {/* Terminal download, mobile counterpart of the desktop picker.
                 Restored alongside it so the control is not desktop-only.
 
-                "Download APK" and the macOS row stay removed: there is no
-                Android build either, and macOS never had one at all — the
-                desktop picker still shows macOS as "Soon", which is enough
-                of a signal without repeating it here.
+                Both platforms are listed here now that a Mac build exists —
+                the desktop picker offers the choice, so hiding one of the two
+                on a narrow viewport would make the same site advertise a
+                different set of builds depending on window width. "Download
+                APK" stays removed: there is genuinely no Android build.
 
-                Same caveat as the desktop link: this 404s until an
-                installer is placed in /opt/tuskaex/downloads. */}
-            <li className={`pt-3 border-t ${c.dividerStrong}`}>
+                Same caveat as the desktop links: these 404 until the builds
+                are placed in /opt/tuskaex/downloads. */}
+            {/* flex-col, not space-y: the two pills are inline-flex, so in
+                normal flow they would sit on a text baseline and pick up the
+                whitespace between the tags as an extra gap. */}
+            <li className={`flex flex-col gap-2 pt-3 border-t ${c.dividerStrong}`}>
               <a
                 href="/downloads/TuskaExTerminal-Setup-1.0.1.exe"
                 download="TuskaExTerminal-Setup.exe"
@@ -729,6 +742,15 @@ export default function MarketingNavbar({
               >
                 <Monitor className="w-4 h-4" strokeWidth={2} />
                 Terminal for Windows
+              </a>
+              <a
+                href="/downloads/TuskaExTerminal-1.0.1-universal.dmg"
+                download="TuskaExTerminal.dmg"
+                onClick={() => setOpen(false)}
+                className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
+              >
+                <Monitor className="w-4 h-4" strokeWidth={2} />
+                Terminal for macOS
               </a>
             </li>
             {showCta && (

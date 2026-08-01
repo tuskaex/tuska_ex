@@ -2,8 +2,14 @@
 # build-msvc/ also holds the deployed copy of web/, the Qt runtime DLLs and
 # vc_redist.x64.exe — none of it belongs in the repo, and Qt6WebEngineCore.dll
 # alone is 147 MB (over GitHub's 100 MB per-file limit).
+#
+# build-macos/ is the same story on the other platform and needs its own line,
+# since the pattern above only matches the exact names: the .app bundle inside
+# it is 553 MB, macdeployqt having copied every Qt framework and the whole
+# Chromium helper into it, and QtWebEngineCore alone clears GitHub's limit.
 build/
 build-msvc/
+build-macos/
 dist/
 
 # ---- logs / scratch ----

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for a HARDENED-RUNTIME signature (Developer ID + notarisation).
+  The ad-hoc signature build-macos.sh applies by default does not use the
+  hardened runtime and therefore does not need this file — it exists so the
+  distribution build works the day a Developer ID certificate is available:
+
+      codesign --force --options runtime --timestamp \
+               --entitlements resources/terminal.entitlements \
+               --sign "Developer ID Application: ... (TEAMID)" "TuskaEx Terminal.app"
+
+  Every key here is required by QtWebEngine, which embeds Chromium:
+    allow-jit                        V8 compiles JavaScript to native code.
+    allow-unsigned-executable-memory Chromium's allocator maps RWX pages.
+    disable-library-validation       macdeployqt copies Qt frameworks that were
+                                     signed by the Qt project (or ad-hoc), not
+                                     by our team id; without this the loader
+                                     refuses them at launch.
+  There is deliberately NO app-sandbox key: the terminal is not sandboxed, so
+  outbound HTTPS/WebSocket needs no network entitlement.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>

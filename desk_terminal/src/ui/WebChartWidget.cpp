@@ -11,6 +11,7 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QDir>
+#include <QStandardPaths>
 #include <QDateTime>
 #include <QResizeEvent>
 #include <QUrl>
@@ -19,8 +20,29 @@
 #define TX_SOURCE_WEB_DIR ""
 #endif
 
+// Where the JS diagnostic log goes.
+//
+// On Windows the terminal is installed per-user and the exe directory is
+// writable, so the log sits next to terminal.exe — easy to find and to attach
+// to a bug report.
+//
+// A mac app bundle in /Applications is NOT writable without admin rights, and
+// Contents/MacOS is inside the code signature: writing there would either fail
+// silently (leaving no diagnostics at all) or break the signature. So the log
+// moves to Application Support, which is per-user and writable.
+static QString diagLogPath() {
+#ifdef Q_OS_MACOS
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (!dir.isEmpty()) {
+        QDir().mkpath(dir);
+        return dir + "/chart-diag.log";
+    }
+#endif
+    return QCoreApplication::applicationDirPath() + "/chart-diag.log";
+}
+
 // Logs JS console output + page errors so chart issues are diagnosable without
-// opening devtools. Writes to <exe-dir>/chart-diag.log.
+// opening devtools. See diagLogPath() for where it lands.
 class DiagPage : public QWebEnginePage {
 public:
     using QWebEnginePage::QWebEnginePage;
@@ -29,7 +51,7 @@ protected:
                                   int line, const QString& source) override {
         const char* lv = level == InfoMessageLevel ? "INFO"
                        : level == WarningMessageLevel ? "WARN" : "ERROR";
-        QFile f(QCoreApplication::applicationDirPath() + "/chart-diag.log");
+        QFile f(diagLogPath());
         if (f.open(QIODevice::Append | QIODevice::Text)) {
             QString src = source.section('/', -1);
             f.write(QString("%1 [%2] %3:%4  %5\n")
@@ -62,7 +84,7 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
     });
 
     // Truncate the diagnostic log at startup, then record load status.
-    const QString diag = QCoreApplication::applicationDirPath() + "/chart-diag.log";
+    const QString diag = diagLogPath();
     QFile::remove(diag);
     connect(m_view, &QWebEngineView::loadFinished, this, [diag](bool ok) {
         QFile f(diag);
@@ -92,8 +114,17 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
 }
 
 QString WebChartWidget::resolveIndexHtml() {
-    // 1) next to the executable (deployed layout: <exe>/web/index.html)
-    const QString beside = QCoreApplication::applicationDirPath() + "/web/index.html";
+    const QString appDir = QCoreApplication::applicationDirPath();
+#ifdef Q_OS_MACOS
+    // 0) inside the app bundle. applicationDirPath() is Contents/MacOS, and
+    //    CMake's POST_BUILD step puts the web layer in Contents/Resources/web —
+    //    the only location Apple treats as bundle data rather than as code.
+    const QString bundled =
+        QDir::cleanPath(appDir + "/../Resources/web/index.html");
+    if (QFileInfo::exists(bundled)) return bundled;
+#endif
+    // 1) next to the executable (deployed Windows layout: <exe>/web/index.html)
+    const QString beside = appDir + "/web/index.html";
     if (QFileInfo::exists(beside)) return beside;
     // 2) source tree (dev)
     const QString src = QStringLiteral(TX_SOURCE_WEB_DIR) + "/index.html";
