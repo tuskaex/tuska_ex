@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <file>tuskaex-256.png</file>
+        <file>tuskaex.ico</file>
+    </qresource>
+</RCC>
