@@ -35,9 +35,10 @@ public slots:
     void applyTheme();
 
 signals:
-    // One specific position. symbol/lots are carried only so the confirmation
-    // can name what is about to be closed.
-    void closePosition(const QString& positionId, const QString& symbol, double lots);
+    // One specific position. The whole row is carried, not just its id: the
+    // close dialog shows side, size and P/L, and re-deriving those from a
+    // later poll could describe a position that has already moved.
+    void closePosition(const OpenPosition& position);
 
 private:
     // Time filter, one per tab. Which timestamp it tests depends on the tab:

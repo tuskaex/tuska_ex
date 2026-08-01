@@ -39,7 +39,9 @@ public:
     // partial update, so re-sending the other one from a stale snapshot would
     // silently revert it. level <= 0 asks to remove the bracket.
     void modifyBracket(const QString& positionId, const QString& kind, double level);
-    void closePositionById(const QString& positionId);
+    // lots <= 0 (or >= the position's size) closes it fully; a smaller value is
+    // a partial close and leaves the remainder open.
+    void closePositionById(const QString& positionId, double lots = 0.0);
 
 signals:
     void symbolsReceived(const QVector<SymbolSpec>& symbols);

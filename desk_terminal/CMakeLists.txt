@@ -26,6 +26,7 @@ set(SOURCES
     src/ui/OrderTicket.cpp
     src/ui/AccountPanel.cpp
     src/ui/PositionsPanel.cpp
+    src/ui/ClosePositionDialog.cpp
     src/ui/WalletDialog.cpp
     src/ui/MainWindow.cpp
 )
@@ -45,6 +46,7 @@ set(HEADERS
     src/ui/OrderTicket.h
     src/ui/AccountPanel.h
     src/ui/PositionsPanel.h
+    src/ui/ClosePositionDialog.h
     src/ui/WalletDialog.h
     src/ui/MainWindow.h
 )

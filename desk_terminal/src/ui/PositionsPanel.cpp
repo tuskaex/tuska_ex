@@ -249,11 +249,10 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
             "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
             "QPushButton:hover{background:%2; border-color:%2;}")
             .arg(c.btnBorder, c.down));
-        // Capture the position's own id: this closes one row, not the symbol.
-        const QString id = p.id, sym = p.symbol;
-        const double lots = p.lots;
+        // Capture this row's own position: it closes one position, not the symbol.
+        const OpenPosition row = p;
         connect(closeBtn, &QPushButton::clicked, this,
-                [this, id, sym, lots]() { emit closePosition(id, sym, lots); });
+                [this, row]() { emit closePosition(row); });
 
         // Centred in the cell — a fixed-size widget handed straight to
         // setCellWidget() sticks to the left edge.

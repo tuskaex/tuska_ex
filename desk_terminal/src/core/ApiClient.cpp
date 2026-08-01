@@ -276,9 +276,18 @@ void ApiClient::modifyBracket(const QString& positionId, const QString& kind, do
     handlePositionOp(this, r, positionId, "modify");
 }
 
-void ApiClient::closePositionById(const QString& positionId) {
-    QNetworkReply* r = m_net->post(v1Request("/positions/" + positionId + "/close"),
-                                   QByteArray("{}"));
+void ApiClient::closePositionById(const QString& positionId, double lots) {
+    // The endpoint takes an optional "lots". Omitting it means close the whole
+    // position, so a full close sends {} rather than the size — the server then
+    // uses its own record of the position instead of trusting a number this
+    // client may have read one poll ago.
+    QByteArray body("{}");
+    if (lots > 0.0) {
+        QJsonObject o;
+        o["lots"] = lots;
+        body = QJsonDocument(o).toJson(QJsonDocument::Compact);
+    }
+    QNetworkReply* r = m_net->post(v1Request("/positions/" + positionId + "/close"), body);
     handlePositionOp(this, r, positionId, "close");
 }
 

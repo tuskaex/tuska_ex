@@ -57,13 +57,16 @@ QComboBox#input QAbstractItemView {
     background: %CARDBG%; color: %TEXTSTRONG%; border: 1px solid %BORDER%;
     border-radius: 8px; padding: 4px; selection-background-color: %MENUSEL%; outline: none;
 }
+/* TuskaEx red, to match the brand panel beside it. Safe here and only here:
+   #primary is the sign-in button and nothing else, so this does not bleed into
+   the trading UI, where red means SELL. */
 QPushButton#primary {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 %ACCENTHOVER%, stop:1 %ACCENT%);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #c4161c, stop:1 #8f1015);
     color: #ffffff; border: none; border-radius: 10px;
     font-size: 13px; font-weight: 800; letter-spacing: 0.3px;
 }
 QPushButton#primary:hover {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 %ACCENT%, stop:1 #5b9bff);
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #d81b22, stop:1 #a51218);
 }
 QPushButton#primary:disabled { background: %BTNBG%; color: %DIM%; }
 QPushButton#success {

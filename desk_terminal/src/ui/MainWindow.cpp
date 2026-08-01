@@ -5,6 +5,7 @@
 #include "ui/OrderTicket.h"
 #include "ui/AccountPanel.h"
 #include "ui/PositionsPanel.h"
+#include "ui/ClosePositionDialog.h"
 #include "ui/LoginDialog.h"
 #include "ui/WalletDialog.h"
 #include "core/ApiClient.h"
@@ -395,7 +396,8 @@ void MainWindow::connectServices() {
     // one-click strip above, and is the only thing that should ever close more
     // than the trader pointed at.
     connect(m_positions, &PositionsPanel::closePosition, this,
-            [this](const QString& id, const QString& sym, double lots) {
+            [this](const OpenPosition& pos) {
+        const QString sym = pos.symbol;
         // Closing one position goes through /api/v1/positions/{id}/close, which
         // authenticates with the JWT. A session signed in with a pasted API key
         // has no token, so say why instead of firing a request that 401s with a
@@ -409,10 +411,13 @@ void MainWindow::connectServices() {
                    "strip if that is what you want.").arg(sym));
             return;
         }
-        if (QMessageBox::question(this, tr("Close position"),
-                tr("Close this %1 position (%2 lots)?")
-                    .arg(sym).arg(QString::number(lots, 'f', 2))) == QMessageBox::Yes)
-            m_api->closePositionById(id);
+        // Lot step / minimum come from the instrument spec so the dialog cannot
+        // offer a slice the venue would reject.
+        const SymbolSpec spec = m_specs.value(sym);
+        ClosePositionDialog dlg(pos, spec.lotStep, spec.minLot, this);
+        if (dlg.exec() != QDialog::Accepted) return;
+        // A full close sends no lots at all — see ApiClient::closePositionById.
+        m_api->closePositionById(pos.id, dlg.isFullClose() ? 0.0 : dlg.lotsToClose());
     });
 
     // A close moves a row from Trade to History, but the 4s poll only refreshes
