@@ -14,6 +14,7 @@
 #include <QMouseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkCookie>
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -570,6 +571,7 @@ void LoginDialog::doKeyLogin() {
         m_cfg.apiKey       = key;
         m_cfg.apiSecret    = secret;
         m_cfg.token.clear();
+        m_cfg.refreshToken.clear();   // key auth has no session to refresh
         m_cfg.accountId.clear();
         m_cfg.userName.clear();
         m_cfg.accountsJson = "[]";
@@ -640,6 +642,14 @@ void LoginDialog::postLogin(const QString& url, const QString& email,
             setStatus(tr("Sign-in failed: %1").arg(detail), true);
             return;
         }
+
+        // The refresh credential is only ever an HttpOnly cookie — it is not in
+        // the JSON body. Take it here, because this reply is the one time it is
+        // handed out, and without it the session simply dies 45 minutes later.
+        const QVariant sc = reply->header(QNetworkRequest::SetCookieHeader);
+        for (const QNetworkCookie& ck : sc.value<QList<QNetworkCookie>>())
+            if (ck.name() == "pt_refresh") m_cfg.refreshToken = QString::fromUtf8(ck.value());
+
         onLoginJson(o);
     });
 }

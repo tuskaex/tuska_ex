@@ -129,6 +129,24 @@ double WalletDialog::availableOnAccount() const {
     return m_funds.value(id).free;
 }
 
+// FastAPI answers business errors with {"detail": "text"} but validation errors
+// with {"detail": [{"msg": ..., "loc": [...]}, ...]}. QJsonValue::toString() on
+// that array yields an empty string, so a 422 used to surface as Qt's generic
+// "server replied: Unprocessable Entity" with the actual reason thrown away.
+static QString apiDetail(const QJsonObject& o, const QString& fallback) {
+    const QJsonValue d = o.value("detail");
+    if (d.isString()) return d.toString();
+    if (d.isArray()) {
+        QStringList parts;
+        for (const QJsonValue& v : d.toArray()) {
+            const QString msg = v.toObject().value("msg").toString();
+            if (!msg.isEmpty()) parts << msg;
+        }
+        if (!parts.isEmpty()) return parts.join("; ");
+    }
+    return fallback;
+}
+
 static QNetworkRequest bearerReq(const QString& url, const Config& cfg) {
     QNetworkRequest req{QUrl(url)};
     req.setRawHeader("Authorization", ("Bearer " + cfg.token).toUtf8());
@@ -146,7 +164,7 @@ void WalletDialog::loadWallet() {
         const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
         if (r->error() != QNetworkReply::NoError || http >= 400) {
             setStatus(tr("Couldn't load wallet: %1")
-                      .arg(o.value("detail").toString(r->errorString())), true);
+                      .arg(apiDetail(o, r->errorString())), true);
             return;
         }
 
@@ -249,7 +267,7 @@ void WalletDialog::doTransfer() {
         const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
         if (r->error() != QNetworkReply::NoError || http >= 400) {
             setStatus(tr("Transfer failed: %1")
-                      .arg(o.value("detail").toString(r->errorString())), true);
+                      .arg(apiDetail(o, r->errorString())), true);
             return;
         }
         setStatus(out ? tr("✓ Moved $%L1 to your main wallet").arg(amount, 0, 'f', 2)

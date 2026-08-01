@@ -34,6 +34,7 @@ Config Config::load() {
 
     const QJsonObject o = QJsonDocument::fromJson(f.readAll()).object();
     if (o.contains("token"))     c.token     = o.value("token").toString();
+    if (o.contains("refreshToken")) c.refreshToken = o.value("refreshToken").toString();
     if (o.contains("accountId")) c.accountId = o.value("accountId").toString();
     if (o.contains("userName"))  c.userName  = o.value("userName").toString();
     if (o.contains("email"))     c.email     = o.value("email").toString();
@@ -52,6 +53,7 @@ Config Config::load() {
 bool Config::save() const {
     QJsonObject o;
     o["token"]        = token;
+    o["refreshToken"] = refreshToken;
     o["accountId"]    = accountId;
     o["userName"]     = userName;
     o["email"]        = email;

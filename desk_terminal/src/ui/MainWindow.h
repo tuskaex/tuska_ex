@@ -70,6 +70,7 @@ private:
 
     QLabel*  m_message;
     QTimer*  m_accountTimer;
+    QTimer*  m_sessionTimer = nullptr;   // renews the JWT before it lapses
     QLabel*  m_identity = nullptr;     // menu-bar left: name | type | account no.
     QMenu*   m_accountsMenu = nullptr;
     QAction* m_darkAction   = nullptr;

@@ -1,6 +1,7 @@
 #include "core/ApiClient.h"
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QNetworkCookie>
 #include <QUrl>
 #include <QUrlQuery>
 #include <QJsonDocument>
@@ -274,6 +275,47 @@ void ApiClient::modifyBracket(const QString& positionId, const QString& kind, do
     QNetworkReply* r = m_net->put(v1Request("/positions/" + positionId),
                                   QJsonDocument(body).toJson(QJsonDocument::Compact));
     handlePositionOp(this, r, positionId, "modify");
+}
+
+// The refresh cookie is sent by hand rather than through a cookie jar: the
+// terminal's managers are per-widget and none of them outlives a restart, so
+// the credential has to travel in Config, not in QNetworkAccessManager.
+void ApiClient::refreshSession() {
+    if (m_cfg.refreshToken.trimmed().isEmpty()) {
+        emit sessionRefreshFailed(tr("No stored session to refresh."));
+        return;
+    }
+    QString base = m_cfg.restBase;
+    base.replace("/api/algo", "/api/v1");
+
+    QNetworkRequest req{QUrl(base + "/auth/refresh")};
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setRawHeader("Cookie", ("pt_refresh=" + m_cfg.refreshToken).toUtf8());
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                     QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    QNetworkReply* r = m_net->post(req, QByteArray("{}"));
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        const int http = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
+        if (r->error() != QNetworkReply::NoError || http >= 400) {
+            emit sessionRefreshFailed(o.value("detail").toString(r->errorString()));
+            return;
+        }
+        const QString access = o.value("access_token").toString();
+
+        // Pick the replacement refresh cookie out of Set-Cookie. Missing it
+        // would leave the old, now-invalidated token in Config and every later
+        // refresh would 401 — the failure mode is silent until the session dies.
+        QString newRefresh;
+        const QVariant sc = r->header(QNetworkRequest::SetCookieHeader);
+        for (const QNetworkCookie& ck : sc.value<QList<QNetworkCookie>>())
+            if (ck.name() == "pt_refresh") newRefresh = QString::fromUtf8(ck.value());
+
+        if (access.isEmpty()) { emit sessionRefreshFailed(tr("Refresh returned no token.")); return; }
+        emit sessionRefreshed(access, newRefresh);
+    });
 }
 
 void ApiClient::closePositionById(const QString& positionId, double lots) {

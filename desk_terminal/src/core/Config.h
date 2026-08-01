@@ -7,7 +7,16 @@
 class Config {
 public:
     // Terminal login (email/password → JWT). Preferred.
-    QString token;         // JWT
+    QString token;         // JWT — access token, expires in ~45 minutes
+    // The pt_refresh cookie from sign-in, used to mint a new access token
+    // without asking for the password again. It is SINGLE USE: every refresh
+    // returns a replacement and invalidates this one, so whatever comes back
+    // must be stored here or the next refresh fails with 401.
+    //
+    // Worth knowing: this is a 7-day credential sitting in a plaintext file
+    // next to the access token. It is no worse than what was already here, but
+    // it is longer-lived — the file is the whole session.
+    QString refreshToken;
     QString accountId;     // selected trading account id
     QString userName;      // display name from the login response
     QString email;         // the address signed in with (prefills the login form)

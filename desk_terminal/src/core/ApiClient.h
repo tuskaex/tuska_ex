@@ -38,6 +38,12 @@ public:
     // Sends ONLY the bracket being changed ("sl" | "tp"); the endpoint does a
     // partial update, so re-sending the other one from a stale snapshot would
     // silently revert it. level <= 0 asks to remove the bracket.
+    // Mints a fresh access token from the stored refresh cookie. The access
+    // token lasts ~45 minutes and everything on /api/v1 — per-position close,
+    // SL/TP, the wallet — dies with it, so this has to run on a timer rather
+    // than waiting for a user to hit "Invalid token" mid-trade.
+    void refreshSession();
+
     void modifyBracket(const QString& positionId, const QString& kind, double level);
     // lots <= 0 (or >= the position's size) closes it fully; a smaller value is
     // a partial close and leaves the remainder open.
@@ -55,6 +61,10 @@ signals:
     // Result of a per-position modify/close. ok=false carries the reject reason
     // (so the chart can snap a dragged line back and toast the message).
     void positionOpResult(const QString& positionId, const QString& op, bool ok, const QString& message);
+    // New access token, plus the replacement refresh cookie. Both must be
+    // persisted: the old refresh token is dead the moment this fires.
+    void sessionRefreshed(const QString& accessToken, const QString& refreshToken);
+    void sessionRefreshFailed(const QString& message);
     void errorOccurred(const QString& context, const QString& message);
 
 private:

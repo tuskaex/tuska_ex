@@ -129,6 +129,22 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
         m_api->fetchOrders();
     });
     m_accountTimer->start();
+
+    // Keep the access token alive. It lasts ~45 minutes and every /api/v1 call
+    // — per-position close, SL/TP, the whole wallet — dies with it, so this
+    // runs well inside that window rather than waiting for a trader to meet
+    // "Invalid token" halfway through closing a position.
+    //
+    // Also fired once now: a terminal reopened the next morning starts with a
+    // token that expired overnight, and nothing would have noticed until the
+    // first action failed.
+    m_sessionTimer = new QTimer(this);
+    m_sessionTimer->setInterval(30 * 60 * 1000);
+    connect(m_sessionTimer, &QTimer::timeout, this, [this]() { m_api->refreshSession(); });
+    if (!m_cfg.refreshToken.trimmed().isEmpty()) {
+        m_sessionTimer->start();
+        m_api->refreshSession();
+    }
 }
 
 // --- menu bar ---------------------------------------------------------------
@@ -378,6 +394,28 @@ void MainWindow::connectServices() {
     connect(m_account, &AccountPanel::refreshRequested, this, [this]() { m_api->fetchAccount(); });
 
     // Blotter (positions / pending / history)
+    // A refresh hands back BOTH a new access token and a replacement refresh
+    // cookie, and the old refresh token is dead the moment it does. Persist
+    // immediately: losing the replacement means the next refresh 401s and the
+    // session quietly expires anyway.
+    connect(m_api, &ApiClient::sessionRefreshed, this,
+            [this](const QString& access, const QString& refresh) {
+        m_cfg.token = access;
+        if (!refresh.isEmpty()) m_cfg.refreshToken = refresh;
+        m_cfg.save();
+        m_api->setConfig(m_cfg);
+    });
+    connect(m_api, &ApiClient::sessionRefreshFailed, this, [this](const QString& msg) {
+        // Not fatal on its own — trading runs on the algo key, which does not
+        // expire. Only the /api/v1 surface is affected, so say what is lost
+        // rather than throwing the user back to the sign-in card.
+        m_cfg.refreshToken.clear();
+        m_cfg.save();
+        m_sessionTimer->stop();
+        setStatus(tr("Session could not be renewed (%1). Sign in again to close "
+                     "positions or use the wallet.").arg(msg), true);
+    });
+
     // Floating P/L is summed from the same snapshot the blotter draws rather
     // than derived from equity-minus-balance: those two come from different
     // reads and drift apart between polls, which shows up as a status strip
@@ -554,6 +592,8 @@ void MainWindow::logout() {
     m_cfg.accountsJson = "[]";
     m_cfg.apiKey.clear();
     m_cfg.apiSecret.clear();
+    m_cfg.refreshToken.clear();   // a live refresh token would outlive the log out
+    if (m_sessionTimer) m_sessionTimer->stop();
     m_cfg.save();   // the config file is the only store a token lives in
     m_api->setConfig(m_cfg);
 
