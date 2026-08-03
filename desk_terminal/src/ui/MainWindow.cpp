@@ -150,6 +150,16 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
 void MainWindow::buildMenuBar() {
     QMenuBar* bar = menuBar();
 
+#ifdef Q_OS_MACOS
+    // Keep the menu bar inside the window on macOS rather than promoting it to
+    // the system bar at the top of the screen. Apple's global menu bar cannot
+    // host corner widgets, and the identity line ("Name | Account number") is
+    // exactly that — a TopLeftCorner widget — so going native would silently
+    // delete it. It also keeps the terminal reading identically on both
+    // platforms, which matters when a trader sends a support screenshot.
+    bar->setNativeMenuBar(false);
+#endif
+
     // ── File ──
     QMenu* file = bar->addMenu(tr("&File"));
     connect(file->addAction(tr("&Settings…")), &QAction::triggered,
