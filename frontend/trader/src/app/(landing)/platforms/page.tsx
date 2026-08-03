@@ -1,7 +1,6 @@
 import Image from 'next/image'
 import { Monitor, Smartphone, Globe, Zap, BarChart3, Shield, Check, ArrowRight } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
-import { MobileArt } from '@/landing/marketing/ui/PlatformArt'
 
 export const metadata = { title: 'Trading Platforms — TuskaEx' }
 
@@ -53,28 +52,22 @@ export default function PlatformsPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              /* `gradient` used to be a pastel placeholder that an `image`
-                 key overrode. Those images were SwissCresta product shots
-                 — a laptop showing their dashboard, an App Store listing
-                 for "SwissCresta — Smart Trading Platform", and a laptop
-                 with their logo on screen. They were replaced first by a
-                 single large glyph (honest, but an empty banner) and now
-                 by drawn device mockups: see ui/PlatformArt. */
               /* These three cards used to be "Desktop Terminal
                  (Windows & macOS)", "Mobile Trading (iOS & Android)"
                  and "Web Platform". Two of the three did not exist:
-                 there is no desktop build and no mobile app, and the
-                 navbar's download links for both returned HTTP 404
-                 because no /downloads directory is on the server. The
-                 mobile card additionally promised push notifications
-                 and biometric login.
+                 there is no mobile app, and the navbar's download links
+                 for both returned HTTP 404 because no /downloads
+                 directory was on the server. The mobile card
+                 additionally promised push notifications and biometric
+                 login. They were replaced with the three surfaces a user
+                 can genuinely reach today.
 
-                 Replaced with the three surfaces a user can genuinely
-                 reach today. The artwork is illustrative of each
-                 surface, not a screenshot of it. */
-              /* Web Terminal and Algo Connector now carry real artwork.
-                 `art` is kept for Copy Trading & PAMM, which has no shot yet —
-                 a card renders whichever of the two it is given. */
+                 The artwork went through the same correction. It was
+                 SwissCresta product shots, then a single glyph, then
+                 drawn device mockups (ui/PlatformArt, now unused here),
+                 and is finally TuskaEx's own. `gradient` still paints the
+                 banner underneath — the images are opaque and cover it,
+                 but it is what shows while one is still loading. */
               {
                 image: '/marketing/web_terminal.png',
                 imageAlt: 'The TuskaEx web terminal — EUR/USD chart, order ticket, open positions and watchlist',
@@ -96,7 +89,8 @@ export default function PlatformsPage() {
                 features: ['Place & close orders', 'Read balance and margin', 'Live tick stream', 'Key + secret auth'],
               },
               {
-                art: MobileArt,
+                image: '/marketing/copy_trading.png',
+                imageAlt: 'A trader watching a live candlestick chart on a wide curved monitor',
                 icon: Smartphone,
                 title: 'Copy Trading & PAMM',
                 gradient: 'radial-gradient(120% 100% at 50% 110%, #F14A4A 0%, #D60101 50%, #A30000 100%)',
@@ -104,7 +98,7 @@ export default function PlatformsPage() {
                 cta: 'Explore',
                 features: ['Follow a master account', 'Mirror trades automatically', 'PAMM by NAV units', 'Track from one dashboard'],
               },
-            ].map(({ art: Art, image, imageAlt, icon: Icon, title, gradient, availability, cta, features }) => (
+            ].map(({ image, imageAlt, icon: Icon, title, gradient, availability, cta, features }) => (
               <div
                 key={title}
                 className="flex flex-col rounded-3xl bg-white p-3 ring-1 ring-gray-100 shadow-[0_20px_50px_-22px_rgba(0,0,0,0.30)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_60px_-24px_rgba(0,0,0,0.35)]"
@@ -123,22 +117,18 @@ export default function PlatformsPage() {
                     className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_60%_at_50%_-10%,rgba(255,255,255,0.22),transparent_60%)]"
                   />
                   <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover/art:scale-[1.04]">
-                    {image ? (
-                      /* object-cover, because the shots are ~2:1 and the banner
-                         is not — letting them letterbox would show bands of the
-                         gradient the artwork is meant to replace. fill + sizes
-                         keeps Next from serving the full 1784px original for a
-                         176px-tall tile. */
-                      <Image
-                        src={image}
-                        alt={imageAlt ?? ''}
-                        fill
-                        sizes="(max-width: 768px) 100vw, 400px"
-                        className="object-cover"
-                      />
-                    ) : (
-                      Art ? <Art /> : null
-                    )}
+                    {/* object-cover, because the shots are ~2:1 and the banner
+                        is not — letting them letterbox would show bands of the
+                        gradient the artwork is meant to replace. fill + sizes
+                        keeps Next from serving the full 1784px original for a
+                        176px-tall tile. */}
+                    <Image
+                      src={image}
+                      alt={imageAlt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 400px"
+                      className="object-cover"
+                    />
                   </div>
                 </div>
 
