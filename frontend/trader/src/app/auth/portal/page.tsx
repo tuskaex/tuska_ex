@@ -10,7 +10,6 @@
  */
 
 import Link from 'next/link';
-import AuthPanelArt from '@/components/ui/AuthPanelArt';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 
@@ -28,6 +27,25 @@ export default function LoginPortalPage() {
 
         {/* Left dark hero panel */}
         <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative overflow-hidden z-10 flex flex-col justify-between min-h-[20rem] md:min-h-[36rem]">
+          {/* Brand artwork, filling the panel. It sits at the very bottom of
+              this stacking context; the logo and headline below already carry
+              `relative z-10`, so they stay above it. */}
+          <Image
+            src="/marketing/login_banner.png"
+            alt=""
+            aria-hidden="true"
+            fill
+            priority
+            sizes="(max-width: 768px) 100vw, 640px"
+            className="object-cover"
+          />
+          {/* The artwork is bright red down its right edge and the headline
+              runs across the bottom, so a scrim keeps that text legible
+              whatever the crop does at a given viewport width. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/20"
+          />
           <Link
             href="/"
             aria-label="TuskaEx home"
@@ -42,11 +60,13 @@ export default function LoginPortalPage() {
               className="h-8 w-auto"
             />
           </Link>
-          {/* Same treatment as the signup/login card — this panel is a
-              copy of that one, and leaving one of the pair as an empty
-              black rectangle would make the auth flow look half-built as
-              the user moves between them. */}
-          <AuthPanelArt className="relative z-10 hidden flex-1 items-center py-6 md:flex" />
+          {/* The drawn AuthPanelArt that used to fill this space is gone —
+              real artwork replaced it, and stacking the two would read as
+              clutter. Its sibling in full-screen-signup.tsx still draws it,
+              so the two auth panels no longer match; give that one the same
+              treatment when there is a shot for it. A spacer keeps the
+              logo/headline split the drawn art used to hold open. */}
+          <div className="hidden flex-1 md:block" />
 
           <h1 className="text-2xl md:text-3xl font-medium leading-tight tracking-tight relative z-10">
             A precision-engineered trading platform for serious investors.
