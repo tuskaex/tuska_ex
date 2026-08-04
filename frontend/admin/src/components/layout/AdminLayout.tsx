@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from './AdminSidebar';
 import AdminNotificationBell from '@/components/AdminNotificationBell';
+import ThemeToggle from '@/components/ThemeToggle';
 import { useAuthStore } from '@/stores/authStore';
 import { Search, User, LogOut, Loader2, Menu } from 'lucide-react';
 import { useAuthRehydrated } from '@/hooks/useAuthRehydrated';
@@ -109,6 +110,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             />
           </div>
           <div className="ml-auto flex items-center gap-2 md:gap-3">
+            <ThemeToggle />
             <AdminNotificationBell />
             <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg bg-bg-primary/40 border border-border-primary/30">
               <div className="w-6 h-6 rounded-full bg-gradient-to-br from-accent/60 to-accent/20 flex items-center justify-center shrink-0">

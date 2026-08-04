@@ -77,7 +77,18 @@ export default function AdminSidebar({
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Config', 'Business']);
+  /* Collapsed by default. These were hard-coded open ('Config', 'Business'),
+     which pushed nine sub-items into the list on every page and shoved half the
+     nav below the fold — Analytics onwards needed a scroll to reach.
+     The group holding the current page is the exception: land on
+     /config/spreads and Config opens, so the sidebar still shows where you are.
+     Computed once, in a lazy initialiser, so it seeds the state rather than
+     re-asserting itself and re-opening a group the user just closed. */
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(() =>
+    NAV_ITEMS
+      .filter((item) => item.children?.some((c) => pathname?.startsWith(c.href)))
+      .map((item) => item.label),
+  );
   const [permissions, setPermissions] = useState<string[]>(['*']);
   const [employeeRole, setEmployeeRole] = useState<string>('super_admin');
 
