@@ -150,11 +150,20 @@ export default function AdminSidebar({
     )}>
       {/* Header */}
       <div className="flex items-center h-14 px-3 border-b border-border-primary/40">
+        {/* Two logo files, swapped by CSS rather than by reading the theme in
+            JS. The `dark` class is on <html> before first paint, so this has no
+            flash and no hydration mismatch — a JS swap would have both.
+            The wordmark's type is near-black and was all but invisible against
+            the dark sidebar. */}
         {!showLabels ? (
-          <img src="/logo.png" alt="TuskaEx" className="w-7 h-7 object-contain mx-auto" />
+          <>
+            <img src="/logo.png" alt="TuskaEx" className="w-7 h-7 object-contain mx-auto dark:hidden" />
+            <img src="/tuskaex-logo-light.png" alt="TuskaEx" className="hidden w-7 h-7 object-contain mx-auto dark:block" />
+          </>
         ) : (
           <Link href="/" className="flex items-center min-w-0">
-            <img src="/tuskaex-logo.png" alt="TuskaEx" className="h-7 w-auto object-contain shrink-0" />
+            <img src="/tuskaex-logo.png" alt="TuskaEx" className="h-7 w-auto object-contain shrink-0 dark:hidden" />
+            <img src="/tuskaex-logo-light.png" alt="TuskaEx" className="hidden h-7 w-auto object-contain shrink-0 dark:block" />
           </Link>
         )}
         {/* Desktop collapse toggle */}
