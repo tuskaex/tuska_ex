@@ -30,15 +30,25 @@ export default function IBPoster({ className = '' }: { className?: string }) {
     <div
       className={`relative flex h-full w-full flex-col overflow-hidden rounded-[2rem] bg-[#0A0A0A] p-7 ring-1 ring-white/10 sm:p-9 ${className}`}
     >
-      {/* Brand-red bloom, top-right */}
-      <span
+      {/* Real artwork behind the card. The CSS red bloom and chart grid that
+          used to fill this space are gone: the photograph carries its own
+          light and texture, and stacking all three just muddied it. */}
+      <Image
+        src="/marketing/ib_banner.png"
+        alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute -right-1/3 -top-1/3 h-[110%] w-[110%] rounded-full bg-[radial-gradient(circle,rgba(214,1,1,0.55),transparent_65%)]"
+        fill
+        sizes="(max-width: 1024px) 100vw, 560px"
+        className="object-cover"
+        priority={false}
       />
-      {/* Faint grid, evokes a price chart without inventing numbers */}
+      {/* Scrim. Every word on this card is white, and the photo is brightest
+          down its left edge and through the middle — exactly where the logo
+          and the pillar list sit. Weighted to the bottom, where the four
+          pillars need the most help. */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:38px_38px]"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/35"
       />
 
       <div className="relative flex h-full flex-col">
