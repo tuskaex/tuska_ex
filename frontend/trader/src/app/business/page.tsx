@@ -108,7 +108,7 @@ export default function BusinessPage() {
         {/* Hero header */}
         <div className="relative overflow-hidden rounded-2xl border border-border-primary bg-bg-card p-6 sm:p-8">
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#FDE3E3] via-white to-white"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#FDE3E3] via-white to-white dark:from-[#D60101]/20 dark:via-transparent dark:to-transparent"
             aria-hidden
           />
           <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -408,7 +408,7 @@ function SubBrokerTab() {
                   key={`s-${c.user_id}`}
                   className={clsx(
                     'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                    c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600',
+                    c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-bg-active text-text-secondary',
                   )}
                 >
                   {c.status}
@@ -598,7 +598,7 @@ function CtaCard({
       <div className="overflow-hidden rounded-2xl border border-border-primary bg-bg-card">
         <div className="relative px-6 sm:px-8 pt-8 pb-6 text-center">
           <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FDE3E3]/60 to-transparent"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FDE3E3]/60 to-transparent dark:from-[#D60101]/15"
             aria-hidden
           />
           <div className="relative">

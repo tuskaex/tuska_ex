@@ -132,7 +132,7 @@ export default function AlgoConnectorPage() {
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
 
         {/* ─── Hero Header ─── */}
-        <div className="relative overflow-hidden rounded-2xl border border-[#F3D9CE] bg-gradient-to-br from-[#FFF6F2] to-[#FDE3E3] px-6 py-7 sm:px-8 sm:py-9 text-center shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-[#F3D9CE] dark:border-border-primary bg-gradient-to-br from-[#FFF6F2] to-[#FDE3E3] dark:from-[#D60101]/20 dark:to-[#D60101]/5 px-6 py-7 sm:px-8 sm:py-9 text-center shadow-sm">
           <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#D60101]/10 blur-2xl" />
           <div className="relative space-y-2.5">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#D60101] text-white shadow-lg shadow-[#D60101]/25 mb-1">
@@ -143,10 +143,10 @@ export default function AlgoConnectorPage() {
               Generate API credentials for any trading account and connect your algorithmic trading bot.
             </p>
             <div className="flex items-center justify-center gap-2 pt-1">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D60101]/20 bg-white/70 px-3 py-1 text-xs font-semibold text-[#A30000]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#D60101]/20 bg-white/70 dark:bg-white/10 px-3 py-1 text-xs font-semibold text-[#A30000]">
                 <Key size={12} /> {accounts.length} account{accounts.length === 1 ? '' : 's'}
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/25 bg-white/70 px-3 py-1 text-xs font-semibold text-green-600">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/25 bg-white/70 dark:bg-white/10 px-3 py-1 text-xs font-semibold text-green-600">
                 <Radio size={12} /> {connectedKeys.length} connected
               </span>
             </div>

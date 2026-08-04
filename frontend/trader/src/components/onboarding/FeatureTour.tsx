@@ -266,7 +266,7 @@ export default function FeatureTour() {
 
       {/* Instruction card */}
       <div
-        className="absolute z-[10000] rounded-2xl border border-[#E5E5E5] bg-white p-5 shadow-2xl"
+        className="absolute z-[10000] rounded-2xl border border-border-primary bg-bg-card p-5 shadow-2xl"
         style={cardStyle}
       >
         <button

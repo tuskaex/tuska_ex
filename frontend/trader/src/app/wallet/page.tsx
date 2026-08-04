@@ -2319,7 +2319,7 @@ function FundsDropdown({
       {open && !disabled && options.length > 0 && (
         <ul
           role="listbox"
-          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-border-primary bg-bg-card shadow-lg ring-1 ring-black/5"
+          className="absolute left-0 right-0 top-full z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-border-primary bg-bg-card shadow-lg ring-1 ring-black/5 dark:ring-white/10"
         >
           {options.map((o) => {
             const sel = o.id === value;

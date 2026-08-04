@@ -543,7 +543,7 @@ export default function OrderPanel() {
                 <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                   <div
                     className={clsx(
-                      'flex flex-col items-center rounded-lg bg-white shadow-md ring-1 ring-black/5 border border-[#E5E5E5]',
+                      'flex flex-col items-center rounded-lg bg-bg-card shadow-md ring-1 ring-black/5 dark:ring-white/10 border border-[#E5E5E5]',
                       isTradingTerminal ? 'px-2 py-1' : 'px-2.5 py-1.5',
                     )}
                   >

@@ -703,7 +703,7 @@ function AccountCard({
               'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
               isActive
                 ? 'bg-emerald-50 text-emerald-700'
-                : 'bg-gray-100 text-gray-600',
+                : 'bg-bg-active text-text-secondary',
             )}
           >
             {isActive ? 'Active' : 'Inactive'}
@@ -738,7 +738,7 @@ function AccountCard({
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Account settings"
-            className="rounded-full p-1.5 text-text-secondary hover:bg-gray-100 hover:text-text-primary transition-colors"
+            className="rounded-full p-1.5 text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
           >
             <Settings size={18} />
           </button>
@@ -747,7 +747,7 @@ function AccountCard({
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); setRenameOpen(true); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-gray-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary"
               >
                 <Pencil size={14} />
                 Rename label
@@ -755,7 +755,7 @@ function AccountCard({
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); onTransfer(); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-gray-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary"
               >
                 <ArrowLeftRight size={14} />
                 Transfer funds

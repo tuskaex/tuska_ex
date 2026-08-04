@@ -596,7 +596,7 @@ function PortfolioPageContent() {
               <select
                 value={validAccountId ?? ''}
                 onChange={(e) => onPickAccount(e.target.value)}
-                className="rounded-lg border border-[#E5E5E5] bg-white px-3 py-2 text-sm font-medium text-text-primary outline-none focus:border-[#D60101] cursor-pointer"
+                className="rounded-lg border border-border-primary bg-bg-card px-3 py-2 text-sm font-medium text-text-primary outline-none focus:border-[#D60101] cursor-pointer"
                 aria-label="Filter by trading account"
               >
                 <option value="">All accounts</option>
@@ -656,7 +656,7 @@ function PortfolioPageContent() {
 
         {tab === 'overview' && (
 
-          <div className="rounded-2xl border border-[#E5E5E5] bg-white overflow-hidden">
+          <div className="rounded-2xl border border-border-primary bg-bg-card overflow-hidden">
 
             {/* Mobile card layout */}
             <div className="md:hidden p-2 space-y-2">
@@ -796,7 +796,7 @@ function PortfolioPageContent() {
 
           <>
 
-            <div className="rounded-2xl border border-[#E5E5E5] bg-white overflow-hidden">
+            <div className="rounded-2xl border border-border-primary bg-bg-card overflow-hidden">
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-3 border-b border-border-glass">
 
