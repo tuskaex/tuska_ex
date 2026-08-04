@@ -420,6 +420,11 @@ void MainWindow::connectServices() {
         if (!refresh.isEmpty()) m_cfg.refreshToken = refresh;
         m_cfg.save();
         m_api->setConfig(m_cfg);
+        if (m_authRecoveryTried) {
+            m_authRecoveryTried = false;
+            setStatus(QString());
+            refreshAll();
+        }
     });
     connect(m_api, &ApiClient::sessionRefreshFailed, this, [this](const QString& msg) {
         // Not fatal on its own — trading runs on the algo key, which does not
@@ -478,6 +483,26 @@ void MainWindow::connectServices() {
         // overwrite one the server has already moved.
         if (dlg.slChanged()) m_api->modifyBracket(pos.id, "sl", dlg.stopLoss());
         if (dlg.tpChanged()) m_api->modifyBracket(pos.id, "tp", dlg.takeProfit());
+    });
+
+    // Typed straight into the S/L or T/P cell — the client asked for this over
+    // the dialog, and it is one call for the one leg that changed.
+    connect(m_positions, &PositionsPanel::bracketEdited, this,
+            [this](const QString& id, const QString& kind, double level) {
+        if (!requireSession(tr("Modifying stop loss / take profit"))) {
+            m_api->fetchPositions();   // put the cell back to the server's value
+            return;
+        }
+        m_api->modifyBracket(id, kind, level);
+    });
+
+    // The server's answer is what the cell should end up showing: a rejected
+    // level must not be left sitting in the table as though it took.
+    connect(m_api, &ApiClient::positionOpResult, this,
+            [this](const QString&, const QString& op, bool ok, const QString& msg) {
+        if (op != "modify") return;
+        setStatus(ok ? tr("S/L — T/P updated") : msg, !ok);
+        m_api->fetchPositions();
     });
 
     connect(m_positions, &PositionsPanel::cancelOrder, this,
@@ -595,6 +620,17 @@ void MainWindow::onApiError(const QString& context, const QString& message) {
         || message.contains("Invalid token", Qt::CaseInsensitive)
         || message.contains("Invalid API credentials", Qt::CaseInsensitive)
         || message.contains("Not authenticated", Qt::CaseInsensitive)) {
+        // Try to recover before declaring the session dead. The /api/algo polls
+        // normally ride the key + secret, which never expire — reaching here
+        // means they are falling back to the JWT (the key was never minted, or
+        // it was revoked), and that lapses after ~45 minutes. A silent renewal
+        // turns what the client saw as "the desktop is down" into a blip.
+        if (!m_authRecoveryTried && !m_cfg.refreshToken.trimmed().isEmpty()) {
+            m_authRecoveryTried = true;
+            setStatus(tr("Session expired — renewing…"), false);
+            m_api->refreshSession();
+            return;
+        }
         setStatus(tr("Session expired — open Settings and sign in again"), true);
         return;
     }

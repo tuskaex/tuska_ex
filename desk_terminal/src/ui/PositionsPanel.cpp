@@ -11,6 +11,8 @@
 #include <QDateEdit>
 #include <QLabel>
 #include <QDateTime>
+#include <QLocale>
+#include <QApplication>
 #include <QFont>
 #include <QColor>
 
@@ -38,6 +40,20 @@ static QTableWidget* makeTable(const QStringList& headers) {
 static QTableWidgetItem* cell(const QString& text, Qt::Alignment a = Qt::AlignLeft | Qt::AlignVCenter) {
     auto* it = new QTableWidgetItem(text);
     it->setTextAlignment(a);
+    it->setFlags(it->flags() & ~Qt::ItemIsEditable);
+    return it;
+}
+
+// An S/L or T/P cell the trader can type into. Carries the position id and the
+// level it was rendered with, so a commit knows which position it belongs to
+// and whether the value actually changed — the table is rebuilt every four
+// seconds, and a rebuild must not read as an edit.
+static QTableWidgetItem* bracketCell(double level, const QString& positionId, int digits) {
+    auto* it = new QTableWidgetItem(level > 0 ? QString::number(level, 'f', digits) : QString());
+    it->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    it->setData(Qt::UserRole, positionId);
+    it->setData(Qt::UserRole + 1, level);
+    it->setToolTip(QObject::tr("Double-click to edit. Clear the cell to remove it."));
     return it;
 }
 
@@ -169,6 +185,12 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_orderTable->horizontalHeader()->setSectionResizeMode(cancelCol, QHeaderView::Fixed);
     m_orderTable->setColumnWidth(cancelCol, 64);
 
+    // Only the open-positions table takes edits, and only its S/L and T/P
+    // cells are marked editable — every other item has the flag cleared.
+    m_posTable->setEditTriggers(QAbstractItemView::DoubleClicked
+                                | QAbstractItemView::EditKeyPressed);
+    connect(m_posTable, &QTableWidget::itemChanged, this, &PositionsPanel::onBracketEdited);
+
     // Each tab is table + its own filter bar, so a range chosen on History does
     // not silently reach into the open-positions tab.
     m_tabs->addTab(wrapTable(0, m_posTable),   tr("Trade"));
@@ -207,8 +229,58 @@ static QString tabCaption(const QString& name, int shown, int total) {
                           : QString("%1 (%2/%3)").arg(name).arg(shown).arg(total);
 }
 
+// True while a cell editor is open on `t`.
+//
+// QAbstractItemView::state() would answer this directly but is protected. The
+// editor the default delegate creates for a text item is a QLineEdit parented
+// into the viewport and holding focus, so that is what is looked for — and the
+// type is checked, not just the ancestry, because the Action column's buttons
+// live in the same viewport and keep focus after a click. Treating those as
+// "editing" would freeze the blotter permanently.
+static bool editorOpen(QTableWidget* t) {
+    QWidget* f = QApplication::focusWidget();
+    return f && f->inherits("QLineEdit") && t->viewport()->isAncestorOf(f);
+}
+
+void PositionsPanel::onBracketEdited(QTableWidgetItem* item) {
+    // itemChanged fires while the table is being filled too, so every
+    // setPositions() run raises it once per cell. m_populating tells a real
+    // edit from a repaint.
+    if (m_populating || !item) return;
+    const int col = item->column();
+    if (col != 6 && col != 7) return;
+
+    const QString id = item->data(Qt::UserRole).toString();
+    if (id.isEmpty()) return;
+
+    const double was = item->data(Qt::UserRole + 1).toDouble();
+    const QString text = item->text().trimmed();
+    bool parsed = false;
+    // An empty cell is the instruction to remove the bracket; the server reads
+    // 0 as "clear it".
+    const double now = text.isEmpty() ? 0.0 : QLocale().toDouble(text, &parsed);
+
+    if (!text.isEmpty() && !parsed) {
+        // Unparseable: put the old value back rather than sending nonsense.
+        m_populating = true;
+        item->setText(was > 0 ? QString::number(was, 'f', 5) : QString());
+        m_populating = false;
+        return;
+    }
+    if (qFuzzyCompare(now + 1.0, was + 1.0)) return;   // typed the same value
+
+    item->setData(Qt::UserRole + 1, now);
+    emit bracketEdited(id, col == 6 ? QStringLiteral("sl") : QStringLiteral("tp"), now);
+}
+
 void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
     m_lastPositions = positions;
+    // A 4s poll lands while someone is halfway through typing a stop loss. The
+    // snapshot is kept, but the table is left alone until the editor closes —
+    // otherwise the cell is rebuilt and the half-typed value disappears.
+    if (editorOpen(m_posTable)) return;
+
+    m_populating = true;
     QVector<OpenPosition> shown;
     for (const OpenPosition& p : positions)
         if (passes(0, p.openedAt)) shown.append(p);
@@ -232,8 +304,8 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         m_posTable->setItem(r, 3, typeItem);
         m_posTable->setItem(r, 4, cell(fmt(p.lots), R));
         m_posTable->setItem(r, 5, cell(fmt(p.openPrice, 5), R));
-        m_posTable->setItem(r, 6, cell(p.sl > 0 ? fmt(p.sl, 5) : QString(), R));
-        m_posTable->setItem(r, 7, cell(p.tp > 0 ? fmt(p.tp, 5) : QString(), R));
+        m_posTable->setItem(r, 6, bracketCell(p.sl, p.id, 5));
+        m_posTable->setItem(r, 7, bracketCell(p.tp, p.id, 5));
         m_posTable->setItem(r, 8, cell(p.currentPrice > 0 ? fmt(p.currentPrice, 5) : QString(), R));
         m_posTable->setItem(r, 9, cell(cash(p.swap), R));
         auto* pnl = cell(cash(p.profit), R);
@@ -283,6 +355,7 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         m_posTable->setCellWidget(r, 11, cellWrap);
         ++r;
     }
+    m_populating = false;
 }
 
 void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {

@@ -83,6 +83,10 @@ private:
     QLabel*  m_message;
     QTimer*  m_accountTimer;
     QTimer*  m_sessionTimer = nullptr;   // renews the JWT before it lapses
+    // One recovery attempt per failure episode. Without it an expired token
+    // would loop: the poll 401s, that triggers a refresh, the refresh answers
+    // and the next poll 401s again a second later.
+    bool     m_authRecoveryTried = false;
     QLabel*  m_identity = nullptr;     // menu-bar left: name | type | account no.
     QMenu*   m_accountsMenu = nullptr;
     QAction* m_darkAction   = nullptr;

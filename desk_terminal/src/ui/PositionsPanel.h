@@ -43,6 +43,11 @@ signals:
     void modifyBrackets(const OpenPosition& position);
     // Cancel a listed pending order.
     void cancelOrder(const PendingOrder& order);
+    // An S/L or T/P cell was edited in place. level 0 removes that bracket.
+    void bracketEdited(const QString& positionId, const QString& kind, double level);
+
+private slots:
+    void onBracketEdited(class QTableWidgetItem* item);
 
 private:
     // Time filter, one per tab. Which timestamp it tests depends on the tab:
@@ -63,6 +68,9 @@ private:
     QTableWidget* m_histTable;
     QComboBox*    m_range[3] = {nullptr, nullptr, nullptr};
     QDateEdit*    m_date[3]  = {nullptr, nullptr, nullptr};
+    // True while a table is being filled. itemChanged() cannot tell a repaint
+    // from a real edit on its own, and setPositions() runs every four seconds.
+    bool m_populating = false;
     bool m_collapsed = false;
     bool m_privacy = false;
 
