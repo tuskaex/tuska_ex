@@ -55,8 +55,8 @@ function StatCard({ label, value, icon: Icon, tone = 'default' }: {
 }) {
   const toneClasses = {
     default: { bg: 'bg-bg-hover', icon: 'text-text-primary' },
-    success: { bg: 'bg-emerald-50', icon: 'text-emerald-600 dark:text-emerald-400' },
-    warning: { bg: 'bg-amber-50', icon: 'text-amber-600 dark:text-amber-400' },
+    success: { bg: 'bg-emerald-50 dark:bg-emerald-500/15', icon: 'text-emerald-600 dark:text-emerald-400' },
+    warning: { bg: 'bg-amber-50 dark:bg-amber-500/15', icon: 'text-amber-600 dark:text-amber-400' },
     accent: { bg: 'bg-[#FDE3E3] dark:bg-[#D60101]/15', icon: 'text-[#D60101]' },
   }[tone];
   return (
@@ -564,7 +564,7 @@ function TreeNode({ node, depth }: { node: any; depth: number }) {
 
 function PendingCard({ message }: { message: string }) {
   return (
-    <div className="mx-auto max-w-lg rounded-2xl border border-amber-200 bg-amber-50/50 p-8 text-center">
+    <div className="mx-auto max-w-lg rounded-2xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/50 dark:bg-amber-500/10 p-8 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 mb-3">
         <span className="text-xl">⏳</span>
       </div>
