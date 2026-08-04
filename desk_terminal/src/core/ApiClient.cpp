@@ -144,6 +144,7 @@ static PendingOrder parseOrder(const QJsonObject& o) {
     p.tp        = firstDouble(o, {"tp", "take_profit"});
     p.createdAt = firstString(o, {"created_at"});
     p.comment   = o.value("comment").toString();
+    p.status    = o.value("status").toString();
     return p;
 }
 
@@ -211,8 +212,13 @@ void ApiClient::fetchPositions() {
 
 void ApiClient::fetchOrders() {
     if (m_cfg.accountId.isEmpty()) return;
+    // status=pending, like fetchPositions asks for status=open. Without it the
+    // endpoint returns EVERY order the account ever placed — filled market
+    // orders included — and they all landed in the Pending tab, where the only
+    // action offered is cancel. The server then rightly answered "Can only
+    // cancel pending order" on each one.
     QNetworkReply* r = m_net->get(v1Request(
-        QString("/orders/?account_id=%1").arg(m_cfg.accountId)));
+        QString("/orders/?account_id=%1&status=pending").arg(m_cfg.accountId)));
     handleReply(r, "orders", tr("Loading orders"));
 }
 
@@ -450,7 +456,17 @@ void ApiClient::handleReply(QNetworkReply* reply, const QString& kind, const QSt
                 emit positionsReceived(out);
             } else if (kind == "orders") {
                 QVector<PendingOrder> out;
-                for (const QJsonValue& v : arr) out.push_back(parseOrder(v.toObject()));
+                for (const QJsonValue& v : arr) {
+                    PendingOrder p = parseOrder(v.toObject());
+                    // Belt and braces over the status=pending query above: an
+                    // order that is already filled, cancelled or expired must
+                    // never reach a tab whose only control is Cancel. An empty
+                    // status is kept — some payloads omit the field, and
+                    // hiding a real pending order would be the worse failure.
+                    if (!p.status.isEmpty() &&
+                        p.status.compare("pending", Qt::CaseInsensitive) != 0) continue;
+                    out.push_back(p);
+                }
                 emit ordersReceived(out);
             } else {
                 QVector<HistoryTrade> out;

@@ -78,6 +78,11 @@ struct PendingOrder {
     QString id, symbol, type, side;
     double  lots = 0, price = 0, sl = 0, tp = 0;
     QString createdAt, comment;
+    // Carried so the blotter can drop anything already filled or cancelled.
+    // /orders/ returns every order for the account unless asked otherwise, and
+    // the Pending tab's only action is "cancel" — a filled order there is a
+    // button that cannot work.
+    QString status;
 };
 
 // Closed trade (history).
