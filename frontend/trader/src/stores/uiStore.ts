@@ -73,10 +73,18 @@ export const useUIStore = create<UIState>()(
       // root would flip every other page (dashboard, portfolio,
       // wallet, etc.) into dark mode just because the user toggled
       // the terminal's local theme.
-      // Dark theme has been removed — the website is light-only. Both actions
-      // are kept (call sites still reference them) but always resolve to light.
-      setTheme: () => set({ theme: 'light' }),
-      toggleTheme: () => set({ theme: 'light' }),
+      // These used to be stubs — "dark theme has been removed", both pinned to
+      // light — which left ThemeProvider, the [data-theme="dark"] token block in
+      // globals.css and every call site wired to a switch that did nothing.
+      //
+      // NOT every page survives dark yet: wallet, business and accounts were
+      // written light-only against hard-coded hex (197, 102 and 55 colour
+      // classes, with no semantic tokens between them), so they show light
+      // panels until they are converted. The rest of the app — terminal,
+      // portfolio, social, PAMM, KYC, profile, support, dashboard — is
+      // tokenised and follows correctly.
+      setTheme: (theme) => set({ theme }),
+      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       setWatchlistWidth: (w) =>
         set({ watchlistWidth: Math.max(WATCHLIST_MIN_PX, Math.min(WATCHLIST_MAX_PX, w)) }),
       setOrderPanelWidth: (w) => set({ orderPanelWidth: Math.max(250, Math.min(560, w)) }),

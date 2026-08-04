@@ -46,6 +46,7 @@ import {
 import { useShellStore } from '@/stores/shellStore';
 import { useAuthStore } from '@/stores/authStore';
 import { NotificationBell } from '@/components/NotificationListener';
+import AppThemeToggle from '@/components/layout/AppThemeToggle';
 import { cn } from '@/lib/utils';
 
 type NavItem = {
@@ -348,8 +349,10 @@ export default function AppNavbar() {
             </>
           )}
 
+          <AppThemeToggle />
+
           {/* Notifications */}
-          <div className="text-[#0A0A0A]">
+          <div className="text-text-primary">
             <NotificationBell />
           </div>
 
