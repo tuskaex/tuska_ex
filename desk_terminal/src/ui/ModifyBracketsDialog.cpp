@@ -49,8 +49,13 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         s->setDecimals(digits);
         s->setRange(0.0, 1e7);
         s->setSingleStep(std::pow(10.0, -digits + 1));
-        // 0 is a real instruction here, not "empty": it removes the bracket.
-        s->setSpecialValueText(tr("none"));
+        // A bracket that already exists cannot be taken back off — the endpoint
+        // treats a null as "leave it alone" (see ApiClient::modifyBracket), so
+        // 0 would report success and change nothing. Put the floor one tick
+        // above 0 in that case, and the value is unreachable rather than
+        // reachable-but-refused. 0 stays available while there is no bracket,
+        // where it simply means "not setting one".
+        s->setMinimum(value > 0.0 ? std::pow(10.0, -digits) : 0.0);
         s->setValue(value > 0.0 ? value : 0.0);
         s->setMinimumHeight(32);
         connect(s, &QDoubleSpinBox::valueChanged, this, [this]() { refreshHint(); });
@@ -113,9 +118,9 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
 void ModifyBracketsDialog::refreshHint() {
     QStringList parts;
     if (slChanged())
-        parts << (stopLoss() > 0 ? tr("stop loss will move") : tr("stop loss will be removed"));
+        parts << tr("stop loss will move");
     if (tpChanged())
-        parts << (takeProfit() > 0 ? tr("take profit will move") : tr("take profit will be removed"));
+        parts << tr("take profit will move");
 
     // Saying which legs will be sent matters: only the changed ones are, so an
     // untouched bracket is left exactly as the server has it.

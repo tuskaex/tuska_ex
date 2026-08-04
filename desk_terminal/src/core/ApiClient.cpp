@@ -310,9 +310,27 @@ void ApiClient::cancelOrder(const QString& orderId) {
 }
 
 void ApiClient::modifyBracket(const QString& positionId, const QString& kind, double level) {
-    QJsonObject body;
     const QString field = (kind == "tp") ? "take_profit" : "stop_loss";
-    body[field] = level > 0.0 ? QJsonValue(level) : QJsonValue(QJsonValue::Null);
+
+    // A bracket CANNOT be removed through this endpoint. The server applies an
+    // update with `if req.stop_loss is not None`, so null means "leave it
+    // alone", not "clear it" — it answers 200 and the old level is still there
+    // on the next poll. Verified against the live API.
+    //
+    // Sending it anyway is worse than refusing: the caller sees success, the
+    // value reappears four seconds later, and that is indistinguishable from
+    // the "S/L and T/P not changing" bug this whole path exists to fix. Fail
+    // loudly instead, and say the one true thing about it.
+    if (level <= 0.0) {
+        emit positionOpResult(positionId, "modify", false,
+            tr("A stop loss or take profit cannot be removed once set — the "
+               "platform has no way to clear one. Move it instead, or close "
+               "the position."));
+        return;
+    }
+
+    QJsonObject body;
+    body[field] = level;
     QNetworkReply* r = m_net->put(v1Request("/positions/" + positionId),
                                   QJsonDocument(body).toJson(QJsonDocument::Compact));
     handlePositionOp(this, r, positionId, "modify");
