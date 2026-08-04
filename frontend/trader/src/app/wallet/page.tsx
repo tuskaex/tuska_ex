@@ -1381,7 +1381,7 @@ function WalletPageContent() {
               )}
             />
             {depositAmount && !depositAmountValid && depositMinDeposit > 0 && (
-              <p className="text-xs text-red-600">
+              <p className="text-xs text-red-600 dark:text-red-400">
                 Minimum deposit for this account is {formatCurrency(depositMinDeposit, depositAccount?.currency || wallet?.currency || 'USD')}.
               </p>
             )}
@@ -1556,7 +1556,7 @@ function WalletPageContent() {
         ) : (
           <div className="space-y-2">
             {!kycApproved && (
-              <div className="rounded-xl border border-[#D60101]/40 bg-[#FDE3E3] px-4 py-3 text-sm text-text-primary flex flex-wrap items-center justify-between gap-3">
+              <div className="rounded-xl border border-[#D60101]/40 bg-[#FDE3E3] dark:bg-[#D60101]/15 px-4 py-3 text-sm text-text-primary flex flex-wrap items-center justify-between gap-3">
                 <span className="leading-relaxed">
                   Local Banking requires <span className="font-semibold">verified KYC</span>.
                 </span>
@@ -2122,11 +2122,11 @@ function WalletPageContent() {
               const status = (it.status || '').toLowerCase();
               const statusClass =
                 status === 'completed' || status === 'approved'
-                  ? 'text-emerald-600 bg-emerald-50'
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15'
                   : status === 'pending'
-                    ? 'text-amber-600 bg-amber-50'
+                    ? 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/15'
                     : status === 'failed' || status === 'rejected' || status === 'cancelled'
-                      ? 'text-red-600 bg-red-50'
+                      ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15'
                       : 'text-text-secondary bg-bg-hover';
               return (
                 <div
@@ -2217,13 +2217,13 @@ function WalletPageContent() {
           </div>
 
           {loadError && (
-            <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-500/15 px-3 py-2 text-xs text-amber-900">
               {loadError}
             </div>
           )}
 
           {demoFundingBlocked && (
-            <div className="rounded-xl border border-red-300 bg-red-50 px-3 py-2.5 text-xs text-red-900">
+            <div className="rounded-xl border border-red-300 bg-red-50 dark:bg-red-500/15 px-3 py-2.5 text-xs text-red-900">
               <p className="font-bold">Demo account — funding disabled</p>
               <p className="mt-1 leading-relaxed">{DEMO_FUNDING_MSG}</p>
             </div>

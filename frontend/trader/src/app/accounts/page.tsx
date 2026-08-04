@@ -562,7 +562,7 @@ function JoinCopyTradingCard({ onStart }: { onStart: () => void }) {
         <div className="max-w-md">
           <h3 className="text-lg font-bold tracking-tight text-text-primary">Join Copy Trading</h3>
           <p className="mt-2 text-sm leading-relaxed text-text-secondary">
-            More than <span className="font-semibold text-emerald-600">50,000+ Copiers</span>
+            More than <span className="font-semibold text-emerald-600 dark:text-emerald-400">50,000+ Copiers</span>
             <br />
             Trade like a master and earn by copying professional investors
           </p>
@@ -702,7 +702,7 @@ function AccountCard({
             className={clsx(
               'inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium',
               isActive
-                ? 'bg-emerald-50 text-emerald-700'
+                ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
                 : 'bg-bg-active text-text-secondary',
             )}
           >
@@ -763,7 +763,7 @@ function AccountCard({
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); setCloseModal(true); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:bg-red-500/15"
               >
                 <Trash2 size={14} />
                 Close account

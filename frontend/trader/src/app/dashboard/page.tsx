@@ -219,7 +219,7 @@ function BrokerHome() {
         <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 <WalletIcon size={20} className="text-[#D60101]" />
               </div>
               <p className="text-[11px] uppercase tracking-wide font-semibold text-text-tertiary">Total Balance</p>
@@ -235,7 +235,7 @@ function BrokerHome() {
         <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 {todaysPnl >= 0
                   ? <TrendingUp size={20} className="text-[#D60101]" />
                   : <TrendingDown size={20} className="text-[#D60101]" />}
@@ -268,7 +268,7 @@ function BrokerHome() {
           }}
           className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
             <BarChart3 size={22} className="text-[#D60101]" />
           </div>
           <div className="flex-1 min-w-0">
@@ -283,7 +283,7 @@ function BrokerHome() {
           onClick={() => router.push('/social')}
           className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
         >
-          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+          <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
             <Users size={22} className="text-[#D60101]" />
           </div>
           <div className="flex-1 min-w-0">
@@ -301,7 +301,7 @@ function BrokerHome() {
             onClick={() => router.push('/wallet')}
             className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
           >
-            <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
               <WalletIcon size={22} className="text-[#D60101]" />
             </div>
             <div className="flex-1 min-w-0">

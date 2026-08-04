@@ -55,8 +55,8 @@ function StatCard({ label, value, icon: Icon, tone = 'default' }: {
 }) {
   const toneClasses = {
     default: { bg: 'bg-bg-hover', icon: 'text-text-primary' },
-    success: { bg: 'bg-emerald-50', icon: 'text-emerald-600' },
-    warning: { bg: 'bg-amber-50', icon: 'text-amber-600' },
+    success: { bg: 'bg-emerald-50', icon: 'text-emerald-600 dark:text-emerald-400' },
+    warning: { bg: 'bg-amber-50', icon: 'text-amber-600 dark:text-amber-400' },
     accent: { bg: 'bg-[#FDE3E3] dark:bg-[#D60101]/15', icon: 'text-[#D60101]' },
   }[tone];
   return (
@@ -78,7 +78,7 @@ function BenefitItem({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-start gap-3 text-left">
       <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-        <CheckCircle2 size={13} className="text-emerald-600" strokeWidth={2.6} />
+        <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" strokeWidth={2.6} />
       </span>
       <span className="text-sm text-text-secondary leading-relaxed">{children}</span>
     </li>
@@ -299,13 +299,13 @@ function IBTab() {
             <span key={`s-${c.id}`} className="text-text-primary">{c.source_user?.name}</span>,
             <span key={`t-${c.id}`} className="text-text-secondary capitalize">{c.commission_type?.replace('_', ' ')}</span>,
             <span key={`l-${c.id}`} className="text-text-secondary">L{c.mlm_level}</span>,
-            <span key={`a-${c.id}`} className="font-mono tabular-nums text-emerald-600">${fmt(c.amount || 0)}</span>,
+            <span key={`a-${c.id}`} className="font-mono tabular-nums text-emerald-600 dark:text-emerald-400">${fmt(c.amount || 0)}</span>,
             (
               <span
                 key={`st-${c.id}`}
                 className={clsx(
                   'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                  c.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700',
+                  c.status === 'paid' ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400',
                 )}
               >
                 {c.status}
@@ -408,7 +408,7 @@ function SubBrokerTab() {
                   key={`s-${c.user_id}`}
                   className={clsx(
                     'inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                    c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-bg-active text-text-secondary',
+                    c.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' : 'bg-bg-active text-text-secondary',
                   )}
                 >
                   {c.status}
@@ -503,7 +503,7 @@ function NetworkTab() {
             Level: <span className="font-bold text-text-primary">L{tree.root?.level}</span>
           </span>
           <span className="text-text-secondary">
-            Total Earned: <span className="font-mono font-bold text-emerald-600">${fmt(tree.root?.total_earned || 0)}</span>
+            Total Earned: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">${fmt(tree.root?.total_earned || 0)}</span>
           </span>
         </div>
       </div>
@@ -547,7 +547,7 @@ function TreeNode({ node, depth }: { node: any; depth: number }) {
         <span className="rounded-md bg-[#FDE3E3] dark:bg-[#D60101]/15 px-1.5 py-0.5 text-[10px] font-mono font-bold text-[#D60101]">L{node.depth}</span>
         <span className="ml-auto font-mono tabular-nums text-text-secondary">${fmt(node.total_earned || 0)}</span>
         {!node.is_active && (
-          <span className="rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-600">inactive</span>
+          <span className="rounded-full bg-red-50 dark:bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-red-600 dark:text-red-400">inactive</span>
         )}
       </button>
       {expanded && hasChildren && node.children.map((child: any) => (

@@ -183,7 +183,15 @@ export default function AppNavbar() {
             width={200}
             height={44}
             priority
-            className="h-9 w-auto"
+            className="h-9 w-auto dark:hidden"
+          />
+          <Image
+            src="/marketing/tuskaex-logo-light.png"
+            alt="TuskaEx"
+            width={200}
+            height={44}
+            priority
+            className="hidden h-9 w-auto dark:block"
           />
         </Link>
 

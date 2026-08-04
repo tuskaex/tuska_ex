@@ -486,7 +486,7 @@ export default function PammPage() {
           {/* My PAMM Investments */}
           <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
             <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 <Users size={20} className="text-[#D60101]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -502,7 +502,7 @@ export default function PammPage() {
           {/* Total Profit — value/ROI stays green/red */}
           <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
             <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 <TrendingUp size={20} className="text-[#D60101]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -520,7 +520,7 @@ export default function PammPage() {
           {/* Available Balance */}
           <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
             <div className="flex items-start gap-3 mb-3">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 <Wallet size={20} className="text-[#D60101]" />
               </div>
               <div className="min-w-0 flex-1">
@@ -542,7 +542,7 @@ export default function PammPage() {
           {/* Total PAMM Accounts */}
           <div className="rounded-2xl p-5 bg-bg-card border border-border-primary">
             <div className="flex items-start gap-3">
-              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] flex items-center justify-center shrink-0">
+              <div className="w-11 h-11 rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15 flex items-center justify-center shrink-0">
                 <BarChart2 size={20} className="text-[#D60101]" />
               </div>
               <div className="min-w-0 flex-1">
