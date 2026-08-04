@@ -55,9 +55,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" translate="no" suppressHydrationWarning className={fontVariableClass}>
       <head>
         <meta name="google" content="notranslate" />
+        {/* Applies the saved theme before the first paint.
+            This used to hard-code light unconditionally, which is why the
+            toggle appeared to do nothing: the script runs on every load and
+            navigation and stamped data-theme="light" over whatever the user
+            had chosen, leaving ThemeProvider to fight it from an effect that
+            only runs after hydration.
+            It reads the persisted uiStore ('tuskaex-ui') directly rather than
+            waiting for zustand to rehydrate — that happens after mount, by
+            which point the page has already painted white. Light stays the
+            fallback, so anyone who never touches the switch sees no change. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var d=document.documentElement;d.setAttribute('data-theme','light');d.classList.add('theme-light');d.style.backgroundColor='#ffffff';d.style.color='#0A0A0A';}catch(e){document.documentElement.setAttribute('data-theme','light');document.documentElement.style.backgroundColor='#ffffff';document.documentElement.style.color='#0A0A0A';}})();`,
+            __html: `(function(){var t='light';try{var raw=localStorage.getItem('tuskaex-ui');if(raw){var p=JSON.parse(raw);var s=p&&p.state&&p.state.theme;if(s==='dark'||s==='light')t=s;}}catch(e){}try{var d=document.documentElement;d.setAttribute('data-theme',t);d.classList.add(t==='dark'?'theme-dark':'theme-light');d.classList.remove(t==='dark'?'theme-light':'theme-dark');d.style.backgroundColor=t==='dark'?'#0a0a0a':'#ffffff';d.style.color=t==='dark'?'#ffffff':'#0A0A0A';}catch(e){}})();`,
           }}
         />
       </head>

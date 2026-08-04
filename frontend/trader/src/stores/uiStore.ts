@@ -115,8 +115,10 @@ export const useUIStore = create<UIState>()(
       version: 14,
       onRehydrateStorage: () => (rehydrated, err) => {
         if (err || !rehydrated || typeof window === 'undefined') return;
-        // Dark theme removed — force any persisted 'dark' back to light.
-        if (rehydrated.theme !== 'light') useUIStore.setState({ theme: 'light' });
+        // The saved theme is honoured again. This used to overwrite anything
+        // that was not 'light' on every rehydrate, so a dark choice survived
+        // exactly until the next page load — the single reason the switch
+        // never appeared to stick.
         if (window.innerWidth < 768) return;
         const w = rehydrated.watchlistWidth;
         if (w < WATCHLIST_MIN_PX) {

@@ -173,7 +173,7 @@ export default function AppNavbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#E5E5E5] bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border-primary bg-bg-glass backdrop-blur">
       <div className="mx-auto flex h-[60px] max-w-[1400px] items-center px-4 lg:px-6">
         {/* LEFT — Logo (same PNG as the marketing navbar) */}
         <Link href="/dashboard" className="flex items-center shrink-0" aria-label="TuskaEx home">
@@ -200,7 +200,7 @@ export default function AppNavbar() {
                     data-tour={item.tourKey}
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition-colors',
-                      groupActive ? 'bg-[#FDE3E3] text-[#D60101]' : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                      groupActive ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]' : 'text-text-primary hover:bg-bg-hover',
                     )}
                     aria-haspopup="menu"
                   >
@@ -209,7 +209,7 @@ export default function AppNavbar() {
                   </button>
                   {/* pt-2 keeps a hover bridge so the menu doesn't close in the gap */}
                   <div className="absolute left-0 top-full pt-2 hidden group-hover:block">
-                    <div className="min-w-[200px] rounded-xl border border-[#E5E5E5] bg-white p-1.5 shadow-xl ring-1 ring-black/5">
+                    <div className="min-w-[200px] rounded-xl border border-border-primary bg-bg-primary p-1.5 shadow-xl ring-1 ring-black/5">
                       {item.children.map((child) => {
                         const childActive = isActive(pathname, child.href);
                         const ChildIcon = child.icon;
@@ -220,7 +220,7 @@ export default function AppNavbar() {
                             prefetch={false}
                             className={cn(
                               'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                              childActive ? 'bg-[#FDE3E3] text-[#D60101]' : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                              childActive ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]' : 'text-text-primary hover:bg-bg-hover',
                             )}
                           >
                             <ChildIcon size={16} strokeWidth={1.9} />
@@ -243,8 +243,8 @@ export default function AppNavbar() {
                 className={cn(
                   'inline-flex items-center rounded-full px-3 py-1.5 text-[13.5px] font-medium transition-colors',
                   active
-                    ? 'bg-[#FDE3E3] text-[#D60101]'
-                    : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                    ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]'
+                    : 'text-text-primary hover:bg-bg-hover',
                 )}
               >
                 <span>{item.label}</span>
@@ -261,8 +261,8 @@ export default function AppNavbar() {
               className={cn(
                 'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition-colors',
                 MORE_ITEMS.some((i) => isActive(pathname, i.href))
-                  ? 'bg-[#FDE3E3] text-[#D60101]'
-                  : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                  ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]'
+                  : 'text-text-primary hover:bg-bg-hover',
               )}
               aria-haspopup="menu"
               aria-expanded={moreOpen}
@@ -273,7 +273,7 @@ export default function AppNavbar() {
             {moreOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-[520px] rounded-2xl border border-[#E5E5E5] bg-white p-3 shadow-xl ring-1 ring-black/5"
+                className="absolute right-0 top-full mt-2 w-[520px] rounded-2xl border border-border-primary bg-bg-primary p-3 shadow-xl ring-1 ring-black/5"
               >
                 <div className="grid grid-cols-2 gap-1">
                   {MORE_ITEMS.map((item) => {
@@ -282,15 +282,15 @@ export default function AppNavbar() {
                     const rowCls = cn(
                       'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                       active
-                        ? 'bg-[#FDE3E3] text-[#D60101]'
-                        : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                        ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]'
+                        : 'text-text-primary hover:bg-bg-hover',
                     );
                     const inner = (
                       <>
                         <span
                           className={cn(
                             'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                            active ? 'bg-[#D60101] text-white' : 'bg-[#F5F5F5] text-[#0A0A0A]',
+                            active ? 'bg-[#D60101] text-white' : 'bg-bg-hover text-text-primary',
                           )}
                         >
                           <Icon size={17} strokeWidth={1.9} />
@@ -333,7 +333,7 @@ export default function AppNavbar() {
               <Link
                 href="/wallet"
                 prefetch={false}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E5E5] bg-white px-2.5 py-1 text-[12px] font-medium text-[#0A0A0A] hover:bg-[#F5F5F5] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border-primary bg-bg-primary px-2.5 py-1 text-[12px] font-medium text-text-primary hover:bg-bg-hover transition-colors"
                 aria-label="Crypto deposit"
               >
                 <Bitcoin size={14} className="text-[#F7931A]" />
@@ -344,7 +344,7 @@ export default function AppNavbar() {
                 href="/wallet"
                 prefetch={false}
                 data-tour="deposit"
-                className="inline-flex items-center rounded-full bg-[#0A0A0A] px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-[#222] transition-colors"
+                className="inline-flex items-center rounded-full bg-[#0A0A0A] px-4 py-1.5 text-[13px] font-semibold text-white hover:bg-[#222] dark:bg-[#D60101] dark:hover:bg-[#A30000] transition-colors"
               >
                 Deposit
               </Link>
@@ -361,32 +361,32 @@ export default function AppNavbar() {
             <button
               type="button"
               onClick={() => setUserMenuOpen((v) => !v)}
-              className="flex items-center gap-2 rounded-full p-0.5 hover:bg-[#F5F5F5] transition-colors"
+              className="flex items-center gap-2 rounded-full p-0.5 hover:bg-bg-hover transition-colors"
               aria-haspopup="menu"
               aria-expanded={userMenuOpen}
             >
-              <div className="h-8 w-8 rounded-full bg-[#FDE3E3] border border-[#D60101]/30 flex items-center justify-center text-[12px] font-bold uppercase text-[#D60101]">
+              <div className="h-8 w-8 rounded-full bg-[#FDE3E3] dark:bg-[#D60101]/15 border border-[#D60101]/30 flex items-center justify-center text-[12px] font-bold uppercase text-[#D60101]">
                 {initials}
               </div>
-              <ChevronDown size={14} className="text-[#5B5B5B] mr-1" />
+              <ChevronDown size={14} className="text-text-secondary mr-1" />
             </button>
 
             {userMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-[220px] rounded-xl border border-[#E5E5E5] bg-white py-1 shadow-lg"
+                className="absolute right-0 top-full mt-2 w-[220px] rounded-xl border border-border-primary bg-bg-primary py-1 shadow-lg"
               >
-                <div className="px-3 pt-2 pb-2 border-b border-[#EDEDED] mb-1">
-                  <div className="text-[13px] font-semibold text-[#0A0A0A] truncate">{handle}</div>
+                <div className="px-3 pt-2 pb-2 border-b border-border-secondary mb-1">
+                  <div className="text-[13px] font-semibold text-text-primary truncate">{handle}</div>
                   {user?.email && (
-                    <div className="text-[11.5px] text-[#9A9A9A] truncate">{user.email}</div>
+                    <div className="text-[11.5px] text-text-tertiary truncate">{user.email}</div>
                   )}
                 </div>
                 <Link
                   href="/profile"
                   prefetch={false}
                   onClick={() => setUserMenuOpen(false)}
-                  className="block px-3 py-2 text-[13px] text-[#0A0A0A] hover:bg-[#F5F5F5] transition-colors"
+                  className="block px-3 py-2 text-[13px] text-text-primary hover:bg-bg-hover transition-colors"
                 >
                   Profile &amp; Settings
                 </Link>
@@ -394,7 +394,7 @@ export default function AppNavbar() {
                   href="/wallet"
                   prefetch={false}
                   onClick={() => setUserMenuOpen(false)}
-                  className="block px-3 py-2 text-[13px] text-[#0A0A0A] hover:bg-[#F5F5F5] transition-colors"
+                  className="block px-3 py-2 text-[13px] text-text-primary hover:bg-bg-hover transition-colors"
                 >
                   Wallet
                 </Link>
@@ -402,11 +402,11 @@ export default function AppNavbar() {
                   href="/kyc"
                   prefetch={false}
                   onClick={() => setUserMenuOpen(false)}
-                  className="block px-3 py-2 text-[13px] text-[#0A0A0A] hover:bg-[#F5F5F5] transition-colors"
+                  className="block px-3 py-2 text-[13px] text-text-primary hover:bg-bg-hover transition-colors"
                 >
                   KYC Verification
                 </Link>
-                <div className="border-t border-[#EDEDED] my-1" />
+                <div className="border-t border-border-secondary my-1" />
                 <button
                   type="button"
                   onClick={onSignOut}
@@ -428,7 +428,7 @@ export default function AppNavbar() {
             <Link
               href="/wallet"
               prefetch={false}
-              className="inline-flex items-center rounded-full bg-[#0A0A0A] px-3 py-1.5 text-[12px] font-semibold text-white"
+              className="inline-flex items-center rounded-full bg-[#0A0A0A] px-3 py-1.5 text-[12px] font-semibold text-white dark:bg-[#D60101]"
             >
               Deposit
             </Link>
@@ -439,7 +439,7 @@ export default function AppNavbar() {
           <button
             type="button"
             onClick={() => setSidebarOpen(!mobileOpen)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#0A0A0A] hover:bg-[#F5F5F5]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-text-primary hover:bg-bg-hover"
             aria-label="Open menu"
             aria-expanded={mobileOpen}
           >
@@ -456,7 +456,7 @@ export default function AppNavbar() {
             aria-hidden
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="fixed left-0 right-0 top-[60px] z-50 max-h-[calc(100dvh-60px)] overflow-y-auto border-b border-[#E5E5E5] bg-white lg:hidden">
+          <div className="fixed left-0 right-0 top-[60px] z-50 max-h-[calc(100dvh-60px)] overflow-y-auto border-b border-border-primary bg-bg-primary lg:hidden">
             <nav className="px-3 py-3">
               {ALL_NAV.map((item) => {
                 const active = isActive(pathname, item.href);
@@ -464,8 +464,8 @@ export default function AppNavbar() {
                 const rowCls = cn(
                   'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors',
                   active
-                    ? 'bg-[#FDE3E3] text-[#D60101]'
-                    : 'text-[#0A0A0A] hover:bg-[#F5F5F5]',
+                    ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]'
+                    : 'text-text-primary hover:bg-bg-hover',
                 );
                 const inner = (
                   <>
@@ -484,12 +484,12 @@ export default function AppNavbar() {
                   </Link>
                 );
               })}
-              <div className="my-3 h-px bg-[#EDEDED]" />
+              <div className="my-3 h-px bg-bg-active" />
               <Link
                 href="/profile"
                 prefetch={false}
                 onClick={() => setSidebarOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium text-[#0A0A0A] hover:bg-[#F5F5F5]"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium text-text-primary hover:bg-bg-hover"
               >
                 <Settings size={18} strokeWidth={1.85} />
                 <span>Profile &amp; Settings</span>
