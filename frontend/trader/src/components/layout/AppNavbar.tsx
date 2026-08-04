@@ -322,6 +322,8 @@ export default function AppNavbar() {
 
         {/* RIGHT — actions (lg+) */}
         <div className="hidden lg:flex items-center gap-2">
+          <AppThemeToggle />
+
           {/* Crypto + Deposit pills are hidden for try-with-demo users —
               demo accounts run on play money so funding doesn't apply,
               and clicking either would just bounce them to the
@@ -348,8 +350,6 @@ export default function AppNavbar() {
               </Link>
             </>
           )}
-
-          <AppThemeToggle />
 
           {/* Notifications */}
           <div className="text-text-primary">
@@ -421,6 +421,9 @@ export default function AppNavbar() {
 
         {/* RIGHT — mobile (lg-) */}
         <div className="flex lg:hidden items-center gap-1">
+          {/* Same switch on phones. The desktop cluster above is hidden below
+              lg, so without this the toggle simply would not exist there. */}
+          <AppThemeToggle />
           {!user?.is_demo && (
             <Link
               href="/wallet"
@@ -430,7 +433,7 @@ export default function AppNavbar() {
               Deposit
             </Link>
           )}
-          <div className="text-[#0A0A0A]">
+          <div className="text-text-primary">
             <NotificationBell />
           </div>
           <button
