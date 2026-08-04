@@ -39,6 +39,10 @@ signals:
     // close dialog shows side, size and P/L, and re-deriving those from a
     // later poll could describe a position that has already moved.
     void closePosition(const OpenPosition& position);
+    // Edit this position's stop loss / take profit.
+    void modifyBrackets(const OpenPosition& position);
+    // Cancel a listed pending order.
+    void cancelOrder(const PendingOrder& order);
 
 private:
     // Time filter, one per tab. Which timestamp it tests depends on the tab:

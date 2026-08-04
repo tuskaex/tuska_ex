@@ -59,6 +59,8 @@ set(SOURCES
     src/ui/AccountPanel.cpp
     src/ui/PositionsPanel.cpp
     src/ui/ClosePositionDialog.cpp
+    src/ui/ModifyBracketsDialog.cpp
+    src/ui/PendingOrderDialog.cpp
     src/ui/WalletDialog.cpp
     src/ui/MainWindow.cpp
 )
@@ -80,6 +82,8 @@ set(HEADERS
     src/ui/AccountPanel.h
     src/ui/PositionsPanel.h
     src/ui/ClosePositionDialog.h
+    src/ui/ModifyBracketsDialog.h
+    src/ui/PendingOrderDialog.h
     src/ui/WalletDialog.h
     src/ui/MainWindow.h
 )

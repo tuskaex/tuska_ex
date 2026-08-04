@@ -42,6 +42,7 @@ private slots:
     void onTradeResult(const TradeResult& r);
     void onApiError(const QString& context, const QString& message);
     void openSettings();
+    void openPendingOrder();   // place a limit / stop order
     void logout();              // clear the session and return to the sign-in card
     void applyTheme();          // restyle the bits that carry inline style sheets
 
@@ -58,6 +59,12 @@ private:
     // and a session that never renews takes the wallet and per-position close
     // down with it.
     void applySessionRenewal();
+    // True when this session holds a JWT. Everything on /api/v1 — per-position
+    // close, S/L and T/P, pending orders, the wallet — needs one, and a session
+    // signed in with a pasted API key never has it. Says so once, here, instead
+    // of each call site firing a request that 401s with a message no trader can
+    // act on. `what` names the action in the message.
+    bool requireSession(const QString& what);
     void updateIdentity();      // the "name | type | account no." line by the logo
     // Money as text, or a mask when privacy mode is on.
     QString money(double v, const QString& currency = QString()) const;
@@ -86,6 +93,9 @@ private:
     QSplitter* m_centerSplit = nullptr;
 
     QHash<QString, SymbolSpec> m_specs;
+    // Last tick per symbol, so the pending-order dialog can seed its price
+    // and state the rule without waiting for a fresh quote.
+    QHash<QString, Quote> m_lastQuotes;
     QString     m_currentSymbol;
     AccountInfo m_lastAccount;          // re-rendered when privacy/theme flips
     bool        m_streamLive = false;

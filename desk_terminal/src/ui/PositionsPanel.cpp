@@ -154,16 +154,20 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
                             tr("Price"), tr("S/L"), tr("T/P"), tr("Price"), tr("Swap"),
                             tr("Profit"), tr("Action")});
     m_orderTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
-                              tr("Price"), tr("S/L"), tr("T/P")});
+                              tr("Price"), tr("S/L"), tr("T/P"), tr("Action")});
     m_histTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
                              tr("Price"), tr("Price"), tr("Swap"), tr("Commission"), tr("Profit")});
 
     // Action holds a control, not data: pin it narrow so it does not take an
     // equal share of the width like the value columns do — just wide enough for
     // the header word and a centred button.
+    // 92px, not 64: the cell now holds an S/L button beside the close ✕.
     const int closeCol = m_posTable->columnCount() - 1;
     m_posTable->horizontalHeader()->setSectionResizeMode(closeCol, QHeaderView::Fixed);
-    m_posTable->setColumnWidth(closeCol, 64);
+    m_posTable->setColumnWidth(closeCol, 92);
+    const int cancelCol = m_orderTable->columnCount() - 1;
+    m_orderTable->horizontalHeader()->setSectionResizeMode(cancelCol, QHeaderView::Fixed);
+    m_orderTable->setColumnWidth(cancelCol, 64);
 
     // Each tab is table + its own filter bar, so a range chosen on History does
     // not silently reach into the open-positions tab.
@@ -254,12 +258,28 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         connect(closeBtn, &QPushButton::clicked, this,
                 [this, row]() { emit closePosition(row); });
 
+        auto* editBtn = new QPushButton(tr("S/L"));
+        editBtn->setFixedSize(30, 18);
+        editBtn->setCursor(Qt::PointingHandCursor);
+        editBtn->setToolTip(tr("Modify stop loss / take profit"));
+        editBtn->setStyleSheet(QString(
+            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;"
+            "color:%2; font-size:9px; font-weight:800; padding:0;}"
+            "QPushButton:hover{border-color:%3; color:%3;}")
+            .arg(c.btnBorder, c.muted, c.accent));
+        connect(editBtn, &QPushButton::clicked, this,
+                [this, row]() { emit modifyBrackets(row); });
+
         // Centred in the cell — a fixed-size widget handed straight to
         // setCellWidget() sticks to the left edge.
         auto* cellWrap = new QWidget;
         auto* wrapLay = new QHBoxLayout(cellWrap);
         wrapLay->setContentsMargins(0, 0, 0, 0);
-        wrapLay->addWidget(closeBtn, 0, Qt::AlignCenter);
+        wrapLay->setSpacing(3);
+        wrapLay->addStretch();
+        wrapLay->addWidget(editBtn);
+        wrapLay->addWidget(closeBtn);
+        wrapLay->addStretch();
         m_posTable->setCellWidget(r, 11, cellWrap);
         ++r;
     }
@@ -290,6 +310,26 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
         m_orderTable->setItem(r, 5, cell(o.price > 0 ? fmt(o.price, 5) : QString(), R));
         m_orderTable->setItem(r, 6, cell(o.sl > 0 ? fmt(o.sl, 5) : QString(), R));
         m_orderTable->setItem(r, 7, cell(o.tp > 0 ? fmt(o.tp, 5) : QString(), R));
+
+        auto* cancelBtn = new QPushButton;
+        cancelBtn->setFixedSize(22, 18);
+        cancelBtn->setCursor(Qt::PointingHandCursor);
+        cancelBtn->setToolTip(tr("Cancel this pending order"));
+        cancelBtn->setIcon(Icons::close(QColor(c.down), 12));
+        cancelBtn->setIconSize(QSize(12, 12));
+        cancelBtn->setStyleSheet(QString(
+            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
+            "QPushButton:hover{background:%2; border-color:%2;}")
+            .arg(c.btnBorder, c.down));
+        const PendingOrder ord = o;
+        connect(cancelBtn, &QPushButton::clicked, this,
+                [this, ord]() { emit cancelOrder(ord); });
+
+        auto* wrap = new QWidget;
+        auto* wl = new QHBoxLayout(wrap);
+        wl->setContentsMargins(0, 0, 0, 0);
+        wl->addWidget(cancelBtn, 0, Qt::AlignCenter);
+        m_orderTable->setCellWidget(r, 8, wrap);
         ++r;
     }
 }

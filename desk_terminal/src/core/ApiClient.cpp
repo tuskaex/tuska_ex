@@ -268,6 +268,47 @@ static void handlePositionOp(ApiClient* self, QNetworkReply* reply,
         });
 }
 
+// Shared reply handling for the two order operations. Both answer with a
+// FastAPI body, so the reason comes out through apiDetail() and reaches the
+// user instead of Qt's generic "server replied: Bad Request".
+static void handleOrderOp(ApiClient* self, QNetworkReply* reply, const QString& op) {
+    QObject::connect(reply, &QNetworkReply::finished, self, [self, reply, op]() {
+        reply->deleteLater();
+        const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
+        const bool ok = (reply->error() == QNetworkReply::NoError && http < 400);
+        emit self->orderOpResult(
+            op, ok,
+            ok ? (op == "cancel" ? QObject::tr("Order cancelled")
+                                 : QObject::tr("Pending order placed"))
+               : apiDetail(o, reply->errorString()));
+    });
+}
+
+void ApiClient::placePendingOrder(const QString& symbol, const QString& side,
+                                  const QString& type, double lots, double price,
+                                  double sl, double tp, const QString& comment) {
+    QJsonObject body;
+    body["account_id"] = m_cfg.accountId;
+    body["symbol"]     = symbol;
+    body["order_type"] = type.toLower();     // limit | stop
+    body["side"]       = side.toLower();     // buy | sell
+    body["lots"]       = lots;
+    body["price"]      = price;
+    if (sl > 0.0) body["stop_loss"]   = sl;
+    if (tp > 0.0) body["take_profit"] = tp;
+    body["comment"] = comment.isEmpty() ? QStringLiteral("terminal") : comment;
+
+    QNetworkReply* r = m_net->post(v1Request("/orders/"),
+                                   QJsonDocument(body).toJson(QJsonDocument::Compact));
+    handleOrderOp(this, r, "place");
+}
+
+void ApiClient::cancelOrder(const QString& orderId) {
+    QNetworkReply* r = m_net->deleteResource(v1Request("/orders/" + orderId));
+    handleOrderOp(this, r, "cancel");
+}
+
 void ApiClient::modifyBracket(const QString& positionId, const QString& kind, double level) {
     QJsonObject body;
     const QString field = (kind == "tp") ? "take_profit" : "stop_loss";

@@ -6,6 +6,8 @@
 #include "ui/AccountPanel.h"
 #include "ui/PositionsPanel.h"
 #include "ui/ClosePositionDialog.h"
+#include "ui/ModifyBracketsDialog.h"
+#include "ui/PendingOrderDialog.h"
 #include "ui/LoginDialog.h"
 #include "ui/WalletDialog.h"
 #include "core/ApiClient.h"
@@ -171,6 +173,12 @@ void MainWindow::buildMenuBar() {
             this, &MainWindow::logout);
     connect(file->addAction(tr("E&xit")), &QAction::triggered,
             qApp, &QApplication::quit);
+
+    // ── Trade ──
+    QMenu* trade = bar->addMenu(tr("&Trade"));
+    QAction* pending = trade->addAction(tr("New &pending order…"));
+    pending->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
+    connect(pending, &QAction::triggered, this, &MainWindow::openPendingOrder);
 
     // ── Accounts — rebuilt each time it opens, so a fresh sign-in shows up ──
     m_accountsMenu = bar->addMenu(tr("&Accounts"));
@@ -444,19 +452,9 @@ void MainWindow::connectServices() {
     connect(m_positions, &PositionsPanel::closePosition, this,
             [this](const OpenPosition& pos) {
         const QString sym = pos.symbol;
-        // Closing one position goes through /api/v1/positions/{id}/close, which
-        // authenticates with the JWT. A session signed in with a pasted API key
-        // has no token, so say why instead of firing a request that 401s with a
-        // message no trader can act on. Never silently fall back to the
-        // symbol-wide close — that is the bug this replaced.
-        if (m_cfg.token.trimmed().isEmpty()) {
-            QMessageBox::information(this, tr("Close position"),
-                tr("Closing a single position needs an email/password sign-in.\n\n"
-                   "This session is authenticated with an API key, which can only "
-                   "close every %1 position at once — use CLOSE on the one-click "
-                   "strip if that is what you want.").arg(sym));
-            return;
-        }
+        // Never silently falls back to the symbol-wide close — that was the
+        // bug this replaced.
+        if (!requireSession(tr("Closing a single position"))) return;
         // Lot step / minimum come from the instrument spec so the dialog cannot
         // offer a slice the venue would reject.
         const SymbolSpec spec = m_specs.value(sym);
@@ -464,6 +462,43 @@ void MainWindow::connectServices() {
         if (dlg.exec() != QDialog::Accepted) return;
         // A full close sends no lots at all — see ApiClient::closePositionById.
         m_api->closePositionById(pos.id, dlg.isFullClose() ? 0.0 : dlg.lotsToClose());
+    });
+
+    // S/L and T/P were display-only in the blotter: the columns showed the
+    // levels and only a chart-line drag could change them, which is what the
+    // "S/L and T/P not changing" report was about.
+    connect(m_positions, &PositionsPanel::modifyBrackets, this,
+            [this](const OpenPosition& pos) {
+        if (!requireSession(tr("Modifying stop loss / take profit"))) return;
+        const SymbolSpec spec = m_specs.value(pos.symbol);
+        ModifyBracketsDialog dlg(pos, spec.digits > 0 ? spec.digits : 5, this);
+        if (dlg.exec() != QDialog::Accepted) return;
+        // One call per leg, and only for legs the user touched — the endpoint
+        // patches, so sending an untouched level from a 4s-old snapshot could
+        // overwrite one the server has already moved.
+        if (dlg.slChanged()) m_api->modifyBracket(pos.id, "sl", dlg.stopLoss());
+        if (dlg.tpChanged()) m_api->modifyBracket(pos.id, "tp", dlg.takeProfit());
+    });
+
+    connect(m_positions, &PositionsPanel::cancelOrder, this,
+            [this](const PendingOrder& o) {
+        if (!requireSession(tr("Cancelling a pending order"))) return;
+        if (QMessageBox::question(this, tr("Cancel order"),
+                tr("Cancel this pending %1 order (%2 lots at %3)?")
+                    .arg(o.symbol, QString::number(o.lots, 'f', 2),
+                         QString::number(o.price, 'f', 5))) != QMessageBox::Yes)
+            return;
+        m_api->cancelOrder(o.id);
+    });
+
+    // Both order operations end by refetching rather than patching the table:
+    // a cancel races the fill engine, and the server's answer is the only
+    // truthful one.
+    connect(m_api, &ApiClient::orderOpResult, this,
+            [this](const QString&, bool ok, const QString& msg) {
+        setStatus(msg, !ok);
+        m_api->fetchOrders();
+        m_api->fetchPositions();
     });
 
     // A close moves a row from Trade to History, but the 4s poll only refreshes
@@ -481,6 +516,8 @@ void MainWindow::connectServices() {
     // Live stream fan-out
     connect(m_stream, &PriceStream::tickReceived, m_watch,  &WatchlistWidget::updateQuote);
     connect(m_stream, &PriceStream::tickReceived, m_ticket, &OrderTicket::updateQuote);
+    connect(m_stream, &PriceStream::tickReceived, this,
+            [this](const Quote& q) { if (q.valid) m_lastQuotes.insert(q.symbol, q); });
     connect(m_stream, &PriceStream::statusChanged, this, [this](const QString& s) {
         const bool live = s.startsWith("Live");
         if (live == m_streamLive) return;
@@ -584,6 +621,16 @@ void MainWindow::setStatus(const QString& text, bool error) {
 // disk; endpoints and UI preferences (theme, privacy) survive, and the email is
 // kept so the form prefills. Cancelling the sign-in closes the terminal — there
 // is no signed-out state worth showing, only stale numbers.
+bool MainWindow::requireSession(const QString& what) {
+    if (!m_cfg.token.trimmed().isEmpty()) return true;
+    QMessageBox::information(this, what,
+        tr("%1 needs an email/password sign-in. This session is authenticated "
+           "with an API key, which can place and close market orders but cannot "
+           "reach the account endpoints. Sign in from File > Settings to use it.")
+            .arg(what));
+    return false;
+}
+
 void MainWindow::applySessionRenewal() {
     if (!m_sessionTimer) return;
     if (m_cfg.refreshToken.trimmed().isEmpty()) m_sessionTimer->stop();
@@ -636,6 +683,23 @@ void MainWindow::logout() {
     refreshAll();
     updateIdentity();
     setStatus(tr("Signed in"));
+}
+
+void MainWindow::openPendingOrder() {
+    // The one-click strip only ever fills at market, and the blotter listed
+    // pending orders it had no way to create — "Pending order window can't be
+    // found" was literally true. This is that window.
+    if (!requireSession(tr("Placing a pending order"))) return;
+    if (m_currentSymbol.isEmpty()) {
+        setStatus(tr("Pick a symbol in Market Watch first."), true);
+        return;
+    }
+    const SymbolSpec spec = m_specs.value(m_currentSymbol);
+    const Quote q = m_lastQuotes.value(m_currentSymbol);
+    PendingOrderDialog dlg(spec, q.bid, q.ask, this);
+    if (dlg.exec() != QDialog::Accepted) return;
+    m_api->placePendingOrder(m_currentSymbol, dlg.side(), dlg.orderType(),
+                             dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit());
 }
 
 void MainWindow::openSettings() {

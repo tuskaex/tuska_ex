@@ -38,6 +38,18 @@ public:
     // Sends ONLY the bracket being changed ("sl" | "tp"); the endpoint does a
     // partial update, so re-sending the other one from a stale snapshot would
     // silently revert it. level <= 0 asks to remove the bracket.
+    // Pending (limit / stop) order. The algo /trade endpoint only fills at
+    // market, so this goes to /api/v1/orders with the JWT — same auth as the
+    // per-position operations below.
+    //   type = "limit" | "stop";  side = "buy" | "sell"
+    //   sl/tp <= 0 are omitted.
+    void placePendingOrder(const QString& symbol, const QString& side, const QString& type,
+                           double lots, double price, double sl = 0.0, double tp = 0.0,
+                           const QString& comment = QString());
+    // Cancels a pending order. Returns 400 once it has filled, which is why
+    // the list is refetched after every action rather than patched in place.
+    void cancelOrder(const QString& orderId);
+
     // Mints a fresh access token from the stored refresh cookie. The access
     // token lasts ~45 minutes and everything on /api/v1 — per-position close,
     // SL/TP, the wallet — dies with it, so this has to run on a timer rather
@@ -61,6 +73,8 @@ signals:
     // Result of a per-position modify/close. ok=false carries the reject reason
     // (so the chart can snap a dragged line back and toast the message).
     void positionOpResult(const QString& positionId, const QString& op, bool ok, const QString& message);
+    // Result of placePendingOrder()/cancelOrder(). op = "place" | "cancel".
+    void orderOpResult(const QString& op, bool ok, const QString& message);
     // New access token, plus the replacement refresh cookie. Both must be
     // persisted: the old refresh token is dead the moment this fires.
     void sessionRefreshed(const QString& accessToken, const QString& refreshToken);
