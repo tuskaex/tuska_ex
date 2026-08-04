@@ -209,7 +209,7 @@ export default function AppNavbar() {
                   </button>
                   {/* pt-2 keeps a hover bridge so the menu doesn't close in the gap */}
                   <div className="absolute left-0 top-full pt-2 hidden group-hover:block">
-                    <div className="min-w-[200px] rounded-xl border border-border-primary bg-bg-primary p-1.5 shadow-xl ring-1 ring-black/5">
+                    <div className="min-w-[200px] rounded-xl border border-border-primary bg-bg-primary p-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
                       {item.children.map((child) => {
                         const childActive = isActive(pathname, child.href);
                         const ChildIcon = child.icon;
@@ -273,7 +273,7 @@ export default function AppNavbar() {
             {moreOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-[520px] rounded-2xl border border-border-primary bg-bg-primary p-3 shadow-xl ring-1 ring-black/5"
+                className="absolute right-0 top-full mt-2 w-[520px] rounded-2xl border border-border-primary bg-bg-primary p-3 shadow-xl ring-1 ring-black/5 dark:ring-white/10"
               >
                 <div className="grid grid-cols-2 gap-1">
                   {MORE_ITEMS.map((item) => {

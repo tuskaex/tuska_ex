@@ -358,7 +358,7 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={() => setDemoUpgradeOpen(true)}
-                    className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
+                    className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] dark:bg-[#D60101] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
                   >
                     Open Account
                   </button>
@@ -366,14 +366,14 @@ export default function AccountsPage() {
                   <button
                     type="button"
                     onClick={handleOpenNewAccount}
-                    className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
+                    className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] dark:bg-[#D60101] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
                   >
                     Open Account
                   </button>
                 )}
 
                 {/* Grid / List view toggle */}
-                <div className="inline-flex items-center gap-1 rounded-full border border-[#E5E5E5] bg-white p-1">
+                <div className="inline-flex items-center gap-1 rounded-full border border-border-primary bg-bg-card p-1">
                   <button
                     type="button"
                     aria-label="Grid view"
@@ -381,8 +381,8 @@ export default function AccountsPage() {
                     className={clsx(
                       'p-1.5 rounded-full transition-colors',
                       viewMode === 'grid'
-                        ? 'bg-white text-[#0A0A0A] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#0A0A0A]',
+                        ? 'bg-bg-card text-text-primary shadow-sm'
+                        : 'text-text-tertiary hover:text-text-primary',
                     )}
                   >
                     <LayoutGrid size={16} />
@@ -394,8 +394,8 @@ export default function AccountsPage() {
                     className={clsx(
                       'p-1.5 rounded-full transition-colors',
                       viewMode === 'list'
-                        ? 'bg-white text-[#0A0A0A] shadow-sm'
-                        : 'text-[#9CA3AF] hover:text-[#0A0A0A]',
+                        ? 'bg-bg-card text-text-primary shadow-sm'
+                        : 'text-text-tertiary hover:text-text-primary',
                     )}
                   >
                     <ListIcon size={16} />
@@ -420,7 +420,7 @@ export default function AccountsPage() {
               )}
 
               {!loading && !error && visibleRows.length === 0 && (
-                <div className="rounded-2xl border border-[#E5E5E5] bg-white p-8 text-center">
+                <div className="rounded-2xl border border-border-primary bg-bg-card p-8 text-center">
                   <p className="text-sm text-text-secondary">
                     {user?.is_demo
                       ? 'No demo trading account is linked yet.'
@@ -511,17 +511,17 @@ function FilterDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         className={clsx(
-          'inline-flex items-center gap-2 rounded-full border border-[#E5E5E5] bg-white px-4 py-2 text-sm font-medium text-[#0A0A0A] hover:border-[#0A0A0A] transition-colors',
-          disabled && 'opacity-60 cursor-not-allowed hover:border-[#E5E5E5]',
+          'inline-flex items-center gap-2 rounded-full border border-border-primary bg-bg-card px-4 py-2 text-sm font-medium text-text-primary hover:border-text-primary transition-colors',
+          disabled && 'opacity-60 cursor-not-allowed hover:border-border-primary',
         )}
       >
         <span>{label}</span>
-        <ChevronDown size={14} className={clsx('text-[#6B7280] transition-transform', open && 'rotate-180')} />
+        <ChevronDown size={14} className={clsx('text-text-secondary transition-transform', open && 'rotate-180')} />
       </button>
       {open && !disabled && (
         <ul
           role="listbox"
-          className="absolute left-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-[#E5E5E5] bg-white shadow-lg ring-1 ring-black/5"
+          className="absolute left-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-border-primary bg-bg-card shadow-lg ring-1 ring-black/5 dark:ring-white/10"
         >
           {options.map((o) => {
             const selected = o.id === value;
@@ -534,8 +534,8 @@ function FilterDropdown({
                     setOpen(false);
                   }}
                   className={clsx(
-                    'block w-full px-4 py-2 text-left text-sm hover:bg-[#F5F5F5] transition-colors',
-                    selected ? 'bg-[#F5F5F5] font-semibold text-[#0A0A0A]' : 'text-[#0A0A0A]',
+                    'block w-full px-4 py-2 text-left text-sm hover:bg-bg-hover transition-colors',
+                    selected ? 'bg-bg-hover font-semibold text-text-primary' : 'text-text-primary',
                   )}
                 >
                   {o.label}
@@ -557,11 +557,11 @@ function FilterDropdown({
    ------------------------------------------------------------------------ */
 function JoinCopyTradingCard({ onStart }: { onStart: () => void }) {
   return (
-    <div className="md:col-span-2 relative overflow-hidden rounded-2xl border border-[#E5E5E5] bg-white p-6">
+    <div className="md:col-span-2 relative overflow-hidden rounded-2xl border border-border-primary bg-bg-card p-6">
       <div className="relative z-[1] flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
         <div className="max-w-md">
-          <h3 className="text-lg font-bold tracking-tight text-[#0A0A0A]">Join Copy Trading</h3>
-          <p className="mt-2 text-sm leading-relaxed text-[#4B5563]">
+          <h3 className="text-lg font-bold tracking-tight text-text-primary">Join Copy Trading</h3>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
             More than <span className="font-semibold text-emerald-600">50,000+ Copiers</span>
             <br />
             Trade like a master and earn by copying professional investors
@@ -570,7 +570,7 @@ function JoinCopyTradingCard({ onStart }: { onStart: () => void }) {
         <button
           type="button"
           onClick={onStart}
-          className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors shrink-0"
+          className="inline-flex items-center justify-center rounded-full bg-[#0A0A0A] dark:bg-[#D60101] px-5 py-2 text-sm font-semibold text-white hover:bg-black transition-colors shrink-0"
         >
           Start Copying
         </button>
@@ -693,7 +693,7 @@ function AccountCard({
   return (
     <div
       id={`account-card-${row.id}`}
-      className="rounded-2xl border border-[#E5E5E5] bg-white p-5"
+      className="rounded-2xl border border-border-primary bg-bg-card p-5"
     >
       {/* Header � status pill + platform + account number + settings cog */}
       <div className="flex items-start justify-between gap-3">
@@ -710,7 +710,7 @@ function AccountCard({
           </span>
           {isManagedAccount && (
             <span
-              className="inline-flex items-center gap-1 rounded-md bg-[#FDE3E3] px-2 py-0.5 text-xs font-medium text-[#D60101]"
+              className="inline-flex items-center gap-1 rounded-md bg-[#FDE3E3] dark:bg-[#D60101]/15 px-2 py-0.5 text-xs font-medium text-[#D60101]"
               title="Copy-trading account — trades are mirrored from the master you follow"
             >
               <Users size={12} />
@@ -719,15 +719,15 @@ function AccountCard({
           )}
           {alias ? (
             <div className="min-w-0 flex flex-col leading-tight">
-              <span className="truncate text-sm font-semibold text-[#0A0A0A]" title={alias}>
+              <span className="truncate text-sm font-semibold text-text-primary" title={alias}>
                 {alias}
               </span>
-              <span className="text-[11px] tabular-nums text-[#6B7280]">
+              <span className="text-[11px] tabular-nums text-text-secondary">
                 {row.account_number}
               </span>
             </div>
           ) : (
-            <span className="text-sm font-semibold tabular-nums text-[#0A0A0A]">
+            <span className="text-sm font-semibold tabular-nums text-text-primary">
               {row.account_number}
             </span>
           )}
@@ -738,16 +738,16 @@ function AccountCard({
             type="button"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label="Account settings"
-            className="rounded-full p-1.5 text-[#6B7280] hover:bg-gray-100 hover:text-[#0A0A0A] transition-colors"
+            className="rounded-full p-1.5 text-text-secondary hover:bg-gray-100 hover:text-text-primary transition-colors"
           >
             <Settings size={18} />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-9 z-20 w-44 rounded-xl border border-[#E5E5E5] bg-white py-1 shadow-lg">
+            <div className="absolute right-0 top-9 z-20 w-44 rounded-xl border border-border-primary bg-bg-card py-1 shadow-lg">
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); setRenameOpen(true); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#0A0A0A] hover:bg-gray-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-gray-50"
               >
                 <Pencil size={14} />
                 Rename label
@@ -755,7 +755,7 @@ function AccountCard({
               <button
                 type="button"
                 onClick={() => { setMenuOpen(false); onTransfer(); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[#0A0A0A] hover:bg-gray-50"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-primary hover:bg-gray-50"
               >
                 <ArrowLeftRight size={14} />
                 Transfer funds
@@ -775,30 +775,30 @@ function AccountCard({
 
       {/* Sub-header � copy-trading accounts show just "Copy Trading"; regular
           accounts show their group + server line. */}
-      <p className="mt-2 text-xs text-[#6B7280]">
+      <p className="mt-2 text-xs text-text-secondary">
         {isManagedAccount ? (
           <span className="font-medium text-[#D60101]">Copy Trading</span>
         ) : (
           <>
-            {groupName} STP <span className="mx-2 text-[#D1D5DB]">|</span> {serverLabel}
+            {groupName} STP <span className="mx-2 text-text-tertiary">|</span> {serverLabel}
           </>
         )}
       </p>
 
       {/* Inner summary tile */}
-      <div className="mt-4 rounded-xl bg-[#F5F5F5] p-4">
+      <div className="mt-4 rounded-xl bg-bg-hover p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FDE3E3]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FDE3E3] dark:bg-[#D60101]/15">
             <Wallet size={20} className="text-[#D60101]" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] uppercase tracking-wide font-semibold text-[#9A9A9A]">Equity</p>
-            <p className="truncate text-xl font-bold font-mono tabular-nums text-[#0A0A0A]">
+            <p className="text-[11px] uppercase tracking-wide font-semibold text-text-tertiary">Equity</p>
+            <p className="truncate text-xl font-bold font-mono tabular-nums text-text-primary">
               {hasNumbers ? fmt(balance, row.currency) : '--'}
             </p>
-            <p className="mt-0.5 text-xs text-[#6B7280]">
+            <p className="mt-0.5 text-xs text-text-secondary">
               Credits: {hasNumbers ? fmt(credit, row.currency) : '-'}
-              <span className="mx-2 text-[#D1D5DB]">|</span>
+              <span className="mx-2 text-text-tertiary">|</span>
               Balance: {hasNumbers ? fmt(balance, row.currency) : '-'}
             </p>
           </div>
@@ -811,7 +811,7 @@ function AccountCard({
             <button
               type="button"
               onClick={onDeposit}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#0A0A0A] px-4 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-[#0A0A0A] dark:bg-[#D60101] px-4 py-2 text-sm font-semibold text-white hover:bg-black transition-colors"
             >
               <ArrowDownToLine size={15} />
               Deposit
@@ -825,7 +825,7 @@ function AccountCard({
                 ? 'Managed account — trades are mirrored from the master. Open the terminal to view the copied positions.'
                 : undefined
             }
-            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#E5E5E5] bg-white px-4 py-2 text-sm font-semibold text-[#0A0A0A] hover:border-[#D60101] hover:text-[#D60101] transition-colors"
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-border-primary bg-bg-card px-4 py-2 text-sm font-semibold text-text-primary hover:border-[#D60101] hover:text-[#D60101] transition-colors"
           >
             <TrendingUp size={15} />
             {isManagedAccount ? 'View Trades' : 'Trade'}
