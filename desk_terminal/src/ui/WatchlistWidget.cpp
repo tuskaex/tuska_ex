@@ -85,6 +85,12 @@ WatchlistWidget::WatchlistWidget(QWidget* parent) : QWidget(parent) {
     m_table->setColumnWidth(2, 80);
     connect(m_table, &QTableWidget::itemSelectionChanged,
             this, &WatchlistWidget::onSelectionChanged);
+    // Row index maps straight into m_all — applyFilter() rebuilds the table in
+    // that order, so the two stay aligned.
+    connect(m_table, &QTableWidget::cellDoubleClicked, this, [this](int row, int) {
+        if (row < 0 || row >= m_all.size()) return;
+        emit symbolDoubleClicked(m_all.at(row).symbol);
+    });
 
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(0, 0, 0, 0);

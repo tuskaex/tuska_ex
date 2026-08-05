@@ -42,7 +42,7 @@ private slots:
     void onTradeResult(const TradeResult& r);
     void onApiError(const QString& context, const QString& message);
     void openSettings();
-    void openPendingOrder();   // place a limit / stop order
+    void openOrderWindow();    // Market + Pending order ticket (F9)
     void logout();              // clear the session and return to the sign-in card
     void applyTheme();          // restyle the bits that carry inline style sheets
 

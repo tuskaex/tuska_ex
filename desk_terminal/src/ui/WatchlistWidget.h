@@ -31,6 +31,10 @@ public slots:
 
 signals:
     void symbolActivated(const QString& symbol);
+    // Double-click is the MT5 gesture for "trade this one" — it opens the
+    // order window. Kept separate from symbolActivated, which also fires on a
+    // plain selection change and must not pop a dialog on every arrow key.
+    void symbolDoubleClicked(const QString& symbol);
 
 private:
     struct Row {

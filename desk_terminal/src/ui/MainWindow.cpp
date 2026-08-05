@@ -7,7 +7,7 @@
 #include "ui/PositionsPanel.h"
 #include "ui/ClosePositionDialog.h"
 #include "ui/ModifyBracketsDialog.h"
-#include "ui/PendingOrderDialog.h"
+#include "ui/OrderDialog.h"
 #include "ui/LoginDialog.h"
 #include "ui/WalletDialog.h"
 #include "core/ApiClient.h"
@@ -176,9 +176,14 @@ void MainWindow::buildMenuBar() {
 
     // ── Trade ──
     QMenu* trade = bar->addMenu(tr("&Trade"));
-    QAction* pending = trade->addAction(tr("New &pending order…"));
-    pending->setShortcut(QKeySequence(QStringLiteral("Ctrl+P")));
-    connect(pending, &QAction::triggered, this, &MainWindow::openPendingOrder);
+    QAction* order = trade->addAction(tr("&New order…"));
+    // F9 is the order-window key in MT4/MT5; traders coming from either reach
+    // for it before they look at the menu bar. Ctrl+P stays as the shortcut
+    // that used to open the pending-only dialog, so existing muscle memory
+    // still lands somewhere sensible.
+    order->setShortcuts({QKeySequence(Qt::Key_F9),
+                         QKeySequence(QStringLiteral("Ctrl+P"))});
+    connect(order, &QAction::triggered, this, &MainWindow::openOrderWindow);
 
     // ── Accounts — rebuilt each time it opens, so a fresh sign-in shows up ──
     m_accountsMenu = bar->addMenu(tr("&Accounts"));
@@ -400,6 +405,11 @@ void MainWindow::connectServices() {
 
     // Market watch selection
     connect(m_watch, &WatchlistWidget::symbolActivated, this, &MainWindow::onSymbolActivated);
+    // Double-click a symbol -> order window on that symbol. onSymbolActivated
+    // has already run from the selection change, so m_currentSymbol is the
+    // row that was double-clicked by the time this fires.
+    connect(m_watch, &WatchlistWidget::symbolDoubleClicked, this,
+            [this](const QString& s) { onSymbolActivated(s); openOrderWindow(); });
 
     // The chart (TradingView) pulls bars + ticks itself via the ChartBridge,
     // so no bars/tick wiring is needed here for it.
@@ -734,21 +744,34 @@ void MainWindow::logout() {
     setStatus(tr("Signed in"));
 }
 
-void MainWindow::openPendingOrder() {
-    // The one-click strip only ever fills at market, and the blotter listed
-    // pending orders it had no way to create — "Pending order window can't be
-    // found" was literally true. This is that window.
-    if (!requireSession(tr("Placing a pending order"))) return;
+void MainWindow::openOrderWindow() {
+    // One home for order entry, Market and Pending both. Before this, market
+    // orders lived only on the one-click strip floating over the chart — which
+    // "View > Show trade panel" can hide — and pending orders were a menu item
+    // people did not find. The blotter listed pending orders the UI had no
+    // obvious way to create; "we can't find the pending order window" was
+    // literally true.
+    if (!requireSession(tr("Placing an order"))) return;
     if (m_currentSymbol.isEmpty()) {
         setStatus(tr("Pick a symbol in Market Watch first."), true);
         return;
     }
     const SymbolSpec spec = m_specs.value(m_currentSymbol);
     const Quote q = m_lastQuotes.value(m_currentSymbol);
-    PendingOrderDialog dlg(spec, q.bid, q.ask, this);
+    OrderDialog dlg(spec, q.bid, q.ask, m_lastAccount.leverage,
+                    m_lastAccount.freeMargin, this);
+    // Keep it live: a market order confirmed against the quote the dialog
+    // opened with is a fill at a price the trader never saw.
+    connect(m_stream, &PriceStream::tickReceived, &dlg, &OrderDialog::updateQuote);
     if (dlg.exec() != QDialog::Accepted) return;
-    m_api->placePendingOrder(m_currentSymbol, dlg.side(), dlg.orderType(),
-                             dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit());
+
+    if (dlg.mode() == "market") {
+        m_api->placeOrder(dlg.side().toUpper(), m_currentSymbol, dlg.lots(),
+                          dlg.stopLoss(), dlg.takeProfit(), "terminal");
+    } else {
+        m_api->placePendingOrder(m_currentSymbol, dlg.side(), dlg.orderType(),
+                                 dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit());
+    }
 }
 
 void MainWindow::openSettings() {
