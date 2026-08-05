@@ -49,13 +49,11 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         s->setDecimals(digits);
         s->setRange(0.0, 1e7);
         s->setSingleStep(std::pow(10.0, -digits + 1));
-        // A bracket that already exists cannot be taken back off — the endpoint
-        // treats a null as "leave it alone" (see ApiClient::modifyBracket), so
-        // 0 would report success and change nothing. Put the floor one tick
-        // above 0 in that case, and the value is unreachable rather than
-        // reachable-but-refused. 0 stays available while there is no bracket,
-        // where it simply means "not setting one".
-        s->setMinimum(value > 0.0 ? std::pow(10.0, -digits) : 0.0);
+        // 0 is reachable whether or not a bracket is already set: on an
+        // existing one it means "remove it", on an empty one "don't set one".
+        // The floor used to be lifted one tick above 0 for an existing bracket
+        // because the endpoint could not clear a level; it now can.
+        s->setMinimum(0.0);
         s->setValue(value > 0.0 ? value : 0.0);
         s->setMinimumHeight(32);
         connect(s, &QDoubleSpinBox::valueChanged, this, [this]() { refreshHint(); });
@@ -117,10 +115,14 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
 
 void ModifyBracketsDialog::refreshHint() {
     QStringList parts;
+    // "be removed" vs "move": clearing to 0 is a materially different action
+    // from nudging a level, and worth spelling out before it is saved.
     if (slChanged())
-        parts << tr("stop loss will move");
+        parts << (stopLoss() <= 0.0 ? tr("stop loss will be removed")
+                                    : tr("stop loss will move"));
     if (tpChanged())
-        parts << tr("take profit will move");
+        parts << (takeProfit() <= 0.0 ? tr("take profit will be removed")
+                                      : tr("take profit will move"));
 
     // Saying which legs will be sent matters: only the changed ones are, so an
     // untouched bracket is left exactly as the server has it.

@@ -866,11 +866,31 @@ async def modify_position(position_id: UUID, req, user_id: UUID, db: AsyncSessio
 
     check_sltp_levels(is_buy, req.stop_loss, req.take_profit, Decimal(str(ref)), ref_label)
 
+    # Distinguish "field omitted" from "field explicitly null".
+    #
+    # This used to be `if req.stop_loss is not None`, which collapsed the two:
+    # a null meant "leave it alone", so THERE WAS NO WAY TO REMOVE A STOP LOSS
+    # OR TAKE PROFIT. The endpoint answered 200 and the old level was still
+    # there on the next poll — indistinguishable, from the client's side, from
+    # the update silently failing. A trader could set a stop and then never
+    # clear it; only move it, or close the position.
+    #
+    # model_fields_set holds the names the CLIENT actually sent, so:
+    #     {}                        -> both untouched
+    #     {"stop_loss": 1.2345}     -> SL set, TP untouched
+    #     {"stop_loss": null}       -> SL cleared, TP untouched
+    # which is JSON-Merge-Patch semantics and what every caller already
+    # assumed. Partial updates keep working: the desktop terminal sends one
+    # field at a time and must not have the other wiped out from under it.
+    provided = getattr(req, "model_fields_set", None)
+    if provided is None:                       # pydantic v1 fallback
+        provided = getattr(req, "__fields_set__", set())
+
     updated = False
-    if req.stop_loss is not None:
-        pos.stop_loss = req.stop_loss
+    if "stop_loss" in provided:
+        pos.stop_loss = req.stop_loss          # None => cleared
         updated = True
-    if req.take_profit is not None:
+    if "take_profit" in provided:
         pos.take_profit = req.take_profit
         updated = True
 

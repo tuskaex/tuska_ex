@@ -318,25 +318,18 @@ void ApiClient::cancelOrder(const QString& orderId) {
 void ApiClient::modifyBracket(const QString& positionId, const QString& kind, double level) {
     const QString field = (kind == "tp") ? "take_profit" : "stop_loss";
 
-    // A bracket CANNOT be removed through this endpoint. The server applies an
-    // update with `if req.stop_loss is not None`, so null means "leave it
-    // alone", not "clear it" — it answers 200 and the old level is still there
-    // on the next poll. Verified against the live API.
+    // level <= 0 means "remove this bracket", sent as an explicit JSON null.
     //
-    // Sending it anyway is worse than refusing: the caller sees success, the
-    // value reappears four seconds later, and that is indistinguishable from
-    // the "S/L and T/P not changing" bug this whole path exists to fix. Fail
-    // loudly instead, and say the one true thing about it.
-    if (level <= 0.0) {
-        emit positionOpResult(positionId, "modify", false,
-            tr("A stop loss or take profit cannot be removed once set — the "
-               "platform has no way to clear one. Move it instead, or close "
-               "the position."));
-        return;
-    }
-
+    // This used to be refused outright, because the server applied the update
+    // with `if req.stop_loss is not None` — null read as "leave it alone", so
+    // a removal answered 200 and the old level was back on the next poll. The
+    // endpoint now keys off the fields the client actually sent, so null
+    // genuinely clears. Only ONE field is ever sent, and the untouched one is
+    // omitted rather than nulled, which is what stops a stop-loss edit from
+    // wiping the take profit.
     QJsonObject body;
-    body[field] = level;
+    if (level > 0.0) body[field] = level;
+    else             body[field] = QJsonValue(QJsonValue::Null);
     QNetworkReply* r = m_net->put(v1Request("/positions/" + positionId),
                                   QJsonDocument(body).toJson(QJsonDocument::Compact));
     handlePositionOp(this, r, positionId, "modify");

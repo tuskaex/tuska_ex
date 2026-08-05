@@ -53,8 +53,8 @@ static QTableWidgetItem* bracketCell(double level, const QString& positionId, in
     it->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
     it->setData(Qt::UserRole, positionId);
     it->setData(Qt::UserRole + 1, level);
-    it->setToolTip(QObject::tr("Double-click to edit. A level cannot be removed "
-                               "once set — only moved."));
+    it->setToolTip(QObject::tr("Double-click to edit. Clear the cell to remove "
+                               "the level."));
     return it;
 }
 
@@ -261,14 +261,10 @@ void PositionsPanel::onBracketEdited(QTableWidgetItem* item) {
     // 0 as "clear it".
     const double now = text.isEmpty() ? 0.0 : QLocale().toDouble(text, &parsed);
 
-    if (text.isEmpty()) {
-        // Removal is not something the endpoint supports — see
-        // ApiClient::modifyBracket. Restore rather than send.
-        m_populating = true;
-        item->setText(was > 0 ? QString::number(was, 'f', 5) : QString());
-        m_populating = false;
-        return;
-    }
+    // Clearing the cell removes the bracket. This used to be restored instead
+    // of sent, because the endpoint could not clear one — it now can, so an
+    // empty cell goes through as level 0 and ApiClient turns that into an
+    // explicit JSON null.
     if (!text.isEmpty() && !parsed) {
         // Unparseable: put the old value back rather than sending nonsense.
         m_populating = true;
