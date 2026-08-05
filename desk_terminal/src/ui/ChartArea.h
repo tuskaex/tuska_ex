@@ -9,6 +9,7 @@ class WebChartWidget;
 class QGridLayout;
 class QFrame;
 class QLabel;
+class QToolButton;
 
 // Holds 1, 2 or 4 charts in a grid, MT5-style.
 //
@@ -26,9 +27,20 @@ class ChartArea : public QWidget {
 public:
     ChartArea(ApiClient* api, PriceStream* stream, QWidget* parent = nullptr);
 
-    // 1, 2 (side by side) or 4 (2x2). Anything else is clamped.
+    // 1..4. The menu only offers 1 / 2 / 4, but closing a pane from a 2x2 can
+    // land on 3, which relayout() tiles as two on top and one across the
+    // bottom. Values outside 1..4 are clamped.
     void setChartCount(int count);
     int  chartCount() const { return m_count; }
+
+    // Closes one pane via the ✕ in its header. The last remaining chart cannot
+    // be closed — an empty chart area has nothing to put in its place.
+    //
+    // The pane is not destroyed: it is moved to the end of m_panes so its
+    // symbol, timeframe and drawings survive, and re-opening a larger layout
+    // brings it back as it was. Destroying it would also mean tearing down a
+    // QWebEngineView and its renderer process, only to pay to rebuild both.
+    void closePane(int index);
 
     WebChartWidget* activeChart() const;
 
@@ -46,6 +58,9 @@ public:
 
 signals:
     void activeChartChanged(int index);
+    // Fires whenever the pane count changes, including from a ✕ rather than
+    // the menu, so the View > Chart layout radio group can follow it.
+    void chartCountChanged(int count);
 
 protected:
     // Clicks on a pane's header select it; the header carries a "paneIndex".
@@ -53,9 +68,11 @@ protected:
 
 private:
     struct Pane {
-        QFrame*         frame = nullptr;
-        QLabel*         title = nullptr;
-        WebChartWidget* chart = nullptr;
+        QFrame*         frame  = nullptr;
+        QWidget*        header = nullptr;   // title + ✕, the pane's click target
+        QLabel*         title  = nullptr;
+        QToolButton*    closeBtn = nullptr;
+        WebChartWidget* chart  = nullptr;
         QString         symbol;
     };
 
@@ -63,6 +80,10 @@ private:
     void  relayout();
     void  setActive(int index);
     void  paintPaneStates();
+    // Panes shift position when one is closed, so the "Chart N" text and the
+    // paneIndex property the event filter reads must be rewritten from the
+    // pane's CURRENT slot rather than the one it was built in.
+    void  refreshPaneHeaders();
     // Walks up from the focused widget to find which pane it belongs to, so
     // clicking anywhere on a chart activates that pane. The web view swallows
     // mouse events, so focus is the only signal the host reliably sees.

@@ -221,6 +221,19 @@ void MainWindow::buildMenuBar() {
         });
     }
 
+    // Closing a pane with its ✕ changes the count behind the menu's back, so
+    // mirror it here. A close out of 2x2 lands on 3, which no menu entry
+    // represents — in that case leave the whole group unchecked rather than
+    // showing a count the user is not actually on. QActionGroup refuses to
+    // clear an exclusive group, hence the temporary toggle.
+    connect(m_charts, &ChartArea::chartCountChanged, this, [this](int count) {
+        if (!m_layoutGroup) return;
+        m_layoutGroup->setExclusive(false);
+        for (QAction* a : m_layoutGroup->actions())
+            a->setChecked(a->data().toInt() == count);
+        m_layoutGroup->setExclusive(true);
+    });
+
     view->addSeparator();
     m_bloterAction = view->addAction(tr("Show &trade panel"));
     m_bloterAction->setCheckable(true);
