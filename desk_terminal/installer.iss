@@ -33,6 +33,32 @@ SetupIconFile={#SourcePath}resources\tuskaex.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+
+; ── Installing over a RUNNING terminal ───────────────────────────────
+; Symptom this fixes:
+;     resources\icudtl.dat
+;     DeleteFile failed; code 32.
+;     The process cannot access the file because it is being used by
+;     another process.
+;
+; Inno already asks Restart Manager to close whatever holds the files it
+; is about to replace, but CloseApplicationsFilter defaults to
+; *.exe,*.dll,*.chm — and the files QtWebEngine keeps mapped are none of
+; those. icudtl.dat, qtwebengine_resources*.pak and v8_context_snapshot.bin
+; were never registered, so nothing was detected, the install ran, and it
+; died partway through on the first locked one. Widening the filter to
+; every file is what actually makes the detection cover them. It costs a
+; slower "Preparing to install" scan; a half-installed terminal costs more.
+CloseApplications=yes
+CloseApplicationsFilter=*.*
+; Don't relaunch what we closed — [Run] below already offers to start it,
+; and reopening it silently mid-install races the file copy.
+RestartApplications=no
+; Belt and braces: the app holds this mutex while it runs (see src/main.cpp),
+; so Setup can say "close TuskaEx Terminal" up front instead of relying on
+; Restart Manager alone. Renaming it breaks that detection on installed
+; versions, so leave it alone.
+AppMutex=TuskaExTerminal.SingleInstance
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
