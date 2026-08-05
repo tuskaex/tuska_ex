@@ -103,6 +103,45 @@ function makeDatafeed(bridge) {
   const lastBid = {};       // symbol -> last bid
   const lastSpread = {};    // symbol -> last (ask - bid)
 
+  // ── Half-spread arrival, and why history waits for it ──────────────
+  //
+  // History comes back as MID and is shifted down to BID (rule 3) by half the
+  // spread. The only source of a spread is bridge.tick, so on a symbol the
+  // session has not ticked yet — i.e. EVERY symbol switch — lastSpread is
+  // undefined, `|| 0` shifted history by nothing, and the bars stayed at MID
+  // while the forming candle drawn seconds later used BID. The chart showed a
+  // vertical step of half a spread exactly where history met live data. That
+  // is the "gap when changing from one currency to another".
+  //
+  // So: hold the bars until the symbol's first tick names the spread. It
+  // normally lands in well under a second (Market Watch streams every symbol),
+  // and if it never arrives there are no live candles either, so MID history
+  // is self-consistent and nothing is visibly wrong.
+  const SPREAD_WAIT_MS = 1500;
+  const spreadWaiters = {};   // symbol -> [callback]
+
+  function whenSpreadKnown(symbol, cb) {
+    if (lastSpread[symbol] !== undefined) { cb(); return; }
+    let fired = false;
+    const fire = () => { if (fired) return; fired = true; cb(); };
+    (spreadWaiters[symbol] || (spreadWaiters[symbol] = [])).push(fire);
+    setTimeout(fire, SPREAD_WAIT_MS);   // never hang the chart on a dead feed
+  }
+
+  function flushSpreadWaiters(symbol) {
+    const list = spreadWaiters[symbol];
+    if (!list) return;
+    delete spreadWaiters[symbol];
+    for (const fn of list) fn();
+  }
+
+  // Symbols whose history was handed over before the spread was known, i.e.
+  // still sitting at MID. When a tick finally names the spread, those bars are
+  // wrong by half of it, so the chart is asked to drop its cache and re-fetch.
+  // Belt and braces for the case where the first tick misses SPREAD_WAIT_MS.
+  const staleBasis = {};      // symbol -> true
+  const resetCbs = {};        // guid -> onResetCacheNeededCallback
+
   bridge.barsReady.connect((reqId, barsJson) => {
     const req = pendingBars[reqId];
     if (!req) return;
@@ -126,10 +165,15 @@ function makeDatafeed(bridge) {
 
     // Rule 3 (BID) + rule 4 (blank weekends). No synthetic fill — if the
     // backend returned nothing real, the chart ends here (noData).
-    out = toBidBars(out, (lastSpread[req.symbol] || 0) / 2);
-    out = dropWeekendBars(out, req.symbol);
-
-    req.onResult(out, { noData: out.length === 0 });
+    // The BID shift waits on the symbol's first tick; see whenSpreadKnown.
+    const raw = out;
+    whenSpreadKnown(req.symbol, () => {
+      const known = lastSpread[req.symbol] !== undefined;
+      if (!known) staleBasis[req.symbol] = true;   // delivered at MID
+      let done = toBidBars(raw, (lastSpread[req.symbol] || 0) / 2);
+      done = dropWeekendBars(done, req.symbol);
+      req.onResult(done, { noData: done.length === 0 });
+    });
   });
 
   // --- live tick fan-out to subscribed charts ---
@@ -147,6 +191,20 @@ function makeDatafeed(bridge) {
   bridge.tick.connect((sym, bid, ask, tsMs) => {
     lastBid[sym] = bid;
     lastSpread[sym] = Math.abs(ask - bid);
+    // Release any history held back for this symbol. Done BEFORE the weekend
+    // guard below, or a Saturday tick would leave the bars waiting on the
+    // timeout for no reason.
+    flushSpreadWaiters(sym);
+    // History that went out at MID is now known to be half a spread off.
+    // Drop the chart's cache so it re-fetches on the right basis.
+    if (staleBasis[sym]) {
+      delete staleBasis[sym];
+      for (const guid in subs) {
+        if (subs[guid].symbol === sym && typeof resetCbs[guid] === "function") {
+          try { resetCbs[guid](); } catch (e) { /* chart went away */ }
+        }
+      }
+    }
     // Rule 4: don't grow a weekend candle for non-crypto (feed is frozen then,
     // but guard against a stray tick).
     const day = new Date(tsMs).getUTCDay();
@@ -235,12 +293,16 @@ function makeDatafeed(bridge) {
       }, 6000);
     },
 
-    subscribeBars(symbolInfo, resolution, onTick, guid) {
+    subscribeBars(symbolInfo, resolution, onTick, guid, onResetCacheNeededCallback) {
       subs[guid] = { symbol: symbolInfo.name, resSec: resolutionToSec(resolution), onTick, lastBar: null };
+      // Kept so a late spread can force a re-fetch of MID-basis history.
+      if (typeof onResetCacheNeededCallback === "function")
+        resetCbs[guid] = onResetCacheNeededCallback;
     },
 
     unsubscribeBars(guid) {
       delete subs[guid];
+      delete resetCbs[guid];
     },
   };
 }
