@@ -248,6 +248,19 @@ WebChartWidget* ChartArea::activeChart() const {
     return m_panes[m_active].chart;
 }
 
+void ChartArea::setActivePane(int index) { setActive(index); }
+
+QString ChartArea::activeSymbol() const {
+    return m_panes[m_active].symbol;
+}
+
+QStringList ChartArea::visibleSymbols() const {
+    QStringList out;
+    for (int i = 0; i < m_count && i < m_panes.size(); ++i)
+        out << m_panes[i].symbol;
+    return out;
+}
+
 void ChartArea::setSymbols(const QVector<SymbolSpec>& symbols) {
     m_symbols = symbols;
     for (Pane& p : m_panes) if (p.chart) p.chart->setSymbols(symbols);

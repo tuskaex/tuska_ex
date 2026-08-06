@@ -405,6 +405,12 @@ void MainWindow::connectServices() {
 
     // Market watch selection
     connect(m_watch, &WatchlistWidget::symbolActivated, this, &MainWindow::onSymbolActivated);
+    // Clicking a chart pane makes it active — the strip and the order window
+    // must follow it, not stay on whatever Market Watch last selected.
+    connect(m_charts, &ChartArea::activeChartChanged, this, &MainWindow::onActiveChartChanged);
+    // Grid changed (menu or a pane's ✕) — remember it for the next launch.
+    connect(m_charts, &ChartArea::chartCountChanged, this,
+            [this](int) { persistChartLayout(); });
     // Double-click a symbol -> order window on that symbol. onSymbolActivated
     // has already run from the selection change, so m_currentSymbol is the
     // row that was double-clicked by the time this fires.
@@ -598,13 +604,35 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
 
     setStatus(tr("%1 instruments loaded").arg(symbols.size()));
 
+    // Restore the saved grid. This runs HERE, not in the constructor, because
+    // a pane can only be pointed at a symbol once the metadata for it has
+    // arrived — before that every restored pane would fall back to the default.
+    // Guarded so it happens once per launch and never stamps over a layout the
+    // trader has since changed (symbols can be re-fetched mid-session).
+    if (!m_chartLayoutRestored) {
+        m_chartLayoutRestored = true;
+        if (m_cfg.chartCount > 1)
+            m_charts->setChartCount(m_cfg.chartCount);
+        for (int i = 0; i < m_cfg.chartSymbols.size() && i < m_charts->chartCount(); ++i) {
+            const QString s = m_cfg.chartSymbols.at(i);
+            if (s.isEmpty() || !m_specs.contains(s)) continue;
+            m_charts->setActivePane(i);
+            m_charts->showSymbol(s);
+        }
+        m_charts->setActivePane(0);
+    }
+
     // Auto-select a liquid, likely-active symbol so the chart isn't empty on
     // startup (the alphabetical first, e.g. AAPL, is often a closed market).
+    // A restored pane 0 wins over the default pick — that is the layout the
+    // trader actually left behind.
     if (!symbols.isEmpty()) {
         QString pick = symbols.front().symbol;
         for (const QString& pref : {"EURUSD", "BTCUSD", "XAUUSD", "GBPUSD", "ETHUSD"}) {
             if (m_specs.contains(pref)) { pick = pref; break; }
         }
+        const QString restored = m_charts->activeSymbol();
+        if (!restored.isEmpty() && m_specs.contains(restored)) pick = restored;
         m_watch->selectSymbol(pick);   // moves selection -> triggers onSymbolActivated
         onSymbolActivated(pick);
     }
@@ -615,7 +643,43 @@ void MainWindow::onSymbolActivated(const QString& symbol) {
     m_currentSymbol = symbol;
     if (m_specs.contains(symbol))
         m_ticket->setSymbolSpec(m_specs.value(symbol));
+    // Seed the strip from the last known quote so it is not showing "—" (or
+    // worse, the previous instrument's price) until the next tick lands.
+    if (m_lastQuotes.contains(symbol))
+        m_ticket->updateQuote(m_lastQuotes.value(symbol));
     m_charts->showSymbol(symbol);   // active pane only
+    persistChartLayout();
+}
+
+void MainWindow::onActiveChartChanged(int) {
+    // Clicking between panes has to move the quote with it. ChartArea already
+    // emitted this, but nothing listened, so the one-click strip kept whatever
+    // Market Watch last selected: sitting on the XAUUSD pane (gold, ~4259) the
+    // strip offered SELL/BUY at 61.81 — the XAGUSD price. One click from
+    // trading silver at gold's chart.
+    const QString sym = m_charts->activeSymbol();
+    if (sym.isEmpty() || sym == m_currentSymbol) return;
+    m_currentSymbol = sym;
+    if (m_specs.contains(sym))
+        m_ticket->setSymbolSpec(m_specs.value(sym));
+    if (m_lastQuotes.contains(sym))
+        m_ticket->updateQuote(m_lastQuotes.value(sym));
+    // Keep Market Watch in step. This re-enters onSymbolActivated, which
+    // early-returns because m_currentSymbol already equals sym — that guard is
+    // what stops the two from bouncing off each other.
+    m_watch->selectSymbol(sym);
+    persistChartLayout();
+}
+
+void MainWindow::persistChartLayout() {
+    // Remember the grid AND what each pane was showing. Restoring four panes
+    // that all default to one symbol is not "as I left it".
+    const int count = m_charts->chartCount();
+    const QStringList syms = m_charts->visibleSymbols();
+    if (m_cfg.chartCount == count && m_cfg.chartSymbols == syms) return;
+    m_cfg.chartCount   = count;
+    m_cfg.chartSymbols = syms;
+    m_cfg.save();
 }
 
 void MainWindow::onTradeResult(const TradeResult& r) {

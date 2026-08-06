@@ -43,6 +43,8 @@ private slots:
     void onApiError(const QString& context, const QString& message);
     void openSettings();
     void openOrderWindow();    // Market + Pending order ticket (F9)
+    void onActiveChartChanged(int index);  // strip follows the active pane
+    void persistChartLayout();             // grid + per-pane symbols -> Config
     void logout();              // clear the session and return to the sign-in card
     void applyTheme();          // restyle the bits that carry inline style sheets
 
@@ -93,6 +95,10 @@ private:
     QAction* m_privacyAction = nullptr;
     QAction* m_bloterAction = nullptr;  // show/hide the trade blotter
     QActionGroup* m_layoutGroup = nullptr;  // 1 / 2 / 4 chart panes
+    // The saved grid is restored once, from the first symbols payload — panes
+    // cannot be pointed at an instrument before its metadata exists. Symbols
+    // can be re-fetched mid-session, hence the latch.
+    bool m_chartLayoutRestored = false;
     QFrame*  m_identityDivider = nullptr;  // hairline before the first menu
     QSplitter* m_centerSplit = nullptr;
 

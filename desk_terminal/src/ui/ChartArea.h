@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QVector>
+#include <QStringList>
 #include "core/Models.h"
 
 class ApiClient;
@@ -43,6 +44,21 @@ public:
     void closePane(int index);
 
     WebChartWidget* activeChart() const;
+
+    // The instrument the ACTIVE pane is showing. Not the same thing as the
+    // Market Watch selection once a trader clicks between panes — the one-click
+    // strip and the order window follow this, or they would quote a different
+    // instrument from the chart they are sitting on.
+    QString activeSymbol() const;
+
+    // Per-pane symbols, left to right, for the panes currently visible. Saved
+    // to Config so a 2x2 comes back as it was left rather than as one chart.
+    QStringList visibleSymbols() const;
+
+    // Select a pane programmatically. Exists for restoring a saved layout:
+    // showSymbol() only ever targets the ACTIVE pane, so seeding four of them
+    // means stepping the selection across each in turn.
+    void setActivePane(int index);
 
     // Fan-outs — every pane needs the symbol table, the open positions and the
     // theme; only the active one follows the watchlist.

@@ -1,5 +1,6 @@
 #pragma once
 #include <QString>
+#include <QStringList>
 
 // Persists connection settings (API key/secret + endpoints) to a JSON file
 // in the user's app-config directory. Plaintext — this is a local desktop
@@ -25,6 +26,14 @@ public:
     // UI preferences
     QString theme   = "light"; // "dark" | "light" — light mirrors the MT5 layout
     bool    privacy = false;   // mask balances / account numbers on screen
+
+    // Chart grid, restored on the next launch. A trader who set up a 2x2 of
+    // four instruments should not have to rebuild it every session — the
+    // terminal used to always reopen on a single chart.
+    // chartSymbols is left-to-right for the visible panes; a short or empty
+    // list just means those panes open on the default symbol.
+    int         chartCount = 1;   // 1..4
+    QStringList chartSymbols;
 
     // Legacy bot auth (still supported for a pasted API key).
     QString apiKey;
