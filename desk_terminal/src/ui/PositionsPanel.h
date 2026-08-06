@@ -7,6 +7,9 @@ class QTabWidget;
 class QTableWidget;
 class QComboBox;
 class QDateEdit;
+class QPushButton;
+class QLabel;
+class NewsPanel;
 
 // MT5's bottom blotter. Three tabs — Trade (open positions with live P/L),
 // Pending orders, and closed-trade History — using MT5's column set:
@@ -28,6 +31,10 @@ public slots:
     void setPositions(const QVector<OpenPosition>& positions);
     void setOrders(const QVector<PendingOrder>& orders);
     void setHistory(const QVector<HistoryTrade>& history);
+    void setTransactions(const QVector<Transaction>& txns);
+
+    // Live headlines for the instrument in focus — see NewsPanel.
+    void setNewsSymbol(const QString& symbol);
 
     void setCollapsed(bool collapsed);
     bool isCollapsed() const { return m_collapsed; }
@@ -43,6 +50,8 @@ signals:
     void modifyBrackets(const OpenPosition& position);
     // Cancel a listed pending order.
     void cancelOrder(const PendingOrder& order);
+    // Amend a listed pending order (price / volume / brackets).
+    void modifyOrder(const PendingOrder& order);
     // An S/L or T/P cell was edited in place. level 0 removes that bracket.
     void bracketEdited(const QString& positionId, const QString& kind, double level);
 
@@ -63,11 +72,15 @@ private:
     QWidget* wrapTable(int tab, QTableWidget* table);
 
     QTabWidget*   m_tabs;
+    NewsPanel*    m_news = nullptr;
     QTableWidget* m_posTable;
     QTableWidget* m_orderTable;
     QTableWidget* m_histTable;
-    QComboBox*    m_range[3] = {nullptr, nullptr, nullptr};
-    QDateEdit*    m_date[3]  = {nullptr, nullptr, nullptr};
+    QTableWidget* m_txnTable;
+    // One slot per FILTERED tab: 0 Trade, 1 Pending, 2 History,
+    // 3 Transactions. News has no filter and no slot.
+    QComboBox*    m_range[4] = {nullptr, nullptr, nullptr, nullptr};
+    QDateEdit*    m_date[4]  = {nullptr, nullptr, nullptr, nullptr};
     // True while a table is being filled. itemChanged() cannot tell a repaint
     // from a real edit on its own, and setPositions() runs every four seconds.
     bool m_populating = false;
@@ -80,4 +93,17 @@ private:
     QVector<OpenPosition> m_lastPositions;
     QVector<PendingOrder> m_lastOrders;
     QVector<HistoryTrade> m_lastHistory;
+    QVector<Transaction>  m_lastTxns;
+
+    // ── Transactions pagination ──
+    // The ledger is the one tab that can run to hundreds of rows in a blotter
+    // only ~200px tall, so it pages rather than scrolls. 0-based; clamped in
+    // setTransactions() because the filter can shrink the list under the page
+    // the user is currently on.
+    int          m_txnPage = 0;
+    QComboBox*   m_txnPageSize = nullptr;
+    QPushButton* m_txnPrev = nullptr;
+    QPushButton* m_txnNext = nullptr;
+    QLabel*      m_txnPageLbl = nullptr;
+    int          txnPageSize() const;
 };

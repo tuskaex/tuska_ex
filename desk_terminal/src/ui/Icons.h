@@ -143,6 +143,15 @@ inline QIcon power(const QColor& c, int px = 18) {
         "<path d='M12 2v10'/>"), c, px);
 }
 
+// Pencil — edit. Used for "modify stop loss / take profit" in the blotter's
+// Action column, where an "S/L" text button sat oddly beside an icon ✕ and
+// only named half of what it opens (the dialog edits T/P too).
+inline QIcon pencil(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 20h9'/>"
+        "<path d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z'/>"), c, px);
+}
+
 // Accounts — stacked layers.
 inline QIcon layers(const QColor& c, int px = 18) {
     return detail::render(detail::wrap(

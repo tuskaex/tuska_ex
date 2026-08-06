@@ -8,28 +8,24 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QPushButton>
+#include <QList>
 #include <cmath>
 
 namespace {
-// Quick-volume chips, same ladder the web ticket offers. Each is clamped to the
-// symbol's own min/max before it is applied, so a 100-lot chip on an instrument
-// capped at 10 sets 10 rather than silently failing validation server-side.
+// Quick-volume chips, the same ladder the web ticket offers. Each is clamped to
+// the symbol's own min/max before it is applied, so a 100-lot chip on an
+// instrument capped at 10 sets 10 rather than failing validation server-side.
 const double kLotChips[] = {0.01, 0.1, 1.0, 10.0, 100.0};
 }
 
-OrderDialog::OrderDialog(const SymbolSpec& spec, double bid, double ask,
+OrderDialog::OrderDialog(const QHash<QString, SymbolSpec>& specs,
+                         const QHash<QString, Quote>& quotes,
+                         const QString& symbol,
                          int leverage, double freeMargin, QWidget* parent)
-    : QDialog(parent), m_spec(spec), m_bid(bid), m_ask(ask),
+    : QDialog(parent), m_specs(specs), m_quotes(quotes),
       m_leverage(leverage > 0 ? leverage : 100), m_freeMargin(freeMargin) {
-    setWindowTitle(tr("Order — %1").arg(spec.symbol));
     setModal(true);
     setMinimumWidth(400);
-
-    const auto& c = Theme::p();
-
-    auto* title = new QLabel(tr("<b>%1</b>").arg(spec.displayName.isEmpty()
-                                                 ? spec.symbol : spec.displayName));
-    title->setStyleSheet(QString("font-size:15px; color:%1;").arg(c.textStrong));
 
     m_tabs = new QTabWidget;
     m_tabs->addTab(buildMarketTab(),  tr("Market"));
@@ -37,10 +33,45 @@ OrderDialog::OrderDialog(const SymbolSpec& spec, double bid, double ask,
 
     auto* lay = new QVBoxLayout(this);
     lay->setSpacing(9);
-    lay->addWidget(title);
+    lay->addWidget(buildHeader());
     lay->addWidget(m_tabs);
 
-    refreshAll();
+    applySymbol(symbol);
+}
+
+// ── Header: instrument picker + leverage ───────────────────────────
+QWidget* OrderDialog::buildHeader() {
+    const auto& c = Theme::p();
+    auto* row = new QWidget;
+    auto* h = new QHBoxLayout(row);
+    h->setContentsMargins(0, 0, 0, 0);
+    h->setSpacing(8);
+
+    // Switchable from here, as on the web. Sorted, because the hash this comes
+    // from has no order and an arbitrary instrument list is unusable.
+    m_symbolBox = new QComboBox;
+    m_symbolBox->setMinimumHeight(32);
+    m_symbolBox->setMinimumWidth(150);
+    QList<QString> names = m_specs.keys();
+    std::sort(names.begin(), names.end());
+    for (const QString& s : names) m_symbolBox->addItem(s);
+    connect(m_symbolBox, &QComboBox::currentTextChanged, this, [this](const QString& s) {
+        if (!m_applying) applySymbol(s);
+    });
+
+    // Shown because margin is meaningless without it: the same 0.10 lots costs
+    // ten times more at 1:10 than at 1:100, and the trader cannot see which
+    // this account is on anywhere else in this window.
+    m_leverageLbl = new QLabel;
+    m_leverageLbl->setStyleSheet(QString(
+        "background:%1; color:%2; border:1px solid %3; border-radius:4px;"
+        "padding:4px 8px; font-size:11px; font-weight:800;")
+        .arg(c.panelAlt, c.muted, c.border));
+
+    h->addWidget(m_symbolBox, 1);
+    h->addStretch();
+    h->addWidget(m_leverageLbl);
+    return row;
 }
 
 // ── Market ─────────────────────────────────────────────────────────
@@ -74,7 +105,7 @@ QWidget* OrderDialog::buildMarketTab() {
 
     m_spreadLbl = new QLabel("—");
     m_spreadLbl->setAlignment(Qt::AlignCenter);
-    m_spreadLbl->setFixedWidth(56);
+    m_spreadLbl->setFixedWidth(62);
     m_spreadLbl->setStyleSheet(QString("color:%1; font-size:10px; font-weight:800;"
                                        "font-family:Consolas,monospace;").arg(c.muted));
 
@@ -84,47 +115,151 @@ QWidget* OrderDialog::buildMarketTab() {
     tiles->addWidget(m_spreadLbl);
     tiles->addWidget(m_buyTile, 1);
 
-    const int digits = m_spec.digits;
-    const double step = std::pow(10.0, -digits + 1);
+    // ── volume, in lots or units ──
+    auto mkToggle = [&](const QString& text) {
+        auto* b = new QPushButton(text);
+        b->setCheckable(true);
+        b->setFixedHeight(22);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setFocusPolicy(Qt::NoFocus);
+        return b;
+    };
+    m_lotsBtn  = mkToggle(tr("Lots"));
+    m_unitsBtn = mkToggle(tr("Units"));
+    m_lotsBtn->setChecked(true);
+    // Manual pair rather than a QButtonGroup: only two, and the handler has to
+    // convert the value across the switch anyway.
+    auto onToggle = [this](bool units) {
+        if (units == unitsMode()) return;
+        const double lots = lotsFromInput();          // read in the OLD mode
+        m_lotsBtn->setChecked(!units);
+        m_unitsBtn->setChecked(units);
+        applySymbol(m_spec.symbol);                   // re-range for the new unit
+        const double cs = m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0;
+        m_mktVolume->setValue(units ? lots * cs : lots);
+        refreshMarket();
+    };
+    connect(m_lotsBtn,  &QPushButton::clicked, this, [onToggle]() { onToggle(false); });
+    connect(m_unitsBtn, &QPushButton::clicked, this, [onToggle]() { onToggle(true); });
 
-    m_mktLots = new QDoubleSpinBox;
-    m_mktLots->setDecimals(2);
-    m_mktLots->setRange(m_spec.minLot > 0 ? m_spec.minLot : 0.01,
-                        m_spec.maxLot > 0 ? m_spec.maxLot : 100.0);
-    m_mktLots->setSingleStep(m_spec.lotStep > 0 ? m_spec.lotStep : 0.01);
-    m_mktLots->setValue(m_mktLots->minimum());
-    m_mktLots->setMinimumHeight(32);
-    connect(m_mktLots, &QDoubleSpinBox::valueChanged, this, [this]() { refreshMarket(); });
+    m_mktVolume = new QDoubleSpinBox;
+    m_mktVolume->setMinimumHeight(34);
+    m_mktVolume->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    m_mktVolume->setAlignment(Qt::AlignCenter);
+    connect(m_mktVolume, &QDoubleSpinBox::valueChanged, this, [this]() { refreshMarket(); });
+
+    auto* minus = new QPushButton(QStringLiteral("−"));
+    auto* plus  = new QPushButton(QStringLiteral("+"));
+    for (QPushButton* b : {minus, plus}) {
+        b->setFixedSize(34, 34);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setFocusPolicy(Qt::NoFocus);
+        b->setStyleSheet(QString(
+            "QPushButton{background:%1; color:%2; border:1px solid %3;"
+            "border-radius:5px; font-size:16px; font-weight:800;}"
+            "QPushButton:hover{border-color:%4;}")
+            .arg(c.btnBg, c.textStrong, c.btnBorder, c.accent));
+    }
+    connect(minus, &QPushButton::clicked, this, [this]() { m_mktVolume->stepDown(); });
+    connect(plus,  &QPushButton::clicked, this, [this]() { m_mktVolume->stepUp(); });
+
+    auto* volRow = new QHBoxLayout;
+    volRow->setSpacing(6);
+    volRow->addWidget(minus);
+    volRow->addWidget(m_mktVolume, 1);
+    volRow->addWidget(plus);
 
     auto* chips = new QHBoxLayout;
     chips->setSpacing(4);
     for (double v : kLotChips) {
-        auto* b = new QPushButton(QString::number(v, 'f', v < 1.0 ? 2 : (v < 10.0 ? 2 : 0)));
+        auto* b = new QPushButton(QString::number(v, 'f', v < 10.0 ? 2 : 0));
         b->setMinimumHeight(26);
         b->setCursor(Qt::PointingHandCursor);
+        b->setFocusPolicy(Qt::NoFocus);
         b->setStyleSheet(QString(
             "QPushButton{background:%1; color:%2; border:1px solid %3; border-radius:5px;"
             "font-size:11px; font-weight:700;}"
             "QPushButton:hover{border-color:%4; color:%5;}")
             .arg(c.btnBg, c.muted, c.btnBorder, c.accent, c.textStrong));
+        // Chips are always LOTS, even in units mode — that is what the numbers
+        // on them mean.
         connect(b, &QPushButton::clicked, this, [this, v]() {
-            m_mktLots->setValue(qBound(m_mktLots->minimum(), v, m_mktLots->maximum()));
+            const double cs = m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0;
+            const double shown = unitsMode() ? v * cs : v;
+            m_mktVolume->setValue(qBound(m_mktVolume->minimum(), shown, m_mktVolume->maximum()));
         });
         chips->addWidget(b, 1);
     }
 
+    // ── brackets, collapsed until asked for ──
     auto mkBracket = [&]() {
         auto* s = new QDoubleSpinBox;
-        s->setDecimals(digits);
         s->setRange(0.0, 1e7);
-        s->setSingleStep(step);
         s->setSpecialValueText(tr("none"));   // 0 => not set
         s->setValue(0.0);
         s->setMinimumHeight(32);
+        s->setVisible(false);
         return s;
     };
     m_mktSl = mkBracket();
     m_mktTp = mkBracket();
+
+    auto mkAdd = [&](const QString& text) {
+        auto* b = new QPushButton(text);
+        b->setMinimumHeight(30);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setFocusPolicy(Qt::NoFocus);
+        b->setStyleSheet(QString(
+            "QPushButton{background:%1; color:%2; border:1px solid %3;"
+            "border-radius:5px; font-size:11px; font-weight:700;}"
+            "QPushButton:hover{border-color:%4; color:%4;}")
+            .arg(c.btnBg, c.muted, c.btnBorder, c.accent));
+        return b;
+    };
+    m_addSlBtn = mkAdd(tr("+ SL"));
+    m_addTpBtn = mkAdd(tr("+ TP"));
+    // Most market orders go out without brackets; showing two empty price
+    // fields by default made the window taller than it needed to be for the
+    // common case. They are one click away, and stay open once revealed.
+    connect(m_addSlBtn, &QPushButton::clicked, this, [this]() {
+        const bool show = !m_mktSl->isVisible();
+        m_mktSl->setVisible(show);
+        m_addSlBtn->setText(show ? tr("SL") : tr("+ SL"));
+        if (!show) m_mktSl->setValue(0.0);
+        adjustSize();
+    });
+    connect(m_addTpBtn, &QPushButton::clicked, this, [this]() {
+        const bool show = !m_mktTp->isVisible();
+        m_mktTp->setVisible(show);
+        m_addTpBtn->setText(show ? tr("TP") : tr("+ TP"));
+        if (!show) m_mktTp->setValue(0.0);
+        adjustSize();
+    });
+
+    auto* brRow = new QHBoxLayout;
+    brRow->setSpacing(6);
+    brRow->addWidget(m_addSlBtn);
+    brRow->addWidget(m_mktSl, 1);
+    brRow->addWidget(m_addTpBtn);
+    brRow->addWidget(m_mktTp, 1);
+
+    m_marginLbl = new QLabel;
+    m_marginLbl->setStyleSheet(QString("color:%1; font-size:11px;"
+                                       "font-family:Consolas,monospace;").arg(c.muted));
+
+    m_mktSubmit = new QPushButton;
+    m_mktSubmit->setMinimumHeight(40);
+    m_mktSubmit->setCursor(Qt::PointingHandCursor);
+    connect(m_mktSubmit, &QPushButton::clicked, this, &QDialog::accept);
+
+    auto* cancel = new QPushButton(tr("Cancel"));
+    cancel->setMinimumHeight(40);
+    connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
+
+    auto* actions = new QHBoxLayout;
+    actions->setSpacing(8);
+    actions->addWidget(cancel, 1);
+    actions->addWidget(m_mktSubmit, 2);
 
     auto cap = [&](const QString& t) {
         auto* l = new QLabel(t);
@@ -133,43 +268,32 @@ QWidget* OrderDialog::buildMarketTab() {
         return l;
     };
 
-    auto* form = new QGridLayout;
-    form->setHorizontalSpacing(10);
-    form->setVerticalSpacing(6);
-    form->addWidget(cap(tr("STOP LOSS")),   0, 0);
-    form->addWidget(cap(tr("TAKE PROFIT")), 0, 1);
-    form->addWidget(m_mktSl,                1, 0);
-    form->addWidget(m_mktTp,                1, 1);
-
-    m_marginLbl = new QLabel;
-    m_marginLbl->setStyleSheet(QString("color:%1; font-size:11px;"
-                                       "font-family:Consolas,monospace;").arg(c.muted));
-
-    m_mktSubmit = new QPushButton;
-    m_mktSubmit->setMinimumHeight(38);
-    m_mktSubmit->setCursor(Qt::PointingHandCursor);
-    connect(m_mktSubmit, &QPushButton::clicked, this, &QDialog::accept);
-
-    auto* cancel = new QPushButton(tr("Cancel"));
-    cancel->setMinimumHeight(38);
-    connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
-
-    auto* actions = new QHBoxLayout;
-    actions->setSpacing(8);
-    actions->addWidget(cancel, 1);
-    actions->addWidget(m_mktSubmit, 2);
+    auto* volHead = new QHBoxLayout;
+    volHead->addWidget(cap(tr("VOLUME")));
+    volHead->addStretch();
+    volHead->addWidget(m_lotsBtn);
+    volHead->addWidget(m_unitsBtn);
 
     auto* v = new QVBoxLayout(page);
     v->setSpacing(8);
     v->addLayout(tiles);
-    v->addWidget(cap(tr("VOLUME")));
-    v->addWidget(m_mktLots);
+    v->addLayout(volHead);
+    v->addLayout(volRow);
     v->addLayout(chips);
-    v->addLayout(form);
+    v->addLayout(brRow);
     v->addWidget(m_marginLbl);
     v->addStretch(1);
     v->addLayout(actions);
     return page;
+}
+
+bool OrderDialog::unitsMode() const { return m_unitsBtn && m_unitsBtn->isChecked(); }
+
+double OrderDialog::lotsFromInput() const {
+    if (!m_mktVolume) return 0.0;
+    if (!unitsMode()) return m_mktVolume->value();
+    const double cs = m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0;
+    return m_mktVolume->value() / cs;
 }
 
 void OrderDialog::setMarketSide(const QString& side) {
@@ -179,16 +303,15 @@ void OrderDialog::setMarketSide(const QString& side) {
 
 void OrderDialog::refreshMarket() {
     const auto& c = Theme::p();
-    const int digits = m_spec.digits;
+    const int digits = m_spec.digits > 0 ? m_spec.digits : 5;
     const bool buy = (m_marketSide == "buy");
 
     m_sellPrice->setText(m_bid > 0 ? QString::number(m_bid, 'f', digits) : QStringLiteral("—"));
     m_buyPrice->setText(m_ask > 0 ? QString::number(m_ask, 'f', digits) : QStringLiteral("—"));
 
-    // Spread in points, the unit the rest of the terminal quotes it in.
     if (m_bid > 0 && m_ask > 0) {
         const double pts = (m_ask - m_bid) * std::pow(10.0, digits - 1);
-        m_spreadLbl->setText(QString::number(pts, 'f', 1));
+        m_spreadLbl->setText(tr("%1\npips").arg(QString::number(pts, 'f', 1)));
     } else {
         m_spreadLbl->setText(QStringLiteral("—"));
     }
@@ -199,23 +322,22 @@ void OrderDialog::refreshMarket() {
         b->setStyleSheet(QString(
             "QPushButton{background:%1; border:2px solid %2; border-radius:8px;}"
             "QPushButton:hover{background:%3;}")
-            .arg(on ? colour : c.panelAlt,
-                 on ? colour : c.border,
-                 colour));
+            .arg(on ? colour : c.panelAlt, on ? colour : c.border, colour));
     };
     paint(m_sellTile, c.down, !buy);
     paint(m_buyTile,  c.up,   buy);
 
-    // Same formula the b-book engine uses server-side:
+    // Same formula the b-book engine applies server-side:
     //   margin = lots * contractSize * fillPrice / leverage
     // Shown before the order goes out so a rejection for insufficient margin is
-    // visible here rather than coming back as a server error.
+    // visible here rather than arriving as a server error.
     const double refPx = buy ? m_ask : m_bid;
+    const double lots  = lotsFromInput();
     const double margin = (refPx > 0)
-        ? m_mktLots->value() * m_spec.contractSize * refPx / double(m_leverage)
+        ? lots * (m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0) * refPx / double(m_leverage)
         : 0.0;
     const bool affordable = (m_freeMargin <= 0.0) || (margin <= m_freeMargin);
-    m_marginLbl->setText(tr("Margin ≈ %1    Free margin %2")
+    m_marginLbl->setText(tr("Margin ≈ %1    Free %2")
                          .arg(QString::number(margin, 'f', 2),
                               QString::number(m_freeMargin, 'f', 2)));
     m_marginLbl->setStyleSheet(QString("color:%1; font-size:11px;"
@@ -231,15 +353,25 @@ void OrderDialog::refreshMarket() {
         .arg(buy ? c.up : c.down, c.btnBg, c.muted));
     // No quote yet means no price to fill against; the server would reject it.
     m_mktSubmit->setEnabled(refPx > 0.0);
+
+    // Toggle styling lives here so a theme change repaints it with everything else.
+    auto paintToggle = [&](QPushButton* b) {
+        const bool on = b->isChecked();
+        b->setStyleSheet(QString(
+            "QPushButton{background:%1; color:%2; border:1px solid %3;"
+            "border-radius:4px; padding:2px 10px; font-size:10px; font-weight:700;}")
+            .arg(on ? c.accent : c.btnBg,
+                 on ? QStringLiteral("#ffffff") : c.muted,
+                 on ? c.accent : c.btnBorder));
+    };
+    paintToggle(m_lotsBtn);
+    paintToggle(m_unitsBtn);
 }
 
 // ── Pending ────────────────────────────────────────────────────────
 QWidget* OrderDialog::buildPendingTab() {
     const auto& c = Theme::p();
     auto* page = new QWidget;
-
-    const int digits = m_spec.digits;
-    const double step = std::pow(10.0, -digits + 1);
 
     m_live = new QLabel;
     m_live->setStyleSheet(QString("color:%1; font-size:11px; font-family:Consolas,monospace;")
@@ -253,26 +385,12 @@ QWidget* OrderDialog::buildPendingTab() {
     m_type->addItem(tr("Limit"), "limit");
     m_type->addItem(tr("Stop"),  "stop");
 
-    m_lots = new QDoubleSpinBox;
-    m_lots->setDecimals(2);
-    m_lots->setRange(m_spec.minLot > 0 ? m_spec.minLot : 0.01,
-                     m_spec.maxLot > 0 ? m_spec.maxLot : 100.0);
-    m_lots->setSingleStep(m_spec.lotStep > 0 ? m_spec.lotStep : 0.01);
-    m_lots->setValue(m_lots->minimum());
-
+    m_lots  = new QDoubleSpinBox;
     m_price = new QDoubleSpinBox;
-    m_price->setDecimals(digits);
-    m_price->setRange(0.0, 1e7);
-    m_price->setSingleStep(step);
-    // Seeded from the side's own side of the book, which is the price this
-    // order would actually fill against.
-    m_price->setValue(m_ask > 0 ? m_ask : m_bid);
 
     auto mkBracket = [&]() {
         auto* s = new QDoubleSpinBox;
-        s->setDecimals(digits);
         s->setRange(0.0, 1e7);
-        s->setSingleStep(step);
         s->setSpecialValueText(tr("none"));   // 0 => not set
         s->setValue(0.0);
         return s;
@@ -334,7 +452,7 @@ QWidget* OrderDialog::buildPendingTab() {
 
 void OrderDialog::refreshHint() {
     const auto& c = Theme::p();
-    const int digits = m_spec.digits;
+    const int digits = m_spec.digits > 0 ? m_spec.digits : 5;
     const bool buy = side() == "buy";
     const bool limit = orderType() == "limit";
     const double ref = buy ? m_ask : m_bid;
@@ -369,17 +487,71 @@ void OrderDialog::refreshHint() {
 }
 
 // ── Shared ─────────────────────────────────────────────────────────
+void OrderDialog::applySymbol(const QString& symbol) {
+    if (!m_specs.contains(symbol)) return;
+    m_applying = true;
+
+    m_spec = m_specs.value(symbol);
+    const Quote q = m_quotes.value(symbol);
+    m_bid = q.bid;
+    m_ask = q.ask;
+
+    setWindowTitle(tr("Order — %1").arg(m_spec.symbol));
+    if (m_symbolBox->currentText() != symbol) m_symbolBox->setCurrentText(symbol);
+    m_leverageLbl->setText(tr("🔒 1:%1").arg(m_leverage));
+
+    const int digits = m_spec.digits > 0 ? m_spec.digits : 5;
+    const double step = std::pow(10.0, -digits + 1);
+    const double minLot = m_spec.minLot > 0 ? m_spec.minLot : 0.01;
+    const double maxLot = m_spec.maxLot > 0 ? m_spec.maxLot : 100.0;
+    const double lotStep = m_spec.lotStep > 0 ? m_spec.lotStep : 0.01;
+    const double cs = m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0;
+
+    // Market volume follows the Lots/Units toggle; everything else is in lots.
+    if (unitsMode()) {
+        m_mktVolume->setDecimals(0);
+        m_mktVolume->setRange(minLot * cs, maxLot * cs);
+        m_mktVolume->setSingleStep(lotStep * cs);
+        if (m_mktVolume->value() < m_mktVolume->minimum()) m_mktVolume->setValue(minLot * cs);
+    } else {
+        m_mktVolume->setDecimals(2);
+        m_mktVolume->setRange(minLot, maxLot);
+        m_mktVolume->setSingleStep(lotStep);
+        if (m_mktVolume->value() < minLot) m_mktVolume->setValue(minLot);
+    }
+
+    for (QDoubleSpinBox* s : {m_mktSl, m_mktTp, m_sl, m_tp, m_price}) {
+        s->setDecimals(digits);
+        s->setSingleStep(step);
+    }
+    m_lots->setDecimals(2);
+    m_lots->setRange(minLot, maxLot);
+    m_lots->setSingleStep(lotStep);
+    if (m_lots->value() < minLot) m_lots->setValue(minLot);
+
+    // Seeded from the side's own side of the book — the price this order would
+    // actually fill against.
+    m_price->setValue(m_ask > 0 ? m_ask : m_bid);
+
+    m_applying = false;
+    refreshAll();
+}
+
 void OrderDialog::refreshAll() {
     refreshMarket();
     refreshHint();
 }
 
 void OrderDialog::updateQuote(const Quote& q) {
-    if (!q.valid || q.symbol != m_spec.symbol) return;
+    if (!q.valid) return;
+    m_quotes.insert(q.symbol, q);          // keeps a symbol switch current
+    if (q.symbol != m_spec.symbol) return;
     m_bid = q.bid;
     m_ask = q.ask;
     refreshAll();
 }
+
+QString OrderDialog::symbol() const { return m_spec.symbol; }
 
 QString OrderDialog::mode() const {
     return m_tabs->currentIndex() == 0 ? QStringLiteral("market")
@@ -393,7 +565,7 @@ QString OrderDialog::side() const {
 QString OrderDialog::orderType() const { return m_type->currentData().toString(); }
 
 double OrderDialog::lots() const {
-    return mode() == "market" ? m_mktLots->value() : m_lots->value();
+    return mode() == "market" ? lotsFromInput() : m_lots->value();
 }
 
 double OrderDialog::price() const { return m_price->value(); }

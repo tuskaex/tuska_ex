@@ -26,12 +26,20 @@ public:
     // space from the chart.
     void setOverlayWidget(QWidget* w);
 
+    // Reduced chrome for a pane sharing the window with others — see
+    // ChartBridge::compact.
+    void setCompact(bool compact);
+
 protected:
     void resizeEvent(QResizeEvent* e) override;
 
+private slots:
+    // Also invoked when the overlay reports a new size hint, so it must be a
+    // slot rather than a plain private helper.
+    void positionOverlay();
+
 private:
     static QString resolveIndexHtml();   // locate web/index.html
-    void positionOverlay();
 
     ChartBridge*    m_bridge;
     QWebEngineView* m_view;

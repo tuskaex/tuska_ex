@@ -1,5 +1,6 @@
 #pragma once
 #include <QDialog>
+#include <QHash>
 #include "core/Models.h"
 
 class QLabel;
@@ -8,9 +9,9 @@ class QDoubleSpinBox;
 class QPushButton;
 class QTabWidget;
 
-// The terminal's order window: Market and Pending in one dialog, mirroring the
-// web platform's ticket so a trader moving between the two is not relearning
-// the layout.
+// The terminal's order window: Market and Pending in one dialog, laid out like
+// the web platform's ticket so a trader moving between the two is not
+// relearning where anything is.
 //
 // This replaces the old PendingOrderDialog, which could only place limit/stop
 // orders. Market orders were reachable only from the one-click strip floating
@@ -28,16 +29,23 @@ class QTabWidget;
 // prices, margin estimate and pending-price validation track the market. A
 // market order confirmed against a frozen quote is a fill at a price the
 // trader never actually saw.
+//
+// It takes the WHOLE symbol table rather than one spec because the instrument
+// is switchable from inside the window (as on the web). Closing the dialog to
+// change your mind about which instrument to trade is a pointless round trip.
 class OrderDialog : public QDialog {
     Q_OBJECT
 public:
-    OrderDialog(const SymbolSpec& spec, double bid, double ask,
+    OrderDialog(const QHash<QString, SymbolSpec>& specs,
+                const QHash<QString, Quote>& quotes,
+                const QString& symbol,
                 int leverage, double freeMargin, QWidget* parent = nullptr);
 
+    QString symbol() const;      // may differ from the one it opened on
     QString mode() const;        // "market" | "pending"  — which tab was used
     QString side() const;        // "buy" | "sell"
     QString orderType() const;   // "limit" | "stop"      — pending tab only
-    double  lots() const;
+    double  lots() const;        // always LOTS, whatever the Lots/Units toggle shows
     double  price() const;       // pending tab only
     double  stopLoss() const;    // 0 => not set
     double  takeProfit() const;
@@ -47,20 +55,34 @@ public slots:
     void updateQuote(const Quote& q);
 
 private:
+    QWidget* buildHeader();
     QWidget* buildMarketTab();
     QWidget* buildPendingTab();
+    void     applySymbol(const QString& symbol);   // re-spec every field
     void     setMarketSide(const QString& side);
     void     refreshMarket();     // tiles, margin estimate, action button
     void     refreshHint();       // pending-price validation
     void     refreshAll();
 
+    // Volume is entered in lots or in units (lots x contract size). Only lots
+    // ever leave this dialog; units is a display convenience for instruments
+    // whose lot is an awkward number of the underlying.
+    bool     unitsMode() const;
+    double   lotsFromInput() const;
+
+    QHash<QString, SymbolSpec> m_specs;
+    QHash<QString, Quote>      m_quotes;
     SymbolSpec m_spec;
     double m_bid = 0.0;
     double m_ask = 0.0;
     int    m_leverage = 100;
     double m_freeMargin = 0.0;
+    // Guards applySymbol() against the currentTextChanged it triggers itself.
+    bool   m_applying = false;
 
     QTabWidget* m_tabs = nullptr;
+    QComboBox*  m_symbolBox = nullptr;
+    QLabel*     m_leverageLbl = nullptr;
 
     // ── Market tab ──
     QString         m_marketSide = QStringLiteral("buy");
@@ -69,7 +91,11 @@ private:
     QLabel*         m_sellPrice = nullptr;
     QLabel*         m_buyPrice  = nullptr;
     QLabel*         m_spreadLbl = nullptr;
-    QDoubleSpinBox* m_mktLots = nullptr;
+    QPushButton*    m_lotsBtn = nullptr;
+    QPushButton*    m_unitsBtn = nullptr;
+    QDoubleSpinBox* m_mktVolume = nullptr;
+    QPushButton*    m_addSlBtn = nullptr;
+    QPushButton*    m_addTpBtn = nullptr;
     QDoubleSpinBox* m_mktSl   = nullptr;
     QDoubleSpinBox* m_mktTp   = nullptr;
     QLabel*         m_marginLbl = nullptr;

@@ -148,6 +148,18 @@ static PendingOrder parseOrder(const QJsonObject& o) {
     return p;
 }
 
+static Transaction parseTransaction(const QJsonObject& o) {
+    Transaction t;
+    t.id          = o.value("id").toString();
+    t.type        = o.value("type").toString();
+    t.method      = o.value("method").toString();
+    t.description = o.value("description").toString();
+    t.currency    = o.value("currency").toString("USD");
+    t.amount      = o.value("amount").toDouble();
+    t.createdAt   = firstString(o, {"created_at"});
+    return t;
+}
+
 static HistoryTrade parseHistory(const QJsonObject& o) {
     HistoryTrade h;
     h.id          = o.value("id").toString();
@@ -208,6 +220,16 @@ void ApiClient::fetchPositions() {
     QNetworkReply* r = m_net->get(v1Request(
         QString("/positions/?account_id=%1&status=open").arg(m_cfg.accountId)));
     handleReply(r, "positions", tr("Loading positions"));
+}
+
+void ApiClient::fetchTransactions() {
+    if (m_cfg.accountId.isEmpty()) return;
+    // Scoped to the selected account. Without account_id the endpoint returns
+    // the USER's whole ledger across every account, which is not what a
+    // per-account blotter tab should show.
+    QNetworkReply* r = m_net->get(
+        v1Request("/wallet/transactions?account_id=" + m_cfg.accountId));
+    handleReply(r, "transactions", tr("Loading transactions"));
 }
 
 void ApiClient::fetchOrders() {
@@ -308,6 +330,22 @@ void ApiClient::placePendingOrder(const QString& symbol, const QString& side,
     QNetworkReply* r = m_net->post(v1Request("/orders/"),
                                    QJsonDocument(body).toJson(QJsonDocument::Compact));
     handleOrderOp(this, r, "place");
+}
+
+void ApiClient::modifyPendingOrder(const QString& orderId, double price, double lots,
+                                   double sl, double tp) {
+    QJsonObject body;
+    if (price >= 0.0) body["price"] = price;
+    if (lots  >  0.0) body["lots"]  = lots;
+    // 0 is a real instruction here ("remove the bracket"), so the sentinel for
+    // "leave alone" has to be negative rather than 0.
+    if (sl >= 0.0) body["stop_loss"]   = sl > 0.0 ? QJsonValue(sl) : QJsonValue(QJsonValue::Null);
+    if (tp >= 0.0) body["take_profit"] = tp > 0.0 ? QJsonValue(tp) : QJsonValue(QJsonValue::Null);
+    if (body.isEmpty()) return;                 // nothing to send
+
+    QNetworkReply* r = m_net->put(v1Request("/orders/" + orderId),
+                                  QJsonDocument(body).toJson(QJsonDocument::Compact));
+    handleOrderOp(this, r, "modify");
 }
 
 void ApiClient::cancelOrder(const QString& orderId) {
@@ -434,6 +472,13 @@ void ApiClient::handleReply(QNetworkReply* reply, const QString& kind, const QSt
                 out.push_back(parseBar(v.toObject()));
             emit barsReceived(obj.value("symbol").toString(),
                               obj.value("timeframe").toString(), out);
+        } else if (kind == "transactions") {
+            QJsonArray arr = doc.isArray() ? doc.array()
+                           : obj.contains("items") ? obj.value("items").toArray()
+                                                   : obj.value("transactions").toArray();
+            QVector<Transaction> out;
+            for (const QJsonValue& v : arr) out.push_back(parseTransaction(v.toObject()));
+            emit transactionsReceived(out);
         } else if (kind == "positions" || kind == "orders" || kind == "history") {
             // Three shapes in the wild: a bare array (platform positions and
             // orders), {"items": [...]} (paged history), and {"<kind>": [...]}

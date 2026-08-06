@@ -72,6 +72,12 @@ void ChartBridge::setTheme(const QString& theme) {
     emit themeChanged(theme);
 }
 
+void ChartBridge::setCompact(bool compact) {
+    if (compact == m_compact) return;
+    m_compact = compact;
+    emit compactChanged(compact);
+}
+
 void ChartBridge::setCurrentSymbol(const QString& symbol) {
     if (symbol.isEmpty() || symbol == m_currentSymbol) return;
     m_currentSymbol = symbol;

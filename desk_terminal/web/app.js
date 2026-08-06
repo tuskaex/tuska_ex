@@ -6,9 +6,18 @@
 (function () {
   // Candle colours stay put across themes (green up / red down); only the
   // surfaces and axis type flip.
-  function overridesFor(theme) {
+  function overridesFor(theme, compact) {
     const light = theme === "light";
     return {
+      // Split view: drop the "Bitcoin / US Dollar · 5 · TuskaEx" line from the
+      // legend. The pane header above it already names the instrument, so in a
+      // half or quarter pane it is a second copy of the same fact sitting on
+      // top of the candles. The OHLC row underneath is left alone — that IS
+      // data, and it has no other home on the chart.
+      //
+      // A legend property rather than the `legend_widget` feature: that flag
+      // removes the whole block, OHLC included.
+      "paneProperties.legendProperties.showSeriesTitle": !compact,
       "paneProperties.background": light ? "#ffffff" : "#0e0f13",
       "paneProperties.backgroundType": "solid",
       "paneProperties.vertGridProperties.color": light ? "#eef1f5" : "#191b20",
@@ -89,6 +98,9 @@
    */
   function createChart(bridge, theme) {
     const t = theme === "light" ? "light" : "dark";
+    // Read live rather than taking it as an argument: createChart is also
+    // called from themeChanged, which knows nothing about the grid.
+    const compact = !!bridge.compact;
     const surface = surfaceFor(t);
     document.body.style.background = surface;
     // Lives outside the widget, so a theme rebuild only restyles it.
@@ -143,10 +155,20 @@
         "use_localstorage_for_settings",
         "header_saveload",
         "header_compare",
+        // Split view (2 or 4 panes): drop the drawing toolbar down the left and
+        // the date-range bar along the bottom. Both are worth their space on a
+        // full-window chart; in a quarter pane they take most of the height and
+        // width that the candles need. sc.compact is set by ChartArea whenever
+        // the grid crosses between one pane and several.
+        //
+        // These are CONSTRUCTOR-ONLY, like toolbar_bg — there is no runtime API
+        // to toggle a feature, which is why compactChanged rebuilds the widget
+        // rather than flipping something on the live chart.
+        ...(compact ? ["left_toolbar", "timeframes_toolbar"] : []),
       ],
-      // Left drawing toolbar stays open (as on the web chart).
+      // Left drawing toolbar stays open on a single full-size chart.
       enabled_features: [],
-      overrides: overridesFor(t),
+      overrides: overridesFor(t, compact),
     });
 
     window.tvWidget = widget;
@@ -253,6 +275,11 @@
       try { widget.activeChart().setSymbol(sym); } catch (e) { /* not ready yet */ }
     });
     bridge.themeChanged.connect((theme) => createChart(bridge, theme));
+    // Same rebuild path as a theme switch: the features that hide the drawing
+    // toolbar and the bottom bar can only be set when the widget is built.
+    // ChartBridge::setCompact only emits on an actual change, so switching
+    // between 2 and 4 panes does not rebuild anything.
+    bridge.compactChanged.connect(() => createChart(bridge, bridge.theme));
   }
 
   function fail(msg) {

@@ -1,5 +1,6 @@
 #include "ui/WebChartWidget.h"
 #include "core/ChartBridge.h"
+#include "ui/OrderTicket.h"
 #include "ui/Theme.h"
 #include <QWebEngineView>
 #include <QWebEnginePage>
@@ -135,6 +136,13 @@ QString WebChartWidget::resolveIndexHtml() {
 void WebChartWidget::setOverlayWidget(QWidget* w) {
     if (!w) return;
     m_overlay = w;
+    // The strip re-sizes itself when a longer price arrives (BTCUSD's six
+    // figures against EURUSD's five decimals). Nothing else would notice — it
+    // is placed by hand, not by a layout — so it says so and we re-place it.
+    // Unique connection: setOverlayWidget runs again on every pane switch.
+    if (auto* t = qobject_cast<OrderTicket*>(w))
+        connect(t, &OrderTicket::sizeHintChanged, this,
+                &WebChartWidget::positionOverlay, Qt::UniqueConnection);
     // Deliberately NOT added to the layout: it has to sit on top of the web
     // view, not beside it. raise() puts it above the view in the stacking order.
     w->setParent(this);
@@ -178,6 +186,10 @@ void WebChartWidget::showSymbol(const QString& symbol) {
 
 void WebChartWidget::setPositions(const QVector<OpenPosition>& positions) {
     m_bridge->setPositions(positions);
+}
+
+void WebChartWidget::setCompact(bool compact) {
+    m_bridge->setCompact(compact);
 }
 
 void WebChartWidget::setTheme(const QString& theme) {

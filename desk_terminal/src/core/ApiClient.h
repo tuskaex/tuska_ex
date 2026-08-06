@@ -27,6 +27,7 @@ public:
     void fetchBars(const QString& symbol, const QString& timeframe, int limit = 300);
     void fetchPositions();
     void fetchOrders();
+    void fetchTransactions();   // ledger for the selected account
     void fetchHistory(int limit = 100);
 
     // action = "BUY" | "SELL". sl/tp <= 0 are omitted.
@@ -48,6 +49,12 @@ public:
                            const QString& comment = QString());
     // Cancels a pending order. Returns 400 once it has filled, which is why
     // the list is refetched after every action rather than patched in place.
+    // Amend a pending order. Only the legs the caller actually changed are
+    // sent: PUT /orders/{id} leaves an omitted field alone, so passing every
+    // field would rewrite values the trader never touched. Pass a negative to
+    // mean "not changing this one"; 0 on sl/tp means "remove".
+    void modifyPendingOrder(const QString& orderId, double price, double lots,
+                            double sl, double tp);
     void cancelOrder(const QString& orderId);
 
     // Mints a fresh access token from the stored refresh cookie. The access
@@ -69,6 +76,7 @@ signals:
     void tradeResult(const TradeResult& result);
     void positionsReceived(const QVector<OpenPosition>& positions);
     void ordersReceived(const QVector<PendingOrder>& orders);
+    void transactionsReceived(const QVector<Transaction>& txns);
     void historyReceived(const QVector<HistoryTrade>& history);
     // Result of a per-position modify/close. ok=false carries the reject reason
     // (so the chart can snap a dragged line back and toast the message).

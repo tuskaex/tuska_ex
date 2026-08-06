@@ -58,9 +58,11 @@ set(SOURCES
     src/ui/OrderTicket.cpp
     src/ui/AccountPanel.cpp
     src/ui/PositionsPanel.cpp
+    src/ui/NewsPanel.cpp
     src/ui/ClosePositionDialog.cpp
     src/ui/ModifyBracketsDialog.cpp
     src/ui/OrderDialog.cpp
+    src/ui/EditOrderDialog.cpp
     src/ui/WalletDialog.cpp
     src/ui/MainWindow.cpp
 )
@@ -81,9 +83,11 @@ set(HEADERS
     src/ui/OrderTicket.h
     src/ui/AccountPanel.h
     src/ui/PositionsPanel.h
+    src/ui/NewsPanel.h
     src/ui/ClosePositionDialog.h
     src/ui/ModifyBracketsDialog.h
     src/ui/OrderDialog.h
+    src/ui/EditOrderDialog.h
     src/ui/WalletDialog.h
     src/ui/MainWindow.h
 )

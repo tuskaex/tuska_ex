@@ -30,6 +30,13 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
     if (p.chart) return p;
 
     p.frame = new QFrame(this);
+    // Named so paintPaneStates() can target THIS frame and nothing else. A bare
+    // `QFrame{...}` selector also matches every QFrame-derived descendant — and
+    // QLabel derives from QFrame — so the active pane's accent border was being
+    // painted around every label inside it, including the one-click strip's
+    // price tiles and spread readout. That looked like a blue box drawn on the
+    // BUY/SELL buttons. See the selector in paintPaneStates().
+    p.frame->setObjectName(QStringLiteral("chartPane"));
     auto* v = new QVBoxLayout(p.frame);
     v->setContentsMargins(1, 1, 1, 1);
     v->setSpacing(0);
@@ -178,6 +185,14 @@ void ChartArea::relayout() {
     for (Pane& p : m_panes)
         if (p.header) p.header->setVisible(m_count > 1);
 
+    // Split view: strip the chart's drawing toolbar and bottom date-range bar.
+    // At full size they are worth their room; in a half or quarter pane they
+    // eat most of it. setCompact() is a no-op when the value is unchanged, so
+    // this does not rebuild charts on every relayout — only when the grid
+    // actually crosses between one pane and several.
+    for (Pane& p : m_panes)
+        if (p.chart) p.chart->setCompact(m_count > 1);
+
     refreshPaneHeaders();
     paintPaneStates();
     if (m_overlay) setOverlayWidget(m_overlay);   // re-home it on the active pane
@@ -221,7 +236,11 @@ void ChartArea::paintPaneStates() {
         Pane& p = m_panes[i];
         if (!p.frame) continue;
         const bool active = (i == m_active) && m_count > 1;
-        p.frame->setStyleSheet(QString("QFrame{background:%1; border:1px solid %2;}")
+        // #chartPane, not a bare QFrame: the type selector matches subclasses,
+        // and QLabel is one, so this border used to be drawn around every label
+        // parented into the pane — the one-click strip's price tiles ended up
+        // with a blue rectangle inside each button.
+        p.frame->setStyleSheet(QString("QFrame#chartPane{background:%1; border:1px solid %2;}")
                                .arg(c.bg, active ? c.accent : c.border));
         if (p.header)
             p.header->setStyleSheet(QString("background:%1; border:none;")

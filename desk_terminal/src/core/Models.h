@@ -86,6 +86,15 @@ struct PendingOrder {
 };
 
 // Closed trade (history).
+// A money movement on the account's ledger: deposits, withdrawals, transfers,
+// commission, swap, admin adjustments. Distinct from HistoryTrade, which is a
+// closed POSITION — a trade produces ledger rows but is not one itself.
+struct Transaction {
+    QString id, type, method, description, currency;
+    double  amount = 0;
+    QString createdAt;
+};
+
 struct HistoryTrade {
     QString id, symbol, side;
     double  lots = 0, openPrice = 0, closePrice = 0, profit = 0, swap = 0, commission = 0;

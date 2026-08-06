@@ -8,6 +8,7 @@
 #include "ui/ClosePositionDialog.h"
 #include "ui/ModifyBracketsDialog.h"
 #include "ui/OrderDialog.h"
+#include "ui/EditOrderDialog.h"
 #include "ui/LoginDialog.h"
 #include "ui/WalletDialog.h"
 #include "core/ApiClient.h"
@@ -379,6 +380,7 @@ void MainWindow::refreshAll() {
     m_api->fetchPositions();
     m_api->fetchOrders();
     m_api->fetchHistory();
+    m_api->fetchTransactions();
 }
 
 void MainWindow::connectServices() {
@@ -480,6 +482,7 @@ void MainWindow::connectServices() {
     connect(m_api, &ApiClient::positionsReceived, m_charts,    &ChartArea::setPositions);
     connect(m_api, &ApiClient::ordersReceived,    m_positions, &PositionsPanel::setOrders);
     connect(m_api, &ApiClient::historyReceived,   m_positions, &PositionsPanel::setHistory);
+    connect(m_api, &ApiClient::transactionsReceived, m_positions, &PositionsPanel::setTransactions);
     // One row's ✕ closes THAT position. The symbol-wide close lives on the
     // one-click strip above, and is the only thing that should ever close more
     // than the trader pointed at.
@@ -545,6 +548,24 @@ void MainWindow::connectServices() {
         m_api->cancelOrder(o.id);
     });
 
+    connect(m_positions, &PositionsPanel::modifyOrder, this,
+            [this](const PendingOrder& o) {
+        if (!requireSession(tr("Modifying a pending order"))) return;
+        const SymbolSpec spec = m_specs.value(o.symbol);
+        const Quote q = m_lastQuotes.value(o.symbol);
+        EditOrderDialog dlg(o, spec, q.bid, q.ask, this);
+        if (dlg.exec() != QDialog::Accepted) return;
+        // -1 for anything untouched: the endpoint leaves an omitted field
+        // alone, and 0 already means "remove the bracket", so the sentinel has
+        // to sit outside both.
+        m_api->modifyPendingOrder(
+            o.id,
+            dlg.priceChanged() ? dlg.price()      : -1.0,
+            dlg.lotsChanged()  ? dlg.lots()       : -1.0,
+            dlg.slChanged()    ? dlg.stopLoss()   : -1.0,
+            dlg.tpChanged()    ? dlg.takeProfit() : -1.0);
+    });
+
     // Both order operations end by refetching rather than patching the table:
     // a cancel races the fill engine, and the server's answer is the only
     // truthful one.
@@ -564,6 +585,7 @@ void MainWindow::connectServices() {
         if (!ok) { setStatus(msg, true); return; }
         m_api->fetchPositions();
         m_api->fetchHistory();
+    m_api->fetchTransactions();
         m_api->fetchAccount();
     });
 
@@ -613,7 +635,12 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
         m_chartLayoutRestored = true;
         if (m_cfg.chartCount > 1)
             m_charts->setChartCount(m_cfg.chartCount);
-        for (int i = 0; i < m_cfg.chartSymbols.size() && i < m_charts->chartCount(); ++i) {
+        // Pane 0 is deliberately skipped: the terminal always opens on the
+        // startup instrument (XAUUSD, see below), so restoring the saved symbol
+        // there would immediately be overwritten anyway. Panes 1..n keep what
+        // they were showing, so a 2x2 comes back with its other three
+        // instruments intact.
+        for (int i = 1; i < m_cfg.chartSymbols.size() && i < m_charts->chartCount(); ++i) {
             const QString s = m_cfg.chartSymbols.at(i);
             if (s.isEmpty() || !m_specs.contains(s)) continue;
             m_charts->setActivePane(i);
@@ -622,17 +649,20 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
         m_charts->setActivePane(0);
     }
 
-    // Auto-select a liquid, likely-active symbol so the chart isn't empty on
-    // startup (the alphabetical first, e.g. AAPL, is often a closed market).
-    // A restored pane 0 wins over the default pick — that is the layout the
-    // trader actually left behind.
+    // Open on XAUUSD — the platform's headline instrument — rather than on the
+    // alphabetical first, which is usually a share with a closed market and an
+    // empty chart. The rest of the list is fallback for a deployment that does
+    // not carry gold.
+    //
+    // This wins over whatever pane 0 was showing last session — every launch
+    // starts on gold. The grid (1/2/4) and the OTHER panes' instruments are
+    // still restored above, so a 2x2 comes back as it was apart from the pane
+    // in focus.
     if (!symbols.isEmpty()) {
         QString pick = symbols.front().symbol;
-        for (const QString& pref : {"EURUSD", "BTCUSD", "XAUUSD", "GBPUSD", "ETHUSD"}) {
+        for (const QString& pref : {"XAUUSD", "EURUSD", "BTCUSD", "GBPUSD", "ETHUSD"}) {
             if (m_specs.contains(pref)) { pick = pref; break; }
         }
-        const QString restored = m_charts->activeSymbol();
-        if (!restored.isEmpty() && m_specs.contains(restored)) pick = restored;
         m_watch->selectSymbol(pick);   // moves selection -> triggers onSymbolActivated
         onSymbolActivated(pick);
     }
@@ -648,6 +678,7 @@ void MainWindow::onSymbolActivated(const QString& symbol) {
     if (m_lastQuotes.contains(symbol))
         m_ticket->updateQuote(m_lastQuotes.value(symbol));
     m_charts->showSymbol(symbol);   // active pane only
+    m_positions->setNewsSymbol(symbol);
     persistChartLayout();
 }
 
@@ -668,6 +699,7 @@ void MainWindow::onActiveChartChanged(int) {
     // early-returns because m_currentSymbol already equals sym — that guard is
     // what stops the two from bouncing off each other.
     m_watch->selectSymbol(sym);
+    m_positions->setNewsSymbol(sym);
     persistChartLayout();
 }
 
@@ -820,20 +852,23 @@ void MainWindow::openOrderWindow() {
         setStatus(tr("Pick a symbol in Market Watch first."), true);
         return;
     }
-    const SymbolSpec spec = m_specs.value(m_currentSymbol);
-    const Quote q = m_lastQuotes.value(m_currentSymbol);
-    OrderDialog dlg(spec, q.bid, q.ask, m_lastAccount.leverage,
-                    m_lastAccount.freeMargin, this);
+    // The whole symbol table goes in: the instrument is switchable from inside
+    // the window, so it needs every spec and the last quote for each.
+    OrderDialog dlg(m_specs, m_lastQuotes, m_currentSymbol,
+                    m_lastAccount.leverage, m_lastAccount.freeMargin, this);
     // Keep it live: a market order confirmed against the quote the dialog
     // opened with is a fill at a price the trader never saw.
     connect(m_stream, &PriceStream::tickReceived, &dlg, &OrderDialog::updateQuote);
     if (dlg.exec() != QDialog::Accepted) return;
 
+    // dlg.symbol(), not m_currentSymbol — the picker inside the window may have
+    // moved to a different instrument since it opened.
+    const QString sym = dlg.symbol();
     if (dlg.mode() == "market") {
-        m_api->placeOrder(dlg.side().toUpper(), m_currentSymbol, dlg.lots(),
+        m_api->placeOrder(dlg.side().toUpper(), sym, dlg.lots(),
                           dlg.stopLoss(), dlg.takeProfit(), "terminal");
     } else {
-        m_api->placePendingOrder(m_currentSymbol, dlg.side(), dlg.orderType(),
+        m_api->placePendingOrder(sym, dlg.side(), dlg.orderType(),
                                  dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit());
     }
 }

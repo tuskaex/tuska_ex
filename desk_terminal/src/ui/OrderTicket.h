@@ -43,6 +43,11 @@ signals:
     void buy(const QString& symbol, double volume, double sl, double tp);
     void sell(const QString& symbol, double volume, double sl, double tp);
     void closeAll(const QString& symbol);
+    // The strip has no parent layout — it is positioned by hand over the chart
+    // — so nothing notices when its size hint changes. Raised when the tiles
+    // are re-sized for a new symbol, so the host can re-run its placement
+    // instead of leaving the strip at a width that clips the price.
+    void sizeHintChanged();
 
 private:
     // A price tile: SELL/BUY caption over the live price, whole thing clickable.
@@ -53,6 +58,9 @@ private:
     };
     Tile makeTile(const QString& caption);
     void styleTile(const Tile& t, const QString& base, const QString& hover);
+    // Width a tile needs to show `sample` in full, from the price label's own
+    // font metrics rather than a hard-coded pixel guess.
+    int  tileWidthFor(const QString& sample) const;
 
     SymbolSpec m_spec;
     int    m_digits = 5;

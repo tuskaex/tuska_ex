@@ -1,4 +1,5 @@
 #include "ui/PositionsPanel.h"
+#include "ui/NewsPanel.h"
 #include "ui/Theme.h"
 #include "ui/Icons.h"
 #include <QTabWidget>
@@ -7,6 +8,8 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QEvent>
+#include <QIcon>
 #include <QComboBox>
 #include <QDateEdit>
 #include <QLabel>
@@ -17,6 +20,40 @@
 #include <QColor>
 
 static const char* MASK = "••••";
+
+namespace {
+
+// Swaps a button's icon while the pointer is over it.
+//
+// Needed because the close ✕ fills with the sell red on hover and its icon is
+// drawn in that same red — the glyph vanished into its own background exactly
+// when the user was pointing at it. A style sheet cannot recolour an icon, and
+// enterEvent/leaveEvent need a subclass, so this rides along as an event filter
+// parented to the button (destroyed with it — the blotter rebuilds its rows
+// every four seconds).
+class HoverIconSwap : public QObject {
+public:
+    HoverIconSwap(QPushButton* btn, QIcon normal, QIcon hovered)
+        : QObject(btn), m_btn(btn), m_normal(std::move(normal)),
+          m_hovered(std::move(hovered)) {
+        btn->installEventFilter(this);
+    }
+
+protected:
+    bool eventFilter(QObject* o, QEvent* e) override {
+        if (o == m_btn) {
+            if (e->type() == QEvent::Enter)      m_btn->setIcon(m_hovered);
+            else if (e->type() == QEvent::Leave) m_btn->setIcon(m_normal);
+        }
+        return QObject::eventFilter(o, e);
+    }
+
+private:
+    QPushButton* m_btn;
+    QIcon m_normal, m_hovered;
+};
+
+} // namespace
 
 static QTableWidget* makeTable(const QStringList& headers) {
     auto* t = new QTableWidget;
@@ -138,7 +175,8 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
         // widening the range never needs another round-trip.
         if (tab == 0)      setPositions(m_lastPositions);
         else if (tab == 1) setOrders(m_lastOrders);
-        else               setHistory(m_lastHistory);
+        else if (tab == 2) setHistory(m_lastHistory);
+        else               setTransactions(m_lastTxns);
     };
     connect(box, &QComboBox::currentIndexChanged, this, [date, rerender](int i) {
         date->setVisible(i == RangeDay);
@@ -150,7 +188,64 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
     h->addWidget(box);
     h->addWidget(date);
     h->addStretch();
+
+    // Pagination, Transactions only. The other three tabs hold a working set a
+    // trader wants to see whole — open positions and live pending orders are
+    // risk, and hiding half of them behind a page control would be wrong. The
+    // ledger is different: it only grows, and nothing on page 4 is urgent.
+    if (tab == 3) {
+        const auto& c = Theme::p();
+
+        m_txnPageSize = new QComboBox;
+        m_txnPageSize->setCursor(Qt::PointingHandCursor);
+        for (int n : {5, 10, 15, 20, 25, 50}) m_txnPageSize->addItem(tr("%1 / page").arg(n), n);
+        m_txnPageSize->setCurrentIndex(0);       // 5
+        connect(m_txnPageSize, &QComboBox::currentIndexChanged, this, [this](int) {
+            m_txnPage = 0;                        // page 3 of 5-per-page is page 1 of 25
+            setTransactions(m_lastTxns);
+        });
+
+        auto mkNav = [&](const QString& glyph) {
+            auto* b = new QPushButton(glyph);
+            b->setFixedSize(26, 22);
+            b->setCursor(Qt::PointingHandCursor);
+            b->setFocusPolicy(Qt::NoFocus);
+            b->setStyleSheet(QString(
+                "QPushButton{background:%1; color:%2; border:1px solid %3;"
+                "border-radius:4px; font-weight:800;}"
+                "QPushButton:hover:!disabled{border-color:%4; color:%4;}"
+                "QPushButton:disabled{color:%5;}")
+                .arg(c.btnBg, c.textStrong, c.btnBorder, c.accent, c.dim));
+            return b;
+        };
+        m_txnPrev = mkNav(QStringLiteral("‹"));
+        m_txnNext = mkNav(QStringLiteral("›"));
+        connect(m_txnPrev, &QPushButton::clicked, this, [this]() {
+            if (m_txnPage > 0) { --m_txnPage; setTransactions(m_lastTxns); }
+        });
+        connect(m_txnNext, &QPushButton::clicked, this, [this]() {
+            ++m_txnPage; setTransactions(m_lastTxns);   // clamped on render
+        });
+
+        m_txnPageLbl = new QLabel;
+        m_txnPageLbl->setStyleSheet(QString("color:%1; font-size:11px;"
+                                            "font-family:Consolas,monospace;").arg(c.muted));
+
+        h->addWidget(m_txnPageSize);
+        h->addSpacing(4);
+        h->addWidget(m_txnPrev);
+        h->addWidget(m_txnPageLbl);
+        h->addWidget(m_txnNext);
+    }
     return bar;
+}
+
+int PositionsPanel::txnPageSize() const {
+    // 5 before the bar exists — setTransactions can run from applyTheme() during
+    // construction, ahead of the filter bar it reads this from.
+    if (!m_txnPageSize) return 5;
+    const int n = m_txnPageSize->currentData().toInt();
+    return n > 0 ? n : 5;
 }
 
 QWidget* PositionsPanel::wrapTable(int tab, QTableWidget* table) {
@@ -174,17 +269,23 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
                               tr("Price"), tr("S/L"), tr("T/P"), tr("Action")});
     m_histTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
                              tr("Price"), tr("Price"), tr("Swap"), tr("Commission"), tr("Profit")});
+    m_txnTable = makeTable({tr("Time"), tr("Type"), tr("Method"), tr("Description"),
+                            tr("Amount"), tr("Currency")});
 
     // Action holds a control, not data: pin it narrow so it does not take an
     // equal share of the width like the value columns do — just wide enough for
     // the header word and a centred button.
-    // 92px, not 64: the cell now holds an S/L button beside the close ✕.
+    // 68px fits the two 22px icon buttons (edit + close) with their spacing and
+    // the header word. It was 92 while the edit control was a wider "S/L" text
+    // button; that has since become a pencil icon.
     const int closeCol = m_posTable->columnCount() - 1;
     m_posTable->horizontalHeader()->setSectionResizeMode(closeCol, QHeaderView::Fixed);
-    m_posTable->setColumnWidth(closeCol, 92);
+    m_posTable->setColumnWidth(closeCol, 68);
+    // 68px, matching the Trade tab: this cell now holds the same edit + cancel
+    // pair rather than a lone ✕.
     const int cancelCol = m_orderTable->columnCount() - 1;
     m_orderTable->horizontalHeader()->setSectionResizeMode(cancelCol, QHeaderView::Fixed);
-    m_orderTable->setColumnWidth(cancelCol, 64);
+    m_orderTable->setColumnWidth(cancelCol, 68);
 
     // Only the open-positions table takes edits, and only its S/L and T/P
     // cells are marked editable — every other item has the flag cleared.
@@ -197,6 +298,14 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_tabs->addTab(wrapTable(0, m_posTable),   tr("Trade"));
     m_tabs->addTab(wrapTable(1, m_orderTable), tr("Pending"));
     m_tabs->addTab(wrapTable(2, m_histTable),  tr("History"));
+    // No filter bar on News — the feed is the provider's, not a table we page
+    // through, so a Period selector would have nothing to filter.
+    m_news = new NewsPanel;
+    m_tabs->addTab(m_news, tr("News"));
+    // Ledger for THIS account: deposits, withdrawals, transfers, commission,
+    // swap, admin adjustments. Separate from History, which lists closed
+    // POSITIONS — a trade writes ledger rows but is not one itself.
+    m_tabs->addTab(wrapTable(3, m_txnTable), tr("Transactions"));
 
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(0, 0, 0, 0);
@@ -210,6 +319,7 @@ void PositionsPanel::applyTheme() {
     setPositions(m_lastPositions);
     setOrders(m_lastOrders);
     setHistory(m_lastHistory);
+    setTransactions(m_lastTxns);
 }
 
 void PositionsPanel::setPrivacy(bool on) {
@@ -321,29 +431,40 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         // A real ✕ icon rather than the glyph: several UI fonts render "✕" as a
         // hairline that all but disappears at this size.
         auto* closeBtn = new QPushButton;
-        closeBtn->setFixedSize(22, 18);
+        closeBtn->setFixedSize(24, 20);
         closeBtn->setCursor(Qt::PointingHandCursor);
         closeBtn->setToolTip(tr("Close this %1 position (%2 lots)").arg(p.symbol).arg(fmt(p.lots)));
-        closeBtn->setIcon(Icons::close(QColor(c.down), 12));
-        closeBtn->setIconSize(QSize(12, 12));
+        closeBtn->setIcon(Icons::close(QColor(c.down), 14));
+        closeBtn->setIconSize(QSize(14, 14));
         closeBtn->setStyleSheet(QString(
             "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
             "QPushButton:hover{background:%2; border-color:%2;}")
             .arg(c.btnBorder, c.down));
+        // The hover fill IS the sell red, so the red glyph has to go white or it
+        // disappears into it. See HoverIconSwap.
+        new HoverIconSwap(closeBtn, Icons::close(QColor(c.down), 14),
+                                    Icons::close(QColor("#ffffff"), 14));
         // Capture this row's own position: it closes one position, not the symbol.
         const OpenPosition row = p;
         connect(closeBtn, &QPushButton::clicked, this,
                 [this, row]() { emit closePosition(row); });
 
-        auto* editBtn = new QPushButton(tr("S/L"));
-        editBtn->setFixedSize(30, 18);
+        // A pencil, matching the ✕ beside it. The old "S/L" text button was the
+        // odd one out in a cell of icons, and it named only half of what the
+        // dialog does — it edits the take profit too.
+        auto* editBtn = new QPushButton;
+        editBtn->setFixedSize(24, 20);
         editBtn->setCursor(Qt::PointingHandCursor);
         editBtn->setToolTip(tr("Modify stop loss / take profit"));
+        // accent, not muted: a 2px-stroke glyph drawn in the muted grey at 12px
+        // was near-invisible on the light theme's row background. It also reads
+        // as a pair with the red ✕ beside it — blue edits, red closes.
+        editBtn->setIcon(Icons::pencil(QColor(c.accent), 14));
+        editBtn->setIconSize(QSize(14, 14));
         editBtn->setStyleSheet(QString(
-            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;"
-            "color:%2; font-size:9px; font-weight:800; padding:0;}"
-            "QPushButton:hover{border-color:%3; color:%3;}")
-            .arg(c.btnBorder, c.muted, c.accent));
+            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
+            "QPushButton:hover{border-color:%2;}")
+            .arg(c.btnBorder, c.accent));
         connect(editBtn, &QPushButton::clicked, this,
                 [this, row]() { emit modifyBrackets(row); });
 
@@ -390,26 +511,106 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
         m_orderTable->setItem(r, 7, cell(o.tp > 0 ? fmt(o.tp, 5) : QString(), R));
 
         auto* cancelBtn = new QPushButton;
-        cancelBtn->setFixedSize(22, 18);
+        cancelBtn->setFixedSize(24, 20);   // matches the Trade tab's action pair
         cancelBtn->setCursor(Qt::PointingHandCursor);
         cancelBtn->setToolTip(tr("Cancel this pending order"));
-        cancelBtn->setIcon(Icons::close(QColor(c.down), 12));
-        cancelBtn->setIconSize(QSize(12, 12));
+        cancelBtn->setIcon(Icons::close(QColor(c.down), 14));
+        cancelBtn->setIconSize(QSize(14, 14));
         cancelBtn->setStyleSheet(QString(
             "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
             "QPushButton:hover{background:%2; border-color:%2;}")
             .arg(c.btnBorder, c.down));
+        // Same red-on-red hover as the Trade tab's ✕.
+        new HoverIconSwap(cancelBtn, Icons::close(QColor(c.down), 14),
+                                     Icons::close(QColor("#ffffff"), 14));
         const PendingOrder ord = o;
         connect(cancelBtn, &QPushButton::clicked, this,
                 [this, ord]() { emit cancelOrder(ord); });
 
+        // Edit — same pencil/✕ pair as the Trade tab. A pending order can still
+        // have its price, volume and brackets changed (PUT /orders/{id}), which
+        // beats cancelling and re-placing just to move a level.
+        auto* editBtn = new QPushButton;
+        editBtn->setFixedSize(24, 20);
+        editBtn->setCursor(Qt::PointingHandCursor);
+        editBtn->setToolTip(tr("Modify this pending order"));
+        editBtn->setIcon(Icons::pencil(QColor(c.accent), 14));
+        editBtn->setIconSize(QSize(14, 14));
+        editBtn->setStyleSheet(QString(
+            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
+            "QPushButton:hover{border-color:%2;}")
+            .arg(c.btnBorder, c.accent));
+        connect(editBtn, &QPushButton::clicked, this,
+                [this, ord]() { emit modifyOrder(ord); });
+
         auto* wrap = new QWidget;
         auto* wl = new QHBoxLayout(wrap);
         wl->setContentsMargins(0, 0, 0, 0);
-        wl->addWidget(cancelBtn, 0, Qt::AlignCenter);
+        wl->setSpacing(3);
+        wl->addStretch();
+        wl->addWidget(editBtn);
+        wl->addWidget(cancelBtn);
+        wl->addStretch();
         m_orderTable->setCellWidget(r, 8, wrap);
         ++r;
     }
+}
+
+void PositionsPanel::setTransactions(const QVector<Transaction>& txns) {
+    m_lastTxns = txns;
+    QVector<Transaction> shown;
+    for (const Transaction& t : txns)
+        if (passes(3, t.createdAt)) shown.append(t);
+
+    const auto& c = Theme::p();
+    m_tabs->setTabText(4, tabCaption(tr("Transactions"), shown.size(), txns.size()));
+
+    // Clamp before slicing: the Period filter (or a shorter refresh) can leave
+    // the user on a page that no longer exists, and an out-of-range offset
+    // would render an empty table with no way back.
+    const int size  = txnPageSize();
+    const int pages = shown.isEmpty() ? 1 : (shown.size() + size - 1) / size;
+    m_txnPage = qBound(0, m_txnPage, pages - 1);
+    const int from  = m_txnPage * size;
+    const int count = qMin(size, shown.size() - from);
+
+    if (m_txnPageLbl) {
+        m_txnPageLbl->setText(shown.isEmpty()
+            ? tr(" 0 of 0 ")
+            : tr(" %1–%2 of %3 ").arg(from + 1).arg(from + count).arg(shown.size()));
+    }
+    if (m_txnPrev) m_txnPrev->setEnabled(m_txnPage > 0);
+    if (m_txnNext) m_txnNext->setEnabled(m_txnPage < pages - 1);
+
+    m_txnTable->setRowCount(count);
+    int r = 0;
+    const auto R = Qt::AlignRight | Qt::AlignVCenter;
+    for (int i = from; i < from + count; ++i) {
+        const Transaction& t = shown.at(i);
+        m_txnTable->setItem(r, 0, cell(shortTime(t.createdAt)));
+        // "credit_adjustment" -> "credit adjustment": the API's snake_case is a
+        // wire format, not something to put in front of a trader.
+        m_txnTable->setItem(r, 1, cell(QString(t.type).replace('_', ' ')));
+        m_txnTable->setItem(r, 2, cell(QString(t.method).replace('_', ' ')));
+        m_txnTable->setItem(r, 3, cell(t.description));
+
+        // Signed and coloured: a ledger's whole point is which way the money
+        // went, and +/- reads faster than the type word.
+        auto* amt = cell(m_privacy ? QString(MASK)
+                                   : QString("%1%2").arg(t.amount >= 0 ? "+" : "").arg(fmt(t.amount)),
+                         R);
+        if (!m_privacy)
+            amt->setForeground(QColor(t.amount >= 0 ? c.up : c.down));
+        QFont f = amt->font(); f.setBold(true); amt->setFont(f);
+        m_txnTable->setItem(r, 4, amt);
+
+        m_txnTable->setItem(r, 5, cell(t.currency));
+        ++r;
+    }
+}
+
+void PositionsPanel::setNewsSymbol(const QString& symbol) {
+    if (m_news) m_news->setSymbol(symbol);
 }
 
 void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {

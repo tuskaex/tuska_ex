@@ -16,6 +16,10 @@ class ChartBridge : public QObject {
     Q_PROPERTY(QString currentSymbol  READ currentSymbol  NOTIFY symbolChanged)
     Q_PROPERTY(QString positionsJson  READ positionsJson  NOTIFY positionsChanged)
     Q_PROPERTY(QString theme          READ theme          NOTIFY themeChanged)
+    // True while this pane is one of several. The web layer drops the drawing
+    // toolbar and the bottom date-range bar in that state — in a quarter-sized
+    // pane they cost more room than they earn.
+    Q_PROPERTY(bool    compact        READ compact        NOTIFY compactChanged)
 public:
     ChartBridge(ApiClient* api, PriceStream* stream, QObject* parent = nullptr);
 
@@ -23,8 +27,12 @@ public:
     QString currentSymbol() const { return m_currentSymbol; }
     QString positionsJson() const { return m_positionsJson; }
     QString theme()         const { return m_theme; }
+    bool    compact()       const { return m_compact; }
 
     void setTheme(const QString& theme);   // "dark" | "light"
+    // Rebuilds the chart with a reduced chrome set. Costly (the widget is torn
+    // down and recreated), so it is only called when the value actually flips.
+    void setCompact(bool compact);
 
     void setSymbols(const QVector<SymbolSpec>& symbols);  // called by MainWindow
     void setCurrentSymbol(const QString& symbol);          // watchlist selection
@@ -49,6 +57,7 @@ signals:
     void symbolChanged(const QString& symbol);
     void positionsChanged();
     void themeChanged(const QString& theme);
+    void compactChanged(bool compact);
     void barsReady(const QString& reqId, const QString& barsJson);
     void tick(const QString& symbol, double bid, double ask, double tsMs);
     // Result of a modifyBrackets()/closePosition() call, back to the broker adapter.
@@ -66,6 +75,7 @@ private:
     QString      m_symbolsJson = "[]";
     QString      m_positionsJson = "[]";
     QString      m_currentSymbol;
+    bool         m_compact = false;
     QString      m_theme = "dark";
 
     // Correlate async /bars responses (which carry only symbol+tf) back to the
