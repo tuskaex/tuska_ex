@@ -70,7 +70,21 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Files]
-Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs; \
+; ignoreversion is NOT optional here.
+;
+; Inno's default for a file carrying version info is to replace it only when
+; the incoming version is HIGHER. terminal.exe declares its version from
+; resources/app.rc, and that had been left at 1.0.1 across builds — so an
+; upgrade compared 1.0.1 against 1.0.1, decided there was nothing to do, and
+; skipped the executable. Setup still wrote the uninstaller and stamped
+; DisplayVersion=1.0.2 into Apps & features, which is the worst possible
+; outcome: the machine reports 1.0.2 while running the older binary, and the
+; only symptom is "my changes aren't there".
+;
+; app.rc is bumped alongside AppVersion now, but this flag is the belt to that
+; brace — a build where someone forgets to bump still ships, because the file
+; is replaced on every install regardless of what its version claims.
+Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; \
   Excludes: "CMakeFiles\*,terminal_autogen\*,*.obj,*.pdb,*.ilk,*.cmake,CMakeCache.txt,build.ninja,.ninja_deps,.ninja_log,*.ninja_deps,*.ninja_log,chart-diag.log"
 
 [Icons]
