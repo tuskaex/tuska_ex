@@ -544,7 +544,7 @@ void MainWindow::connectServices() {
         if (QMessageBox::question(this, tr("Cancel order"),
                 tr("Cancel this pending %1 order (%2 lots at %3)?")
                     .arg(o.symbol, QString::number(o.lots, 'f', 2),
-                         QString::number(o.price, 'f', 5))) != QMessageBox::Yes)
+                         QString::number(o.price, 'f', m_specs.value(o.symbol).digits))) != QMessageBox::Yes)
             return;
         m_api->cancelOrder(o.id);
     });
@@ -635,6 +635,13 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
     // so this is belt and braces — but the belt is what makes the restore see
     // the real saved values.
     m_charts->setSymbols(symbols);  // feed symbol metadata to every pane's datafeed
+    // The blotter formats prices at each instrument's own precision — gold to
+    // 2, US30 to 1, EURUSD to 5 — instead of a flat 5 everywhere.
+    {
+        QHash<QString, int> digits;
+        for (const SymbolSpec& sp : symbols) digits.insert(sp.symbol, sp.digits);
+        m_positions->setSymbolDigits(digits);
+    }
     // Restore the saved grid. This runs HERE, not in the constructor, because
     // a pane can only be pointed at a symbol once the metadata for it has
     // arrived — before that every restored pane would fall back to the default.

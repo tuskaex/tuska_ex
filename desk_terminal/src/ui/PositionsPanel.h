@@ -1,6 +1,7 @@
 #pragma once
 #include <QWidget>
 #include <QDate>
+#include <QHash>
 #include "core/Models.h"
 
 class QTabWidget;
@@ -35,6 +36,11 @@ public slots:
 
     // Live headlines for the instrument in focus — see NewsPanel.
     void setNewsSymbol(const QString& symbol);
+
+    // Price precision per instrument, fed from the symbol table. The blotter
+    // has no other way to know it: OpenPosition / PendingOrder carry prices
+    // but not the digits they should be shown at.
+    void setSymbolDigits(const QHash<QString, int>& digits);
 
     void setCollapsed(bool collapsed);
     bool isCollapsed() const { return m_collapsed; }
@@ -94,6 +100,11 @@ private:
     QVector<PendingOrder> m_lastOrders;
     QVector<HistoryTrade> m_lastHistory;
     QVector<Transaction>  m_lastTxns;
+
+    // symbol -> decimals. Defaults to 5 for anything not listed, which is the
+    // right guess for an FX pair and the old behaviour for everything else.
+    QHash<QString, int> m_digits;
+    int digitsFor(const QString& symbol) const { return m_digits.value(symbol, 5); }
 
     // ── Transactions pagination ──
     // The ledger is the one tab that can run to hundreds of rows in a blotter

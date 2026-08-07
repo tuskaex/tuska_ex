@@ -418,10 +418,14 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
                                 ? QColor(c.down) : QColor(c.up));
         m_posTable->setItem(r, 3, typeItem);
         m_posTable->setItem(r, 4, cell(fmt(p.lots), R));
-        m_posTable->setItem(r, 5, cell(fmt(p.openPrice, 5), R));
-        m_posTable->setItem(r, 6, bracketCell(p.sl, p.id, 5));
-        m_posTable->setItem(r, 7, bracketCell(p.tp, p.id, 5));
-        m_posTable->setItem(r, 8, cell(p.currentPrice > 0 ? fmt(p.currentPrice, 5) : QString(), R));
+        // Gold is quoted to 2 decimals and US30 to 1 — a flat 5 rendered them
+        // as 4255.00000 / 54486.60000, and made the edit dialogs (which use the
+        // instrument's real precision) look like they were truncating.
+        const int d = digitsFor(p.symbol);
+        m_posTable->setItem(r, 5, cell(fmt(p.openPrice, d), R));
+        m_posTable->setItem(r, 6, bracketCell(p.sl, p.id, d));
+        m_posTable->setItem(r, 7, bracketCell(p.tp, p.id, d));
+        m_posTable->setItem(r, 8, cell(p.currentPrice > 0 ? fmt(p.currentPrice, d) : QString(), R));
         m_posTable->setItem(r, 9, cell(cash(p.swap), R));
         auto* pnl = cell(cash(p.profit), R);
         pnl->setForeground(p.profit >= 0 ? QColor(c.up) : QColor(c.down));
@@ -506,9 +510,10 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
                                 ? QColor(c.down) : QColor(c.up));
         m_orderTable->setItem(r, 3, typeItem);
         m_orderTable->setItem(r, 4, cell(fmt(o.lots), R));
-        m_orderTable->setItem(r, 5, cell(o.price > 0 ? fmt(o.price, 5) : QString(), R));
-        m_orderTable->setItem(r, 6, cell(o.sl > 0 ? fmt(o.sl, 5) : QString(), R));
-        m_orderTable->setItem(r, 7, cell(o.tp > 0 ? fmt(o.tp, 5) : QString(), R));
+        const int d = digitsFor(o.symbol);
+        m_orderTable->setItem(r, 5, cell(o.price > 0 ? fmt(o.price, d) : QString(), R));
+        m_orderTable->setItem(r, 6, cell(o.sl > 0 ? fmt(o.sl, d) : QString(), R));
+        m_orderTable->setItem(r, 7, cell(o.tp > 0 ? fmt(o.tp, d) : QString(), R));
 
         auto* cancelBtn = new QPushButton;
         cancelBtn->setFixedSize(24, 20);   // matches the Trade tab's action pair
@@ -609,6 +614,11 @@ void PositionsPanel::setTransactions(const QVector<Transaction>& txns) {
     }
 }
 
+void PositionsPanel::setSymbolDigits(const QHash<QString, int>& digits) {
+    m_digits = digits;
+    applyTheme();   // same path as a theme change: re-render every table
+}
+
 void PositionsPanel::setNewsSymbol(const QString& symbol) {
     if (m_news) m_news->setSymbol(symbol);
 }
@@ -636,8 +646,9 @@ void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
                                 ? QColor(c.down) : QColor(c.up));
         m_histTable->setItem(r, 3, typeItem);
         m_histTable->setItem(r, 4, cell(fmt(h.lots), R));
-        m_histTable->setItem(r, 5, cell(fmt(h.openPrice, 5), R));
-        m_histTable->setItem(r, 6, cell(fmt(h.closePrice, 5), R));
+        const int d = digitsFor(h.symbol);
+        m_histTable->setItem(r, 5, cell(fmt(h.openPrice, d), R));
+        m_histTable->setItem(r, 6, cell(fmt(h.closePrice, d), R));
         m_histTable->setItem(r, 7, cell(cash(h.swap), R));
         m_histTable->setItem(r, 8, cell(cash(h.commission), R));
         auto* pnl = cell(cash(h.profit), R);
