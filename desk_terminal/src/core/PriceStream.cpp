@@ -61,7 +61,17 @@ void PriceStream::onDisconnected() {
 }
 
 void PriceStream::onError() {
-    emit statusChanged(tr("Stream error: %1").arg(m_ws.errorString()));
+    // Qt's errorString() here is Windows TLS-stack internals. A dropped Wi-Fi,
+    // a resumed laptop or an idle connection reset upstream all surface as
+    // "Schannel failed to encrypt data: The TLS/SSL connection has been
+    // closed" — which tells a trader nothing except that something alarming
+    // happened, and it stayed on screen in red while the terminal was already
+    // reconnecting perfectly well.
+    //
+    // Say what it means for them. The socket detail still goes to the debug
+    // log for anyone diagnosing a genuinely broken connection.
+    qWarning("PriceStream socket error: %s", qPrintable(m_ws.errorString()));
+    emit statusChanged(tr("Price feed disconnected — reconnecting…"));
     // disconnected() will fire and trigger reconnect if wanted.
 }
 

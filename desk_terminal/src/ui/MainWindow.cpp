@@ -597,7 +597,12 @@ void MainWindow::connectServices() {
             [this](const Quote& q) { if (q.valid) m_lastQuotes.insert(q.symbol, q); });
     connect(m_stream, &PriceStream::statusChanged, this, [this](const QString& s) {
         const bool live = s.startsWith("Live");
-        if (live == m_streamLive) return;
+        // Only a live->live repeat is dropped. The old guard compared liveness
+        // and returned whenever it had not CHANGED, which meant the first
+        // trouble message stuck for the whole outage: a trader kept reading
+        // the original socket error while the stream had already moved on to
+        // "Reconnecting…". Every non-live update now reaches the status bar.
+        if (live && m_streamLive) return;
         m_streamLive = live;
         // The permanent status label is gone, but a dropped feed still has to be
         // visible — stale prices that look live are the one thing a trading UI
