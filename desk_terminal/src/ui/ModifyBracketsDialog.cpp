@@ -1,5 +1,6 @@
 #include "ui/ModifyBracketsDialog.h"
 #include "ui/Theme.h"
+#include "ui/SpinInput.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -56,7 +57,17 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         s->setMinimum(0.0);
         s->setValue(value > 0.0 ? value : 0.0);
         s->setMinimumHeight(32);
+        // Let the trader type the whole price. With tracking on, Qt reparses
+        // and reformats after every keystroke and drops the cursor at the end,
+        // so on a 5-digit instrument only the last characters stayed editable.
+        s->setKeyboardTracking(false);
+        // Both signals: valueChanged for the steppers and the commit, textEdited
+        // for typing, which tracking-off no longer reports. Save is disabled
+        // until something changes, and a disabled button swallows the mouse
+        // press without moving focus — so nothing would ever commit the typed
+        // level and the button could never enable.
         connect(s, &QDoubleSpinBox::valueChanged, this, [this]() { refreshHint(); });
+        SpinInput::onTyping(s, this, [this]() { refreshHint(); });
         return s;
     };
     m_sl = mkSpin(m_pos.sl);
@@ -136,7 +147,10 @@ void ModifyBracketsDialog::refreshHint() {
 // untouched field "changed" often enough to matter.
 static bool differs(double a, double b) { return std::fabs(a - b) > 1e-9; }
 
-bool   ModifyBracketsDialog::slChanged() const { return differs(m_sl->value(), m_slWas); }
-bool   ModifyBracketsDialog::tpChanged() const { return differs(m_tp->value(), m_tpWas); }
-double ModifyBracketsDialog::stopLoss()   const { return m_sl->value(); }
-double ModifyBracketsDialog::takeProfit() const { return m_tp->value(); }
+// Read the text rather than value(): tracking is off, so value() lags a field
+// that is still being edited, and both the hint and the saved level have to
+// match what the trader sees.
+bool   ModifyBracketsDialog::slChanged() const { return differs(stopLoss(), m_slWas); }
+bool   ModifyBracketsDialog::tpChanged() const { return differs(takeProfit(), m_tpWas); }
+double ModifyBracketsDialog::stopLoss()   const { return SpinInput::typedValue(m_sl); }
+double ModifyBracketsDialog::takeProfit() const { return SpinInput::typedValue(m_tp); }

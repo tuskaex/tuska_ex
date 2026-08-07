@@ -1,5 +1,6 @@
 #include "ui/OrderTicket.h"
 #include "ui/Theme.h"
+#include "ui/SpinInput.h"
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QLabel>
@@ -98,11 +99,17 @@ OrderTicket::OrderTicket(QWidget* parent) : QWidget(parent) {
     // ── the two price tiles + the volume stepper between them ──
     m_sell = makeTile(tr("SELL"));
     m_buy  = makeTile(tr("BUY"));
+    // typedValue, not value(): the tiles are deliberately NoFocus, so clicking
+    // one never takes focus off a spin box, and with keyboardTracking disabled a
+    // box only adopts its typed text on focus-out. Reading value() here would
+    // send the volume from before the trader retyped it.
     connect(m_sell.btn, &QPushButton::clicked, this, [this]() {
-        emit sell(m_spec.symbol, m_volume->value(), m_sl->value(), m_tp->value());
+        emit sell(m_spec.symbol, SpinInput::typedValue(m_volume),
+                  SpinInput::typedValue(m_sl), SpinInput::typedValue(m_tp));
     });
     connect(m_buy.btn, &QPushButton::clicked, this, [this]() {
-        emit buy(m_spec.symbol, m_volume->value(), m_sl->value(), m_tp->value());
+        emit buy(m_spec.symbol, SpinInput::typedValue(m_volume),
+                 SpinInput::typedValue(m_sl), SpinInput::typedValue(m_tp));
     });
 
     m_volume = new QDoubleSpinBox;
@@ -133,6 +140,7 @@ OrderTicket::OrderTicket(QWidget* parent) : QWidget(parent) {
     // ── collapsible S/L + T/P row ──
     m_sl = new QDoubleSpinBox;
     m_tp = new QDoubleSpinBox;
+    SpinInput::freeTyping({m_volume, m_sl, m_tp});
     for (QDoubleSpinBox* s : {m_sl, m_tp}) {
         s->setDecimals(5);
         // Capped at 1e6 so the box does not size itself for a 10-digit value it

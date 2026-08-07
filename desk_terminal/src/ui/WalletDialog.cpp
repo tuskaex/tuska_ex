@@ -41,6 +41,9 @@ WalletDialog::WalletDialog(const Config& cfg, QWidget* parent)
     m_amount->setDecimals(2);
     m_amount->setValue(100.0);
     m_amount->setPrefix("$ ");
+    // Per-keystroke interpretation clamps to the 0.01 minimum mid-word, so
+    // clearing the field to retype an amount snapped it back instantly.
+    m_amount->setKeyboardTracking(false);
 
     m_maxBtn = new QPushButton(tr("Max"));
     m_maxBtn->setFixedWidth(52);

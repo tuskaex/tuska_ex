@@ -86,6 +86,10 @@ ClosePositionDialog::ClosePositionDialog(const OpenPosition& pos, double lotStep
     m_lots->setRange(qMin(m_min, m_pos.lots), m_pos.lots);
     m_lots->setValue(m_pos.lots);
     m_lots->setMinimumHeight(34);
+    // Commit on Enter / focus-out rather than per keystroke — otherwise the
+    // range clamp fires on the half-typed number and rewrites the field under
+    // the cursor (typing "1.5" against a 2.0 position became "1" then "1.5").
+    m_lots->setKeyboardTracking(false);
     connect(m_lots, &QDoubleSpinBox::valueChanged, this, [this]() { refresh(); });
 
     auto* estRow = new QHBoxLayout;

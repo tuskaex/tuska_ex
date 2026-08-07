@@ -1,5 +1,6 @@
 #include "ui/OrderDialog.h"
 #include "ui/Theme.h"
+#include "ui/SpinInput.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -147,6 +148,7 @@ QWidget* OrderDialog::buildMarketTab() {
     m_mktVolume->setButtonSymbols(QAbstractSpinBox::NoButtons);
     m_mktVolume->setAlignment(Qt::AlignCenter);
     connect(m_mktVolume, &QDoubleSpinBox::valueChanged, this, [this]() { refreshMarket(); });
+    SpinInput::onTyping(m_mktVolume, this, [this]() { refreshMarket(); });
 
     auto* minus = new QPushButton(QStringLiteral("−"));
     auto* plus  = new QPushButton(QStringLiteral("+"));
@@ -203,6 +205,7 @@ QWidget* OrderDialog::buildMarketTab() {
     };
     m_mktSl = mkBracket();
     m_mktTp = mkBracket();
+    SpinInput::freeTyping({m_mktVolume, m_mktSl, m_mktTp});
 
     auto mkAdd = [&](const QString& text) {
         auto* b = new QPushButton(text);
@@ -291,9 +294,10 @@ bool OrderDialog::unitsMode() const { return m_unitsBtn && m_unitsBtn->isChecked
 
 double OrderDialog::lotsFromInput() const {
     if (!m_mktVolume) return 0.0;
-    if (!unitsMode()) return m_mktVolume->value();
+    const double shown = SpinInput::typedValue(m_mktVolume);   // see price()
+    if (!unitsMode()) return shown;
     const double cs = m_spec.contractSize > 0 ? m_spec.contractSize : 100000.0;
-    return m_mktVolume->value() / cs;
+    return shown / cs;
 }
 
 void OrderDialog::setMarketSide(const QString& side) {
@@ -397,6 +401,7 @@ QWidget* OrderDialog::buildPendingTab() {
     };
     m_sl = mkBracket();
     m_tp = mkBracket();
+    SpinInput::freeTyping({m_lots, m_price, m_sl, m_tp});
 
     for (QWidget* w : {(QWidget*)m_side, (QWidget*)m_type, (QWidget*)m_lots,
                        (QWidget*)m_price, (QWidget*)m_sl, (QWidget*)m_tp})
@@ -446,7 +451,11 @@ QWidget* OrderDialog::buildPendingTab() {
 
     for (QComboBox* b : {m_side, m_type})
         connect(b, &QComboBox::currentIndexChanged, this, [this]() { refreshHint(); });
+    // textEdited as well as valueChanged: with tracking off the latter only
+    // fires on commit, and the price validation is worth having while the
+    // number is still being typed.
     connect(m_price, &QDoubleSpinBox::valueChanged, this, [this]() { refreshHint(); });
+    SpinInput::onTyping(m_price, this, [this]() { refreshHint(); });
     return page;
 }
 
@@ -573,15 +582,18 @@ QString OrderDialog::side() const {
 QString OrderDialog::orderType() const { return m_type->currentData().toString(); }
 
 double OrderDialog::lots() const {
-    return mode() == "market" ? lotsFromInput() : m_lots->value();
+    return mode() == "market" ? lotsFromInput() : SpinInput::typedValue(m_lots);
 }
 
-double OrderDialog::price() const { return m_price->value(); }
+// typedValue rather than value(): keyboardTracking is off on these fields, so
+// value() only catches up on Enter or focus-out. The hint has to judge the
+// price the trader is typing, and the order has to be placed at it.
+double OrderDialog::price() const { return SpinInput::typedValue(m_price); }
 
 double OrderDialog::stopLoss() const {
-    return mode() == "market" ? m_mktSl->value() : m_sl->value();
+    return SpinInput::typedValue(mode() == "market" ? m_mktSl : m_sl);
 }
 
 double OrderDialog::takeProfit() const {
-    return mode() == "market" ? m_mktTp->value() : m_tp->value();
+    return SpinInput::typedValue(mode() == "market" ? m_mktTp : m_tp);
 }

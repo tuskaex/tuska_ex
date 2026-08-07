@@ -1,5 +1,6 @@
 #include "ui/EditOrderDialog.h"
 #include "ui/Theme.h"
+#include "ui/SpinInput.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -62,6 +63,7 @@ EditOrderDialog::EditOrderDialog(const PendingOrder& order, const SymbolSpec& sp
     };
     m_sl = mkBracket(order.sl);
     m_tp = mkBracket(order.tp);
+    SpinInput::freeTyping({m_price, m_lots, m_sl, m_tp});
 
     for (QWidget* w : {(QWidget*)m_price, (QWidget*)m_lots,
                        (QWidget*)m_sl, (QWidget*)m_tp})
@@ -108,8 +110,16 @@ EditOrderDialog::EditOrderDialog(const PendingOrder& order, const SymbolSpec& sp
     lay->addSpacing(2);
     lay->addLayout(actions);
 
-    for (QDoubleSpinBox* s : {m_price, m_lots, m_sl, m_tp})
+    // Both signals, deliberately. valueChanged covers the steppers and the
+    // commit; textEdited covers typing, which with keyboardTracking off no
+    // longer raises valueChanged. Without the second one "Save changes" would
+    // stay disabled while a new price is typed — and a disabled button ignores
+    // the mouse press, so clicking it would not even take focus off the field
+    // to commit it. The dialog would simply refuse to save.
+    for (QDoubleSpinBox* s : {m_price, m_lots, m_sl, m_tp}) {
         connect(s, &QDoubleSpinBox::valueChanged, this, [this]() { refreshHint(); });
+        SpinInput::onTyping(s, this, [this]() { refreshHint(); });
+    }
     refreshHint();
 }
 
@@ -155,10 +165,14 @@ void EditOrderDialog::refreshHint() {
         .arg(c.accent, c.btnBg, c.muted));
 }
 
-double EditOrderDialog::price() const      { return m_price->value(); }
-double EditOrderDialog::lots() const       { return m_lots->value(); }
-double EditOrderDialog::stopLoss() const   { return m_sl->value(); }
-double EditOrderDialog::takeProfit() const { return m_tp->value(); }
+// Read from the text, not from value(): with keyboardTracking off the box only
+// adopts what was typed on Enter or focus-out, so value() lags a field that is
+// still being edited. These feed both the live hint and the request built after
+// accept(), and both have to reflect what the trader can see.
+double EditOrderDialog::price() const      { return SpinInput::typedValue(m_price); }
+double EditOrderDialog::lots() const       { return SpinInput::typedValue(m_lots); }
+double EditOrderDialog::stopLoss() const   { return SpinInput::typedValue(m_sl); }
+double EditOrderDialog::takeProfit() const { return SpinInput::typedValue(m_tp); }
 
 bool EditOrderDialog::priceChanged() const {
     return differs(price(), m_order.price, m_spec.digits > 0 ? m_spec.digits : 5);
