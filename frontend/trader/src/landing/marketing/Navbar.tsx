@@ -485,7 +485,7 @@ export default function MarketingNavbar({
             </button>
           )}
           {/* RESTORED by request.
-              Caveat that has not gone away: /downloads/TuskaExTerminal-Setup-1.0.2.exe
+              Caveat that has not gone away: /downloads/TuskaExTerminal-Setup-1.0.3.exe
               is not on the server. There is no /opt/tuskaex/downloads directory, so
               this link returns HTTP 404 until an installer is uploaded there. That is
               why it was removed; it is back because the control is wanted. Drop the
@@ -529,7 +529,7 @@ export default function MarketingNavbar({
                   </div>
                   {/* Windows */}
                   <a
-                    href="/downloads/TuskaExTerminal-Setup-1.0.2.exe"
+                    href="/downloads/TuskaExTerminal-Setup-1.0.3.exe"
                     download="TuskaExTerminal-Setup.exe"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
@@ -742,7 +742,7 @@ export default function MarketingNavbar({
                 whitespace between the tags as an extra gap. */}
             <li className={`flex flex-col gap-2 pt-3 border-t ${c.dividerStrong}`}>
               <a
-                href="/downloads/TuskaExTerminal-Setup-1.0.2.exe"
+                href="/downloads/TuskaExTerminal-Setup-1.0.3.exe"
                 download="TuskaExTerminal-Setup.exe"
                 onClick={() => setOpen(false)}
                 className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}

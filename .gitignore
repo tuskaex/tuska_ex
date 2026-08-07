@@ -96,3 +96,9 @@ tuskaex_web/
 # TradingView Charting Library download (licensed — do NOT commit)
 charting_library-master/
 backend/services/market_data/
+
+# ---- SpeedTrade ----
+# A separate product with its own private repo. It lives inside this working
+# tree for convenience only; this repo is PUBLIC, so it must never be committed
+# here. Its own .git is what tracks it.
+/speedtrade_landing/
