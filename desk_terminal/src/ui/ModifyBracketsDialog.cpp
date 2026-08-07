@@ -60,7 +60,7 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         // Let the trader type the whole price. With tracking on, Qt reparses
         // and reformats after every keystroke and drops the cursor at the end,
         // so on a 5-digit instrument only the last characters stayed editable.
-        s->setKeyboardTracking(false);
+        SpinInput::freeTyping({s});
         // Both signals: valueChanged for the steppers and the commit, textEdited
         // for typing, which tracking-off no longer reports. Save is disabled
         // until something changes, and a disabled button swallows the mouse

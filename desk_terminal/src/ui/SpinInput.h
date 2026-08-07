@@ -17,17 +17,64 @@
 // from what is on screen rather than from the last committed value.
 
 #include <QDoubleSpinBox>
+#include <QEvent>
+#include <QKeyEvent>
 #include <QLineEdit>
 #include <QLocale>
+#include <QObject>
 #include <QString>
 #include <initializer_list>
 #include <utility>
 
 namespace SpinInput {
 
+// An empty bracket field reads "none" — QDoubleSpinBox::specialValueText, shown
+// in place of the minimum. It looks editable and is not: typing a digit onto it
+// produces "none4", the validator rejects that as not a number, and the
+// keystroke is dropped. The trader clicks into Take Profit, types, and nothing
+// happens.
+//
+// So the first digit typed onto the special text empties the field and is then
+// allowed through to land in it. Only digits and the decimal separator trigger
+// this — arrows, Tab and the like must still behave normally, and Backspace on
+// an already-empty field should stay a no-op rather than look like an edit.
+class SpecialTextClearer : public QObject {
+public:
+    explicit SpecialTextClearer(QDoubleSpinBox* box) : QObject(box), m_box(box) {}
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override {
+        if (event->type() != QEvent::KeyPress) return false;
+        auto* le = qobject_cast<QLineEdit*>(watched);
+        if (!le || m_box->specialValueText().isEmpty()) return false;
+        if (le->text() != m_box->specialValueText()) return false;
+
+        // decimalPoint() is a QString in Qt 6, so it is compared as one; the
+        // bare '.' is accepted too because that is what the numeric keypad
+        // sends under a locale that separates with a comma.
+        const QString typed = static_cast<QKeyEvent*>(event)->text();
+        if (typed.isEmpty()) return false;
+        if (!typed.at(0).isDigit() && typed != QLocale().decimalPoint()
+            && typed != QLatin1String("."))
+            return false;
+
+        le->clear();       // false, not true: the keystroke still has to be
+        return false;      // delivered — it is the value being typed.
+    }
+
+private:
+    QDoubleSpinBox* m_box;
+};
+
 inline void freeTyping(std::initializer_list<QDoubleSpinBox*> boxes) {
-    for (QDoubleSpinBox* b : boxes)
-        if (b) b->setKeyboardTracking(false);
+    for (QDoubleSpinBox* b : boxes) {
+        if (!b) continue;
+        b->setKeyboardTracking(false);
+        // Installed unconditionally and checked at event time, so it does not
+        // matter whether setSpecialValueText() has been called yet.
+        if (QLineEdit* le = b->findChild<QLineEdit*>())
+            le->installEventFilter(new SpecialTextClearer(b));
+    }
 }
 
 // QAbstractSpinBox::lineEdit() is protected, so the editor is fetched as a
