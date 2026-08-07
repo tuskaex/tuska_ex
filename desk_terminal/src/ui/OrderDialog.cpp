@@ -524,6 +524,14 @@ void OrderDialog::applySymbol(const QString& symbol) {
         s->setDecimals(digits);
         s->setSingleStep(step);
     }
+    // Brackets are cleared on every instrument change, for the same reason the
+    // one-click strip clears them: a level typed for gold is nonsense on a
+    // currency pair, and silently carrying it into the next order is how a
+    // 4255 stop loss ended up on AUDUSD. Collapse the market tab's rows back
+    // to "+ SL" / "+ TP" so the next order starts clean.
+    for (QDoubleSpinBox* s : {m_mktSl, m_mktTp, m_sl, m_tp}) s->setValue(0.0);
+    if (m_mktSl->isVisible()) { m_mktSl->setVisible(false); m_addSlBtn->setText(tr("+ SL")); }
+    if (m_mktTp->isVisible()) { m_mktTp->setVisible(false); m_addTpBtn->setText(tr("+ TP")); }
     m_lots->setDecimals(2);
     m_lots->setRange(minLot, maxLot);
     m_lots->setSingleStep(lotStep);

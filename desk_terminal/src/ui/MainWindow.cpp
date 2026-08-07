@@ -30,6 +30,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QFile>
 #include "ui/Theme.h"
 
 static const char* MASK = "••••••";
@@ -619,35 +620,53 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
     for (const SymbolSpec& s : symbols)
         m_specs.insert(s.symbol, s);
 
-    m_watch->setSymbols(symbols);
+    // Charts first, then the RESTORE, and only then the watchlist.
+    //
+    // Order matters: WatchlistWidget::setSymbols() ends by selecting the first
+    // instrument, which fires symbolActivated -> onSymbolActivated ->
+    // persistChartLayout. Run that before the grid has been restored and it
+    // saves the 1-chart default over the layout still sitting on disk.
+    // persistChartLayout() also refuses to write until m_chartLayoutRestored,
+    // so this is belt and braces — but the belt is what makes the restore see
+    // the real saved values.
     m_charts->setSymbols(symbols);  // feed symbol metadata to every pane's datafeed
-    // Snapshot prices immediately (before first ticks arrive).
-    m_api->fetchPrices({});
-
-    setStatus(tr("%1 instruments loaded").arg(symbols.size()));
-
     // Restore the saved grid. This runs HERE, not in the constructor, because
     // a pane can only be pointed at a symbol once the metadata for it has
     // arrived — before that every restored pane would fall back to the default.
     // Guarded so it happens once per launch and never stamps over a layout the
     // trader has since changed (symbols can be re-fetched mid-session).
     if (!m_chartLayoutRestored) {
-        m_chartLayoutRestored = true;
-        if (m_cfg.chartCount > 1)
-            m_charts->setChartCount(m_cfg.chartCount);
+        // Snapshot BEFORE touching the grid. setChartCount() emits
+        // chartCountChanged, which lands in persistChartLayout() and rewrites
+        // m_cfg.chartSymbols from the panes as they are right now — all empty,
+        // because none has been pointed at an instrument yet. The loop below
+        // then read those empties and restored nothing. The flag is also only
+        // raised at the END of this block, so persistChartLayout() stays a
+        // no-op for the whole restore rather than saving each half-built step.
+        const int       wantCount = m_cfg.chartCount;
+        const QStringList wantSyms = m_cfg.chartSymbols;
+
+        if (wantCount > 1)
+            m_charts->setChartCount(wantCount);
         // Pane 0 is deliberately skipped: the terminal always opens on the
         // startup instrument (XAUUSD, see below), so restoring the saved symbol
         // there would immediately be overwritten anyway. Panes 1..n keep what
         // they were showing, so a 2x2 comes back with its other three
         // instruments intact.
-        for (int i = 1; i < m_cfg.chartSymbols.size() && i < m_charts->chartCount(); ++i) {
-            const QString s = m_cfg.chartSymbols.at(i);
+        for (int i = 1; i < wantSyms.size() && i < m_charts->chartCount(); ++i) {
+            const QString s = wantSyms.at(i);
             if (s.isEmpty() || !m_specs.contains(s)) continue;
             m_charts->setActivePane(i);
             m_charts->showSymbol(s);
         }
         m_charts->setActivePane(0);
+        m_chartLayoutRestored = true;
     }
+
+    m_watch->setSymbols(symbols);
+    // Snapshot prices immediately (before first ticks arrive).
+    m_api->fetchPrices({});
+    setStatus(tr("%1 instruments loaded").arg(symbols.size()));
 
     // Open on XAUUSD — the platform's headline instrument — rather than on the
     // alphabetical first, which is usually a share with a closed market and an
@@ -704,6 +723,16 @@ void MainWindow::onActiveChartChanged(int) {
 }
 
 void MainWindow::persistChartLayout() {
+    // Nothing is saved until the saved layout has been APPLIED.
+    //
+    // Without this the startup order destroyed it: m_watch->setSymbols() ends
+    // by auto-selecting the first instrument, that fires onSymbolActivated,
+    // and this ran with the grid still at its 1-chart default — writing
+    // "1 [AAPL]" over the "4 [XAUUSD|EURUSD|BTCUSD|GBPUSD]" that had just been
+    // read off disk. The restore block then looked at m_cfg, saw 1, and
+    // correctly did nothing. Four charts became one on every launch.
+    if (!m_chartLayoutRestored) return;
+
     // Remember the grid AND what each pane was showing. Restoring four panes
     // that all default to one symbol is not "as I left it".
     const int count = m_charts->chartCount();

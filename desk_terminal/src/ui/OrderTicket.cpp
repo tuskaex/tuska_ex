@@ -263,6 +263,23 @@ void OrderTicket::setSymbolSpec(const SymbolSpec& spec) {
     if (m_volume->value() < spec.minLot) m_volume->setValue(spec.minLot);
     m_sl->setDecimals(spec.digits);
     m_tp->setDecimals(spec.digits);
+    // Clear the brackets. A level is only meaningful against the instrument it
+    // was typed for, and carrying one across was actively dangerous: a trader
+    // who set S/L 4255 on XAUUSD and then switched to AUDUSD had 4255 still
+    // sitting in the box, and the next one-click BUY sent it — a stop loss
+    // ~6000x the price, on a pair quoted at 0.70. (Reported from the field:
+    // "moved to other symbols same sl and tp placing".)
+    //
+    // The row is collapsed too, so the next order starts bracket-free rather
+    // than with two fields a trader has to remember to check.
+    m_sl->setValue(0.0);
+    m_tp->setValue(0.0);
+    if (m_bracketRow && !m_bracketRow->isHidden()) {
+        m_bracketRow->hide();
+        m_moreBtn->setText(QStringLiteral("⌄"));
+        m_moreBtn->setToolTip(tr("Show S/L and T/P"));
+    }
+
     m_sell.price->setText("—");
     m_buy.price->setText("—");
     m_spreadLabel->setText("—");
