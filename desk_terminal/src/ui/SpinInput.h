@@ -23,6 +23,7 @@
 #include <QLocale>
 #include <QObject>
 #include <QString>
+#include <QPointer>
 #include <initializer_list>
 #include <utility>
 
@@ -38,15 +39,52 @@ namespace SpinInput {
 // allowed through to land in it. Only digits and the decimal separator trigger
 // this — arrows, Tab and the like must still behave normally, and Backspace on
 // an already-empty field should stay a no-op rather than look like an edit.
-class SpecialTextClearer : public QObject {
+//
+// The same filter also selects the whole value when the field takes focus,
+// which is the fix for the complaint this file exists for.
+//
+// A price field is seeded with the live ask — "4322.14" is already sitting
+// there. A trader clicks into it and types, and the cursor is wherever they
+// clicked, so the digits are INSERTED into that number rather than replacing
+// it. Click at the end of "111.429" and the first keystroke makes "111.4291",
+// a fourth decimal the validator rejects; every keystroke after it is rejected
+// the same way and the field looks dead. Click in the middle and you get
+// "4324322.14". Only a trader who selects the text first — which nothing tells
+// them to do — can type a price at all.
+//
+// Selecting on focus makes the obvious action the working one: click, type the
+// price, done. A second click inside the now-focused field still places a caret
+// for editing one digit, so nothing is taken away.
+class TypingHelper : public QObject {
 public:
-    explicit SpecialTextClearer(QDoubleSpinBox* box) : QObject(box), m_box(box) {}
+    explicit TypingHelper(QDoubleSpinBox* box) : QObject(box), m_box(box) {}
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override {
-        if (event->type() != QEvent::KeyPress) return false;
         auto* le = qobject_cast<QLineEdit*>(watched);
-        if (!le || m_box->specialValueText().isEmpty()) return false;
+        if (!le) return false;
+
+        if (event->type() == QEvent::FocusIn) {
+            // Queued, not immediate: the mouse press that gave the field focus
+            // is delivered after this event and would collapse the selection
+            // back to a caret. A posted metacall runs on the next pass of the
+            // loop, after that press has been handled.
+            //
+            // No hasFocus() guard. It looks like the careful thing to write and
+            // it silently disables the whole fix wherever the top-level window
+            // is not active — which is how this went out once already. Selecting
+            // in a field that lost focus in the meantime is harmless: the
+            // selection is not even painted, and the next focus re-selects.
+            // QPointer only because the metacall outlives this event.
+            QPointer<QLineEdit> guard(le);
+            QMetaObject::invokeMethod(le, [guard]() {
+                if (guard) guard->selectAll();
+            }, Qt::QueuedConnection);
+            return false;
+        }
+
+        if (event->type() != QEvent::KeyPress) return false;
+        if (m_box->specialValueText().isEmpty()) return false;
         if (le->text() != m_box->specialValueText()) return false;
 
         // decimalPoint() is a QString in Qt 6, so it is compared as one; the
@@ -73,7 +111,7 @@ inline void freeTyping(std::initializer_list<QDoubleSpinBox*> boxes) {
         // Installed unconditionally and checked at event time, so it does not
         // matter whether setSpecialValueText() has been called yet.
         if (QLineEdit* le = b->findChild<QLineEdit*>())
-            le->installEventFilter(new SpecialTextClearer(b));
+            le->installEventFilter(new TypingHelper(b));
     }
 }
 
