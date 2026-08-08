@@ -110,7 +110,7 @@ export default function DraggableOrderModal({ onClose }: { onClose: () => void }
       {/* The order panel sizes the window to its content (scrolls only if it
           would exceed the 88vh cap), so there's no empty gap below it. */}
       <div className="min-h-0 overflow-y-auto">
-        <OrderPanel />
+        <OrderPanel onPlaced={onClose} />
       </div>
     </div>
   );

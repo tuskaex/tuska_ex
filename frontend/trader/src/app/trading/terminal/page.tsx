@@ -19,6 +19,7 @@ import DraggableOrderModal from '@/components/trading/DraggableOrderModal';
 import RiskCalculator from '@/components/trading/RiskCalculator';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import PositionsPanel from '@/components/trading/PositionsPanel';
+import OrderPanel from '@/components/trading/OrderPanel';
 import { ActiveAccountBadge } from '@/components/trading/ActiveAccountBadge';
 import TerminalLeftRail, { type TerminalSpaceId } from '@/components/trading/TerminalLeftRail';
 import TerminalTicker from '@/components/trading/TerminalTicker';
@@ -71,6 +72,10 @@ export default function TradingTerminalPage() {
   // The Buy/Sell order panel now lives in a movable floating window instead
   // of a pinned right column, so the chart can be full-width.
   const [orderModalOpen, setOrderModalOpen] = useState(false);
+  // Mobile had no order ticket at all — only the market Sell/Buy pair under the
+  // chart. Stop loss, take profit, pending orders and the margin estimate were
+  // desktop-only, so a phone could open a position but not protect it.
+  const [mobileTicketOpen, setMobileTicketOpen] = useState(false);
   const openOrderModal = useCallback(() => setOrderModalOpen(true), []);
 
   const snapshotLayout = useCallback(() => {
@@ -455,6 +460,14 @@ export default function TradingTerminalPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setMobileTicketOpen(true)}
+                  className="shrink-0 px-3 h-[34px] rounded-xl bg-bg-hover/80 text-text-primary border border-border-glass text-[10px] font-extrabold uppercase tracking-wide hover:bg-accent/10 transition-all active:scale-95"
+                  title="Order ticket — stop loss, take profit, pending orders"
+                >
+                  Order
+                </button>
+                <button
+                  type="button"
                   onClick={() => router.push(tradingTerminalUrl(accountId, { view: 'order' }))}
                   className="shrink-0 px-3 h-[34px] rounded-xl bg-bg-hover/80 text-text-primary border border-border-glass text-[10px] font-extrabold uppercase tracking-wide hover:bg-accent/10 transition-all active:scale-95"
                   title="Open positions, pending orders, history"
@@ -645,6 +658,42 @@ export default function TradingTerminalPage() {
                      <span className="text-white text-[14px] font-black uppercase tracking-[0.05em]">Buy</span>
                      <span className="text-white/70 text-[10px] font-mono font-bold leading-tight">{price?.ask.toFixed(digits) || '--'}</span>
                    </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Order ticket, as a bottom sheet rather than another `view`: it is
+              opened to do one thing and dismissed, and routing to it would put
+              it in the back-stack so the phone's Back button leaves the
+              terminal instead of closing the ticket. Capped at 85vh with the
+              panel scrolling inside, so a long ticket (pending + SL + TP) can
+              still be reached on a short screen. */}
+          {mobileTicketOpen && (
+            <div className="fixed inset-0 z-[95] flex flex-col justify-end">
+              <button
+                type="button"
+                aria-label="Close order ticket"
+                onClick={() => setMobileTicketOpen(false)}
+                className="absolute inset-0 bg-black/60"
+              />
+              <div className="relative max-h-[85vh] flex flex-col rounded-t-2xl border-t border-border-glass bg-bg-primary pb-[env(safe-area-inset-bottom,0px)]">
+                <div className="shrink-0 flex items-center justify-between gap-2 px-3 py-2 border-b border-border-glass">
+                  <span className="text-xs font-bold text-text-primary uppercase tracking-wider">
+                    Order
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileTicketOpen(false)}
+                    className="text-xs font-semibold text-text-tertiary px-2 py-1"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  {/* Same auto-dismiss as the desktop window: the sheet covers
+                      the chart, so leaving it up after a fill hides the thing
+                      the trader placed the order to watch. */}
+                  <OrderPanel onPlaced={() => setMobileTicketOpen(false)} />
                 </div>
               </div>
             </div>

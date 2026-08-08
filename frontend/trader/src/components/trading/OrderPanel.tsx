@@ -17,7 +17,11 @@ import OrderPanelSymbolPicker from '@/components/trading/OrderPanelSymbolPicker'
 type OrderSide = 'buy' | 'sell';
 type OrderType = 'market' | 'pending';
 
-export default function OrderPanel() {
+/** Fired once the order request has actually been accepted by the server, so a
+ *  host that opened this panel to place one order can put itself away. Not
+ *  called on failure — the ticket has to stay up with the values still in it,
+ *  or a rejected order means retyping everything. */
+export default function OrderPanel({ onPlaced }: { onPlaced?: () => void } = {}) {
   const pathname = usePathname();
   const isTradingTerminal = Boolean(pathname?.startsWith('/trading/terminal'));
   const {
@@ -317,6 +321,10 @@ export default function OrderPanel() {
     }).then(async () => {
       // Confirm success only now — the request actually went through.
       toast.success(`${side.toUpperCase()} ${lotsNum} ${selectedSymbol}`);
+      // The ticket has done its job. Leaving it up meant it sat over the chart
+      // covering the very candles and the position row the trader wants to see
+      // next, and had to be dismissed by hand after every single order.
+      onPlaced?.();
 
       // Note: we no longer swap the optimistic row's id with the real
       // position_id here. The store's refreshPositions does that merge
