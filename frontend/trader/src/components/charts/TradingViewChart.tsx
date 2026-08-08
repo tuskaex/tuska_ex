@@ -36,7 +36,7 @@ import { useTradingStore } from '@/stores/tradingStore';
 import { createDatafeed, type DatafeedInstrument } from '@/lib/chart/datafeed';
 import { loadChartLibrary } from '@/lib/chart/loadChartLibrary';
 import { api } from '@/lib/api/client';
-import { netPnl } from '@/lib/pnl';
+import { openPnl } from '@/lib/pnl';
 import toast from 'react-hot-toast';
 import { ChartTradeWidget } from '@/components/charts/ChartTradeWidget';
 
@@ -382,7 +382,8 @@ function TradingViewChartInner({
       // NET P&L (profit − commission + swap; swap is negative for a charge) —
       // the same figure the positions table and the mobile app show, so the
       // chart label can never disagree with them by the fee amount.
-      const pnl = netPnl(p);
+      // Gross — matches the blotter and the status bar. See openPnl.
+      const pnl = openPnl(p);
       const lots = Number(p.lots || 0);
       const entry = Number(p.open_price || 0);
       const notional = entry * lots * cs;

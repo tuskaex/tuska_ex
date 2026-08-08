@@ -7,7 +7,7 @@ import { clsx } from 'clsx';
 import api from '@/lib/api/client';
 import toast from 'react-hot-toast';
 import { sounds, unlockAudio } from '@/lib/sounds';
-import { netPnl, sumNetPnl } from '@/lib/pnl';
+import { openPnl, sumOpenPnl } from '@/lib/pnl';
 import {
   RefreshCw,
   Download,
@@ -185,9 +185,9 @@ function TerminalPositionStaticCard({
   onCloseFull: () => void;
   onPartialClose: () => void;
 }) {
-  // NET P&L (profit − commission + swap; swap stored negative) so the card
-  // matches the position rows and the mobile app.
-  const pnl = netPnl(pos);
+  // Gross, like the rows and the status bar — commission and swap already
+  // came off the balance when they were charged. See openPnl.
+  const pnl = openPnl(pos);
   const cur = pos.current_price;
   const priceDown = cur != null && (pos.side === 'buy' ? cur < pos.open_price : cur > pos.open_price);
 
@@ -340,14 +340,12 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
   const [terminalOpenCardView, setTerminalOpenCardView] = useState(false);
   const [sharePosition, setSharePosition] = useState<Position | null>(null);
 
-  // GROSS floating P&L — used for Equity / Free Margin only. Commission was
-  // already deducted from balance at open, and swap when charged, so equity
-  // MUST use gross (adding net here would double-count the fees).
-  const totalPnl = positions.reduce((s, p) => s + (p.profit || 0), 0);
-  // NET floating P&L (profit − commission + swap; swap is stored negative for
-  // charges) — this is the figure shown to the trader and kept in sync with
-  // the mobile app's per-position P&L.
-  const netTotalPnl = sumNetPnl(positions);
+  // Gross floating P&L, for Equity / Free Margin AND for what the trader sees.
+  // Both were meant to be the same number and were not: the displayed figure
+  // used to subtract commission and swap a second time, so Balance + Credit +
+  // Floating did not reach the Equity printed beside it. See openPnl.
+  const totalPnl = sumOpenPnl(positions);
+  const netTotalPnl = totalPnl;
 
   const profitPositions = positions.filter((p) => (p.profit || 0) > 0);
   const lossPositions = positions.filter((p) => (p.profit || 0) < 0);
@@ -1080,7 +1078,7 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                   ) : (
                     positions.map((pos) => {
                       const d = getDigits(pos.symbol);
-                      const net = netPnl(pos);
+                      const net = openPnl(pos);
                       return (
                         <div key={pos.id} className="rounded-xl border border-border-glass bg-bg-secondary/40 p-3 space-y-2">
                           <div className="flex items-center justify-between">
@@ -1170,7 +1168,9 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                       {positions.map((pos) => {
                         const d = getDigits(pos.symbol);
                         const charges = pos.commission || 0;
-                        const net = netPnl(pos);
+                        // Gross: the charge is already its own column, and it
+                        // has already left the balance. See openPnl.
+                        const net = openPnl(pos);
                         return (
                           <tr key={pos.id} className={tbodyRowClass}>
                             <td className={td}>{accountLabel(pos.account_id)}</td>
