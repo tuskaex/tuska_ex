@@ -255,7 +255,109 @@ QWidget* PositionsPanel::wrapTable(int tab, QTableWidget* table) {
     v->setSpacing(0);
     v->addWidget(buildFilterBar(tab));
     v->addWidget(table, 1);
+    // History alone closes with a summary. It is the only tab that answers
+    // "how did the account get from there to here", and a list of closed
+    // trades without its totals is the half of that question nobody wants.
+    if (tab == 2) v->addWidget(buildHistorySummary());
     return page;
+}
+
+// The strip under the History table: what the period earned, what was paid in
+// and taken out over it, and where the balance stands now.
+//
+// Profit is summed from the rows on screen, so it always agrees with the
+// column above it — change the period and both move together. Deposits and
+// withdrawals come from the transaction ledger filtered by the SAME period,
+// not by the Transactions tab's own selector; two different periods feeding
+// one row of figures would be unreadable. Balance is the live account figure
+// and deliberately not period-scoped: it is a position, not a flow.
+QWidget* PositionsPanel::buildHistorySummary() {
+    auto* bar = new QWidget;
+    bar->setObjectName(QStringLiteral("historySummary"));
+    m_histSummary = bar;
+    auto* h = new QHBoxLayout(bar);
+    h->setContentsMargins(10, 5, 10, 5);
+    h->setSpacing(18);
+
+    auto field = [&](const QString& caption, QLabel** out) {
+        auto* wrap = new QWidget;
+        auto* row = new QHBoxLayout(wrap);
+        row->setContentsMargins(0, 0, 0, 0);
+        row->setSpacing(6);
+        auto* cap = new QLabel(caption);
+        cap->setObjectName(QStringLiteral("sumCaption"));
+        auto* val = new QLabel(QStringLiteral("—"));
+        val->setObjectName(QStringLiteral("sumValue"));
+        row->addWidget(cap);
+        row->addWidget(val);
+        *out = val;
+        h->addWidget(wrap);
+    };
+
+    field(tr("Profit / loss"), &m_sumProfit);
+    field(tr("Deposit"),       &m_sumDeposit);
+    field(tr("Withdrawal"),    &m_sumWithdrawal);
+    h->addStretch(1);
+    field(tr("Balance"),       &m_sumBalance);
+    return bar;
+}
+
+void PositionsPanel::refreshHistorySummary() {
+    if (!m_sumProfit) return;                    // called before the bar is built
+    const auto& c = Theme::p();
+
+    // Restyled here rather than once at construction because this runs on the
+    // theme-change path too — applyTheme() re-renders every tab through
+    // setHistory(), which lands back in this function.
+    // #historySummary, not a bare QWidget: a type selector would match every
+    // child, and the top border would be drawn around each label as well.
+    m_histSummary->setStyleSheet(QString("QWidget#historySummary{background:%1;"
+                                         "border-top:1px solid %2;}")
+                                 .arg(c.panelAlt, c.border));
+    for (QLabel* l : m_histSummary->findChildren<QLabel*>(QStringLiteral("sumCaption")))
+        l->setStyleSheet(QString("color:%1; font-size:10px; font-weight:800;"
+                                 "letter-spacing:0.6px;").arg(c.muted));
+
+    // Swap and commission are part of what the period cost: a trade that made
+    // 12.00 gross and paid 14.00 in swap lost money, and a "Profit" that says
+    // otherwise is worse than no figure at all.
+    double profit = 0.0;
+    for (const HistoryTrade& t : m_lastHistory)
+        if (passes(2, t.closedAt)) profit += t.profit + t.swap + t.commission;
+
+    // The ledger is signed — a withdrawal is already negative, as a loss is —
+    // so these are summed as they come rather than having a sign imposed.
+    double deposit = 0.0, withdrawal = 0.0;
+    for (const Transaction& t : m_lastTxns) {
+        if (!passes(2, t.createdAt)) continue;
+        const QString type = t.type.toLower();
+        if (type == QLatin1String("deposit"))         deposit    += t.amount;
+        else if (type == QLatin1String("withdrawal")) withdrawal += t.amount;
+    }
+
+    auto money = [&](double v) {
+        return m_privacy ? QString::fromUtf8(MASK)
+                         : QString("%1 %2").arg(fmt(v), m_lastAccount.currency);
+    };
+    auto paint = [&](QLabel* l, double v, bool colour) {
+        l->setText(money(v));
+        l->setStyleSheet(QString("font-weight:800; color:%1;")
+                         .arg(!colour || m_privacy ? c.textStrong
+                                                   : (v >= 0 ? c.up : c.down)));
+    };
+
+    paint(m_sumProfit,     profit,     true);
+    paint(m_sumDeposit,    deposit,    false);
+    paint(m_sumWithdrawal, withdrawal, false);
+    // Balance is not coloured: it is not a gain or a loss, and a red balance
+    // on a losing period would read as an account in deficit.
+    paint(m_sumBalance,    m_lastAccount.balance, false);
+}
+
+void PositionsPanel::setAccount(const AccountInfo& account) {
+    if (!account.valid) return;
+    m_lastAccount = account;
+    refreshHistorySummary();
 }
 
 PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
@@ -612,6 +714,10 @@ void PositionsPanel::setTransactions(const QVector<Transaction>& txns) {
         m_txnTable->setItem(r, 5, cell(t.currency));
         ++r;
     }
+    // The ledger is where the summary's deposit and withdrawal figures come
+    // from, so it has to be recomputed when the ledger arrives — the History
+    // tab is often already rendered by then.
+    refreshHistorySummary();
 }
 
 void PositionsPanel::setSymbolDigits(const QHash<QString, int>& digits) {
@@ -656,4 +762,5 @@ void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
         m_histTable->setItem(r, 9, pnl);
         ++r;
     }
+    refreshHistorySummary();
 }

@@ -388,6 +388,8 @@ void MainWindow::connectServices() {
     // REST responses
     connect(m_api, &ApiClient::symbolsReceived, this, &MainWindow::onSymbolsReceived);
     connect(m_api, &ApiClient::accountReceived, m_account, &AccountPanel::setAccount);
+    // The blotter takes it too, for the closing balance in the History summary.
+    connect(m_api, &ApiClient::accountReceived, m_positions, &PositionsPanel::setAccount);
     connect(m_api, &ApiClient::accountReceived, this, [this](const AccountInfo& a) {
         if (!a.valid) return;
         setStatus(QString());   // a good poll clears any stale transient error

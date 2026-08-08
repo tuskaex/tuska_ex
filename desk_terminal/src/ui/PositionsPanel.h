@@ -34,6 +34,11 @@ public slots:
     void setHistory(const QVector<HistoryTrade>& history);
     void setTransactions(const QVector<Transaction>& txns);
 
+    // Only the balance and currency are used, for the History summary's
+    // closing figure. Everything else about the account is the account
+    // panel's business.
+    void setAccount(const AccountInfo& account);
+
     // Live headlines for the instrument in focus — see NewsPanel.
     void setNewsSymbol(const QString& symbol);
 
@@ -76,6 +81,8 @@ private:
     bool passes(int tab, const QString& iso) const;
     QWidget* buildFilterBar(int tab);
     QWidget* wrapTable(int tab, QTableWidget* table);
+    QWidget* buildHistorySummary();
+    void     refreshHistorySummary();
 
     QTabWidget*   m_tabs;
     NewsPanel*    m_news = nullptr;
@@ -100,6 +107,15 @@ private:
     QVector<PendingOrder> m_lastOrders;
     QVector<HistoryTrade> m_lastHistory;
     QVector<Transaction>  m_lastTxns;
+    AccountInfo           m_lastAccount;
+
+    // History summary — the closing figures MT5 puts under its History tab,
+    // and the ones the desk asked for by name.
+    QWidget* m_histSummary  = nullptr;
+    QLabel* m_sumProfit     = nullptr;
+    QLabel* m_sumDeposit    = nullptr;
+    QLabel* m_sumWithdrawal = nullptr;
+    QLabel* m_sumBalance    = nullptr;
 
     // symbol -> decimals. Defaults to 5 for anything not listed, which is the
     // right guess for an FX pair and the old behaviour for everything else.
