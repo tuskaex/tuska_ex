@@ -45,6 +45,9 @@ private:
 
     QHash<QString, QLabel*> m_values;
     QHash<QString, QLabel*> m_keys;    // captions, restyled on theme change
+    // The trailing gap after each field, kept so a hidden field can give its
+    // space back instead of leaving a hole in the strip.
+    QHash<QString, class QSpacerItem*> m_gaps;
     void renderFloating();
 
     QPushButton* m_refresh;

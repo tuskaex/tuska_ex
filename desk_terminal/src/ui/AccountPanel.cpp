@@ -9,6 +9,8 @@
 #include <QPainter>
 #include <QStyle>
 #include <QStyleOption>
+#include <cmath>
+#include <QSpacerItem>
 
 static const char* MASK = "••••••";
 
@@ -19,7 +21,9 @@ QLabel* AccountPanel::addField(QHBoxLayout* row, const QString& caption, const Q
     m_values.insert(key, val);
     row->addWidget(cap);
     row->addWidget(val);
-    row->addSpacing(14);
+    auto* gap = new QSpacerItem(14, 0, QSizePolicy::Fixed, QSizePolicy::Minimum);
+    row->addItem(gap);
+    m_gaps.insert(key, gap);
     return val;
 }
 
@@ -32,6 +36,14 @@ AccountPanel::AccountPanel(QWidget* parent) : QWidget(parent) {
 
     // Order mirrors MT5's status line exactly.
     addField(row, tr("Balance:"),      "balance");
+    // Credit sits between Balance and Equity because it is exactly what
+    // separates them: equity is balance plus credit plus floating P/L. Without
+    // it on screen a bonus account shows a balance and an equity that differ by
+    // an unexplained amount with no open positions — reported from the desk as
+    // "balance and equity are different when no position or pending order is
+    // inside". Hidden entirely when there is no credit, which is most accounts;
+    // a permanent "Credit: 0.00" would just be noise on the status line.
+    addField(row, tr("Credit:"),       "credit");
     addField(row, tr("Equity:"),       "equity");
     // Sits next to Equity because it is the difference between the two: equity
     // is balance plus this. MT5 calls it Profit; "Floating P/L" is spelled out
@@ -147,15 +159,37 @@ void AccountPanel::setAccount(const AccountInfo& a) {
 
     m_values["balance"]->setText(money(a.balance, a.currency));
     m_values["equity"]->setText(money(a.equity));
+
+    const bool hasCredit = std::fabs(a.credit) > 0.005;   // below display precision
+    m_values["credit"]->setText(money(a.credit));
+    m_keys["credit"]->setVisible(hasCredit);
+    m_values["credit"]->setVisible(hasCredit);
+    // Hiding the labels leaves the gap that followed them, which reads as a
+    // stray hole between Balance and Equity on a strip this tight.
+    m_gaps["credit"]->changeSize(hasCredit ? 14 : 0, 0,
+                                 QSizePolicy::Fixed, QSizePolicy::Minimum);
+    layout()->invalidate();
+    const QString creditTip = tr("Bonus credit. It counts towards equity and margin, "
+                                 "so it lets you hold larger positions, but it is not "
+                                 "your money and cannot be transferred or withdrawn — "
+                                 "which is why the balance is lower than the equity.");
+    m_keys["credit"]->setToolTip(creditTip);
+    m_values["credit"]->setToolTip(creditTip);
     m_values["margin"]->setText(money(a.marginUsed));
     m_values["free"]->setText(money(a.freeMargin));
     m_values["level"]->setText(m_privacy ? QString::fromUtf8(MASK)
                                          : QString("%L1 %").arg(a.marginLevel, 0, 'f', 2));
 
-    // Equity is the one figure that moves with the market — colour it against
-    // balance so direction reads even when the number itself is masked.
+    // Equity is the one figure that moves with the market — colour it by
+    // direction so that reads even when the number itself is masked.
+    //
+    // Against balance PLUS credit, not balance alone. Credit is a permanent
+    // addition, so comparing with balance left a bonus account's equity green
+    // for ever, including flat with no positions: a "profit" colour on an
+    // account that has not made anything.
+    const double flat = a.balance + a.credit;
     m_values["equity"]->setStyleSheet(QString(
         "background:transparent; font-size:11px; font-weight:700;"
         "font-family:Consolas,monospace; color:%1;")
-        .arg(a.equity > a.balance ? c.up : a.equity < a.balance ? c.down : c.textStrong));
+        .arg(a.equity > flat ? c.up : a.equity < flat ? c.down : c.textStrong));
 }
