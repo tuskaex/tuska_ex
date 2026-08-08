@@ -11,6 +11,7 @@
 #include <QEvent>
 #include <QIcon>
 #include <QComboBox>
+#include <QSet>
 #include <QDateEdit>
 #include <QLabel>
 #include <QDateTime>
@@ -96,6 +97,25 @@ static QTableWidgetItem* bracketCell(double level, const QString& positionId, in
 }
 
 static QString fmt(double v, int d = 2) { return QString::number(v, 'f', d); }
+
+// Is this ledger row money moving IN or OUT of the account, as opposed to the
+// result of trading it?
+//
+// A trading account has no "deposit" or "withdrawal" rows of its own — those
+// live on the main wallet. It is funded by a transfer from that wallet and
+// drained by a transfer back, plus whatever the desk credits or adjusts. So
+// funding is decided by the type being a balance operation, and the direction
+// by the sign; classifying on the literal words "deposit" and "withdrawal"
+// reports zero for every account on the platform.
+static bool isFunding(const QString& type) {
+    static const QSet<QString> kFunding = {
+        QStringLiteral("deposit"),    QStringLiteral("withdrawal"),
+        QStringLiteral("transfer"),   QStringLiteral("credit"),
+        QStringLiteral("bonus"),      QStringLiteral("adjustment"),
+        QStringLiteral("refund"),
+    };
+    return kFunding.contains(type.toLower());
+}
 
 static QString shortTime(const QString& iso) {
     // "2026-07-17T18:35:00+00:00" -> "2026.07.17 18:35" (MT5's format)
@@ -195,6 +215,21 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
     // ledger is different: it only grows, and nothing on page 4 is urgent.
     if (tab == 3) {
         const auto& c = Theme::p();
+
+        // Funding is the reason a trader opens this tab, and on a busy account
+        // it is buried: every close writes a profit or loss row, so 15 real
+        // deposits and withdrawals sit under 120 trading rows and three pages
+        // of scrolling. This pulls them straight out.
+        m_txnKind = new QComboBox;
+        m_txnKind->setCursor(Qt::PointingHandCursor);
+        m_txnKind->addItem(tr("All types"),                KindAll);
+        m_txnKind->addItem(tr("Deposits & withdrawals"),   KindFunding);
+        m_txnKind->addItem(tr("Trading only"),             KindTrading);
+        connect(m_txnKind, &QComboBox::currentIndexChanged, this, [this](int) {
+            m_txnPage = 0;                        // the old page may not exist now
+            setTransactions(m_lastTxns);
+        });
+        h->insertWidget(3, m_txnKind);            // after Period, before the stretch
 
         m_txnPageSize = new QComboBox;
         m_txnPageSize->setCursor(Qt::PointingHandCursor);
@@ -325,14 +360,13 @@ void PositionsPanel::refreshHistorySummary() {
     for (const HistoryTrade& t : m_lastHistory)
         if (passes(2, t.closedAt)) profit += t.profit + t.swap + t.commission;
 
-    // The ledger is signed — a withdrawal is already negative, as a loss is —
-    // so these are summed as they come rather than having a sign imposed.
+    // Split by direction, not by the type word — see isFunding(). The ledger is
+    // signed, so money in is simply the positive side of the balance operations
+    // and money out the negative one.
     double deposit = 0.0, withdrawal = 0.0;
     for (const Transaction& t : m_lastTxns) {
-        if (!passes(2, t.createdAt)) continue;
-        const QString type = t.type.toLower();
-        if (type == QLatin1String("deposit"))         deposit    += t.amount;
-        else if (type == QLatin1String("withdrawal")) withdrawal += t.amount;
+        if (!passes(2, t.createdAt) || !isFunding(t.type)) continue;
+        (t.amount >= 0 ? deposit : withdrawal) += t.amount;
     }
 
     auto money = [&](double v) {
@@ -665,9 +699,14 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
 
 void PositionsPanel::setTransactions(const QVector<Transaction>& txns) {
     m_lastTxns = txns;
+    const int kind = m_txnKind ? m_txnKind->currentData().toInt() : KindAll;
     QVector<Transaction> shown;
-    for (const Transaction& t : txns)
-        if (passes(3, t.createdAt)) shown.append(t);
+    for (const Transaction& t : txns) {
+        if (!passes(3, t.createdAt)) continue;
+        if (kind == KindFunding && !isFunding(t.type)) continue;
+        if (kind == KindTrading && isFunding(t.type))  continue;
+        shown.append(t);
+    }
 
     const auto& c = Theme::p();
     m_tabs->setTabText(4, tabCaption(tr("Transactions"), shown.size(), txns.size()));

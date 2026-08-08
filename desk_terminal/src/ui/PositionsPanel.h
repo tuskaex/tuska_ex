@@ -81,6 +81,10 @@ private:
     bool passes(int tab, const QString& iso) const;
     QWidget* buildFilterBar(int tab);
     QWidget* wrapTable(int tab, QTableWidget* table);
+    // Which slice of the ledger the Transactions tab shows. Funding is money
+    // in and out of the account; trading is what the account did with it.
+    enum TxnKind { KindAll = 0, KindFunding, KindTrading };
+
     QWidget* buildHistorySummary();
     void     refreshHistorySummary();
 
@@ -111,6 +115,7 @@ private:
 
     // History summary — the closing figures MT5 puts under its History tab,
     // and the ones the desk asked for by name.
+    QComboBox* m_txnKind    = nullptr;
     QWidget* m_histSummary  = nullptr;
     QLabel* m_sumProfit     = nullptr;
     QLabel* m_sumDeposit    = nullptr;
