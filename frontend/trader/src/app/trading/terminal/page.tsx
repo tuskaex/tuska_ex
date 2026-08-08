@@ -669,7 +669,10 @@ export default function TradingTerminalPage() {
               panel scrolling inside, so a long ticket (pending + SL + TP) can
               still be reached on a short screen. */}
           {mobileTicketOpen && (
-            <div className="fixed inset-0 z-[95] flex flex-col justify-end">
+            // z-[120], matching the desktop order window. The mobile chart's
+            // own expand mode and the bottom Sell/Buy bar sit at z-[100], so a
+            // sheet below that came up underneath them.
+            <div className="fixed inset-0 z-[120] flex flex-col justify-end">
               <button
                 type="button"
                 aria-label="Close order ticket"
@@ -689,7 +692,15 @@ export default function TradingTerminalPage() {
                     Close
                   </button>
                 </div>
-                <div className="flex-1 min-h-0 overflow-y-auto">
+                {/* min-h-0 WITHOUT flex-1 — the same shape DraggableOrderModal
+                    uses. In an auto-height flex column, flex-1 means
+                    flex-basis:0, and with min-height:0 allowing the collapse
+                    the item resolves to zero height: the sheet rendered as a
+                    bare header strip with the whole ticket squashed out of
+                    existence. Letting it size to its content and capping the
+                    parent at 85vh gives the panel its height and still scrolls
+                    when SL, TP and Pending are all open. */}
+                <div className="min-h-0 overflow-y-auto">
                   {/* Same auto-dismiss as the desktop window: the sheet covers
                       the chart, so leaving it up after a fill hides the thing
                       the trader placed the order to watch. */}
