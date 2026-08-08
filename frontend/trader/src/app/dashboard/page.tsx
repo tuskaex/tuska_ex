@@ -28,6 +28,7 @@ interface AccountRow {
   id: string;
   account_number: string;
   balance: number;
+  credit?: number;
   equity: number;
   free_margin: number;
   margin_used?: number;
@@ -191,7 +192,13 @@ function BrokerHome() {
   const realAccounts = accounts.filter((a) => !a.is_demo);
   const totalBalance = realAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
   const totalEquity = realAccounts.reduce((s, a) => s + (Number(a.equity) || 0), 0);
-  const todaysPnl = totalEquity - totalBalance;
+  const totalCredit = realAccounts.reduce((s, a) => s + (Number(a.credit) || 0), 0);
+  // Equity is balance + credit + floating P/L, so credit has to come back out
+  // or a bonus reads as profit. A $100 credit on a flat account with no open
+  // positions was showing as "+$100.00 / +0.32% unrealized" — money the trader
+  // has not made and cannot withdraw, labelled as if they had.
+  const todaysPnl = totalEquity - totalBalance - totalCredit;
+  // Against balance alone: credit inflates the base and shrinks a real move.
   const todaysPnlPct = totalBalance > 0 ? (todaysPnl / totalBalance) * 100 : 0;
   const firstName = user?.first_name || (user?.email ? user.email.split('@')[0] : 'Trader');
 
@@ -440,6 +447,10 @@ function AccountBalanceCard({
 
       <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
         <Stat label="Balance" value={fmtUsd(a?.balance ?? 0)} highlight />
+        {/* Only when there is one. It sits next to Equity because it is what
+            separates equity from balance, and without it on screen the two
+            differ by an amount nothing on the page explains. */}
+        {Number(a?.credit) > 0 && <Stat label="Credit" value={fmtUsd(Number(a?.credit))} />}
         <Stat label="Free margin" value={fmtUsd(a?.free_margin ?? 0)} />
         <Stat label="Equity" value={fmtUsd(a?.equity ?? 0)} />
         <Stat label="Leverage" value={a ? `1:${a.leverage}` : '—'} />
