@@ -1,6 +1,7 @@
 #include "ui/WalletDialog.h"
 #include "core/ApiError.h"
 #include "ui/Theme.h"
+#include "ui/SpinInput.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -41,9 +42,9 @@ WalletDialog::WalletDialog(const Config& cfg, QWidget* parent)
     m_amount->setDecimals(2);
     m_amount->setValue(100.0);
     m_amount->setPrefix("$ ");
-    // Per-keystroke interpretation clamps to the 0.01 minimum mid-word, so
-    // clearing the field to retype an amount snapped it back instantly.
-    m_amount->setKeyboardTracking(false);
+    // Same helper as every other numeric field: it opens pre-filled with 100.00
+    // and has to be replaceable by clicking and typing.
+    SpinInput::freeTyping({m_amount});
 
     m_maxBtn = new QPushButton(tr("Max"));
     m_maxBtn->setFixedWidth(52);

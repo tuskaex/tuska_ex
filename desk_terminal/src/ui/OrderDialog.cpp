@@ -532,6 +532,17 @@ void OrderDialog::applySymbol(const QString& symbol) {
     for (QDoubleSpinBox* s : {m_mktSl, m_mktTp, m_sl, m_tp, m_price}) {
         s->setDecimals(digits);
         s->setSingleStep(step);
+        // The range belongs here, with the rest of the per-instrument setup,
+        // and not in whichever lambda happened to build the widget.
+        //
+        // m_price was constructed bare and never given one, so it kept Qt's
+        // default maximum of 99.99. setValue(4341.94) silently clamped to
+        // 99.99, and the validator rejected any third integer digit — which is
+        // precisely the "only 2 digits are allowed, for all the symbols" the
+        // desk reported, on every instrument, for as long as this dialog has
+        // existed. Set for every price-like field so the next one added cannot
+        // inherit the same default by omission.
+        s->setRange(0.0, 1e7);
     }
     // Brackets are cleared on every instrument change, for the same reason the
     // one-click strip clears them: a level typed for gold is nonsense on a

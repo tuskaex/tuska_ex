@@ -24,6 +24,7 @@
 #include <QObject>
 #include <QString>
 #include <QPointer>
+#include <QtGlobal>
 #include <initializer_list>
 #include <utility>
 
@@ -107,6 +108,21 @@ private:
 inline void freeTyping(std::initializer_list<QDoubleSpinBox*> boxes) {
     for (QDoubleSpinBox* b : boxes) {
         if (!b) continue;
+
+        // Tripwire for the bug that caused all of this. QDoubleSpinBox defaults
+        // to a maximum of 99.99, and a price field built bare and never given a
+        // range keeps it: setValue(4341.94) clamps to 99.99 and the validator
+        // refuses a third integer digit. It presents as "only 2 digits are
+        // allowed" on every instrument and looks like a typing bug, which cost
+        // two wrong diagnoses before the clamped 99.99 gave it away. Nothing in
+        // this application legitimately tops out at 99.99, so say so loudly
+        // rather than clamping a price in silence.
+        if (b->maximum() == 99.99)
+            qWarning("SpinInput: %s still has Qt's default 0.00-99.99 range — "
+                     "give it setRange(); prices above 99.99 will be clamped",
+                     qPrintable(b->objectName().isEmpty() ? QStringLiteral("a spin box")
+                                                          : b->objectName()));
+
         b->setKeyboardTracking(false);
         // Installed unconditionally and checked at event time, so it does not
         // matter whether setSpecialValueText() has been called yet.
