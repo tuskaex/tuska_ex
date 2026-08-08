@@ -972,3 +972,30 @@ html {
   from { opacity: 0; transform: scaleY(0.1) translateY(6px); }
   to   { opacity: 1; transform: scaleY(1) translateY(0); }
 }
+
+/* ── Terminal ticker marquee ────────────────────────────────────
+   The headline-symbol strip above the chart (components/trading/
+   TerminalTicker). Declared here rather than in the Tailwind config for
+   the same reason as the two above: it is consumed through an
+   arbitrary-value utility and Tailwind only emits keyframes it can see
+   in theme.extend.
+
+   The strip is rendered as two identical groups side by side and each
+   is translated by its own width plus the flex gap, so the moment the
+   first group has fully left the viewport the second is exactly where
+   it started — the loop point is invisible. Translating the whole rail
+   by -50% instead would land half a gap short and visibly stutter once
+   per cycle. */
+@keyframes terminal-ticker {
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-100% - var(--ticker-gap))); }
+}
+
+/* A strip that never stops moving is a genuine problem for vestibular
+   disorders, and this one sits above a chart people read for minutes at
+   a time. Honour the system setting: the marquee stops and the rail goes
+   back to being scrolled by hand. */
+@media (prefers-reduced-motion: reduce) {
+  .terminal-ticker-track { animation: none !important; }
+  .terminal-ticker-rail  { overflow-x: auto; }
+}

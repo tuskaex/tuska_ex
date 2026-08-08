@@ -104,50 +104,89 @@ function TerminalTickerInner({ rightSlot }: { rightSlot?: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prices, tick]);
 
+  const renderTile = (
+    { sym, meta, mid, pct, positive, buf }: (typeof tiles)[number],
+    duplicate: boolean,
+  ) => {
+    const isSelected = selectedSymbol === sym;
+    return (
+      <button
+        key={`${duplicate ? 'dup' : 'src'}-${sym}`}
+        type="button"
+        onClick={() => setSelectedSymbol(sym)}
+        // The second copy exists only so the loop has no seam. It must not be
+        // reachable by Tab or read out, or every symbol would appear twice.
+        tabIndex={duplicate ? -1 : undefined}
+        aria-hidden={duplicate || undefined}
+        className={clsx(
+          'shrink-0 flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-colors',
+          'min-w-[180px]',
+          isSelected
+            ? 'bg-accent/10 border-accent/40'
+            : 'bg-bg-secondary border-border-primary hover:border-accent/30',
+        )}
+      >
+        <span className="text-base leading-none" aria-hidden>
+          {meta?.flag || '·'}
+        </span>
+        <div className="flex flex-col items-start min-w-0">
+          <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
+            {meta?.label || sym}
+          </span>
+          <span className="text-sm font-mono font-bold text-text-primary tabular-nums">
+            {formatPrice(mid, meta?.digits ?? 5)}
+          </span>
+        </div>
+        <div className="flex flex-col items-end gap-0.5 ml-auto">
+          <span
+            className={clsx(
+              'text-[10px] font-bold font-mono tabular-nums whitespace-nowrap',
+              positive ? 'text-green-400' : 'text-red-400',
+            )}
+          >
+            {positive ? '+' : ''}
+            {pct.toFixed(2)}%
+          </span>
+          <Sparkline data={buf} positive={positive} />
+        </div>
+      </button>
+    );
+  };
+
+  // Both groups carry the same gap as the rail between them, which is what
+  // makes the -100%-minus-one-gap translation in the keyframes land exactly on
+  // the seam. Set as a variable so the two can never drift apart.
+  const trackStyle = { ['--ticker-gap' as string]: '0.5rem' };
+
   return (
     <div className="w-full border-b border-border-primary bg-bg-base flex items-center">
-      <div className="flex-1 min-w-0 flex overflow-x-auto no-scrollbar gap-2 px-2 py-1.5">
-        {tiles.map(({ sym, meta, mid, pct, positive, buf }) => {
-          const isSelected = selectedSymbol === sym;
-          return (
-            <button
-              key={sym}
-              type="button"
-              onClick={() => setSelectedSymbol(sym)}
-              className={clsx(
-                'shrink-0 flex items-center gap-2.5 px-3 py-1.5 rounded-lg border transition-colors',
-                'min-w-[180px]',
-                isSelected
-                  ? 'bg-accent/10 border-accent/40'
-                  : 'bg-bg-secondary border-border-primary hover:border-accent/30',
-              )}
-            >
-              <span className="text-base leading-none" aria-hidden>
-                {meta?.flag || '·'}
-              </span>
-              <div className="flex flex-col items-start min-w-0">
-                <span className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
-                  {meta?.label || sym}
-                </span>
-                <span className="text-sm font-mono font-bold text-text-primary tabular-nums">
-                  {formatPrice(mid, meta?.digits ?? 5)}
-                </span>
-              </div>
-              <div className="flex flex-col items-end gap-0.5 ml-auto">
-                <span
-                  className={clsx(
-                    'text-[10px] font-bold font-mono tabular-nums whitespace-nowrap',
-                    positive ? 'text-green-400' : 'text-red-400',
-                  )}
-                >
-                  {positive ? '+' : ''}
-                  {pct.toFixed(2)}%
-                </span>
-                <Sparkline data={buf} positive={positive} />
-              </div>
-            </button>
-          );
-        })}
+      {/* group/ticker so the pause reacts to the whole strip, not one tile:
+          a marquee that only stops under the cursor is unclickable, because
+          the tile you aimed at has already moved on by the time you press. */}
+      <div
+        className="terminal-ticker-rail flex-1 min-w-0 flex gap-2 overflow-hidden no-scrollbar px-2 py-1.5 group/ticker"
+        style={trackStyle}
+      >
+        {[false, true].map((duplicate) => (
+          <div
+            key={duplicate ? 'dup' : 'src'}
+            // The animation goes on each group, never on a wrapper around both:
+            // the keyframes translate by 100% of the animated element, and on a
+            // wrapper that is the width of BOTH groups — twice the intended
+            // distance, so the strip would jump a full cycle every loop.
+            //
+            // min-w-full keeps the group at least as wide as the rail. Six tiles
+            // are narrower than a maximised terminal, and without it the loop
+            // would drag a stretch of empty rail across the screen.
+            className={clsx(
+              'terminal-ticker-track flex shrink-0 min-w-full justify-around gap-2',
+              'animate-[terminal-ticker_36s_linear_infinite]',
+              'group-hover/ticker:[animation-play-state:paused]',
+            )}
+          >
+            {tiles.map((t) => renderTile(t, duplicate))}
+          </div>
+        ))}
       </div>
       {rightSlot ? (
         <div className="shrink-0 flex items-center gap-2 px-2">
