@@ -183,6 +183,25 @@
       // Re-attached per widget: a theme switch rebuilds the chart, and with it
       // the iframe the observer was watching.
       watchDialogs(bridge);
+
+      // Tell the native side when the symbol is changed from inside the chart
+      // — the library's own search box, or the symbol field on its toolbar.
+      //
+      // Nothing reported those before, so C++ went on filtering ticks to the
+      // symbol the Market Watch had selected. The newly picked one drew its
+      // history and then froze: no live candle, and the datafeed holds bars
+      // back until a tick arrives to establish the spread, so often nothing
+      // appeared at all. To a trader the chart simply did not change.
+      try {
+        widget.activeChart().onSymbolChanged().subscribe(null, () => {
+          try {
+            const s = widget.activeChart().symbol();
+            if (s) bridge.chartSymbolPicked(s);
+          } catch (e) { /* chart torn down mid-callback */ }
+        });
+      } catch (e) {
+        console.warn("onSymbolChanged subscribe failed", e);
+      }
     });
   }
 
@@ -272,7 +291,14 @@
     // a rebuild swaps the chart underneath them without stacking handlers.
     bridge.symbolChanged.connect((sym) => {
       if (!sym || !widget) return;
-      try { widget.activeChart().setSymbol(sym); } catch (e) { /* not ready yet */ }
+      try {
+        // An in-chart pick is reported to C++ and comes straight back here as
+        // the property's change notification. Re-applying it would reload the
+        // series the trader just chose — and the reload discards the chart's
+        // scroll position, so it reads as the chart jumping on its own.
+        if (widget.activeChart().symbol() === sym) return;
+        widget.activeChart().setSymbol(sym);
+      } catch (e) { /* not ready yet */ }
     });
     bridge.themeChanged.connect((theme) => createChart(bridge, theme));
     // Same rebuild path as a theme switch: the features that hide the drawing

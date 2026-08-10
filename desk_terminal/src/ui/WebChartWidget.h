@@ -30,6 +30,11 @@ public:
     // ChartBridge::compact.
     void setCompact(bool compact);
 
+signals:
+    // The trader picked a symbol inside the chart itself. Relayed so the pane
+    // header can follow, and so the choice survives a restart.
+    void symbolPickedInChart(const QString& symbol);
+
 protected:
     void resizeEvent(QResizeEvent* e) override;
 

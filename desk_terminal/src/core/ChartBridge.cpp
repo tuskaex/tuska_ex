@@ -84,6 +84,20 @@ void ChartBridge::setCurrentSymbol(const QString& symbol) {
     emit symbolChanged(symbol);
 }
 
+void ChartBridge::chartSymbolPicked(const QString& symbol) {
+    if (symbol.isEmpty() || symbol == m_currentSymbol) return;
+    // Adopt it as the chart's symbol so onTick() stops filtering the new one
+    // out.
+    m_currentSymbol = symbol;
+    emit symbolPickedInChart(symbol);
+    // symbolChanged is the property's NOTIFY, and WebChannel only refreshes the
+    // JS-side copy of currentSymbol when it fires. Skipping it left JS reading
+    // the old symbol forever, which decides which symbol a rebuilt widget opens
+    // on. It does travel back to the chart that raised this, so the handler
+    // over there ignores a symbol the chart is already showing.
+    emit symbolChanged(symbol);
+}
+
 void ChartBridge::requestBars(const QString& symbol, const QString& timeframe,
                               double /*fromSec*/, double /*toSec*/, const QString& reqId) {
     // The API returns the most-recent N bars (no from/to filter); JS filters to

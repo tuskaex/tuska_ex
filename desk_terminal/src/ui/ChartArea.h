@@ -77,6 +77,10 @@ signals:
     // Fires whenever the pane count changes, including from a ✕ rather than
     // the menu, so the View > Chart layout radio group can follow it.
     void chartCountChanged(int count);
+    // The active pane's symbol was changed from inside the chart, so anything
+    // tracking "what am I looking at" (the price stream subscription, the
+    // saved layout) can follow without the trader having to use Market Watch.
+    void symbolPickedInChart(const QString& symbol);
 
 protected:
     // Clicks on a pane's header select it; the header carries a "paneIndex".

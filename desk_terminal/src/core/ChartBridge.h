@@ -52,9 +52,19 @@ public:
     // strip floating over the web view would otherwise cover them permanently.
     Q_INVOKABLE void setOverlayHidden(bool hidden);
 
+    // JS -> C++: the trader picked a symbol inside the chart's own search box,
+    // rather than from the Market Watch. Without this the native side never
+    // learns, keeps filtering ticks to the old symbol, and the newly chosen one
+    // draws its history and then sits frozen.
+    Q_INVOKABLE void chartSymbolPicked(const QString& symbol);
+
 signals:
     void symbolsChanged();
     void symbolChanged(const QString& symbol);
+    // Raised only for an in-chart pick, so the pane can retitle itself. Kept
+    // separate from symbolChanged, which is the C++ -> JS direction; reusing it
+    // would send the symbol straight back to the chart that just set it.
+    void symbolPickedInChart(const QString& symbol);
     void positionsChanged();
     void themeChanged(const QString& theme);
     void compactChanged(bool compact);

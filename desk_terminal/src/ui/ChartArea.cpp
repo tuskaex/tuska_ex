@@ -79,6 +79,25 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
     p.chart = new WebChartWidget(m_api, m_stream, p.frame);
     p.chart->setMinimumSize(220, 160);
 
+    // A symbol chosen inside the chart is as real a choice as one clicked in
+    // the Market Watch, so record it the same way: the pane header follows it,
+    // and symbols() picks it up, which is what gets saved and restored.
+    // Looked up by widget rather than captured index — a ✕ shuffles the panes
+    // along, and a captured index would rename whichever chart moved into the
+    // closed one's slot.
+    connect(p.chart, &WebChartWidget::symbolPickedInChart, this,
+            [this, w = p.chart](const QString& symbol) {
+        for (Pane& q : m_panes) {
+            if (q.chart == w) {
+                if (q.symbol == symbol) return;
+                q.symbol = symbol;
+                refreshPaneHeaders();
+                emit symbolPickedInChart(symbol);
+                return;
+            }
+        }
+    });
+
     v->addWidget(p.header);
     v->addWidget(p.chart, 1);
 

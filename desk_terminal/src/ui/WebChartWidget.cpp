@@ -80,6 +80,8 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
     // The page reports when a TradingView dialog opens. A native child widget
     // always paints above the web view, so the only way to stop the one-click
     // strip covering those dialogs is to take it off screen while they are up.
+    connect(m_bridge, &ChartBridge::symbolPickedInChart,
+            this, &WebChartWidget::symbolPickedInChart);
     connect(m_bridge, &ChartBridge::overlayHiddenChanged, this, [this](bool hidden) {
         if (m_overlay) m_overlay->setVisible(!hidden);
     });
