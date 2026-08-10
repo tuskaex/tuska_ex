@@ -23,7 +23,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, Query, WebSocket
+from fastapi import APIRouter, HTTPException, Header, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from packages.common.src.database import AsyncSessionLocal
@@ -388,6 +388,31 @@ async def algo_prices_ws(websocket: WebSocket) -> None:
     try:
         last_ping = asyncio.get_event_loop().time()
         while True:
+            # Drain whatever the client sends and throw it away.
+            #
+            # This loop used to never read from the socket after the auth
+            # handshake, and that quietly killed every connection at ~60s with
+            # close 1011 "keepalive ping timeout". Nothing was wrong with the
+            # client: incoming frames pile up unread in the ASGI receive queue,
+            # flow control stalls the protocol reader, and uvicorn's own
+            # keepalive PING never gets its PONG back — so uvicorn drops the
+            # connection. The client reconnects, and 60s later it happens
+            # again, which is what a trader sees as "Disconnected — retrying…"
+            # over and over.
+            #
+            # The client's own {"type":"pong"} replies to our 30s heartbeat made
+            # it worse, since those were exactly the frames going unread.
+            #
+            # The account stream in main.py has always drained its socket; this
+            # one simply never did. Nothing here needs the contents — reading is
+            # the whole point.
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
+            except asyncio.TimeoutError:
+                pass
+            except WebSocketDisconnect:
+                break
+
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
             if message and message.get("type") == "message":
                 try:
