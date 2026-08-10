@@ -21,14 +21,14 @@ AppName={#MyApp}
 ; website's download button already links to
 ; (frontend/trader/src/landing/marketing/Navbar.tsx). Bump both together, and
 ; the site's href with them, or the link 404s.
-AppVersion=1.0.5
+AppVersion=1.0.6
 AppPublisher=TuskaEx
 DefaultDirName={autopf}\TuskaEx Terminal
 DefaultGroupName=TuskaEx Terminal
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyExe}
 OutputDir={#SourcePath}dist
-OutputBaseFilename=TuskaExTerminal-Setup-1.0.5
+OutputBaseFilename=TuskaExTerminal-Setup-1.0.6
 SetupIconFile={#SourcePath}resources\tuskaex.ico
 Compression=lzma2/max
 SolidCompression=yes
