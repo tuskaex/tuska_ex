@@ -40,7 +40,7 @@ private slots:
     void onSymbolsReceived(const QVector<SymbolSpec>& symbols);
     void onSymbolActivated(const QString& symbol);
     void onTradeResult(const TradeResult& r);
-    void onApiError(const QString& context, const QString& message);
+    void onApiError(const QString& context, const QString& message, int httpStatus);
     void openSettings();
     void openOrderWindow();    // Market + Pending order ticket (F9)
     void onActiveChartChanged(int index);  // strip follows the active pane

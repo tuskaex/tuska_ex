@@ -87,7 +87,10 @@ signals:
     // persisted: the old refresh token is dead the moment this fires.
     void sessionRefreshed(const QString& accessToken, const QString& refreshToken);
     void sessionRefreshFailed(const QString& message);
-    void errorOccurred(const QString& context, const QString& message);
+    // httpStatus is the response code, or 0 when the request never got one (DNS
+    // failure, timeout, connection refused). Carrying it lets a listener tell a
+    // dead session from a network blip without matching on the message text.
+    void errorOccurred(const QString& context, const QString& message, int httpStatus);
 
 private:
     QNetworkRequest makeRequest(const QString& path) const;   // adds auth headers (algo API)

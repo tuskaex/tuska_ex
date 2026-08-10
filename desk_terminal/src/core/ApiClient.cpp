@@ -450,7 +450,7 @@ void ApiClient::handleReply(QNetworkReply* reply, const QString& kind, const QSt
                 tr_.message = detail;
                 emit tradeResult(tr_);
             }
-            emit errorOccurred(context, detail);
+            emit errorOccurred(context, detail, http);
             return;
         }
 

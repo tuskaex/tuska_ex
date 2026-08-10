@@ -775,10 +775,21 @@ void MainWindow::onTradeResult(const TradeResult& r) {
     }
 }
 
-void MainWindow::onApiError(const QString& context, const QString& message) {
+void MainWindow::onApiError(const QString& context, const QString& message, int httpStatus) {
     // Auth failure (token expired / invalid) — always surface so the user
     // knows to sign in again, instead of silently showing stale data.
-    if (message.contains("expired", Qt::CaseInsensitive)
+    //
+    // 401/403 is the authoritative signal and is checked first. This used to
+    // rest entirely on the four phrase matches below, and any 401 worded
+    // differently fell through to the silent branch further down — which is how
+    // a dead session appeared as an empty blotter: Trade (0), Pending (0),
+    // History (0), no error anywhere, while Balance and Margin kept updating
+    // because those ride the algo key, which never expires. The blotter is the
+    // only part that needs the JWT, so it is the only part that goes blank.
+    //
+    // The phrase checks are kept for any error path that reports no status.
+    if (httpStatus == 401 || httpStatus == 403
+        || message.contains("expired", Qt::CaseInsensitive)
         || message.contains("Invalid token", Qt::CaseInsensitive)
         || message.contains("Invalid API credentials", Qt::CaseInsensitive)
         || message.contains("Not authenticated", Qt::CaseInsensitive)) {
@@ -796,15 +807,40 @@ void MainWindow::onApiError(const QString& context, const QString& message) {
         setStatus(tr("Session expired — open Settings and sign in again"), true);
         return;
     }
-    // The account / trades lists poll every few seconds — a transient network
-    // or DNS blip on one poll shouldn't flash a scary error, the next poll
-    // recovers. Only surface errors from user-initiated actions (trades).
-    if (context.startsWith(tr("Loading positions"))
-        || context.startsWith(tr("Loading orders"))
-        || context.startsWith(tr("Loading history"))
-        || context.startsWith(tr("Loading account"))
-        || context.startsWith(tr("Loading prices"))
-        || context.startsWith(tr("Loading symbols")))
+    // The account / trades lists poll every few seconds, so a blip on one poll
+    // shouldn't flash a scary error — the next poll recovers.
+    //
+    // But "transient" has to mean transient. This used to stay quiet for ANY
+    // failure on these polls, which hid the permanent ones too. A configured
+    // account id that does not belong to the signed-in user answers 404
+    // "Account not found" on every single poll, forever, and the trader was
+    // shown an empty blotter — Trade (0), Pending (0), History (0) — with no
+    // hint anything was wrong, while Balance and Margin kept ticking because
+    // those come from the algo key's own account, a different one entirely.
+    // That reads as "my positions vanished", which is the worst thing a
+    // trading screen can say when it is not true.
+    //
+    // So: keep quiet only for things that genuinely pass on their own — no
+    // response at all (status 0: DNS, timeout, refused), a server-side fault
+    // (5xx), or rate limiting (429). Every other 4xx is a standing problem
+    // that will never resolve by waiting, and has to be visible.
+    // The selected account is not one this login owns. Every blotter poll will
+    // 404 until the account is changed, so say what to do rather than echoing
+    // the API's "Account not found", which tells a trader nothing.
+    if (httpStatus == 404 && message.contains("Account not found", Qt::CaseInsensitive)) {
+        setStatus(tr("This account is not available on the signed-in login — "
+                     "pick another from the Accounts menu."), true);
+        return;
+    }
+
+    const bool transient = httpStatus == 0 || httpStatus == 429 || httpStatus >= 500;
+    if (transient
+        && (context.startsWith(tr("Loading positions"))
+            || context.startsWith(tr("Loading orders"))
+            || context.startsWith(tr("Loading history"))
+            || context.startsWith(tr("Loading account"))
+            || context.startsWith(tr("Loading prices"))
+            || context.startsWith(tr("Loading symbols"))))
         return;
     setStatus(tr("%1 — %2").arg(context, message), true);
 }
