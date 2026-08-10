@@ -100,7 +100,72 @@ Write-Host "==> Building..." -ForegroundColor Cyan
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
 Write-Host "==> Deploying Qt runtime (windeployqt)..." -ForegroundColor Cyan
-& "$qt\bin\windeployqt.exe" --release --no-translations "$build\terminal.exe" | Out-Null
+# --compiler-runtime ships MSVCP140 / VCRUNTIME140 / VCRUNTIME140_1 beside the
+# exe. terminal.exe imports all three, and without them Windows refuses to start
+# the process at all: "The code execution cannot proceed because MSVCP140.dll
+# was not found."
+#
+# This went unnoticed for a long time because almost every Windows machine
+# already has the VC++ Redistributable, installed by some other program. A
+# freshly installed Windows does not -- which is how it surfaced, on Windows
+# running under Parallels on a MacBook.
+#
+# App-local copies rather than requiring the redistributable installer: no admin
+# rights, nothing to install, and the app cannot be broken later by another
+# program's redist uninstall. Microsoft permits shipping these DLLs this way.
+& "$qt\bin\windeployqt.exe" --release --no-translations --compiler-runtime "$build\terminal.exe" | Out-Null
+
+# windeployqt finds the CRT through the VC toolchain it was told about, and
+# silently ships nothing when it cannot. A missing DLL here means an installer
+# that fails on exactly the machines we cannot test on, so verify instead of
+# assuming -- and fall back to copying them out of the MSVC redist directory.
+# terminal.exe itself only imports the first three, but the Qt DLLs beside it
+# pull in MSVCP140_1 (Qt6Core/Gui/Widgets/Quick) and MSVCP140_2 (Qt6Gui/Quick).
+# Those load later than the exe's own imports, so shipping only the exe's three
+# would move the same failure from launch to first window instead of fixing it.
+$crt = @("MSVCP140.dll", "MSVCP140_1.dll", "MSVCP140_2.dll",
+         "VCRUNTIME140.dll", "VCRUNTIME140_1.dll")
+$missing = $crt | Where-Object { -not (Test-Path (Join-Path $build $_)) }
+if ($missing) {
+    Write-Host "==> windeployqt skipped the CRT; copying it directly..." -ForegroundColor Yellow
+    # VCToolsRedistDir is set once vcvars has been sourced, which it has by the
+    # time we get here. Searching the disk is the fallback for a shell that
+    # reached this script some other way.
+    $crtDir = $null
+    if ($env:VCToolsRedistDir) {
+        $p = Join-Path $env:VCToolsRedistDir "x64"
+        if (Test-Path $p) {
+            $crtDir = Get-ChildItem -Path $p -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue |
+                      Select-Object -First 1 -ExpandProperty FullName
+        }
+    }
+    if (-not $crtDir) {
+        # Build Tools installs under Program Files (x86) even for the x64
+        # toolchain, so both roots have to be searched. The `onecore` variants
+        # are excluded: they target OneCore, not desktop Windows.
+        foreach ($base in @("${env:ProgramFiles}\Microsoft Visual Studio",
+                            "${env:ProgramFiles(x86)}\Microsoft Visual Studio")) {
+            if (-not (Test-Path $base)) { continue }
+            $hit = Get-ChildItem -Path $base -Recurse -Directory -Filter "Microsoft.VC*.CRT" -ErrorAction SilentlyContinue |
+                   Where-Object { $_.FullName -match "\\Redist\\MSVC\\[^\\]+\\x64\\" -and $_.FullName -notmatch "\\onecore\\" } |
+                   Select-Object -First 1
+            if ($hit) { $crtDir = $hit.FullName; break }
+        }
+    }
+    if ($crtDir) {
+        Write-Host "    from $crtDir" -ForegroundColor DarkGray
+        foreach ($d in $crt) {
+            $p = Join-Path $crtDir $d
+            if (Test-Path $p) { Copy-Item -Force $p $build }
+        }
+    }
+}
+$stillMissing = $crt | Where-Object { -not (Test-Path (Join-Path $build $_)) }
+if ($stillMissing) {
+    throw ("CRT not deployed: " + ($stillMissing -join ", ") + ". The installer " +
+           "would fail to start on any machine without the VC++ Redistributable.")
+}
+Write-Host "==> CRT deployed: $($crt -join ', ')" -ForegroundColor Green
 
 # Copy the web assets next to the exe for a self-contained run.
 # NOTE: the destination MUST be removed first. `Copy-Item -Recurse src\web dst\web`
