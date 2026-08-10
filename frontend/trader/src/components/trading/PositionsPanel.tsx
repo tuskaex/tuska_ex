@@ -56,6 +56,10 @@ interface ClosedTrade {
 
 type CloseModal = { id: string; symbol: string; side: string; lots: number; closeLots: string; selectedPct: number | null } | null;
 type SltpEdit = { positionId: string; sl: string; tp: string } | null;
+// Pending orders are a separate slice from positions and hit a different
+// endpoint, so they get their own edit state — sharing one would let a click
+// on an order row open an editor that saves to /positions/.
+type OrderSltpEdit = { orderId: string; sl: string; tp: string } | null;
 type BulkCloseType = 'all' | 'profit' | 'loss';
 
 type TabId = 'open' | 'pending' | 'history';
@@ -334,6 +338,8 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
   const [toolbarBusy, setToolbarBusy] = useState(false);
   const [sltpEdit, setSltpEdit] = useState<SltpEdit>(null);
   const [sltpSaving, setSltpSaving] = useState(false);
+  const [orderSltpEdit, setOrderSltpEdit] = useState<OrderSltpEdit>(null);
+  const [orderSltpSaving, setOrderSltpSaving] = useState(false);
   const [bulkConfirm, setBulkConfirm] = useState<BulkCloseType | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   /** Terminal open tab: static trade cards vs compact table. */
@@ -619,6 +625,38 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
       toast.error(e instanceof Error ? e.message : 'Failed to update SL/TP');
     } finally {
       setSltpSaving(false);
+    }
+  };
+
+  // The same job as saveSltpEdit, against PUT /orders/{id}. Until now SL/TP on
+  // a pending order could only be chosen at placement time — the blotter
+  // printed the levels but offered no way to change them, so a trader who left
+  // them blank (or wanted them moved) had to cancel and re-place the order.
+  // The endpoint has always accepted them; nothing in the UI called it.
+  const saveOrderSltpEdit = async () => {
+    if (!orderSltpEdit) return;
+    setOrderSltpSaving(true);
+    try {
+      const body: Record<string, unknown> = {};
+      const slVal = orderSltpEdit.sl.trim();
+      const tpVal = orderSltpEdit.tp.trim();
+      // Only non-empty fields are sent. The server applies each with
+      // `if req.stop_loss is not None`, so an omitted field means "leave it
+      // alone" — which is also why a level cannot be cleared here, only moved.
+      if (slVal !== '' && slVal !== '—') body.stop_loss = parseFloat(slVal);
+      if (tpVal !== '' && tpVal !== '—') body.take_profit = parseFloat(tpVal);
+      if (Object.keys(body).length === 0) {
+        toast.error('Enter a stop loss or take profit first');
+        return;
+      }
+      await api.put(`/orders/${orderSltpEdit.orderId}`, body);
+      toast.success('SL/TP updated');
+      setOrderSltpEdit(null);
+      refreshPendingOrders();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update SL/TP');
+    } finally {
+      setOrderSltpSaving(false);
     }
   };
 
@@ -1385,11 +1423,79 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                             </div>
                             <span className="text-xs font-mono font-semibold text-text-primary tabular-nums">@ {order.price.toFixed(d)}</span>
                           </div>
-                          <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px]">
-                            <div><span className="text-text-tertiary">Qty</span> <span className="text-text-primary font-mono">{order.lots}</span></div>
-                            <div><span className="text-text-tertiary">SL</span> <span className="text-text-secondary font-mono">{order.stop_loss != null ? order.stop_loss.toFixed(d) : '—'}</span></div>
-                            <div><span className="text-text-tertiary">TP</span> <span className="text-text-secondary font-mono">{order.take_profit != null ? order.take_profit.toFixed(d) : '—'}</span></div>
-                          </div>
+                          {orderSltpEdit && orderSltpEdit.orderId === order.id ? (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <label className="flex flex-col gap-1">
+                                  <span className="text-[10px] font-bold uppercase text-[#ef5350]">Stop Loss</span>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.00001"
+                                    value={orderSltpEdit.sl}
+                                    onChange={(e) => setOrderSltpEdit({ ...orderSltpEdit, sl: e.target.value })}
+                                    className="w-full px-2 py-1.5 text-xs font-mono bg-bg-input border border-border-glass rounded text-text-primary"
+                                    placeholder="—"
+                                  />
+                                </label>
+                                <label className="flex flex-col gap-1">
+                                  <span className="text-[10px] font-bold uppercase text-[#6366F1]">Take Profit</span>
+                                  <input
+                                    type="number"
+                                    inputMode="decimal"
+                                    step="0.00001"
+                                    value={orderSltpEdit.tp}
+                                    onChange={(e) => setOrderSltpEdit({ ...orderSltpEdit, tp: e.target.value })}
+                                    className="w-full px-2 py-1.5 text-xs font-mono bg-bg-input border border-border-glass rounded text-text-primary"
+                                    placeholder="—"
+                                  />
+                                </label>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => void saveOrderSltpEdit()}
+                                  disabled={orderSltpSaving}
+                                  className="flex-1 py-1.5 rounded-lg text-[11px] font-bold uppercase bg-buy/15 text-buy border border-buy/30 disabled:opacity-50"
+                                >
+                                  {orderSltpSaving ? 'Saving…' : 'Save'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderSltpEdit(null)}
+                                  className="flex-1 py-1.5 rounded-lg text-[11px] font-bold uppercase bg-bg-secondary text-text-secondary border border-border-glass"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px]">
+                              <div><span className="text-text-tertiary">Qty</span> <span className="text-text-primary font-mono">{order.lots}</span></div>
+                              {/* The whole SL/TP pair is one tap target — on a
+                                  phone two separate 11px hit areas side by side
+                                  are too small to aim at reliably. */}
+                              <button
+                                type="button"
+                                onClick={() => setOrderSltpEdit({
+                                  orderId: order.id,
+                                  sl: order.stop_loss != null ? order.stop_loss.toFixed(d) : '',
+                                  tp: order.take_profit != null ? order.take_profit.toFixed(d) : '',
+                                })}
+                                className="col-span-2 grid grid-cols-2 gap-x-3 text-left"
+                              >
+                                <span>
+                                  <span className="text-text-tertiary">SL</span>{' '}
+                                  <span className="text-text-secondary font-mono">{order.stop_loss != null ? order.stop_loss.toFixed(d) : '—'}</span>
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-text-tertiary">TP</span>{' '}
+                                  <span className="text-text-secondary font-mono">{order.take_profit != null ? order.take_profit.toFixed(d) : '—'}</span>
+                                  <Pencil className="w-2.5 h-2.5 text-text-tertiary" />
+                                </span>
+                              </button>
+                            </div>
+                          )}
                           <div className="flex items-center justify-between pt-1 border-t border-border-glass/40">
                             <span className="text-[10px] text-text-tertiary">{accountLabel(order.account_id)}</span>
                             <button
@@ -1454,10 +1560,73 @@ export default function PositionsPanel({ variant = 'default' }: PositionsPanelPr
                             </td>
                             <td className={td}>{order.lots}</td>
                             <td className={clsx(td, 'font-mono')}>{order.price.toFixed(d)}</td>
-                            <td className={clsx(td, 'text-[10px] text-text-tertiary')}>
-                              SL: {order.stop_loss != null ? order.stop_loss.toFixed(d) : '—'}
-                              <br />
-                              TP: {order.take_profit != null ? order.take_profit.toFixed(d) : '—'}
+                            <td className={clsx(td, 'text-[10px]')}>
+                              {orderSltpEdit && orderSltpEdit.orderId === order.id ? (
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-text-tertiary w-5">SL:</span>
+                                    <input
+                                      type="number"
+                                      step="0.00001"
+                                      value={orderSltpEdit.sl}
+                                      onChange={(e) => setOrderSltpEdit({ ...orderSltpEdit, sl: e.target.value })}
+                                      className="w-20 px-1 py-0.5 text-[10px] font-mono bg-bg-input border border-border-glass rounded text-text-primary"
+                                      placeholder="—"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-text-tertiary w-5">TP:</span>
+                                    <input
+                                      type="number"
+                                      step="0.00001"
+                                      value={orderSltpEdit.tp}
+                                      onChange={(e) => setOrderSltpEdit({ ...orderSltpEdit, tp: e.target.value })}
+                                      className="w-20 px-1 py-0.5 text-[10px] font-mono bg-bg-input border border-border-glass rounded text-text-primary"
+                                      placeholder="—"
+                                    />
+                                  </div>
+                                  <div className="flex gap-1 mt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => void saveOrderSltpEdit()}
+                                      disabled={orderSltpSaving}
+                                      className="p-0.5 rounded bg-buy/15 text-buy hover:bg-buy/25 disabled:opacity-50"
+                                      title="Save"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setOrderSltpEdit(null)}
+                                      className="p-0.5 rounded bg-sell/15 text-sell hover:bg-sell/25"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setOrderSltpEdit({
+                                    orderId: order.id,
+                                    sl: order.stop_loss != null ? order.stop_loss.toFixed(d) : '',
+                                    tp: order.take_profit != null ? order.take_profit.toFixed(d) : '',
+                                  })}
+                                  className="text-left group inline-flex flex-col gap-0.5 cursor-pointer"
+                                  title="Click to set or move SL / TP"
+                                >
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className={order.stop_loss != null ? 'text-[#ef5350]' : 'text-text-tertiary'}>
+                                      SL: {order.stop_loss != null ? order.stop_loss.toFixed(d) : '—'}
+                                    </span>
+                                    <Pencil className="w-2.5 h-2.5 opacity-0 group-hover:opacity-60 text-text-tertiary" />
+                                  </span>
+                                  <span className={order.take_profit != null ? 'text-[#6366F1]' : 'text-text-tertiary'}>
+                                    TP: {order.take_profit != null ? order.take_profit.toFixed(d) : '—'}
+                                  </span>
+                                </button>
+                              )}
                             </td>
                             <td className={clsx(td, 'text-right pr-2')}>
                               <button

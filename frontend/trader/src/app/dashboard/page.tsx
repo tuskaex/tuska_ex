@@ -189,10 +189,21 @@ function BrokerHome() {
   );
 
   // Aggregate stats for the DAG mockup top section.
-  const realAccounts = accounts.filter((a) => !a.is_demo);
-  const totalBalance = realAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
-  const totalEquity = realAccounts.reduce((s, a) => s + (Number(a.equity) || 0), 0);
-  const totalCredit = realAccounts.reduce((s, a) => s + (Number(a.credit) || 0), 0);
+  //
+  // These used to sum live accounts only. A trader whose accounts are all demo
+  // therefore saw "Total Balance $0.00" and "Open P/L +$0.00" sitting directly
+  // above an account card reading $10,503.13 — reported as the home page "not
+  // pulling the open P/L". The equity maths was fine; the account set was empty.
+  //
+  // Demo money still must not be added to real money, so the two sets are not
+  // merged. Instead the summary falls back to the demo set when there is no
+  // live one, and the subtitle says which set it is showing.
+  const liveAccounts = accounts.filter((a) => !a.is_demo);
+  const summedAccounts = liveAccounts.length > 0 ? liveAccounts : accounts;
+  const summingDemo = liveAccounts.length === 0 && accounts.length > 0;
+  const totalBalance = summedAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0);
+  const totalEquity = summedAccounts.reduce((s, a) => s + (Number(a.equity) || 0), 0);
+  const totalCredit = summedAccounts.reduce((s, a) => s + (Number(a.credit) || 0), 0);
   // Equity is balance + credit + floating P/L, so credit has to come back out
   // or a bonus reads as profit. A $100 credit on a flat account with no open
   // positions was showing as "+$100.00 / +0.32% unrealized" — money the trader
@@ -233,7 +244,9 @@ function BrokerHome() {
             </div>
             <div className="text-right min-w-0">
               <p className="text-2xl font-bold font-mono tabular-nums truncate text-text-primary">{fmtUsd(totalBalance)}</p>
-              <p className="text-xs mt-0.5 text-text-secondary">Across {realAccounts.length} {realAccounts.length === 1 ? 'account' : 'accounts'}</p>
+              <p className="text-xs mt-0.5 text-text-secondary">
+                Across {summedAccounts.length} {summingDemo ? 'demo ' : ''}{summedAccounts.length === 1 ? 'account' : 'accounts'}
+              </p>
             </div>
           </div>
         </div>
