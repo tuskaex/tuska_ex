@@ -14,6 +14,18 @@ const STAFF_ROLES = new Set(['admin', 'super_admin', 'employee', 'manager', 'sup
  *  legal pages, the public trade-share short URLs, and /auth/*. */
 const PUBLIC_EXACT_PATHS = new Set<string>([
   '/',
+  /* The cross-domain hand-off hold screen. Not public in the sense of
+   * "unauthenticated users may use it" — it is listed here so it can PAINT
+   * before auth resolves. Everything else in this app is fine rendering
+   * nothing during that window; this page is the one thing standing between a
+   * Trade click and the address bar changing to another domain, so a blank
+   * gap there is exactly what it exists to prevent.
+   *
+   * The page does its own auth gate: it waits for isAuthenticated before
+   * minting a handoff code, and sends an unauthenticated visitor to
+   * /auth/login itself, since being on this list opts it out of the redirect
+   * effect below. */
+  '/terminal',
   // Top-level marketing pages (light + dark legacy)
   '/about', '/contact', '/how-it-works', '/platforms', '/white-label',
   '/privacy', '/terms', '/risk',

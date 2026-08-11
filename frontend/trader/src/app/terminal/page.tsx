@@ -142,9 +142,18 @@ function LaunchTerminal() {
   }, [router, searchParams]);
 
   useEffect(() => {
-    /* Wait for AuthProvider to settle. An unauthenticated user is already
-     * being routed to /auth/login by it — minting here would only 401. */
-    if (!isInitialized || !isAuthenticated) return;
+    /* Wait for AuthProvider to settle — minting before it would only 401. */
+    if (!isInitialized) return;
+
+    /* This route is on AuthProvider's public list so the hold screen can paint
+     * before auth resolves, which also opts it out of that provider's
+     * redirect-to-login. So it has to do that itself, or an unauthenticated
+     * visitor would sit here spinning forever. */
+    if (!isAuthenticated) {
+      router.replace('/auth/login');
+      return;
+    }
+
     if (startedRef.current) return;
     startedRef.current = true;
 
@@ -152,7 +161,7 @@ function LaunchTerminal() {
       setError('Could not open the trading terminal. Please try again.');
       startedRef.current = false; // allow Retry
     });
-  }, [isInitialized, isAuthenticated, launch]);
+  }, [isInitialized, isAuthenticated, launch, router]);
 
   const onRetry = () => {
     if (startedRef.current) return;
