@@ -15,8 +15,14 @@
  * On-chart trading lines (SwisDex-style):
  *  - Each open position draws a locked ENTRY (execution) line coloured by side
  *    (BUY blue / SELL red) whose label carries the LIVE P&L (+$ and %) coloured
- *    by profit/loss/breakeven, plus locked dashed SL (amber) / TP (teal) lines
- *    labelled `SL <price>  +$<projected P&L at that level>`.
+ *    by profit/loss/breakeven, plus locked dashed SL (amber) / TP (teal) lines.
+ *  - A left-edge CHIP is pinned to each of those three lines carrying
+ *    badge · price · P&L · lots, and ✕ on the entry. Brackets show the NET P&L
+ *    they would realize, so "what does this stop cost me" is readable next to
+ *    the level instead of across the chart. The position SL/TP lines therefore
+ *    carry no right-hand label — the same numbers on both edges is noise, and
+ *    with several positions open those labels overlap each other. Pending
+ *    orders keep theirs; they have no chips.
  *  - Pending orders draw a dashed entry (BUY blue / SELL purple) + SL/TP.
  *  - An HTML overlay pins an [SL] [TP] [✕] button group to each entry line:
  *    drag SL/TP up/down to set (dashed preview line + shaded zone + price/P&L
@@ -406,21 +412,15 @@ function TradingViewChartInner({
       // negative for charges). Without this a TP label reads e.g. +$2.06 while
       // the trade realizes +$2.01 after a $0.06 commission (sibling-platform
       // client: "TP amount doesn't match what I get").
-      const netAt = (gross: number) => gross - (Number(p.commission) || 0) + (Number(p.swap) || 0);
-      if (p.stop_loss != null && Number(p.stop_loss) > 0) {
-        const slp = Number(p.stop_loss);
-        const r = computePnlAt(p, slp);
-        const net = Number.isFinite(r) ? netAt(r) : NaN;
-        const pl = Number.isFinite(net) ? `  ${net >= 0 ? '+' : '−'}$${Math.abs(net).toFixed(2)}` : '';
-        desired.push({ key: `${p.id}-sl`, price: slp, color: SL_COLOR, text: `SL ${fp(slp)}${pl}`, dashed: true });
-      }
-      if (p.take_profit != null && Number(p.take_profit) > 0) {
-        const tpp = Number(p.take_profit);
-        const r = computePnlAt(p, tpp);
-        const net = Number.isFinite(r) ? netAt(r) : NaN;
-        const pl = Number.isFinite(net) ? `  ${net >= 0 ? '+' : '−'}$${Math.abs(net).toFixed(2)}` : '';
-        desired.push({ key: `${p.id}-tp`, price: tpp, color: TP_COLOR, text: `TP ${fp(tpp)}${pl}`, dashed: true });
-      }
+      // A POSITION's SL/TP now carry price and projected net P&L in their
+      // left-edge chip, so the line itself is drawn label-less — the same
+      // figures pinned to both edges is noise, and on a chart with several
+      // positions the right-hand labels stack up and overlap each other.
+      // Pending orders below keep their labels: they have no chips.
+      if (p.stop_loss != null && Number(p.stop_loss) > 0)
+        desired.push({ key: `${p.id}-sl`, price: Number(p.stop_loss), color: SL_COLOR, text: '', dashed: true });
+      if (p.take_profit != null && Number(p.take_profit) > 0)
+        desired.push({ key: `${p.id}-tp`, price: Number(p.take_profit), color: TP_COLOR, text: '', dashed: true });
     }
 
     // ── Pending orders (limit/stop): entry + SL + TP. ──
@@ -440,7 +440,9 @@ function TradingViewChartInner({
       lock: true, disableSelection: true, disableSave: true, disableUndo: true,
       overrides: {
         linecolor: lineColor, linestyle: dashed ? 2 : 0, linewidth: dashed ? 1 : 2,
-        showLabel: true, textcolor: textColor, fontsize: 11, bold: true,
+        // Empty text ⇒ no label at all. Left as `true` it draws an empty
+        // coloured chip on the axis, which reads as a rendering glitch.
+        showLabel: text.length > 0, textcolor: textColor, fontsize: 11, bold: true,
         horzLabelsAlign: 'right', vertLabelsAlign: 'middle', showPrice: true,
       },
     });
@@ -930,6 +932,100 @@ function TradingViewChartInner({
       return b;
     };
 
+    /* ── Left-edge chips ────────────────────────────────────────────────
+     * A boxed label pinned to the LEFT of every entry / SL / TP line, each
+     * carrying badge · price · P&L · lots (and ✕ on the entry).
+     *
+     * The prices already sit on the right axis and the entry line already
+     * carries a P&L label there. What the right side cannot show is the P&L
+     * *of a bracket you have not hit yet* next to the level itself — to read
+     * "what does this stop cost me" you had to find the line, track it left,
+     * and read a number pinned to the opposite edge. On a chart with several
+     * positions those right-hand labels also stack up and overlap.
+     *
+     * Built as HTML rather than shape text because the values are live: the
+     * entry P&L moves every tick, and rewriting a TradingView shape's label at
+     * that rate is far more expensive than setting textContent on a span.
+     * They ride the same rAF loop that already positions the button group, so
+     * they stay pinned through zoom and pan for free.
+     */
+    const inst = useTradingStore.getState().instruments.find(
+      (i) => String(i.symbol).toUpperCase() === sym,
+    );
+    const chipDigits = inst?.digits ?? 2;
+    /* Brackets project a REALIZED outcome, so they must show net — the close
+     * books profit − commission + swap (swap is stored negative for a charge).
+     * Same adjustment the shape labels make; without it a TP chip promises
+     * more than the trade pays out. */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const netAt = (pos: any, gross: number) =>
+      gross - (Number(pos.commission) || 0) + (Number(pos.swap) || 0);
+    const money = (n: number) =>
+      Number.isFinite(n) ? `${n >= 0 ? '+' : '−'}$${Math.abs(n).toFixed(2)}` : '—';
+
+    type Chip = {
+      el: HTMLDivElement;
+      priceEl: HTMLSpanElement;
+      pnlEl: HTMLSpanElement;
+      kind: 'entry' | 'sl' | 'tp';
+      posId: string;
+    };
+    const chips: Chip[] = [];
+
+    const mkChip = (
+      badge: string,
+      accent: string,
+      kind: Chip['kind'],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      p: any,
+    ): Chip => {
+      const el = document.createElement('div');
+      el.style.cssText =
+        `position:absolute;left:6px;transform:translateY(-50%);display:flex;align-items:center;gap:6px;`
+        + `padding:2px 6px 2px 2px;border:1px solid ${accent};border-radius:5px;`
+        + `background:${theme === 'dark' ? 'rgba(17,21,28,0.94)' : 'rgba(255,255,255,0.96)'};`
+        + `font:600 11px/1 ui-sans-serif,system-ui,sans-serif;white-space:nowrap;`
+        // pointer-events off on the box so it never eats a chart drag; only
+        // the ✕ inside opts back in.
+        + `pointer-events:none;visibility:hidden;z-index:6;`;
+
+      const b = document.createElement('span');
+      b.textContent = badge;
+      b.style.cssText =
+        `display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:15px;`
+        + `padding:0 4px;border-radius:3px;background:${accent};color:#fff;font-size:10px;font-weight:700;`;
+      el.appendChild(b);
+
+      const priceEl = document.createElement('span');
+      priceEl.style.cssText = `color:${theme === 'dark' ? '#e5e7eb' : '#111827'};`;
+      el.appendChild(priceEl);
+
+      const pnlEl = document.createElement('span');
+      el.appendChild(pnlEl);
+
+      const lotsEl = document.createElement('span');
+      lotsEl.textContent = String(Number(p.lots) || 0);
+      lotsEl.style.cssText = `color:${theme === 'dark' ? '#9ca3af' : '#6b7280'};font-weight:500;`;
+      el.appendChild(lotsEl);
+
+      if (kind === 'entry') {
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.textContent = '✕';
+        x.title = `Close ${String(p.side).toUpperCase()} ${p.lots} ${sym} at market`;
+        x.style.cssText =
+          `pointer-events:auto;cursor:pointer;border:0;background:transparent;padding:0 0 0 2px;`
+          + `color:${theme === 'dark' ? '#9ca3af' : '#6b7280'};font-size:11px;line-height:1;`;
+        x.onclick = (ev) => { ev.stopPropagation(); closePositionFromChart(p.id); };
+        el.appendChild(x);
+      }
+
+      overlay.appendChild(el);
+      const chip: Chip = { el, priceEl, pnlEl, kind, posId: p.id };
+      chips.push(chip);
+      return chip;
+    };
+
     // One button GROUP per open position: [SL] [TP] [✕], pinned to the entry
     // line. Copied (MAM) positions get only ✕ — SL/TP is master-controlled.
     const myPos = useTradingStore.getState().positions.filter(
@@ -964,6 +1060,15 @@ function TradingViewChartInner({
       overlay.appendChild(slZone); overlay.appendChild(tpZone);
       overlay.appendChild(root);
       btns.push({ p, entry: Number(p.open_price) || 0, el: root, slZone, tpZone });
+
+      /* Entry chip is coloured by SIDE so it matches its own line; its P&L
+       * text is coloured by profit/loss in the sync loop. SL/TP chips are made
+       * unconditionally and hidden when that bracket is unset — a position
+       * gains and loses brackets constantly, and toggling visibility each
+       * frame is far cheaper than building and tearing down DOM. */
+      mkChip(side === 'BUY' ? 'B' : 'S', sideColor, 'entry', p);
+      mkChip('SL', SL_COLOR, 'sl', p);
+      mkChip('TP', TP_COLOR, 'tp', p);
     }
 
     let raf = 0;
@@ -996,6 +1101,40 @@ function TradingViewChartInner({
         drawZone(b.slZone, y, lp?.stop_loss);
         drawZone(b.tpZone, y, lp?.take_profit);
       }
+
+      /* Chips read from `live`, not the captured position, so price and P&L
+       * stay current without re-running the effect — the entry P&L moves every
+       * tick and a bracket can be changed from another device. */
+      for (const c of chips) {
+        const lp = live.find((x) => x.id === c.posId);
+        if (!lp) { c.el.style.visibility = 'hidden'; continue; }
+
+        let price = NaN;
+        let pnl = NaN;
+        if (c.kind === 'entry') {
+          price = Number(lp.open_price);
+          pnl = openPnl(lp);
+        } else {
+          const raw = c.kind === 'sl' ? lp.stop_loss : lp.take_profit;
+          price = Number(raw);
+          if (price > 0) {
+            const gross = computePnlAt(lp, price);
+            pnl = Number.isFinite(gross) ? netAt(lp, gross) : NaN;
+          }
+        }
+        if (!(price > 0)) { c.el.style.visibility = 'hidden'; continue; }
+
+        const cy = paneY(price, g) + top;
+        if (!(cy > 8) || cy > h - 8) { c.el.style.visibility = 'hidden'; continue; }
+
+        c.priceEl.textContent = price.toFixed(chipDigits);
+        c.pnlEl.textContent = money(pnl);
+        c.pnlEl.style.color = !Number.isFinite(pnl)
+          ? BREAKEVEN_COLOR
+          : Math.abs(pnl) < 0.10 ? BREAKEVEN_COLOR : pnl > 0 ? PROFIT_COLOR : LOSS_COLOR;
+        c.el.style.top = `${cy}px`;
+        c.el.style.visibility = 'visible';
+      }
     };
     raf = requestAnimationFrame(sync);
 
@@ -1004,8 +1143,12 @@ function TradingViewChartInner({
       container.removeEventListener('mousemove', onMouseMove);
       try { crossSub?.unsubscribe?.(null, onCross); } catch { /* ignore */ }
       for (const b of btns) { for (const el of [b.el, b.slZone, b.tpZone]) { try { overlay.removeChild(el); } catch { /* ignore */ } } }
+      for (const c of chips) { try { overlay.removeChild(c.el); } catch { /* ignore */ } }
     };
-  }, [chartReady, selectedSymbol, positionsKey, computePnlAt, closePositionFromChart]);
+    // `theme` is a real dependency now: the chips bake their background and
+    // text colours in at build time, so without it a theme switch leaves them
+    // on the previous palette until something else re-runs this effect.
+  }, [chartReady, selectedSymbol, positionsKey, computePnlAt, closePositionFromChart, theme]);
 
   return (
     <div className={clsx('relative w-full h-full min-h-[200px] min-w-0 bg-bg-base')} data-tv-chart-root>
