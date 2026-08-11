@@ -1,13 +1,36 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { isOnTerminalHost } from '@/lib/terminalHandoff';
 
-/* On speedtrade.tech these paths are served the SpeedTrade logo instead — the
- * swap is in deploy/nginx/speedtrade.conf, not here. One trader build serves
- * both hosts, so the brand cannot be a build-time constant, and switching it
- * in React would flash the wrong mark between SSR and hydration. Renaming
- * these files means updating those exact-match locations too. */
-const LOGO_SRC = '/marketing/tuskaex-logo.png';
+/**
+ * Brand marks, chosen by the host this is being served on.
+ *
+ * One trader build serves both tuskaex.com and speedtrade.tech, so the brand
+ * cannot be a build-time constant.
+ *
+ * This was first attempted in nginx, aliasing the TuskaEx paths to SpeedTrade's
+ * assets on that host. It cannot work: these render through next/image, so the
+ * browser never requests /marketing/… at all — it requests
+ * /_next/image?url=%2Fmarketing%2F…, and the optimiser then fetches the
+ * original from the app itself, never passing through nginx. The alias applied
+ * to a request nobody makes.
+ *
+ * A runtime host check is safe here even though it is client-only: everything
+ * that renders this sits under AuthProvider, which returns null until the
+ * session resolves, so the terminal chrome never server-renders. There is no
+ * SSR pass to disagree with and therefore no flash of the wrong brand.
+ */
+const BRAND_BY_HOST = {
+  tuskaex: { logo: '/marketing/tuskaex-logo.png', mark: '/marketing/tuskaex_fevicon.png', name: 'TuskaEx' },
+  speedtrade: { logo: '/marketing/speedtrade-logo.png', mark: '/marketing/speedtrade-icon.png', name: 'SpeedTrade' },
+} as const;
+
+function brand() {
+  return isOnTerminalHost() ? BRAND_BY_HOST.speedtrade : BRAND_BY_HOST.tuskaex;
+}
 
 type Props = {
   href?: string;
@@ -62,8 +85,8 @@ export function TuskaExWordmark({
           </span>
         ) : (
           <Image
-            src="/marketing/tuskaex_fevicon.png"
-            alt="TuskaEx"
+            src={brand().mark}
+            alt={brand().name}
             width={28}
             height={28}
             priority
@@ -84,15 +107,15 @@ export function TuskaExWordmark({
   return (
     <Link
       href={href}
-      aria-label="TuskaEx home"
+      aria-label={`${brand().name} home`}
       className={cn(
         'inline-flex items-center min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D60101]/60 focus-visible:rounded-md',
         className,
       )}
     >
       <Image
-        src={LOGO_SRC}
-        alt="TuskaEx"
+        src={brand().logo}
+        alt={brand().name}
         width={220}
         height={48}
         priority
