@@ -24,11 +24,14 @@
  *    with several positions open those labels overlap each other. Pending
  *    orders keep theirs; they have no chips.
  *  - Pending orders draw a dashed entry (BUY blue / SELL purple) + SL/TP.
- *  - An HTML overlay pins an [SL] [TP] [✕] button group to each entry line:
- *    drag SL/TP up/down to set (dashed preview line + shaded zone + price/P&L
- *    label follows the cursor), or plain-click to type a price. A drag commits
- *    on release, MT4/MT5-style — no confirmation. ✕ closes at market and DOES
- *    confirm: that one is irreversible, a mis-dragged bracket is not.
+ *  - An HTML overlay pins draggable [SL] [TP] handles and a [✕] to each
+ *    position. ✕ stays on the entry; each SL/TP handle rides its OWN bracket
+ *    line once that bracket exists, and parks back on the entry row while it
+ *    does not — which is where you reach for it to create one. Drag up/down to
+ *    set (dashed preview line + shaded zone + price/P&L label follows the
+ *    cursor), or plain-click to type a price. A drag commits on release,
+ *    MT4/MT5-style — no confirmation. ✕ closes at market and DOES confirm:
+ *    that one is irreversible, a mis-dragged bracket is not.
  *  - Persistent shaded zones fill entry→SL (red) and entry→TP (teal).
  *  - A stale-price watchdog greys the entry lines when the feed stalls.
  * All bracket edits go through PUT /positions/{id} with ONLY the changed leg
@@ -1026,13 +1029,14 @@ function TradingViewChartInner({
       return chip;
     };
 
-    // One button GROUP per open position: [SL] [TP] [✕], pinned to the entry
-    // line. Copied (MAM) positions get only ✕ — SL/TP is master-controlled.
+    // Handles per open position: [SL] and [TP] on their own bracket lines,
+    // [✕] on the entry. Copied (MAM) positions get only ✕ — SL/TP is
+    // master-controlled, so there is nothing here for the trader to drag.
     const myPos = useTradingStore.getState().positions.filter(
       (p) => String(p.symbol).toUpperCase() === sym,
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const btns: { p: any; entry: number; el: HTMLDivElement; slZone: HTMLDivElement; tpZone: HTMLDivElement }[] = [];
+    const btns: { p: any; entry: number; el: HTMLDivElement; slBtn: HTMLDivElement | null; tpBtn: HTMLDivElement | null; slZone: HTMLDivElement; tpZone: HTMLDivElement }[] = [];
     for (const p of myPos) {
       const side = String(p.side).toUpperCase();
       const sideColor = side === 'BUY' ? CHART_BUY_COLOR : CHART_SELL_COLOR;
@@ -1040,14 +1044,40 @@ function TradingViewChartInner({
       // Clamp the right offset on narrow (mobile) charts so the ~70px-wide
       // group never slides off the left edge; desktop keeps the Swisdex 268px.
       const rightPx = Math.min(CLOSE_BTN_RIGHT_PX, Math.max(8, container.clientWidth - 78));
+
+      /* SL and TP handles ride their OWN line, not the entry line.
+       *
+       * They used to be locked into one flex row with ✕ on the entry, which
+       * meant a stop set 20 points away still had its handle sitting on the
+       * entry — you dragged from a level that was not the one you were
+       * moving, and with the bracket lines drawn elsewhere it read as though
+       * the buttons belonged to nothing.
+       *
+       * So each is positioned independently: on its bracket once that bracket
+       * exists, and parked back on the entry row while it does not — which is
+       * also where you reach for it to create one. The right-offsets keep the
+       * parked layout identical to the old [SL][TP][✕] row (✕ is 18px wide,
+       * SL/TP 28px, 3px gaps), so nothing moves until a bracket is set.
+       */
+      const mkHandle = (right: number, child: HTMLElement): HTMLDivElement => {
+        const d = document.createElement('div');
+        d.style.cssText =
+          `position:absolute;right:${right}px;transform:translateY(-50%);`
+          + `display:flex;align-items:center;pointer-events:none;visibility:hidden;z-index:6;`;
+        d.appendChild(child);
+        overlay.appendChild(d);
+        return d;
+      };
+
+      const slBtn = isCopy ? null : mkHandle(rightPx + 52,
+        mkDragBtn('SL', 'rgba(245,158,11,0.97)', `Stop loss ${side} ${p.lots} ${sym}`, p, 'sl'));
+      const tpBtn = isCopy ? null : mkHandle(rightPx + 21,
+        mkDragBtn('TP', 'rgba(20,184,166,0.97)', `Take profit ${side} ${p.lots} ${sym}`, p, 'tp'));
+
       const root = document.createElement('div');
       root.style.cssText =
         `position:absolute;right:${rightPx}px;transform:translateY(-50%);`
-        + `display:flex;align-items:center;gap:3px;pointer-events:none;visibility:hidden;z-index:6;`;
-      if (!isCopy) {
-        root.appendChild(mkDragBtn('SL', 'rgba(245,158,11,0.97)', `Stop loss ${side} ${p.lots} ${sym}`, p, 'sl'));
-        root.appendChild(mkDragBtn('TP', 'rgba(20,184,166,0.97)', `Take profit ${side} ${p.lots} ${sym}`, p, 'tp'));
-      }
+        + `display:flex;align-items:center;pointer-events:none;visibility:hidden;z-index:6;`;
       root.appendChild(mkBtn('✕', sideColor, `Close ${side} ${p.lots} ${sym} at market`, () => {
         closePositionFromChart(p.id);
       }));
@@ -1059,7 +1089,7 @@ function TradingViewChartInner({
       tpZone.style.cssText = `position:absolute;left:0;right:0;top:0;height:0;background:rgba(20,184,166,0.10);pointer-events:none;visibility:hidden;z-index:4;`;
       overlay.appendChild(slZone); overlay.appendChild(tpZone);
       overlay.appendChild(root);
-      btns.push({ p, entry: Number(p.open_price) || 0, el: root, slZone, tpZone });
+      btns.push({ p, entry: Number(p.open_price) || 0, el: root, slBtn, tpBtn, slZone, tpZone });
 
       /* Entry chip is coloured by SIDE so it matches its own line; its P&L
        * text is coloured by profit/loss in the sync loop. SL/TP chips are made
@@ -1093,11 +1123,24 @@ function TradingViewChartInner({
         if (ht < 1) { el.style.visibility = 'hidden'; return; }
         el.style.top = `${zTop}px`; el.style.height = `${ht}px`; el.style.visibility = 'visible';
       };
+      /* A handle sits on its bracket's price when one is set, and falls back to
+       * the entry row when it is not — read from `live` so it follows a level
+       * changed from another device without this effect re-running. */
+      const placeHandle = (el: HTMLDivElement | null, price: unknown, entryY: number) => {
+        if (!el) return;
+        const pr = Number(price);
+        const hy = pr > 0 ? paneY(pr, g) + top : entryY;
+        if (!(hy > 8) || hy > h - 8) { el.style.visibility = 'hidden'; return; }
+        el.style.top = `${hy}px`;
+        el.style.visibility = 'visible';
+      };
       for (const b of btns) {
         const y = paneY(b.entry, g) + top;
         if (!(y > 8) || y > h - 8) { b.el.style.visibility = 'hidden'; }
         else { b.el.style.top = `${y}px`; b.el.style.visibility = 'visible'; }
         const lp = live.find((x) => x.id === b.p.id);
+        placeHandle(b.slBtn, lp?.stop_loss, y);
+        placeHandle(b.tpBtn, lp?.take_profit, y);
         drawZone(b.slZone, y, lp?.stop_loss);
         drawZone(b.tpZone, y, lp?.take_profit);
       }
@@ -1142,7 +1185,7 @@ function TradingViewChartInner({
       cancelAnimationFrame(raf);
       container.removeEventListener('mousemove', onMouseMove);
       try { crossSub?.unsubscribe?.(null, onCross); } catch { /* ignore */ }
-      for (const b of btns) { for (const el of [b.el, b.slZone, b.tpZone]) { try { overlay.removeChild(el); } catch { /* ignore */ } } }
+      for (const b of btns) { for (const el of [b.el, b.slBtn, b.tpBtn, b.slZone, b.tpZone]) { if (el) { try { overlay.removeChild(el); } catch { /* ignore */ } } } }
       for (const c of chips) { try { overlay.removeChild(c.el); } catch { /* ignore */ } }
     };
     // `theme` is a real dependency now: the chips bake their background and
