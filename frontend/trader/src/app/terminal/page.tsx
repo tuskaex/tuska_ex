@@ -21,7 +21,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { BRAND_LOGO, BRAND_NAME } from '@/config/brand';
+import { BRAND_NAME } from '@/config/brand';
 import {
   buildTerminalUrl,
   createHandoffCode,
@@ -29,28 +29,45 @@ import {
 } from '@/lib/terminalHandoff';
 
 /**
+ * SpeedTrade's wordmark, served from this app rather than linked off
+ * speedtrade.tech.
+ *
+ * A loading screen that waits on a cross-origin image can render empty for as
+ * long as that request takes, and shows nothing at all if it fails — the exact
+ * moment the user most needs to see something. Same-origin, it paints with the
+ * rest of the page.
+ *
+ * The copy is checked into this repo, so it does NOT follow the landing site
+ * automatically the way the terminal's own logo does (that one is proxied live
+ * in deploy/nginx/speedtrade.conf). Re-download it if the brand changes:
+ *   curl -o frontend/trader/public/marketing/speedtrade-logo.png \
+ *        https://speedtrade.tech/images/logo.png
+ */
+const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
+
+/**
  * Branded full-screen hold.
  *
- * This is the only thing the user sees between clicking Trade and the
- * terminal domain taking over, and that gap is a whole network round-trip —
- * mint a handoff code, then a cross-domain navigation. An unbranded spinner
- * on a blank page in that window reads as a broken redirect, especially since
- * the address bar is about to change to a different domain.
+ * This is the only thing the user sees between clicking Trade and the terminal
+ * domain taking over, and that gap is a whole network round-trip — mint a
+ * handoff code, then a cross-domain navigation. An unbranded spinner on a blank
+ * page in that window reads as a broken redirect, especially since the address
+ * bar is about to change to a different domain.
  *
- * Always TuskaEx branding: this page only ever renders on the CRM. On the
- * terminal host the effect below redirects internally without a hand-off, and
- * nginx serves SpeedTrade's assets there anyway.
+ * It shows SpeedTrade, not TuskaEx: the point of the screen is to explain where
+ * the user is being taken. The TuskaEx account is named in the sub-line
+ * instead, which is what makes the domain change read as intentional.
  */
 function Splash({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-bg-primary px-6 text-center">
       <Image
-        src={BRAND_LOGO}
-        alt={BRAND_NAME}
-        width={220}
-        height={48}
+        src={SPEEDTRADE_LOGO}
+        alt="SpeedTrade"
+        width={293}
+        height={64}
         priority
-        className="h-9 w-auto sm:h-10"
+        className="h-8 w-auto sm:h-10"
       />
       {children}
     </div>
