@@ -126,21 +126,33 @@ echo "▶ Healthcheck…"
 sleep 4
 CODE_API=$(curl -sk -o /dev/null -w "%{http_code}" https://api.tuskaex.com/health   || echo "000")
 CODE_TRD=$(curl -sk -o /dev/null -w "%{http_code}" https://trade.tuskaex.com/       || echo "000")
-# The terminal host. Worth its own check: it is where users actually trade, and
-# it can break independently of everything above — its server block lives in a
-# different file and a missing one silently falls through to nginx's default
-# server, which answers with a redirect to tuskaex.com.
-CODE_TERM=$(curl -sk -o /dev/null -w "%{http_code}" https://trade.speedtrade.tech/  || echo "000")
 echo "  api.tuskaex.com/health  → HTTP $CODE_API"
 echo "  trade.tuskaex.com       → HTTP $CODE_TRD"
-echo "  trade.speedtrade.tech   → HTTP $CODE_TERM"
 
 # 5xx or a flat 000 (no connection) is a real failure. 4xx still means the
 # stack is up — caller can decide whether the route should exist.
 fail=0
 case "$CODE_API" in 000|5*) fail=1 ;; esac
 case "$CODE_TRD" in 000|5*) fail=1 ;; esac
-case "$CODE_TERM" in 000|5*) fail=1 ;; esac
+
+# The terminal host, but only once it is actually load-bearing.
+#
+# Checking it unconditionally fails the deploy during the rollout itself: the
+# switch ships blank on purpose, and the DNS record may not exist yet, so the
+# host is *expected* to be unreachable right up until it is turned on. A red
+# deploy at that point blocks the very rollout that makes it green.
+#
+# Once NEXT_PUBLIC_TERMINAL_ORIGIN is set, users are being sent there and an
+# unreachable host is a genuine outage — a missing server block falls through
+# to nginx's default server, which answers with a redirect to tuskaex.com.
+TERMINAL_ORIGIN=$(sed -n 's/^NEXT_PUBLIC_TERMINAL_ORIGIN=//p' .env 2>/dev/null | tr -d '"'\''' | tr -d '[:space:]')
+if [ -n "${TERMINAL_ORIGIN:-}" ]; then
+  CODE_TERM=$(curl -sk -o /dev/null -w "%{http_code}" "${TERMINAL_ORIGIN}/" || echo "000")
+  echo "  ${TERMINAL_ORIGIN#https://}   → HTTP $CODE_TERM"
+  case "$CODE_TERM" in 000|5*) fail=1 ;; esac
+else
+  echo "  terminal split          → off (NEXT_PUBLIC_TERMINAL_ORIGIN empty)"
+fi
 
 if [ $fail -ne 0 ]; then
   echo "⚠️  Healthcheck failed. Inspect with:"
