@@ -23,6 +23,7 @@ import DashboardShell from '@/components/layout/DashboardShell';
 import api from '@/lib/api/client';
 import { useAuthStore } from '@/stores/authStore';
 import { formatCurrency as fmtUsd, formatNumber as fmtNum } from '@/lib/formatters';
+import { tradingTerminalUrl } from '@/lib/tradingNav';
 
 interface AccountRow {
   id: string;
@@ -51,11 +52,13 @@ interface BarRow { time: number; open: number; close: number; }
 
 const TOP_MOVER_SYMBOLS = ['XAUUSD', 'NAS100', 'BTCUSD', 'EURUSD'];
 
-const tradeUrl = (accountId: string) => {
-  const host = process.env.NEXT_PUBLIC_TRADE_HOST;
-  const path = `/trading/terminal?account=${encodeURIComponent(accountId)}&view=chart`;
-  return host ? `https://${host}${path}` : path;
-};
+/* Always a relative URL now. When the terminal lives on its own domain this
+ * resolves to `/terminal?…`, which mints a handoff code and then redirects —
+ * building the cross-domain URL here would send the user there with no session.
+ * The old NEXT_PUBLIC_TRADE_HOST hop is redundant: middleware still bounces
+ * apex → trade subdomain for the in-app case. */
+const tradeUrl = (accountId: string) =>
+  tradingTerminalUrl(accountId, { view: 'chart' });
 
 export default function DashboardPage() {
   return (
@@ -284,7 +287,7 @@ function BrokerHome() {
               return;
             }
             const id = activeId || accounts[0]!.id;
-            router.push(`/trading/terminal?account=${encodeURIComponent(id)}&view=chart`);
+            router.push(tradingTerminalUrl(id, { view: 'chart' }));
           }}
           className="group rounded-2xl p-5 bg-bg-card border border-border-primary hover:border-[#D60101] transition-colors flex items-center gap-4 text-left"
         >

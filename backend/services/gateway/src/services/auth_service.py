@@ -106,8 +106,58 @@ def _cookie_samesite() -> str:
     return v
 
 
-def _cookie_domain() -> str | None:
-    d = get_settings().COOKIE_DOMAIN.strip()
+def _served_host(request: Request) -> str:
+    """Public hostname the BROWSER used, lowercased, no port.
+
+    Host alone is wrong here. Trader traffic reaches this service through the
+    Next.js proxy route, which re-issues the request with fetch() — that sets
+    Host to the internal `gateway:8000`, erasing the public name entirely. So:
+
+      1. X-Forwarded-Host — set by the Next proxy (and by nginx) from the name
+         the browser actually asked for. The reliable source.
+      2. Origin — a fallback for callers that skip the proxy and talk to
+         api.tuskaex.com directly.
+      3. Host — non-proxied/local callers.
+
+    Values are only ever matched against the COOKIE_DOMAINS allow-list, so a
+    forged header can select among domains we already issue on and nothing else.
+    """
+    fwd = (request.headers.get("x-forwarded-host") or "").strip()
+    if fwd:
+        return fwd.split(",")[0].split(":")[0].strip().lower()
+    origin = (request.headers.get("origin") or "").strip()
+    if origin:
+        try:
+            from urllib.parse import urlsplit
+            host = (urlsplit(origin).hostname or "").strip().lower()
+            if host:
+                return host
+        except ValueError:
+            pass
+    return (request.headers.get("host") or "").split(":")[0].strip().lower()
+
+
+def _cookie_domain(request: Request | None = None) -> str | None:
+    """Cookie Domain attribute for this request.
+
+    The terminal (trade.speedtrade.tech) and the CRM (tuskaex.com) are separate
+    registrable domains, so one fixed Domain cannot cover both — a
+    .tuskaex.com cookie is simply never sent to speedtrade.tech. COOKIE_DOMAINS
+    lists every parent domain we may issue on and the one matching the served
+    host wins; longest match first so a deeper parent beats a shallower one.
+
+    Falls back to the single COOKIE_DOMAIN when unset or unmatched, which is
+    the exact pre-split behaviour."""
+    st = get_settings()
+    candidates = [d.strip().lower() for d in (st.COOKIE_DOMAINS or "").split(",") if d.strip()]
+    if candidates and request is not None:
+        host = _served_host(request)
+        if host:
+            for d in sorted(candidates, key=len, reverse=True):
+                bare = d.lstrip(".")
+                if host == bare or host.endswith("." + bare):
+                    return d
+    d = (st.COOKIE_DOMAIN or "").strip()
     return d or None
 
 
@@ -122,7 +172,7 @@ def attach_auth_cookies(
     st = get_settings()
     secure = _cookie_secure_flag(request)
     ss = _cookie_samesite()
-    domain = _cookie_domain()
+    domain = _cookie_domain(request)
     exp = access_expires_at
     if exp.tzinfo is None:
         exp = exp.replace(tzinfo=timezone.utc)
@@ -160,7 +210,7 @@ def clear_auth_cookies(response: JSONResponse, request: Request) -> None:
     st = get_settings()
     secure = _cookie_secure_flag(request)
     ss = _cookie_samesite()
-    domain = _cookie_domain()
+    domain = _cookie_domain(request)
     delete_kw_a = dict(path="/", samesite=ss, secure=secure)
     delete_kw_r = dict(path="/", samesite=ss, secure=secure)
     if domain:
@@ -805,6 +855,141 @@ async def bootstrap_session(access_token: str, request: Request, db: AsyncSessio
         raise AuthServiceError("Account has been banned", 403)
     if user.status == "blocked":
         raise AuthServiceError("Account has been blocked", 403)
+    return await issue_auth_json_response(user, request, db)
+
+
+# ─── Cross-domain terminal handoff ───────────────────────────────────────
+#
+# The CRM (tuskaex.com) and the trading terminal (speedtrade.tech) are separate
+# registrable domains. A cookie scoped to .tuskaex.com is never sent to
+# speedtrade.tech — that is a browser rule, and no amount of CORS changes it.
+# So a user clicking "Trade" on the CRM cannot simply be redirected: they would
+# arrive logged out.
+#
+# The handoff below is the bridge. The CRM asks for a single-use code, the code
+# (and only the code) rides the redirect URL, and the terminal trades it for its
+# own cookies on its own domain.
+
+_HANDOFF_KEY = "auth:handoff:{code}"
+
+
+def terminal_origin() -> str:
+    """Public origin of the external terminal, or "" when the terminal still
+    runs in-app on the CRM domain (the pre-split behaviour)."""
+    return (get_settings().TERMINAL_APP_URL or "").strip().rstrip("/")
+
+
+def _handoff_redis():
+    """Redis db 0 — pinned to 0 regardless of which db REDIS_URL selects, the
+    same convention the impersonation codes in api/auth.py already use, so a
+    writer and a reader can never end up on different databases."""
+    import os
+    import redis.asyncio as aioredis
+    url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    return aioredis.from_url(url.rsplit("/", 1)[0] + "/0", decode_responses=True)
+
+
+async def create_terminal_handoff(
+    user_id: str, request: Request, db: AsyncSession
+) -> dict:
+    """Mint a single-use code the terminal domain can trade for a session.
+
+    A fresh access token is minted and parked in Redis behind a random code; the
+    caller receives the code only. Because the JWT never enters a URL it cannot
+    be recovered from browser history, a Referer header, or an nginx access log
+    — which is exactly the leak the admin impersonation flow was rebuilt to fix.
+
+    No UserSession row is written here. This token is a courier: it exists only
+    to be decoded once by the redeem below, which then issues the real session."""
+    assert_same_origin(request)
+    rate_limit_http(request, "terminal-handoff", 30, 60.0)
+    try:
+        uid = UUID(str(user_id))
+    except (ValueError, TypeError):
+        raise AuthServiceError("Invalid session", 401)
+    user = await db.get(User, uid)
+    if not user:
+        raise AuthServiceError("Invalid session", 401)
+    if user.status == "banned":
+        raise AuthServiceError("Account has been banned", 403)
+    if user.status == "blocked":
+        raise AuthServiceError("Account has been blocked", 403)
+    if user.role in STAFF_ROLES:
+        raise AuthServiceError("Staff accounts cannot open the trading terminal", 403)
+
+    ttl = max(15, int(get_settings().HANDOFF_TTL_SECONDS))
+    token, _expires = create_access_token(str(user.id), user.role)
+    code = secrets.token_urlsafe(32)
+    payload = json.dumps(
+        {"access_token": token, "user_id": str(user.id)}, separators=(",", ":")
+    )
+
+    redis = _handoff_redis()
+    try:
+        await redis.set(_HANDOFF_KEY.format(code=code), payload, ex=ttl)
+    finally:
+        try:
+            await redis.aclose()
+        except Exception:
+            pass
+
+    return {"code": code, "expires_in": ttl, "terminal_url": terminal_origin()}
+
+
+async def redeem_terminal_handoff(
+    code: str, request: Request, db: AsyncSession
+) -> JSONResponse:
+    """Exchange a handoff code for HttpOnly cookies on the *calling* domain.
+
+    Deliberately not routed through bootstrap_session: that shares a
+    30-per-hour-per-IP bucket with admin impersonation, and a handful of traders
+    behind one office NAT opening the terminal would exhaust it within minutes.
+    This path gets its own limit sized for normal trading use."""
+    rate_limit_http(request, "terminal-handoff-redeem", 20, 60.0)
+    code = (code or "").strip()
+    if not code or not (16 <= len(code) <= 128):
+        raise AuthServiceError("Invalid handoff code", 400)
+
+    redis = _handoff_redis()
+    try:
+        # GETDEL is atomic, so the code is single-use in the strict sense: if a
+        # URL is shared or replayed, the second caller finds nothing because the
+        # legitimate page load already consumed it.
+        raw = await redis.getdel(_HANDOFF_KEY.format(code=code))
+    finally:
+        try:
+            await redis.aclose()
+        except Exception:
+            pass
+
+    if not raw:
+        raise AuthServiceError("Handoff code expired or already used", 404)
+    try:
+        data = json.loads(raw)
+    except (ValueError, TypeError):
+        raise AuthServiceError("Corrupted handoff payload", 500)
+
+    access_token = data.get("access_token")
+    if not access_token:
+        raise AuthServiceError("Handoff payload missing token", 500)
+    try:
+        payload = decode_token(str(access_token))
+        uid = UUID(str(payload["sub"]))
+    except Exception:
+        raise AuthServiceError("Invalid handoff token", 401)
+
+    user = await db.get(User, uid)
+    if not user:
+        raise AuthServiceError("Invalid handoff token", 401)
+    # Status is re-checked here, not only at mint: an account banned during the
+    # code's short life must not still be able to open a terminal session.
+    if user.status == "banned":
+        raise AuthServiceError("Account has been banned", 403)
+    if user.status == "blocked":
+        raise AuthServiceError("Account has been blocked", 403)
+    if user.role in STAFF_ROLES:
+        raise AuthServiceError("Staff accounts cannot open the trading terminal", 403)
+
     return await issue_auth_json_response(user, request, db)
 
 

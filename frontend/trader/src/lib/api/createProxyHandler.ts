@@ -128,6 +128,21 @@ export function createProxyHandler(opts: ProxyOptions) {
       const v = req.headers.get(h);
       if (v) headers.set(h, v);
     }
+    /* Preserve the hostname the BROWSER used. This hop would otherwise erase
+     * it — fetch() below sets Host to the internal gateway address — and the
+     * gateway needs it to choose the auth cookie's Domain attribute.
+     *
+     * Concretely: the terminal is served on trade.speedtrade.tech while the CRM
+     * is on tuskaex.com. Without this header every session minted through the
+     * terminal gets Domain=.tuskaex.com, a cookie the terminal's own domain can
+     * never send back, and the user bounces straight to the login screen.
+     *
+     * Not a spoofing vector: the gateway matches this against the COOKIE_DOMAINS
+     * allow-list and falls back to COOKIE_DOMAIN on no match, so a forged value
+     * can only pick between domains we already issue on. */
+    const browserHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    if (browserHost) headers.set('x-forwarded-host', browserHost);
+
     const incomingCt = req.headers.get('content-type');
 
     // ── Build outbound body ───────────────────────────────────────

@@ -28,6 +28,10 @@ export default function robots(): MetadataRoute.Robots {
           '/profile',
           '/trading/terminal',
           '/trading/open-account',
+          // Auth-gated staging route: mints a handoff code and redirects to
+          // the terminal domain. Nothing to index, and a crawler hitting it
+          // burns a code mint per request.
+          '/terminal',
           '/social',
           '/news',
           '/business',

@@ -20,6 +20,49 @@ Open http://localhost:5173
 - Lucide React (icons)
 - Inter (Google Fonts)
 
+## Domain split: CRM on tuskaex.com, terminal on speedtrade.tech
+
+`tuskaex.com` keeps the CRM — dashboard, wallet, KYC, deposits, IB,
+support, auth. The **trading terminal** is served from
+`trade.speedtrade.tech`. Both are the same Next app in the same
+container; only the hostname differs, and the app branches on it at
+runtime.
+
+**Why a subdomain and not `speedtrade.tech/trading`.** Two Next apps
+(this one and `speedtrade_landing/`) both serve their assets from
+`/_next/static/`. Split by path on one hostname and that prefix can only
+proxy to one of them — the other boots with no CSS or JS. A separate
+hostname gives each app its own root. It also matches how
+`trade.tuskaex.com` already works.
+
+**Why the session needs a handoff.** `tuskaex.com` and `speedtrade.tech`
+are different *registrable* domains, so a `.tuskaex.com` cookie is never
+sent to the terminal. Redirecting a user there lands them logged out. So
+the CRM mints a single-use code (`POST /auth/handoff`), the code — never
+the JWT — travels in the redirect URL, and the terminal exchanges it
+(`POST /auth/handoff/redeem`) for cookies on its own domain. Full
+description in [`WEB_TERMINAL_API.md`](WEB_TERMINAL_API.md) §2C.
+
+Three settings make it work, and each fails differently:
+
+| Setting | Value | If wrong |
+|---|---|---|
+| `NEXT_PUBLIC_TERMINAL_ORIGIN` | `https://trade.speedtrade.tech` | Terminal stays in-app on tuskaex.com. **Baked at build time** — rebuild `trader-frontend`, a restart does nothing |
+| `COOKIE_DOMAINS` | `.tuskaex.com,.speedtrade.tech` | Redeem sets a cookie the terminal cannot send back; user silently bounces to login |
+| `CORS_ORIGINS` | must include `https://trade.speedtrade.tech` | Redeem 403s and every WebSocket closes `4003` |
+
+**Rollback** is blanking `NEXT_PUBLIC_TERMINAL_ORIGIN` + `TERMINAL_APP_URL`
+and rebuilding: `tradingTerminalUrl()` goes back to returning
+`/trading/terminal` and the old apex → `trade.tuskaex.com` middleware
+bounce takes over again. Nothing else has to be reverted.
+
+Nginx for the terminal host is [`deploy/nginx/terminal.conf`](deploy/nginx/terminal.conf)
+— in **this** repo, not next to speedtrade.tech's own config, because
+`speedtrade_landing/` is gitignored here and a server block placed there
+would never reach the server through `deploy.sh`. It includes a `/ws/`
+upgrade block, which this host needs and `trade.tuskaex.com` does not
+(same cookie-domain reason).
+
 ## Event bus
 
 There is no message broker in the deployment. Events that need to fan

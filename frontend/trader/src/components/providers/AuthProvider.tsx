@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { usePlatformStatusStore } from '@/stores/platformStatusStore';
 import { useRouter, usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { redeemHandoffFromUrl } from '@/lib/terminalHandoff';
 
 const STAFF_ROLES = new Set(['admin', 'super_admin', 'employee', 'manager', 'support']);
 
@@ -72,10 +73,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const kickedRef = useRef(false);
 
   useEffect(() => {
-    if (!hasLoaded.current) {
-      hasLoaded.current = true;
-      loadUser();
-    }
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
+    /* A `?handoff=` code means we just arrived from the CRM, which lives on a
+     * different registrable domain — so this domain holds no auth cookie yet.
+     * Redeem it BEFORE loadUser(), or the /auth/me call 401s and the redirect
+     * effect below bounces the user to /auth/login on the terminal domain,
+     * where there is nothing for them to log into.
+     *
+     * No-ops (no request at all) when the URL carries no code, which is every
+     * page load on the CRM itself. */
+    void (async () => {
+      await redeemHandoffFromUrl();
+      await loadUser();
+    })();
   }, [loadUser]);
 
   useEffect(() => {

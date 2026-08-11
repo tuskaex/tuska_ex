@@ -42,6 +42,32 @@ class Settings(BaseSettings):
     # the auth session across the apex and subdomains (trade.*, etc.). Leave empty to
     # let the browser set a host-only cookie (works for single-host dev/local setups).
     COOKIE_DOMAIN: str = ""
+    # Additional parent domains the session may be issued on, comma-separated
+    # (e.g. ".tuskaex.com,.speedtrade.tech"). The trading terminal lives on a
+    # DIFFERENT registrable domain from the CRM, and a cookie scoped to
+    # .tuskaex.com is never sent to speedtrade.tech — the browser will not do it,
+    # no matter what CORS says. So the domain attribute has to be chosen from the
+    # host that is actually being served: a request arriving at
+    # trade.speedtrade.tech gets Domain=.speedtrade.tech, one at trade.tuskaex.com
+    # gets Domain=.tuskaex.com.
+    #
+    # This is only reachable through the /auth/handoff redeem flow — a user cannot
+    # log in directly on the terminal domain — so widening this list does not widen
+    # where passwords are accepted. Entries are matched as suffixes of the request
+    # Host, longest first, and anything not matching falls back to COOKIE_DOMAIN.
+    # Leave empty to keep the old single-domain behaviour exactly as it was.
+    COOKIE_DOMAINS: str = ""
+
+    # Public origin of the external trading terminal (no trailing slash), e.g.
+    # "https://trade.speedtrade.tech". When set, the CRM stops rendering the
+    # terminal itself and hands users off to this origin. Empty = terminal stays
+    # in-app on the CRM domain (the pre-split behaviour).
+    TERMINAL_APP_URL: str = ""
+    # Lifetime of a single-use auth handoff code. Deliberately short: the code
+    # travels in a URL, so it is exposed to history and Referer for as long as it
+    # is valid. 60s is enough for a cross-domain redirect on a slow connection and
+    # far too little for a stolen URL to be useful.
+    HANDOFF_TTL_SECONDS: int = 60
 
     # Google OAuth (Sign in / Sign up with Google). Verifies id_token audience offline
     # against Google's JWKS — no client secret stored on our infra. When empty, the

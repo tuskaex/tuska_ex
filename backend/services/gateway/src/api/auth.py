@@ -22,6 +22,8 @@ from ..services.auth_service import (
     setup_2fa as _setup_2fa, verify_2fa as _verify_2fa,
     change_password as _change_password, get_me as _get_me, logout_user,
     client_ip_for_inet,
+    create_terminal_handoff as _create_terminal_handoff,
+    redeem_terminal_handoff as _redeem_terminal_handoff,
 )
 from ..services import wallet_auth_service, email_otp_service, sensitive_action_service
 from ..services import pending_registration_service
@@ -313,6 +315,46 @@ async def impersonate_redeem(
         return await _bootstrap_session(
             access_token=access_token, request=request, db=db,
         )
+    except AuthServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+class _HandoffRedeemRequest(BaseModel):
+    code: str
+
+
+@router.post("/handoff")
+async def terminal_handoff(
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mint a single-use code that hands this CRM session to the trading
+    terminal.
+
+    The terminal lives on a different registrable domain (speedtrade.tech) from
+    the CRM (tuskaex.com), so the CRM's session cookie is never sent there. The
+    CRM calls this, puts the returned code in the redirect URL, and the terminal
+    redeems it below for cookies of its own."""
+    try:
+        return await _create_terminal_handoff(
+            user_id=current_user["user_id"], request=request, db=db,
+        )
+    except AuthServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post("/handoff/redeem")
+async def terminal_handoff_redeem(
+    body: _HandoffRedeemRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Called by the terminal on load with the code from its URL. Consumes the
+    code (single-use, atomic) and sets HttpOnly cookies scoped to the terminal's
+    own domain. No JWT is accepted here — only the code."""
+    try:
+        return await _redeem_terminal_handoff(code=body.code, request=request, db=db)
     except AuthServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
 

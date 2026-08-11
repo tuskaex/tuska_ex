@@ -6,6 +6,8 @@
  * WebSocket must hit the **API gateway** host, not the static marketing site host.
  */
 
+import { isOnTerminalHost } from '../terminalHandoff';
+
 function apiUrlToWsOrigin(apiUrl: string): string | null {
   const t = apiUrl.trim();
   if (!t) return null;
@@ -23,6 +25,24 @@ function apiUrlToWsOrigin(apiUrl: string): string | null {
 }
 
 export function getWebSocketBaseUrl(): string {
+  /* Terminal domain → same-origin sockets, overriding NEXT_PUBLIC_WS_URL.
+   *
+   * That variable points at api.tuskaex.com, which is correct everywhere else
+   * and wrong here: the terminal's session cookie is scoped to
+   * .speedtrade.tech, and no browser sends a cookie to a different registrable
+   * domain. /ws/trades authenticates from that cookie, so connecting to
+   * api.tuskaex.com closes with 4003 and the terminal quietly stops receiving
+   * fills, closes and stop-outs — the socket looks connected right up until it
+   * isn't.
+   *
+   * trade.speedtrade.tech has its own /ws/ upgrade block proxying to the same
+   * gateway, so this changes the hostname the browser dials and nothing else.
+   */
+  if (isOnTerminalHost()) {
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${proto}://${window.location.host}`;
+  }
+
   const rawWs = process.env.NEXT_PUBLIC_WS_URL?.trim();
   const rawGw = process.env.NEXT_PUBLIC_GATEWAY_URL?.trim();
   const rawApi = rawGw || process.env.NEXT_PUBLIC_API_URL?.trim();

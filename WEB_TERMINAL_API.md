@@ -13,13 +13,26 @@ written from memory — 151 REST routes and 5 WebSocket endpoints.
 | Host | Serves |
 |------|--------|
 | `https://api.tuskaex.com` | Gateway — REST **and** all WebSockets |
-| `https://trade.tuskaex.com` | Next.js frontend; proxies REST to the gateway |
-| `https://tuskaex.com` | Marketing + auth pages (same app) |
+| `https://trade.speedtrade.tech` | **The trading terminal.** Same Next.js app, its own domain, its own `/ws/` upgrade block |
+| `https://tuskaex.com` | CRM: dashboard, wallet, KYC, deposits, IB, support, auth |
+| `https://trade.tuskaex.com` | Same app on a subdomain; kept working, no longer where the terminal lives |
+| `https://speedtrade.tech` | SpeedTrade marketing site (a separate Next app — `speedtrade_landing/`) |
 
-> **WebSockets must connect to `api.tuskaex.com` directly.**
-> `trade.tuskaex.com` proxies REST fine but its nginx block does not
-> upgrade WebSocket connections. Only the `api.` host has the
-> `location /ws/` upgrade block (`deploy/nginx/tuskaex.conf`).
+> **The terminal is on a different registrable domain from the CRM.**
+> That is the single fact that explains most of what follows. A cookie
+> scoped to `.tuskaex.com` is never sent to `speedtrade.tech` — the
+> browser will not do it, and CORS has no say in the matter. So a user
+> clicking "Trade" cannot simply be redirected; the session has to be
+> handed across explicitly. See §2C.
+
+> **WebSockets: connect to `api.tuskaex.com`, except from the terminal.**
+> `trade.tuskaex.com` proxies REST fine but does not upgrade WebSocket
+> connections — only `api.` has that block in `deploy/nginx/tuskaex.conf`.
+> `trade.speedtrade.tech` is the exception: it has its own `/ws/` block
+> (`speedtrade_landing/deploy/nginx/speedtrade.conf`) proxying to the same
+> gateway, and the terminal **must** use it. Its cookie lives on
+> `.speedtrade.tech`, so dialling `api.tuskaex.com` sends no credentials
+> and `/ws/trades` closes `4003`. `getWebSocketBaseUrl()` handles this.
 
 **Base URL:** `https://api.tuskaex.com/api/v1`
 
@@ -60,6 +73,41 @@ Send it as either:
 
 Access token expiry is `JWT_ACCESS_EXPIRY_MINUTES` (45 by default), so
 refresh before it lapses or requests start 401ing mid-session.
+
+### C. Handoff code — CRM → terminal, across domains
+
+Only needed because the two sites are on different registrable domains.
+The CRM holds a `.tuskaex.com` session; the terminal needs one on
+`.speedtrade.tech`. A code is what crosses.
+
+```http
+POST /api/v1/auth/handoff          ← CRM, JWT-authed
+→ { "code": "<43 chars>", "expires_in": 60, "terminal_url": "https://trade.speedtrade.tech" }
+
+POST /api/v1/auth/handoff/redeem   ← terminal, NO auth
+{ "code": "..." }
+→ sets pt_access + pt_refresh, Domain=.speedtrade.tech
+```
+
+The code is **single-use** (redeemed with Redis `GETDEL`, so a replay
+finds nothing) and expires in `HANDOFF_TTL_SECONDS`. Only the code rides
+the URL — never the JWT — so nothing recoverable is left in browser
+history, a `Referer` header, or an access log. The terminal strips
+`?handoff=` from the address bar as soon as it has redeemed it.
+
+Account status and role are re-checked at redeem, not just at mint: a
+user banned inside that 60-second window does not get a session.
+
+Client side this is all in
+[`frontend/trader/src/lib/terminalHandoff.ts`](frontend/trader/src/lib/terminalHandoff.ts);
+`/terminal` is the staging route that mints and redirects.
+
+**Two settings this depends on, both easy to miss:**
+
+| Setting | Must contain | Symptom when missing |
+|---|---|---|
+| `CORS_ORIGINS` | `https://trade.speedtrade.tech` | Redeem POST 403s; every WebSocket closes `4003` |
+| `COOKIE_DOMAINS` | `.speedtrade.tech` | Redeem "succeeds" and sets a cookie for a domain the terminal can never send back — user lands on the login screen with no error anywhere |
 
 ### B. API key + secret — for bots, EAs, external terminals
 

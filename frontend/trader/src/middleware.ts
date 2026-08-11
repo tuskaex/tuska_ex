@@ -1,6 +1,19 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
+ * ── Terminal on its own domain (NEXT_PUBLIC_TERMINAL_ORIGIN) ──────
+ * The trading terminal has moved to speedtrade.tech; tuskaex.com keeps the
+ * CRM (dashboard, wallet, KYC, deposits, IB, support). Those are different
+ * registrable domains, so the `.tuskaex.com` session cookie cannot follow the
+ * user — see `src/lib/terminalHandoff.ts` for the single-use-code bridge that
+ * carries the session across. This middleware's part is small: keep
+ * /trading/terminal from rendering anywhere except the terminal host, and send
+ * strays to /terminal, which does the minting.
+ *
+ * Everything below is the older tuskaex.com-only split. It still runs when
+ * NEXT_PUBLIC_TERMINAL_ORIGIN is unset (local dev, or a rollback), and is
+ * bypassed for terminal paths when it is set.
+ *
  * Domain split (asymmetric, by design):
  *   - tuskaex.com (apex): marketing + auth + every user-app page.
  *     If the user lands on the apex with /trading/terminal, we bounce
@@ -112,6 +125,32 @@ function isNeutral(path: string): boolean {
   return NEUTRAL_PREFIXES.some((p) => path.startsWith(p));
 }
 
+/** True only for a real address-bar navigation.
+ *
+ * RSC prefetches and sub-resource fetches must never be redirected across
+ * origins: the browser CORS-blocks the result and the page half-loads. Next
+ * marks them with these headers / the `_rsc` query param. */
+function isTopLevelNavigation(req: NextRequest): boolean {
+  if (req.headers.get('rsc')) return false;
+  if (req.headers.get('next-router-prefetch')) return false;
+  if (req.headers.get('next-router-state-tree')) return false;
+  if (req.nextUrl.searchParams.has('_rsc')) return false;
+  const mode = req.headers.get('sec-fetch-mode');
+  if (mode && mode !== 'navigate') return false;
+  return true;
+}
+
+/** Hostname of the external terminal, or '' when the terminal is still in-app. */
+function terminalHost(): string {
+  const raw = (process.env.NEXT_PUBLIC_TERMINAL_ORIGIN ?? '').trim();
+  if (!raw) return '';
+  try {
+    return new URL(raw).hostname.toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
 export function middleware(req: NextRequest) {
   /* Rate-limit auth endpoints FIRST — before the host-routing logic
    * below. This applies whether the host split is configured or not
@@ -137,19 +176,8 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  const marketingHost = process.env.NEXT_PUBLIC_MARKETING_HOST;
-  const tradeHost = process.env.NEXT_PUBLIC_TRADE_HOST;
-  if (!marketingHost || !tradeHost) return NextResponse.next();
-
   const host = req.headers.get('host')?.toLowerCase().split(':')[0] ?? '';
-  const onMarketing = host === marketingHost.toLowerCase();
-  const onTrade = host === tradeHost.toLowerCase();
-  if (!onMarketing && !onTrade) return NextResponse.next();
-
   const { pathname, search } = req.nextUrl;
-  if (isNeutral(pathname)) return NextResponse.next();
-
-  const trade = isTradePath(pathname);
 
   // Helper: build a non-cacheable redirect. We use 307 (temporary) so a
   // browser can never cache the redirect across deploys; we also set
@@ -163,24 +191,48 @@ export function middleware(req: NextRequest) {
     return r;
   };
 
+  /* ── Terminal split onto its own domain ────────────────────────────
+   * When NEXT_PUBLIC_TERMINAL_ORIGIN is set, /trading/terminal only renders
+   * on the terminal host. Anywhere else — a bookmark, an old email link,
+   * someone typing the URL — is sent to /terminal, the staging route that
+   * mints a handoff code and then redirects.
+   *
+   * Why not redirect straight to the terminal domain from here: the code has
+   * to come from an authenticated API call, and middleware cannot make one.
+   * Sending the user across without a code lands them on a logged-out
+   * terminal with no way to sign in, which is precisely the failure this
+   * whole flow exists to avoid.
+   *
+   * Runs before the marketing/trade host gate so it also covers hosts that
+   * gate does not know about. */
+  const termHost = terminalHost();
+  if (termHost && host !== termHost && !isNeutral(pathname) && isTradePath(pathname)) {
+    if (!isTopLevelNavigation(req)) return NextResponse.next();
+    return noCacheRedirect(new URL(`/terminal${search}`, req.url).toString());
+  }
+
+  const marketingHost = process.env.NEXT_PUBLIC_MARKETING_HOST;
+  const tradeHost = process.env.NEXT_PUBLIC_TRADE_HOST;
+  if (!marketingHost || !tradeHost) return NextResponse.next();
+
+  const onMarketing = host === marketingHost.toLowerCase();
+  const onTrade = host === tradeHost.toLowerCase();
+  if (!onMarketing && !onTrade) return NextResponse.next();
+
+  if (isNeutral(pathname)) return NextResponse.next();
+
+  const trade = isTradePath(pathname);
+
   // Terminal route on apex → bounce to trade subdomain. Only top-level
   // navigations are redirected — RSC prefetches / sub-resource fetches
   // must stay same-origin so CORS doesn't break them.
+  //
+  // Unreachable once the terminal has its own domain: the block above has
+  // already claimed every /trading/terminal request on a non-terminal host.
+  // Kept intact so unsetting NEXT_PUBLIC_TERMINAL_ORIGIN restores the old
+  // apex → trade.tuskaex.com behaviour with no other change.
   if (onMarketing && trade) {
-    const rsc = req.headers.get('rsc');
-    const prefetch = req.headers.get('next-router-prefetch');
-    const nextRouterStateTree = req.headers.get('next-router-state-tree');
-    const mode = req.headers.get('sec-fetch-mode');
-    const hasRscQuery = req.nextUrl.searchParams.has('_rsc');
-    if (
-      rsc ||
-      prefetch ||
-      nextRouterStateTree ||
-      hasRscQuery ||
-      (mode && mode !== 'navigate')
-    ) {
-      return NextResponse.next();
-    }
+    if (!isTopLevelNavigation(req)) return NextResponse.next();
     return noCacheRedirect(`https://${tradeHost}${pathname}${search}`);
   }
   // Trade subdomain → serve every page. We deliberately do NOT redirect

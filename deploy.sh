@@ -111,6 +111,13 @@ if [ $NEEDS_NGINX -eq 1 ]; then
   if [ -f deploy/nginx/cloudflare-real-ip.conf ]; then
     sudo cp deploy/nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/cloudflare-real-ip.conf
   fi
+  # trade.speedtrade.tech — the trading terminal. Its own file because it is a
+  # different hostname, but very much this stack: it proxies to the
+  # trader_frontend and gateway_api upstreams declared in tuskaex.conf. nginx
+  # resolves upstreams across all loaded files, and the `nginx -t` below is
+  # what catches it if tuskaex.conf ever stops defining them.
+  sudo cp deploy/nginx/terminal.conf /etc/nginx/sites-available/terminal.conf
+  sudo ln -sf /etc/nginx/sites-available/terminal.conf /etc/nginx/sites-enabled/terminal.conf
   sudo nginx -t
   sudo systemctl reload nginx
 fi
@@ -119,14 +126,21 @@ echo "▶ Healthcheck…"
 sleep 4
 CODE_API=$(curl -sk -o /dev/null -w "%{http_code}" https://api.tuskaex.com/health   || echo "000")
 CODE_TRD=$(curl -sk -o /dev/null -w "%{http_code}" https://trade.tuskaex.com/       || echo "000")
+# The terminal host. Worth its own check: it is where users actually trade, and
+# it can break independently of everything above — its server block lives in a
+# different file and a missing one silently falls through to nginx's default
+# server, which answers with a redirect to tuskaex.com.
+CODE_TERM=$(curl -sk -o /dev/null -w "%{http_code}" https://trade.speedtrade.tech/  || echo "000")
 echo "  api.tuskaex.com/health  → HTTP $CODE_API"
 echo "  trade.tuskaex.com       → HTTP $CODE_TRD"
+echo "  trade.speedtrade.tech   → HTTP $CODE_TERM"
 
 # 5xx or a flat 000 (no connection) is a real failure. 4xx still means the
 # stack is up — caller can decide whether the route should exist.
 fail=0
 case "$CODE_API" in 000|5*) fail=1 ;; esac
 case "$CODE_TRD" in 000|5*) fail=1 ;; esac
+case "$CODE_TERM" in 000|5*) fail=1 ;; esac
 
 if [ $fail -ne 0 ]; then
   echo "⚠️  Healthcheck failed. Inspect with:"
