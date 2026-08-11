@@ -126,6 +126,35 @@ async def get_current_admin(
     return admin
 
 
+async def get_platform_admin(admin: User = Depends(get_current_admin)) -> User:
+    """get_current_admin, minus white-label tenants.
+
+    require_permission is what refuses a sub_admin anything not marked
+    tenant_safe, but a handful of routers predate per-permission checks and
+    guard themselves inside the service layer instead — they depend on
+    get_current_admin directly. Widening ADMIN_LOGIN_ROLES so a sub_admin can
+    sign in therefore handed them every one of those routes, and the
+    tenant_safe guarantee quietly did not cover them.
+
+    Measured against the deployed build before this existed: a sub_admin got
+    200 from /settings with the platform's own configuration in the body
+    (auto_approve_deposit_threshold and the rest), and 200 from /employees.
+    That list only read empty because every employee row on the platform was
+    itself a sub_admin, which list_employees filters out — the first real
+    staff member would have been visible to every tenant.
+
+    Applied to the routers that are platform-wide by nature. Not to branding
+    (a tenant edits its own), auth (it must reach login and /me), or
+    notifications (already scoped to the caller's own id).
+    """
+    if admin.role == "sub_admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This section belongs to the platform, not to a white-label sub-admin.",
+        )
+    return admin
+
+
 def require_permission(permission: str, *, tenant_safe: bool = False):
     """FastAPI dependency factory that checks if the current admin has the required permission.
 

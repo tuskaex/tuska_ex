@@ -4,7 +4,7 @@ from fastapi import APIRouter, Body, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import get_current_admin, EMPLOYEE_ROLE_PERMISSIONS
+from dependencies import get_platform_admin, EMPLOYEE_ROLE_PERMISSIONS
 from packages.common.src.models import User
 from packages.common.src.admin_schemas import EmployeeIn, EmployeeUpdate
 from services import employee_service
@@ -32,7 +32,7 @@ PERMISSION_CATALOG = {
 
 @router.get("")
 async def list_employees(
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.list_employees(db=db)
@@ -42,7 +42,7 @@ async def list_employees(
 async def create_employee(
     body: EmployeeIn,
     request: Request,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.create_employee(
@@ -56,7 +56,7 @@ async def update_employee(
     employee_id: uuid.UUID,
     body: EmployeeUpdate,
     request: Request,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.update_employee(
@@ -69,7 +69,7 @@ async def update_employee(
 async def delete_employee(
     employee_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.delete_employee(
@@ -83,7 +83,7 @@ async def get_employee_activity(
     employee_id: uuid.UUID,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.get_employee_activity(
@@ -92,7 +92,7 @@ async def get_employee_activity(
 
 
 @router.get("/permissions/catalog")
-async def list_permission_catalog(admin: User = Depends(get_current_admin)):
+async def list_permission_catalog(admin: User = Depends(get_platform_admin)):
     """Return the full permission catalog + role defaults for the admin UI."""
     return {
         "catalog": PERMISSION_CATALOG,
@@ -103,7 +103,7 @@ async def list_permission_catalog(admin: User = Depends(get_current_admin)):
 @router.get("/{employee_id}/permissions")
 async def get_employee_permissions(
     employee_id: uuid.UUID,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.get_employee_permissions(employee_id=employee_id, db=db)
@@ -114,7 +114,7 @@ async def update_employee_permissions(
     employee_id: uuid.UUID,
     request: Request,
     body: dict = Body(...),
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     perms = body.get("extra_permissions") or []
@@ -131,7 +131,7 @@ async def update_employee_permissions(
 async def login_as_employee(
     employee_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(get_current_admin),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await employee_service.login_as_employee(
