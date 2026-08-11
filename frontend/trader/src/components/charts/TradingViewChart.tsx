@@ -24,11 +24,14 @@
  *    with several positions open those labels overlap each other. Pending
  *    orders keep theirs; they have no chips.
  *  - Pending orders draw a dashed entry (BUY blue / SELL purple) + SL/TP.
- *  - The only on-chart control is [✕] on the entry line, which closes at market
- *    and confirms first. SL/TP are read-only here — the chips state them, the
- *    positions table sets and moves them. On-chart [SL]/[TP] drag handles were
- *    removed once the chips carried the same numbers: two live controls for one
- *    value on one screen is a way to disagree with yourself.
+ *  - An HTML overlay pins draggable [SL] [TP] handles and a [✕] to each
+ *    position. ✕ stays on the entry; each SL/TP handle rides its OWN bracket
+ *    line once that bracket exists, and parks back on the entry row while it
+ *    does not — which is where you reach for it to create one. Drag up/down to
+ *    set (dashed preview line + shaded zone + price/P&L label follows the
+ *    cursor), or plain-click to type a price. A drag commits on release,
+ *    MT4/MT5-style — no confirmation. ✕ closes at market and DOES confirm:
+ *    that one is irreversible, a mis-dragged bracket is not.
  *  - Persistent shaded zones fill entry→SL (red) and entry→TP (teal).
  *  - A stale-price watchdog greys the entry lines when the feed stalls.
  * All bracket edits go through PUT /positions/{id} with ONLY the changed leg
@@ -46,6 +49,16 @@ import { api } from '@/lib/api/client';
 import { openPnl } from '@/lib/pnl';
 import toast from 'react-hot-toast';
 import { ChartTradeWidget } from '@/components/charts/ChartTradeWidget';
+
+// Tell the React Native app (when this runs inside its WebView) that an SL/TP
+// drag is in progress, so it can freeze the surrounding ScrollView — otherwise
+// the page scrolls instead of the line dragging. No-op in a normal browser.
+function postDragToNative(active: boolean) {
+  try {
+    (window as unknown as { ReactNativeWebView?: { postMessage: (s: string) => void } })
+      .ReactNativeWebView?.postMessage(JSON.stringify({ type: 'chart:drag', active }));
+  } catch { /* ignore */ }
+}
 
 // A freshly-opened MARKET position shows optimistically with a temporary id
 // ("optim-…") until the server row arrives with a real UUID. SL/TP/close must
@@ -74,15 +87,14 @@ const TP_COLOR = '#14b8a6';          // teal  — take-profit line
 const PENDING_BUY_COLOR = '#3b82f6'; // blue   — pending BUY entry line
 const PENDING_SELL_COLOR = '#a855f7';// purple — pending SELL entry line
 
-// Where the on-chart [✕] sits, measured from the chart's RIGHT edge: just left
-// of the entry line's right-axis label so it reads as part of that line's pill
-// instead of hiding behind the left drawing toolbar.
+// Where the on-chart [SL] [TP] [✕] group sits, measured from the chart's RIGHT
+// edge: just left of each line's right-axis label so the buttons read as part
+// of the line's pill instead of hiding behind the left drawing toolbar.
 const CLOSE_BTN_RIGHT_PX = 268;
 
-// In-app dialog replacing window.confirm for the ✕ close button — the only
-// on-chart control left that needs one. `input` switches it to prompt mode;
-// nothing uses that today (it drove the retired SL/TP type-a-price flow) but
-// it is kept because the next on-chart control that needs a value will want it.
+// In-app dialog replacing window.confirm / window.prompt for the on-chart
+// trade buttons (close ✕, SL/TP drag + type-a-price). `input` switches it to
+// prompt mode (type-a-price).
 type ChartDialog = {
   title: string;
   body: string;
@@ -113,7 +125,7 @@ function TradingViewChartInner({
   const interval = intervalOverride || (onTradingTerminal ? '5' : '15');
 
   const containerRef = useRef<HTMLDivElement>(null);
-  // Overlay layer above the chart for the ✕ button, price chips + shaded zones.
+  // Overlay layer above the chart for the [SL]/[TP]/✕ buttons + shaded zones.
   const overlayRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const widgetRef = useRef<any>(null);
@@ -739,6 +751,60 @@ function TradingViewChartInner({
     let crossSub: any = null;
     try { crossSub = chart.crossHairMoved?.(); crossSub?.subscribe?.(null, onCross); } catch { /* ignore */ }
 
+    // Inverse of paneY: container-Y → price (drives the drag-to-set gesture).
+    const priceForY = (containerY: number): number | null => {
+      const g = geom();
+      if (!g) return null;
+      const top = paneTopOf(g);
+      if (top == null) return null;
+      const py = containerY - top; // pane-relative Y
+      if (g.log) {
+        const lt = Math.log(g.top), lb = Math.log(g.bottom);
+        return Math.exp(lt - (py / g.h) * (lt - lb));
+      }
+      return g.top - (py / g.h) * (g.top - g.bottom);
+    };
+
+    const digits = (useTradingStore.getState().instruments.find(
+      (i) => String(i.symbol).toUpperCase() === sym,
+    )?.digits) ?? 2;
+
+    // Set / clear a position's stop-loss or take-profit from the chart via the
+    // type-a-price dialog. Sends ONLY the bracket being changed — the backend
+    // does a partial update, so the OTHER bracket is never affected (the
+    // button's captured `p` is a stale closure: it only rebuilds on
+    // id/side/lots change, NOT on SL/TP change, so re-sending its copy of the
+    // other bracket would revert it).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const setBracket = (p: any, kind: 'sl' | 'tp') => {
+      if (!isRealPositionId(p.id)) { toast('Order still finalizing…'); return; }
+      const label = kind === 'sl' ? 'Stop Loss' : 'Take Profit';
+      const t = useTradingStore.getState().prices[sym];
+      const cur = kind === 'sl' ? p.stop_loss : p.take_profit;
+      const dflt = Number(cur) || (t ? (p.side === 'buy' ? t.bid : t.ask) : Number(p.open_price)) || 0;
+      openDialogRef.current({
+        title: `${label} — ${String(p.side).toUpperCase()} ${p.lots} ${sym}`,
+        body: 'Enter the price. Leave blank to remove.',
+        confirmLabel: 'Save',
+        input: { defaultValue: dflt ? dflt.toFixed(digits) : '', placeholder: 'Price' },
+        onConfirm: (raw) => {
+          const trimmed = (raw ?? '').trim();
+          const val = trimmed === '' ? null : parseFloat(trimmed);
+          if (val !== null && !(val > 0)) { toast.error('Invalid price'); return; }
+          void (async () => {
+            try {
+              await api.put(`/positions/${p.id}`,
+                kind === 'sl' ? { stop_loss: val } : { take_profit: val });
+              toast.success(val === null ? `${label} removed` : `${label} set @ ${val}`);
+              await useTradingStore.getState().refreshPositions();
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : `Failed to set ${label}`);
+            }
+          })();
+        },
+      });
+    };
+
     const mkBtn = (txt: string, bg: string, title: string, onClick: () => void): HTMLButtonElement => {
       const b = document.createElement('button');
       b.type = 'button';
@@ -755,6 +821,119 @@ function TradingViewChartInner({
       return b;
     };
 
+    // Draggable SL/TP button: press & drag up/down → a dashed preview line
+    // (+ shaded zone + price/P&L label) follows the cursor → release → PUT.
+    // A plain click (no drag) falls back to the type-a-price prompt.
+    // Pointer capture makes the same gesture work for mouse AND touch.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const mkDragBtn = (txt: string, bg: string, title: string, p: any, kind: 'sl' | 'tp'): HTMLButtonElement => {
+      const color = kind === 'sl' ? SL_COLOR : TP_COLOR;
+      const zoneBg = kind === 'sl' ? 'rgba(239,68,68,0.13)' : 'rgba(20,184,166,0.13)';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = txt;
+      b.title = `${title} — drag up/down to set, or click to type`;
+      b.style.cssText =
+        `display:flex;align-items:center;justify-content:center;height:18px;min-width:18px;`
+        + `padding:0 5px;border:0;border-radius:3px;cursor:ns-resize;touch-action:none;`
+        + `font-size:10px;font-weight:700;line-height:1;color:#fff;pointer-events:auto;`
+        + `background:${bg};box-shadow:0 1px 3px rgba(0,0,0,.55);`;
+      b.onmouseenter = () => { b.style.filter = 'brightness(1.15)'; };
+      b.onmouseleave = () => { b.style.filter = 'none'; };
+      b.onpointerdown = (e) => {
+        e.preventDefault(); e.stopPropagation();
+        if (!isRealPositionId(p.id)) { toast('Order still finalizing…'); return; }
+        // Capture the pointer to the button: the drag follows the cursor and
+        // won't "let go" even if it leaves the button — released on pointerup.
+        try { b.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+        postDragToNative(true); // freeze the app's ScrollView during the drag
+        const startY = e.clientY;
+        let moved = false;
+        // Preview: shaded zone (entry → cursor) + dashed line + price label.
+        const zone = document.createElement('div');
+        zone.style.cssText = `position:absolute;left:0;right:0;top:0;height:0;background:${zoneBg};pointer-events:none;z-index:6;`;
+        const line = document.createElement('div');
+        line.style.cssText = `position:absolute;left:0;right:0;top:0;height:0;border-top:1px dashed ${color};pointer-events:none;z-index:7;`;
+        const lbl = document.createElement('div');
+        lbl.style.cssText = `position:absolute;right:2px;top:0;transform:translateY(-50%);background:${color};`
+          + `color:#fff;font:700 10px system-ui;padding:1px 6px;border-radius:3px;pointer-events:none;z-index:8;white-space:nowrap;`;
+        overlay.appendChild(zone); overlay.appendChild(line); overlay.appendChild(lbl);
+        const entryY = (): number | null => {
+          const g = geom();
+          if (!g) return null;
+          const top = paneTopOf(g);
+          if (top == null) return null;
+          return paneY(Number(p.open_price) || 0, g) + top;
+        };
+        const cleanup = () => { for (const el of [zone, line, lbl]) { try { overlay.removeChild(el); } catch { /* ignore */ } } };
+        b.onpointermove = (ev) => {
+          if (Math.abs(ev.clientY - startY) > 3) moved = true;
+          const r = container.getBoundingClientRect();
+          const cy = ev.clientY - r.top;
+          const price = priceForY(cy);
+          line.style.top = `${cy}px`;
+          lbl.style.top = `${cy}px`;
+          // Show the target price AND the projected NET P&L at that price
+          // (gross − commission + swap; matches the static SL/TP labels and
+          // the amount the close actually books).
+          let ptxt = `${kind === 'sl' ? 'SL' : 'TP'} ${price ? price.toFixed(digits) : '—'}`;
+          if (price) {
+            const rr = computePnlAt(p, price);
+            const netRR = Number.isFinite(rr) ? rr - (Number(p.commission) || 0) + (Number(p.swap) || 0) : NaN;
+            if (Number.isFinite(netRR)) ptxt += `  ${netRR >= 0 ? '+' : '−'}$${Math.abs(netRR).toFixed(2)}`;
+          }
+          lbl.textContent = ptxt;
+          const ey = entryY();
+          if (ey != null) { zone.style.top = `${Math.min(ey, cy)}px`; zone.style.height = `${Math.abs(ey - cy)}px`; }
+        };
+        const endDrag = async (ev: PointerEvent, cancelled: boolean) => {
+          b.onpointermove = null; b.onpointerup = null; b.onpointercancel = null;
+          try { b.releasePointerCapture(ev.pointerId); } catch { /* ignore */ }
+          cleanup();
+          postDragToNative(false); // re-enable the app's ScrollView
+          if (cancelled) return;
+          if (!moved) { setBracket(p, kind); return; } // plain click → type-a-price
+          const r = container.getBoundingClientRect();
+          const price = priceForY(ev.clientY - r.top);
+          if (!price || !(price > 0)) { toast.error('Could not read price'); return; }
+          const label = kind === 'sl' ? 'Stop Loss' : 'Take Profit';
+          const projGross = computePnlAt(p, price);
+          const proj = Number.isFinite(projGross)
+            ? projGross - (Number(p.commission) || 0) + (Number(p.swap) || 0)
+            : NaN;
+          const projTxt = Number.isFinite(proj) ? `  ${proj >= 0 ? '+' : '−'}$${Math.abs(proj).toFixed(2)}` : '';
+          /* Drop commits immediately — no confirmation step.
+           *
+           * The dialog that used to sit here asked the user to re-approve a
+           * price they had just dragged a line to and watched follow their
+           * cursor, with the projected P&L live in the drag label the whole
+           * way. It restated what was already on screen, and it broke the
+           * gesture: the line snapped to the new level while a modal waited on
+           * a second confirmation, so the chart and the truth disagreed until
+           * it was answered. MT4/MT5 commit on drop, which is what traders
+           * coming from those platforms expect.
+           *
+           * The toast carries the projection so the outcome is still stated
+           * after the fact, and a wrong drop is undone by dragging again. */
+          try {
+            // Only the dragged bracket — the backend partial-update keeps the
+            // other intact (see setBracket note; `p` is a stale closure).
+            await api.put(`/positions/${p.id}`,
+              kind === 'sl' ? { stop_loss: price } : { take_profit: price });
+            toast.success(`${label} set @ ${price.toFixed(digits)}${projTxt}`);
+            await useTradingStore.getState().refreshPositions();
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : `Failed to set ${label}`);
+            // Put the line back where the server still has it, so a failed
+            // write cannot leave the chart showing a level that was never set.
+            await useTradingStore.getState().refreshPositions();
+          }
+        };
+        b.onpointerup = (ev) => { void endDrag(ev, false); };
+        b.onpointercancel = (ev) => { void endDrag(ev, true); };
+      };
+      return b;
+    };
 
     /* ── Left-edge chips ────────────────────────────────────────────────
      * A boxed label pinned to the LEFT of every entry / SL / TP line, each
@@ -857,13 +1036,43 @@ function TradingViewChartInner({
       (p) => String(p.symbol).toUpperCase() === sym,
     );
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const btns: { p: any; entry: number; el: HTMLDivElement; slZone: HTMLDivElement; tpZone: HTMLDivElement }[] = [];
+    const btns: { p: any; entry: number; el: HTMLDivElement; slBtn: HTMLDivElement | null; tpBtn: HTMLDivElement | null; slZone: HTMLDivElement; tpZone: HTMLDivElement }[] = [];
     for (const p of myPos) {
       const side = String(p.side).toUpperCase();
       const sideColor = side === 'BUY' ? CHART_BUY_COLOR : CHART_SELL_COLOR;
-      // Clamp the right offset on narrow (mobile) charts so the ✕ never slides
-      // off the left edge; desktop keeps the Swisdex 268px.
+      const isCopy = p.trade_type === 'copy_trade';
+      // Clamp the right offset on narrow (mobile) charts so the ~70px-wide
+      // group never slides off the left edge; desktop keeps the Swisdex 268px.
       const rightPx = Math.min(CLOSE_BTN_RIGHT_PX, Math.max(8, container.clientWidth - 78));
+
+      /* SL and TP handles ride their OWN line, not the entry line.
+       *
+       * They used to be locked into one flex row with ✕ on the entry, which
+       * meant a stop set 20 points away still had its handle sitting on the
+       * entry — you dragged from a level that was not the one you were
+       * moving, and with the bracket lines drawn elsewhere it read as though
+       * the buttons belonged to nothing.
+       *
+       * So each is positioned independently: on its bracket once that bracket
+       * exists, and parked back on the entry row while it does not — which is
+       * also where you reach for it to create one. The right-offsets keep the
+       * parked layout identical to the old [SL][TP][✕] row (✕ is 18px wide,
+       * SL/TP 28px, 3px gaps), so nothing moves until a bracket is set.
+       */
+      const mkHandle = (right: number, child: HTMLElement): HTMLDivElement => {
+        const d = document.createElement('div');
+        d.style.cssText =
+          `position:absolute;right:${right}px;transform:translateY(-50%);`
+          + `display:flex;align-items:center;pointer-events:none;visibility:hidden;z-index:6;`;
+        d.appendChild(child);
+        overlay.appendChild(d);
+        return d;
+      };
+
+      const slBtn = isCopy ? null : mkHandle(rightPx + 52,
+        mkDragBtn('SL', 'rgba(245,158,11,0.97)', `Stop loss ${side} ${p.lots} ${sym}`, p, 'sl'));
+      const tpBtn = isCopy ? null : mkHandle(rightPx + 21,
+        mkDragBtn('TP', 'rgba(20,184,166,0.97)', `Take profit ${side} ${p.lots} ${sym}`, p, 'tp'));
 
       const root = document.createElement('div');
       root.style.cssText =
@@ -880,7 +1089,7 @@ function TradingViewChartInner({
       tpZone.style.cssText = `position:absolute;left:0;right:0;top:0;height:0;background:rgba(20,184,166,0.10);pointer-events:none;visibility:hidden;z-index:4;`;
       overlay.appendChild(slZone); overlay.appendChild(tpZone);
       overlay.appendChild(root);
-      btns.push({ p, entry: Number(p.open_price) || 0, el: root, slZone, tpZone });
+      btns.push({ p, entry: Number(p.open_price) || 0, el: root, slBtn, tpBtn, slZone, tpZone });
 
       /* Entry chip is coloured by SIDE so it matches its own line; its P&L
        * text is coloured by profit/loss in the sync loop. SL/TP chips are made
@@ -914,11 +1123,24 @@ function TradingViewChartInner({
         if (ht < 1) { el.style.visibility = 'hidden'; return; }
         el.style.top = `${zTop}px`; el.style.height = `${ht}px`; el.style.visibility = 'visible';
       };
+      /* A handle sits on its bracket's price when one is set, and falls back to
+       * the entry row when it is not — read from `live` so it follows a level
+       * changed from another device without this effect re-running. */
+      const placeHandle = (el: HTMLDivElement | null, price: unknown, entryY: number) => {
+        if (!el) return;
+        const pr = Number(price);
+        const hy = pr > 0 ? paneY(pr, g) + top : entryY;
+        if (!(hy > 8) || hy > h - 8) { el.style.visibility = 'hidden'; return; }
+        el.style.top = `${hy}px`;
+        el.style.visibility = 'visible';
+      };
       for (const b of btns) {
         const y = paneY(b.entry, g) + top;
         if (!(y > 8) || y > h - 8) { b.el.style.visibility = 'hidden'; }
         else { b.el.style.top = `${y}px`; b.el.style.visibility = 'visible'; }
         const lp = live.find((x) => x.id === b.p.id);
+        placeHandle(b.slBtn, lp?.stop_loss, y);
+        placeHandle(b.tpBtn, lp?.take_profit, y);
         drawZone(b.slZone, y, lp?.stop_loss);
         drawZone(b.tpZone, y, lp?.take_profit);
       }
@@ -963,7 +1185,7 @@ function TradingViewChartInner({
       cancelAnimationFrame(raf);
       container.removeEventListener('mousemove', onMouseMove);
       try { crossSub?.unsubscribe?.(null, onCross); } catch { /* ignore */ }
-      for (const b of btns) { for (const el of [b.el, b.slZone, b.tpZone]) { try { overlay.removeChild(el); } catch { /* ignore */ } } }
+      for (const b of btns) { for (const el of [b.el, b.slBtn, b.tpBtn, b.slZone, b.tpZone]) { if (el) { try { overlay.removeChild(el); } catch { /* ignore */ } } } }
       for (const c of chips) { try { overlay.removeChild(c.el); } catch { /* ignore */ } }
     };
     // `theme` is a real dependency now: the chips bake their background and
