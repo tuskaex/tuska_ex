@@ -2,6 +2,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
+/* On speedtrade.tech these paths are served the SpeedTrade logo instead — the
+ * swap is in deploy/nginx/speedtrade.conf, not here. One trader build serves
+ * both hosts, so the brand cannot be a build-time constant, and switching it
+ * in React would flash the wrong mark between SSR and hydration. Renaming
+ * these files means updating those exact-match locations too. */
 const LOGO_SRC = '/marketing/tuskaex-logo.png';
 
 type Props = {
