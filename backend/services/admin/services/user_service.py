@@ -87,16 +87,32 @@ async def list_users(
     page: int, per_page: int, search: str | None,
     status_filter: str | None, kyc_filter: str | None,
     group_id: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
+    """scope_admin: the calling admin, used to restrict the list to their pool.
+
+    Defaults to None so every existing caller keeps the unrestricted behaviour
+    it has today; only a sub_admin narrows the result.
+    """
     # Hide users who have not verified their email yet. An email/password
     # signup sits at email_verified=False until they complete the post-signup
     # OTP, so half-finished registrations never clutter the admin list.
     # Google/OAuth signups are stamped email_verified=True at sign-in, so
     # legitimate users are unaffected.
     query = select(User).where(
-        User.role.notin_(["admin", "super_admin"]),
+        # sub_admin joins the exclusion list: tenants are staff, not clients, and
+        # they have their own screen. Leaving them in made every sub-admin show
+        # up in the Users table as if they were a trader.
+        User.role.notin_(["admin", "super_admin", "sub_admin"]),
         User.email_verified.is_(True),
     )
+
+    # White-label scoping: a sub_admin only ever sees their own pool. Returns
+    # None for every other role, leaving the query exactly as it was.
+    from dependencies import scope_filter
+    crit = scope_filter(scope_admin) if scope_admin is not None else None
+    if crit is not None:
+        query = query.where(crit)
 
     if search:
         term = f"%{search}%"

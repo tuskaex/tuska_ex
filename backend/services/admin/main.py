@@ -19,6 +19,8 @@ from routes import (
     admin_audit_logs,
     deposit_wallets,
     notifications,
+    sub_admins,
+    branding,
 )
 
 app_settings = get_settings()
@@ -80,6 +82,41 @@ async def _apply_startup_ddl():
             await conn.execute(text(
                 "ALTER TABLE algo_api_keys DROP COLUMN IF EXISTS api_secret"
             ))
+            # White-label tenancy (alembic 0057). Every sub-admin endpoint reads
+            # assigned_admin_id, so without these the whole feature 500s on a
+            # host that hasn't run alembic.
+            #
+            # users.role carries a CHECK constraint from the baseline; creating a
+            # sub-admin fails with CheckViolationError until 'sub_admin' is in it.
+            await conn.execute(text(
+                "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN "
+                "('user','admin','super_admin','ib','sub_broker','master_trader','sub_admin'))"
+            ))
+            # employees.role is constrained too — a sub-admin needs a row in both.
+            await conn.execute(text(
+                "ALTER TABLE employees DROP CONSTRAINT IF EXISTS employees_role_check"
+            ))
+            await conn.execute(text(
+                "ALTER TABLE employees ADD CONSTRAINT employees_role_check CHECK (role IN "
+                "('super_admin','trade_manager','support','finance','risk_manager',"
+                "'marketing','sub_admin'))"
+            ))
+            await conn.execute(text("""
+                ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS assigned_admin_id UUID REFERENCES users(id),
+                    ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id),
+                    ADD COLUMN IF NOT EXISTS last_transferred_at TIMESTAMPTZ,
+                    ADD COLUMN IF NOT EXISTS last_transferred_by UUID REFERENCES users(id),
+                    ADD COLUMN IF NOT EXISTS pnl_share_pct NUMERIC(5, 2)
+            """))
+            await conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS ix_users_assigned_admin_role
+                    ON users (assigned_admin_id, role)
+                 WHERE assigned_admin_id IS NOT NULL
+            """))
     except Exception as e:
         logger.warning("startup DDL skipped: %s", e)
 
@@ -144,6 +181,14 @@ app.include_router(bonus.router, prefix=prefix)
 app.include_router(banners.router, prefix=prefix)
 app.include_router(support.router, prefix=prefix)
 app.include_router(employees.router, prefix=prefix)
+app.include_router(sub_admins.router, prefix=prefix)
+app.include_router(branding.router, prefix=prefix)
+# Logo media is public (an <img> in the trader app loads it), so it is
+# mounted beside the branding router rather than inside it.
+app.include_router(branding.media_router, prefix=prefix + '/branding')
+# Public branding lookup: a visitor following a ?ref= link or landing on a
+# tenant domain has no session yet, so this cannot sit behind admin auth.
+app.include_router(branding.public_router, prefix='/api/v1/public')
 app.include_router(settings.router, prefix=prefix)
 app.include_router(transactions.router, prefix=prefix)
 app.include_router(kyc.router, prefix=prefix)

@@ -28,6 +28,12 @@ logger = logging.getLogger("auth_service")
 DEMO_SHARED_EMAIL = "demo@tuskaex.com"
 DEMO_STARTING_BALANCE = Decimal("10000")
 
+# Roles that belong to the admin portal and must never hold a trader session.
+# Was repeated as a literal in four places (login, Google OAuth, refresh, and the
+# onboarding-completeness check); adding 'sub_admin' to three of four would have
+# left one door open, so it is defined once here.
+STAFF_ROLES = ("admin", "super_admin", "employee", "manager", "support", "sub_admin")
+
 _rate_buckets: dict[str, list[float]] = {}
 
 
@@ -469,7 +475,6 @@ async def login_user(
     # responses); done BEFORE 2FA + token issuance so staff credentials
     # never mint a trader session, even if the staff user accidentally
     # submitted them to the wrong form.
-    STAFF_ROLES = ("admin", "super_admin", "employee", "manager", "support")
     if user.role in STAFF_ROLES:
         raise AuthServiceError(
             "Staff accounts must sign in via the admin portal.", 403
@@ -720,7 +725,7 @@ async def google_oauth(
     # have the trader Google flow hit their existing email, refuse to
     # mint a trader session for them. New OAuth signups always default
     # to role="user" above, so this only fires for pre-existing staff.
-    if user.role in ("admin", "super_admin", "employee", "manager", "support"):
+    if user.role in STAFF_ROLES:
         raise AuthServiceError(
             "Staff accounts must sign in via the admin portal.", 403
         )
@@ -772,7 +777,7 @@ async def refresh_token(request: Request, db: AsyncSession) -> JSONResponse:
     # If a staff role somehow still holds a trader refresh token (e.g.
     # issued before the login-side block was added), refuse to renew it.
     # The session will die on next refresh instead of cycling forever.
-    if user.role in ("admin", "super_admin", "employee", "manager", "support"):
+    if user.role in STAFF_ROLES:
         row.revoked = True
         await db.flush()
         raise AuthServiceError("Not authenticated", 401)
@@ -1021,7 +1026,7 @@ async def get_me(user_id: UUID, db: AsyncSession) -> dict:
     if not user:
         raise AuthServiceError("User not found", 404)
 
-    if user.is_demo or user.role in ("admin", "super_admin", "employee", "manager", "support"):
+    if user.is_demo or user.role in STAFF_ROLES:
         complete = True
     else:
         complete = bool(

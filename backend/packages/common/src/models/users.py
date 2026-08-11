@@ -74,6 +74,67 @@ class User(Base):
     wallet_chain = Column(String(20), nullable=True)
     wallet_connected_at = Column(DateTime(timezone=True), nullable=True)
     wallet_disconnected_at = Column(DateTime(timezone=True), nullable=True)
+
+    # ── White-label tenancy (migration 0057) ──────────────────────────────
+    # Which sub-admin owns this client. NULL means the platform pool, which is
+    # what every pre-existing row is and what super-admin sees by default — so
+    # adding this column changes nothing until a client is explicitly assigned.
+    #
+    # A sub-admin is a User with role='sub_admin'. Deliberately NOT role='admin':
+    # require_permission() in the admin service short-circuits for 'admin' and
+    # 'super_admin', so a sub-admin carrying that role would bypass every
+    # permission check and see every tenant's clients.
+    assigned_admin_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # Telemetry for pool moves — who moved this client out of whichever pool it
+    # was in, and when. Kept on the row rather than only in the audit log so the
+    # admin UI can show it without a join.
+    last_transferred_at = Column(DateTime(timezone=True), nullable=True)
+    last_transferred_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    # Revenue split for a sub-admin (role='sub_admin'), 0..100. NULL on clients.
+    pnl_share_pct = Column(Numeric(5, 2), nullable=True)
+
+    # ── White-label branding (migration 0058) ────────────────────────────
+    # Set on a sub-admin; their clients inherit it. All NULL on a client row.
+    brand_name = Column(String(80), nullable=True)
+    # A path into the branding media route, not a filesystem path — nothing in
+    # this repo serves /uploads directly.
+    logo_url = Column(Text, nullable=True)
+    support_email = Column(String(255), nullable=True)
+    support_whatsapp = Column(String(32), nullable=True)
+
+    # Per-tenant outbound SMTP. A tenant that has not configured this sends no
+    # client email at all — deliberately, so one broker's mail never leaves
+    # another broker's (or the platform's) address.
+    smtp_host = Column(String(255), nullable=True)
+    smtp_port = Column(Integer, nullable=True)
+    smtp_user = Column(String(255), nullable=True)
+    smtp_password = Column(Text, nullable=True)
+    smtp_from = Column(String(255), nullable=True)
+    smtp_tls = Column(Boolean, nullable=False, default=True, server_default="true")
+
+    # ── Custom domain (migration 0059) ───────────────────────────────────
+    # Public, shareable code for a tenant's referral link (?ref=ADM12345678).
+    # Distinct from ib_profiles.referral_code — that belongs to the affiliate
+    # tree and pays commission; this only decides which brand a visitor sees.
+    public_code = Column(String(20), nullable=True)
+    # Apex only — lowercase, no scheme, no www, no path.
+    custom_domain = Column(String(253), nullable=True)
+    # Subdomain mode: the user app lives at <app_subdomain>.<custom_domain>.
+    app_subdomain = Column(String(63), nullable=True)
+    # Optional admin panel host: <admin_subdomain>.<custom_domain>.
+    admin_subdomain = Column(String(63), nullable=True)
+    # PENDING_DNS -> DNS_VERIFIED -> PROVISIONING -> READY | FAILED.
+    # A plain string, not an enum: the lifecycle is owned by branding_service
+    # and adding a state should not need a migration.
+    custom_domain_status = Column(String(20), nullable=True)
+    custom_domain_last_error = Column(Text, nullable=True)
+    custom_domain_provisioned_at = Column(DateTime(timezone=True), nullable=True)
+    # How this user arrived: PLATFORM | BRANDED_REFERRAL | CUSTOM_DOMAIN.
+    signup_origin = Column(String(20), nullable=True)
+
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

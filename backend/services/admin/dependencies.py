@@ -48,7 +48,31 @@ EMPLOYEE_ROLE_PERMISSIONS = {
         "bonus.view", "bonus.create", "bonus.update",
         "ib.view", "ib.manage",
     },
+    # White-label tenant operator. Deliberately conservative: everything here is
+    # read-or-service, nothing that moves money or changes platform config. A
+    # super-admin grants more per sub-admin through extra_permissions, which is
+    # additive-only (see require_permission below).
+    "sub_admin": {
+        "users.view",
+        "kyc.view", "kyc.manage",
+        "deposits.view", "withdrawals.view",
+        "trades.view", "positions.view", "orders.view",
+        "tickets.view", "tickets.reply",
+        "analytics.view",
+    },
 }
+
+# Roles that reach the admin API at all. 'sub_admin' is here so a tenant
+# operator can sign in; it is NOT in ADMIN_BYPASS_ROLES below.
+ADMIN_LOGIN_ROLES = ["admin", "super_admin", "sub_admin"]
+
+# Roles for which require_permission() short-circuits.
+#
+# 'sub_admin' must never be added here. employee_service.create_employee mints
+# employees as User(role='admin'), so this tuple is already effectively "any
+# staff member" — adding sub_admin would hand every tenant operator the whole
+# platform and make assert_user_in_scope pointless.
+ADMIN_BYPASS_ROLES = ("admin", "super_admin")
 
 
 ADMIN_COOKIE_NAME = "fx_admin"
@@ -91,7 +115,7 @@ async def get_current_admin(
     result = await db.execute(
         select(User).where(
             User.id == uuid.UUID(admin_id),
-            User.role.in_(["admin", "super_admin"]),
+            User.role.in_(ADMIN_LOGIN_ROLES),
             User.status == "active",
         )
     )
@@ -102,15 +126,39 @@ async def get_current_admin(
     return admin
 
 
-def require_permission(permission: str):
-    """FastAPI dependency factory that checks if the current admin has the required permission."""
+def require_permission(permission: str, *, tenant_safe: bool = False):
+    """FastAPI dependency factory that checks if the current admin has the required permission.
+
+    `tenant_safe` marks a route as having been made aware of white-label pools —
+    i.e. it filters its results (or its target) to the caller's own clients.
+
+    A sub_admin is REFUSED any route not carrying that mark. This is deliberate
+    and fails closed: a tenant operator holds real permissions like
+    `deposits.view` and `kyc.manage`, and an unscoped list endpoint would hand
+    them every other broker's clients. Rather than trust that each of the ~30
+    reachable endpoints remembered to filter, the default is "no", and a route
+    opts in once it genuinely scopes.
+
+    Adding a new admin endpoint therefore cannot silently leak across tenants —
+    the worst case is a sub_admin seeing a 403 on something they should be able
+    to use, which is visible and fixable, instead of data they should never see.
+    """
     async def _check(
         admin: User = Depends(get_current_admin),
         db: AsyncSession = Depends(get_db),
     ) -> User:
         # Full admins (role 'admin' or 'super_admin') bypass per-permission checks.
-        if admin.role in ("admin", "super_admin"):
+        if admin.role in ADMIN_BYPASS_ROLES:
             return admin
+
+        if admin.role == "sub_admin" and not tenant_safe:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "This section is not available to white-label sub-admins yet — "
+                    "it would show clients outside your pool."
+                ),
+            )
 
         result = await db.execute(
             select(Employee).where(Employee.user_id == admin.id, Employee.is_active == True)
@@ -128,6 +176,167 @@ def require_permission(permission: str):
             detail=f"Permission '{permission}' required",
         )
     return _check
+
+
+def scope_filter(admin: User):
+    """SQLAlchemy criterion restricting a `users` query to the caller's pool.
+
+    Returns None when the caller sees everything, so call sites read:
+
+        crit = scope_filter(admin)
+        if crit is not None:
+            query = query.where(crit)
+
+    super_admin / admin see the whole platform, exactly as before this feature
+    existed. A sub_admin sees only clients carrying their id.
+    """
+    if admin.role == "sub_admin":
+        return User.assigned_admin_id == admin.id
+    return None
+
+
+def scope_user_ids(admin: User | None):
+    """Scalar subquery of the user ids in the caller's pool, or None.
+
+    `scope_filter` narrows a query already selecting FROM users. Most admin
+    lists select from something else (deposits, trades, tickets) and join to a
+    user by id, so they need this shape instead:
+
+        sub = scope_user_ids(scope_admin)
+        if sub is not None:
+            query = query.where(Deposit.user_id.in_(sub))
+
+    None for admin/super_admin, so every pre-existing caller keeps the exact
+    query it had before white-label existed.
+    """
+    if admin is not None and admin.role == "sub_admin":
+        return select(User.id).where(User.assigned_admin_id == admin.id).scalar_subquery()
+    return None
+
+
+async def assert_row_in_scope(
+    admin: User | None,
+    owner_user_id: uuid.UUID | None,
+    db: AsyncSession,
+) -> None:
+    """Refuse a sub_admin reading one row belonging to another tenant's client.
+
+    For detail routes keyed by the row's own id (a deposit id, a KYC document
+    id, a ticket id) rather than by user_id — the list is filtered, but the
+    detail route would otherwise be reachable by guessing the id.
+
+    404, not 403, for the same reason as assert_user_in_scope: a 403 would
+    confirm the row exists.
+    """
+    if admin is None or admin.role in ADMIN_BYPASS_ROLES:
+        return
+    if admin.role != "sub_admin":
+        return
+    if owner_user_id is None:
+        raise HTTPException(status_code=404, detail="Not found")
+    owner = (
+        await db.execute(select(User.assigned_admin_id).where(User.id == owner_user_id))
+    ).scalar_one_or_none()
+    if owner != admin.id:
+        raise HTTPException(status_code=404, detail="Not found")
+
+
+async def assert_user_in_scope(
+    admin: User,
+    target_user_id: uuid.UUID,
+    db: AsyncSession,
+) -> User:
+    """Load a target user and refuse if the caller has no business touching it.
+
+    Returns the loaded row so callers don't fetch it twice.
+
+    404 rather than 403 when a sub-admin asks for someone else's client: a 403
+    confirms the id exists, which would let a tenant enumerate the platform's
+    user ids one request at a time. A missing row and a foreign row look the
+    same from outside.
+    """
+    result = await db.execute(select(User).where(User.id == target_user_id))
+    target = result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if admin.role in ADMIN_BYPASS_ROLES:
+        return target
+
+    if admin.role == "sub_admin":
+        # A tenant operator manages clients, never other staff — including
+        # themselves. Without this, a sub-admin assigned to their own row could
+        # edit their own permissions or balance.
+        if target.role in ADMIN_LOGIN_ROLES or target.role in (
+            "employee", "manager", "support",
+        ):
+            raise HTTPException(status_code=404, detail="User not found")
+        if target.assigned_admin_id != admin.id:
+            raise HTTPException(status_code=404, detail="User not found")
+        return target
+
+    return target
+
+
+def require_user_in_scope(permission: str):
+    """`require_permission` plus a pool check on the `{user_id}` path param.
+
+    Swapping `require_permission("users.ban")` for
+    `require_user_in_scope("users.ban")` on a /users/{user_id}/… route is the
+    whole change — the handler body and the service signature stay as they are.
+
+    Only routes that carry a `user_id` path parameter can use this; FastAPI
+    resolves it from the path the same way the handler does.
+    """
+    async def _dep(
+        user_id: uuid.UUID,
+        # tenant_safe: the scope check below is exactly what makes it so.
+        admin: User = Depends(require_permission(permission, tenant_safe=True)),
+        db: AsyncSession = Depends(get_db),
+    ) -> User:
+        await assert_user_in_scope(admin, user_id, db)
+        return admin
+    return _dep
+
+
+def require_owned_row(permission: str, model_name: str, param: str):
+    """`require_permission` plus an ownership check on a row named in the path.
+
+    `require_user_in_scope` covers routes keyed by `{user_id}`. This covers the
+    rest — `/finance/deposits/{deposit_id}/approve`, `/support/tickets/{id}` —
+    where the path names a row that *belongs to* a user. Without it a tenant
+    holding `deposits.approve` could approve another broker's deposit simply by
+    guessing its id; the filtered list would never have shown it to them.
+
+    The row id is read from `request.path_params` rather than declared as an
+    argument so one factory serves every route regardless of what it calls the
+    parameter. `model_name` is resolved lazily against packages.common.src.models
+    to keep this module's import graph as it is.
+
+    admin / super_admin skip the lookup entirely — one less query on the hot path
+    and byte-identical behaviour to before white-label existed.
+    """
+    async def _dep(
+        request: Request,
+        admin: User = Depends(require_permission(permission, tenant_safe=True)),
+        db: AsyncSession = Depends(get_db),
+    ) -> User:
+        if admin.role != "sub_admin":
+            return admin
+        raw = request.path_params.get(param)
+        try:
+            row_id = uuid.UUID(str(raw))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=404, detail="Not found")
+        from packages.common.src import models as _models
+
+        model = getattr(_models, model_name)
+        owner = (
+            await db.execute(select(model.user_id).where(model.id == row_id))
+        ).scalar_one_or_none()
+        await assert_row_in_scope(admin, owner, db)
+        return admin
+    return _dep
 
 
 async def write_audit_log(

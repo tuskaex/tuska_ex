@@ -750,6 +750,81 @@ class EmployeeUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+# ─── Sub-admins (white-label tenants) ────────────────────────────────────
+
+class CreateSubAdminRequest(BaseModel):
+    email: str
+    password: str = Field(min_length=8)
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+    # Permission strings from GET /employees/permissions/catalog. Empty means
+    # the sub_admin role defaults only.
+    permissions: list[str] = []
+    pnl_share_pct: Optional[Decimal] = Field(default=None, ge=0, le=100)
+
+
+class UpdateSubAdminRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+
+
+class UpdateSubAdminPermissionsRequest(BaseModel):
+    permissions: list[str] = []
+
+
+class UpdatePnlShareRequest(BaseModel):
+    pnl_share_pct: Decimal = Field(ge=0, le=100)
+
+
+class ResetSubAdminPasswordRequest(BaseModel):
+    new_password: str = Field(min_length=8)
+
+
+class AssignUserRequest(BaseModel):
+    # None returns the client to the platform pool.
+    sub_admin_id: Optional[str] = None
+
+
+class BulkAssignRequest(BaseModel):
+    user_ids: list[str]
+    sub_admin_id: Optional[str] = None
+
+
+# ─── White-label branding ────────────────────────────────────────────────
+
+class UpdateBrandingRequest(BaseModel):
+    # None = leave alone; "" = clear.
+    brand_name: Optional[str] = None
+    support_email: Optional[str] = None
+    support_whatsapp: Optional[str] = None
+
+
+class ConnectDomainRequest(BaseModel):
+    domain: str
+    # Present => subdomain mode (app.broker.com). Absent => apex mode.
+    app_subdomain: Optional[str] = None
+    admin_subdomain: Optional[str] = None
+
+
+class MarkProvisionedRequest(BaseModel):
+    ok: bool = True
+    error: Optional[str] = None
+    # Super-admin marking a tenant's domain live on their behalf.
+    sub_admin_id: Optional[str] = None
+
+
+class UpdateSmtpRequest(BaseModel):
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = Field(default=None, ge=1, le=65535)
+    smtp_user: Optional[str] = None
+    # Absent keeps the stored password; "" clears it. Never returned on read.
+    smtp_password: Optional[str] = None
+    smtp_from: Optional[str] = None
+    smtp_tls: Optional[bool] = None
+
+
 class EmployeeOut(BaseModel):
     id: str
     user_id: str

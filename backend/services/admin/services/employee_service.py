@@ -19,7 +19,15 @@ VALID_EMPLOYEE_ROLES = [
 
 
 async def list_employees(db: AsyncSession) -> dict:
-    result = await db.execute(select(Employee).order_by(Employee.created_at.desc()))
+    # Sub-admins are stored as Employee rows too — that is how they get a
+    # permission set — but they are white-label tenants, not staff, and they are
+    # managed on their own screen. Listing them here would offer Edit/Delete
+    # actions that skip the tenancy bookkeeping (client reassignment on delete).
+    result = await db.execute(
+        select(Employee)
+        .where(Employee.role != "sub_admin")
+        .order_by(Employee.created_at.desc())
+    )
     employees = result.scalars().all()
 
     items = []

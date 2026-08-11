@@ -162,6 +162,27 @@ class Settings(BaseSettings):
     # Deposit proof screenshots + user payout QR for manual withdrawals (gateway). Mount same path in admin for review.
     WALLET_UPLOAD_ROOT: str = "uploads/wallet"
 
+    # White-label branding. When False every /branding route answers 503, no
+    # tenant logo or brand name is read anywhere, and outbound mail always uses
+    # the platform SMTP account — i.e. the feature is completely inert.
+    #
+    # Default OFF because turning it on changes who transactional email comes
+    # from: a client belonging to a tenant that has not configured SMTP stops
+    # receiving mail entirely rather than getting it from the platform address.
+    # That is the intended behaviour (a broker's mail must never leave another
+    # broker's address) but it is a visible change, so it is opt-in.
+    BRANDING_ENABLED: bool = False
+    # Tenant logos. Served through a media route, never as static files.
+    BRANDING_UPLOAD_DIR: str = "uploads/branding"
+    # The A-record target a tenant points their domain at. Shown verbatim in the
+    # DNS instructions and compared against what actually resolves, so a wrong
+    # value here means every verification fails with a confusing message.
+    # Empty disables the custom-domain section entirely.
+    PLATFORM_PUBLIC_IP: str = ""
+    # Where a branded referral link points, e.g. https://tuskaex.com. Falls back
+    # to TRADER_APP_URL, which is what the IB link builder already uses.
+    BRANDING_PUBLIC_BASE_URL: str = ""
+
     class Config:
         env_file = ".env"
         # The root .env legitimately carries vars for other consumers

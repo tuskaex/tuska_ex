@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_permission, require_owned_row
 from packages.common.src.models import User
 from packages.common.src.admin_schemas import RejectRequest
 from services import deposit_service
@@ -27,20 +27,24 @@ router = APIRouter(prefix="/finance", tags=["Finance"])
 async def list_pending_deposits(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("deposits.view")),
+    admin: User = Depends(require_permission("deposits.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await deposit_service.list_pending_deposits(page=page, per_page=per_page, db=db)
+    return await deposit_service.list_pending_deposits(
+        page=page, per_page=per_page, db=db, scope_admin=admin,
+    )
 
 
 @router.get("/withdrawals/pending")
 async def list_pending_withdrawals(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("withdrawals.view")),
+    admin: User = Depends(require_permission("withdrawals.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await deposit_service.list_pending_withdrawals(page=page, per_page=per_page, db=db)
+    return await deposit_service.list_pending_withdrawals(
+        page=page, per_page=per_page, db=db, scope_admin=admin,
+    )
 
 
 @router.get("/deposits")
@@ -49,11 +53,12 @@ async def list_all_deposits(
     per_page: int = Query(20, ge=1, le=100),
     status: str = Query(None),
     user_id: uuid.UUID | None = Query(None),
-    admin: User = Depends(require_permission("deposits.view")),
+    admin: User = Depends(require_permission("deposits.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.list_all_deposits(
         page=page, per_page=per_page, status=status, user_id=user_id, db=db,
+        scope_admin=admin,
     )
 
 
@@ -63,11 +68,12 @@ async def list_all_withdrawals(
     per_page: int = Query(20, ge=1, le=100),
     status: str = Query(None),
     user_id: uuid.UUID | None = Query(None),
-    admin: User = Depends(require_permission("withdrawals.view")),
+    admin: User = Depends(require_permission("withdrawals.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.list_all_withdrawals(
         page=page, per_page=per_page, status=status, user_id=user_id, db=db,
+        scope_admin=admin,
     )
 
 
@@ -75,7 +81,7 @@ async def list_all_withdrawals(
 async def approve_deposit(
     deposit_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("deposits.approve")),
+    admin: User = Depends(require_owned_row("deposits.approve", "Deposit", "deposit_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.approve_deposit(
@@ -89,7 +95,7 @@ async def set_deposit_payment_link(
     deposit_id: uuid.UUID,
     body: PaymentLinkRequest,
     request: Request,
-    admin: User = Depends(require_permission("deposits.approve")),
+    admin: User = Depends(require_owned_row("deposits.approve", "Deposit", "deposit_id")),
     db: AsyncSession = Depends(get_db),
 ):
     """Local Banking stage-2 (manual link path): admin attaches a custom
@@ -118,7 +124,7 @@ async def approve_deposit_with_razorpay(
     deposit_id: uuid.UUID,
     request: Request,
     body: ApproveRazorpayRequest | None = None,
-    admin: User = Depends(require_permission("deposits.approve")),
+    admin: User = Depends(require_owned_row("deposits.approve", "Deposit", "deposit_id")),
     db: AsyncSession = Depends(get_db),
 ):
     """Local Banking stage-2 (auto path): admin clicks Approve & Razorpay,
@@ -144,7 +150,7 @@ async def reject_deposit(
     deposit_id: uuid.UUID,
     body: RejectRequest,
     request: Request,
-    admin: User = Depends(require_permission("deposits.reject")),
+    admin: User = Depends(require_owned_row("deposits.reject", "Deposit", "deposit_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.reject_deposit(
@@ -157,7 +163,7 @@ async def reject_deposit(
 async def approve_withdrawal(
     withdrawal_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("withdrawals.approve")),
+    admin: User = Depends(require_owned_row("withdrawals.approve", "Withdrawal", "withdrawal_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.approve_withdrawal(
@@ -171,7 +177,7 @@ async def reject_withdrawal(
     withdrawal_id: uuid.UUID,
     body: RejectRequest,
     request: Request,
-    admin: User = Depends(require_permission("withdrawals.reject")),
+    admin: User = Depends(require_owned_row("withdrawals.reject", "Withdrawal", "withdrawal_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.reject_withdrawal(
@@ -185,7 +191,7 @@ async def mark_withdrawal_paid(
     withdrawal_id: uuid.UUID,
     body: MarkPaidRequest,
     request: Request,
-    admin: User = Depends(require_permission("withdrawals.approve")),
+    admin: User = Depends(require_owned_row("withdrawals.approve", "Withdrawal", "withdrawal_id")),
     db: AsyncSession = Depends(get_db),
 ):
     """Record the off-platform payout admin made. Requires withdrawal to
@@ -204,7 +210,7 @@ async def mark_withdrawal_paid(
 @router.get("/deposits/{deposit_id}/screenshot")
 async def download_deposit_screenshot(
     deposit_id: uuid.UUID,
-    admin: User = Depends(require_permission("deposits.view")),
+    admin: User = Depends(require_owned_row("deposits.view", "Deposit", "deposit_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.download_deposit_screenshot(deposit_id=deposit_id, db=db)
@@ -213,7 +219,7 @@ async def download_deposit_screenshot(
 @router.get("/withdrawals/{withdrawal_id}/payout-qr")
 async def download_withdrawal_payout_qr(
     withdrawal_id: uuid.UUID,
-    admin: User = Depends(require_permission("withdrawals.view")),
+    admin: User = Depends(require_owned_row("withdrawals.view", "Withdrawal", "withdrawal_id")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_service.download_withdrawal_payout_qr(withdrawal_id=withdrawal_id, db=db)

@@ -55,8 +55,23 @@ def _withdrawal_to_out(w: Withdrawal, user: User = None) -> WithdrawalOut:
     )
 
 
-async def list_pending_deposits(page: int, per_page: int, db: AsyncSession):
+def _scoped(query, column, scope_admin):
+    """Narrow a finance query to the caller's own clients.
+
+    scope_admin is None for every pre-existing caller and for platform staff,
+    in which case the query is returned untouched — this function only ever
+    subtracts rows for a white-label sub_admin.
+    """
+    from dependencies import scope_user_ids
+    sub = scope_user_ids(scope_admin)
+    if sub is not None:
+        query = query.where(column.in_(sub))
+    return query
+
+
+async def list_pending_deposits(page: int, per_page: int, db: AsyncSession, scope_admin=None):
     query = select(Deposit).where(Deposit.status == "pending")
+    query = _scoped(query, Deposit.user_id, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -76,8 +91,9 @@ async def list_pending_deposits(page: int, per_page: int, db: AsyncSession):
     return PaginatedResponse(items=items, total=total, page=page, per_page=per_page)
 
 
-async def list_pending_withdrawals(page: int, per_page: int, db: AsyncSession):
+async def list_pending_withdrawals(page: int, per_page: int, db: AsyncSession, scope_admin=None):
     query = select(Withdrawal).where(Withdrawal.status == "pending")
+    query = _scoped(query, Withdrawal.user_id, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -97,9 +113,9 @@ async def list_pending_withdrawals(page: int, per_page: int, db: AsyncSession):
 
 async def list_all_deposits(
     page: int, per_page: int, status: str | None, db: AsyncSession,
-    user_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None, scope_admin=None,
 ):
-    query = select(Deposit)
+    query = _scoped(select(Deposit), Deposit.user_id, scope_admin)
     # Optional per-user filter for the user-detail ledger page.
     if user_id is not None:
         query = query.where(Deposit.user_id == user_id)
@@ -126,9 +142,9 @@ async def list_all_deposits(
 
 async def list_all_withdrawals(
     page: int, per_page: int, status: str | None, db: AsyncSession,
-    user_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None, scope_admin=None,
 ):
-    query = select(Withdrawal)
+    query = _scoped(select(Withdrawal), Withdrawal.user_id, scope_admin)
     if user_id is not None:
         query = query.where(Withdrawal.user_id == user_id)
     if status and status != "all":

@@ -88,6 +88,7 @@ services:
       ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?Set ADMIN_JWT_SECRET in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       BANNERS_UPLOAD_DIR: /app/uploads/banners
+      BRANDING_UPLOAD_DIR: /app/uploads/branding
       WALLET_UPLOAD_ROOT: /app/uploads/wallet
       BANK_QR_UPLOAD_DIR: /app/uploads/qr
       KYC_UPLOAD_ROOT: /app/uploads/kyc
@@ -113,6 +114,7 @@ services:
         condition: service_healthy
     environment:
       BANNERS_UPLOAD_DIR: /app/uploads/banners
+      BRANDING_UPLOAD_DIR: /app/uploads/branding
       WALLET_UPLOAD_ROOT: /app/uploads/wallet
       KYC_UPLOAD_ROOT: /app/uploads/kyc
     volumes:

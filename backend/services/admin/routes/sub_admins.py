@@ -1,0 +1,228 @@
+"""Sub-admin (white-label tenant) management — super-admin only.
+
+Every route is gated by `get_current_admin` and the service enforces
+super_admin, matching how routes/employees.py is written.
+"""
+import uuid
+
+from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from packages.common.src.database import get_db
+from packages.common.src.models import User
+from packages.common.src.admin_schemas import (
+    CreateSubAdminRequest, UpdateSubAdminRequest,
+    UpdateSubAdminPermissionsRequest, UpdatePnlShareRequest,
+    ResetSubAdminPasswordRequest, AssignUserRequest, BulkAssignRequest,
+)
+from dependencies import get_current_admin
+from services import sub_admin_service
+
+router = APIRouter(prefix="/sub-admins", tags=["Sub Admins"])
+
+
+def _ip(request: Request) -> str | None:
+    return request.client.host if request.client else None
+
+
+@router.get("")
+async def list_sub_admins(
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    search: str = Query(None),
+    status_filter: str = Query(None, alias="status"),
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.list_sub_admins(
+        page=page, per_page=per_page, search=search,
+        status_filter=status_filter, admin=admin, db=db,
+    )
+
+
+@router.post("")
+async def create_sub_admin(
+    body: CreateSubAdminRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.create_sub_admin(
+        email=body.email, password=body.password,
+        first_name=body.first_name, last_name=body.last_name, phone=body.phone,
+        permissions=body.permissions, pnl_share_pct=body.pnl_share_pct,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+# ─── Pool assignment (keyed by client, not by tenant) ────────────────────
+
+@router.post("/assign/{user_id}")
+async def assign_user(
+    user_id: uuid.UUID,
+    body: AssignUserRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.assign_users(
+        user_ids=[user_id],
+        sub_admin_id=uuid.UUID(body.sub_admin_id) if body.sub_admin_id else None,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.post("/assign-bulk")
+async def bulk_assign(
+    body: BulkAssignRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.assign_users(
+        user_ids=[uuid.UUID(u) for u in body.user_ids],
+        sub_admin_id=uuid.UUID(body.sub_admin_id) if body.sub_admin_id else None,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.get("/{sub_admin_id}")
+async def get_sub_admin(
+    sub_admin_id: uuid.UUID,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.get_sub_admin(
+        sub_admin_id=sub_admin_id, admin=admin, db=db,
+    )
+
+
+@router.put("/{sub_admin_id}")
+async def update_sub_admin(
+    sub_admin_id: uuid.UUID,
+    body: UpdateSubAdminRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.update_sub_admin(
+        sub_admin_id=sub_admin_id, first_name=body.first_name,
+        last_name=body.last_name, phone=body.phone,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.put("/{sub_admin_id}/permissions")
+async def update_permissions(
+    sub_admin_id: uuid.UUID,
+    body: UpdateSubAdminPermissionsRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.update_permissions(
+        sub_admin_id=sub_admin_id, permissions=body.permissions,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.put("/{sub_admin_id}/pnl-share")
+async def set_pnl_share(
+    sub_admin_id: uuid.UUID,
+    body: UpdatePnlShareRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.set_pnl_share(
+        sub_admin_id=sub_admin_id, pct=body.pnl_share_pct,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.post("/{sub_admin_id}/block")
+async def block_sub_admin(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.set_blocked(
+        sub_admin_id=sub_admin_id, blocked=True,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.post("/{sub_admin_id}/unblock")
+async def unblock_sub_admin(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.set_blocked(
+        sub_admin_id=sub_admin_id, blocked=False,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.post("/{sub_admin_id}/reset-password")
+async def reset_password(
+    sub_admin_id: uuid.UUID,
+    body: ResetSubAdminPasswordRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.reset_password(
+        sub_admin_id=sub_admin_id, new_password=body.new_password,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.delete("/{sub_admin_id}")
+async def delete_sub_admin(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.delete_sub_admin(
+        sub_admin_id=sub_admin_id, admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.get("/{sub_admin_id}/users")
+async def list_assigned_users(
+    sub_admin_id: uuid.UUID,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=1, le=100),
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.list_assigned_users(
+        sub_admin_id=sub_admin_id, page=page, per_page=per_page, admin=admin, db=db,
+    )
+
+
+@router.get("/{sub_admin_id}/report")
+async def pool_report(
+    sub_admin_id: uuid.UUID,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.pool_report(
+        sub_admin_id=sub_admin_id, admin=admin, db=db,
+    )
+
+
+@router.post("/{sub_admin_id}/impersonate")
+async def impersonate(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.impersonate(
+        sub_admin_id=sub_admin_id, admin=admin, ip_address=_ip(request), db=db,
+    )

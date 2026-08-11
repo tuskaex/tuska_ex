@@ -12,7 +12,7 @@ from packages.common.src.auth import verify_password
 from packages.common.src.config import get_settings
 from packages.common.src.models import User, Employee
 from packages.common.src.admin_schemas import AdminLoginRequest, AdminLoginResponse, AdminRefreshRequest
-from dependencies import EMPLOYEE_ROLE_PERMISSIONS
+from dependencies import EMPLOYEE_ROLE_PERMISSIONS, ADMIN_LOGIN_ROLES
 
 logger = logging.getLogger("uvicorn.error")
 settings = get_settings()
@@ -47,7 +47,7 @@ async def admin_login(body: AdminLoginRequest, db: AsyncSession) -> AdminLoginRe
         result = await db.execute(
             select(User).where(
                 func.lower(User.email) == email_norm,
-                User.role.in_(["admin", "super_admin"]),
+                User.role.in_(ADMIN_LOGIN_ROLES),
             )
         )
     except (OperationalError, DBAPIError) as e:
@@ -98,7 +98,7 @@ async def admin_refresh(body: AdminRefreshRequest, db: AsyncSession) -> AdminLog
     result = await db.execute(
         select(User).where(
             User.id == admin_id,
-            User.role.in_(["admin", "super_admin"]),
+            User.role.in_(ADMIN_LOGIN_ROLES),
             User.status == "active",
         )
     )
@@ -141,7 +141,15 @@ async def get_admin_me(admin: User, db: AsyncSession) -> dict:
         emp = emp_q.scalar_one_or_none()
         if emp:
             employee_role = emp.role
-            permissions = EMPLOYEE_ROLE_PERMISSIONS.get(emp.role, set())
+            # Union with extra_permissions, matching require_permission():
+            # role defaults | extras. Reading only the role defaults meant the
+            # sidebar hid sections the API would happily have served — a
+            # super-admin could grant a permission and the grantee never saw
+            # the menu entry for it.
+            permissions = (
+                EMPLOYEE_ROLE_PERMISSIONS.get(emp.role, set())
+                | set(emp.extra_permissions or [])
+            )
 
     return {
         "id": str(admin.id),

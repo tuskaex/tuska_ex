@@ -10,7 +10,7 @@ import {
   Settings, Sliders, BarChart3, Gift, Image, HeadphonesIcon,
   UserCog, ChevronDown, ChevronRight, Network, Share2,
   DollarSign, Percent, ArrowLeftRight, PanelLeftClose, PanelLeft,
-  Receipt, Layers, ShieldCheck, ScrollText, BookOpen, X,
+  Receipt, Layers, ShieldCheck, ScrollText, BookOpen, X, Palette,
 } from 'lucide-react';
 
 interface NavItem {
@@ -64,6 +64,9 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Banners', href: '/banners', icon: Image, perm: 'banners.view' },
   { label: 'Support', href: '/support', icon: HeadphonesIcon, perm: 'tickets.view' },
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
+  { label: 'Sub-admins', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
+  // No perm: a sub-admin edits its own brand, a super-admin the platform's.
+  { label: 'Branding', href: '/branding', icon: Palette },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 
@@ -90,7 +93,12 @@ export default function AdminSidebar({
       .map((item) => item.label),
   );
   const [permissions, setPermissions] = useState<string[]>(['*']);
-  const [employeeRole, setEmployeeRole] = useState<string>('super_admin');
+  // Empty, not 'super_admin', until /auth/me answers. The optimistic default
+  // showed every `_super_admin` entry — Employees, Sub-admins, Settings — to
+  // whoever was signing in, including a sub-admin who will be refused all three
+  // by the API. Permissions stay optimistic so the ordinary menu still paints
+  // immediately; only the super-admin-only entries wait to be confirmed.
+  const [employeeRole, setEmployeeRole] = useState<string>('');
 
   // Track viewport so the desktop "collapse" state never hides labels in the
   // mobile drawer (the drawer is always full-width on phones).

@@ -19,7 +19,11 @@ export interface AdminUser {
 // ─── Users ───────────────────────────────────────────────────
 
 export type KycStatus = 'pending' | 'approved' | 'rejected';
-export type UserStatus = 'active' | 'blocked' | 'banned';
+// Mirrors the users_status_check constraint in Postgres. 'suspended' is what a
+// retired sub-admin carries — it was missing here, so the status pill had no
+// branch for it.
+export type UserStatus =
+  | 'active' | 'blocked' | 'banned' | 'suspended' | 'pending_kyc';
 
 export interface UserOut {
   id: string;
@@ -295,6 +299,108 @@ export interface ExposureItem {
   sell_lots: number;
   buy_positions: number;
   sell_positions: number;
+}
+
+// ─── Sub-admins (white-label tenants) ─────────────────────────
+
+export interface SubAdmin {
+  id: string;
+  /** Public tenant code (ADM########), also used in their ?ref= link. */
+  code: string | null;
+  email: string;
+  full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  status: UserStatus;
+  pnl_share_pct: number | null;
+  /** Extra permissions granted on top of the sub_admin role defaults. */
+  permissions: string[];
+  /** The role's built-in permissions — always granted, not editable here. */
+  default_permissions: string[];
+  is_active: boolean;
+  user_count: number;
+  created_at: string | null;
+}
+
+export interface SubAdminClient {
+  id: string;
+  email: string;
+  full_name: string;
+  status: UserStatus;
+  kyc_status: KycStatus;
+  created_at: string | null;
+}
+
+export interface SubAdminReport {
+  sub_admin_id: string;
+  full_name: string;
+  pnl_share_pct: number | null;
+  client_count: number;
+  account_count: number;
+  total_balance: number;
+  total_equity: number;
+  total_margin_used: number;
+}
+
+/** Grouped permission strings from GET /employees/permissions/catalog. */
+export type PermissionCatalog = Record<string, string[]>;
+
+// ─── Branding (white-label) ───────────────────────────────────
+
+export interface BrandingProfile {
+  id: string;
+  email: string;
+  brand_name: string | null;
+  logo_url: string | null;
+  support_email: string | null;
+  support_whatsapp: string | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_user: string | null;
+  smtp_from: string | null;
+  smtp_tls: boolean;
+  /** Whether a password is stored. The password itself is never returned. */
+  smtp_password_set: boolean;
+  /** host + from both present, i.e. mail can actually be sent. */
+  smtp_configured: boolean;
+  /** Shareable code used in ?ref= links. Minted on first read. */
+  public_code: string | null;
+  referral_link: string | null;
+  domain: DomainState;
+}
+
+export type CustomDomainStatus =
+  | 'PENDING_DNS' | 'DNS_VERIFIED' | 'PROVISIONING' | 'READY' | 'FAILED';
+
+export interface DnsRecord {
+  type: string;
+  host: string;
+  value: string;
+}
+
+export interface DnsLookup {
+  host: string;
+  ips: string[];
+  matched: boolean;
+  error: string | null;
+}
+
+export interface DomainState {
+  custom_domain: string | null;
+  app_subdomain: string | null;
+  admin_subdomain: string | null;
+  mode: 'apex' | 'subdomain' | null;
+  status: CustomDomainStatus | null;
+  last_error: string | null;
+  provisioned_at: string | null;
+  served_hostnames: string[];
+  platform_ip: string;
+  dns_records: DnsRecord[];
+  app_url: string | null;
+  admin_url: string | null;
+  /** Present on connect/verify responses only. */
+  dns_check?: { platform_ip: string; all_matched: boolean; records: DnsLookup[] };
 }
 
 // ─── Pagination ───────────────────────────────────────────────
