@@ -21,7 +21,6 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { BRAND_NAME } from '@/config/brand';
 import {
   buildTerminalUrl,
   createHandoffCode,
@@ -54,9 +53,11 @@ const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
  * page in that window reads as a broken redirect, especially since the address
  * bar is about to change to a different domain.
  *
- * It shows SpeedTrade, not TuskaEx: the point of the screen is to explain where
- * the user is being taken. The TuskaEx account is named in the sub-line
- * instead, which is what makes the domain change read as intentional.
+ * It shows SpeedTrade, not TuskaEx: the point of the screen is to say where the
+ * user is being taken, so that the address bar changing to another domain a
+ * moment later reads as intentional. The wordmark carries that on its own —
+ * explanatory copy used to sit under the spinner but the screen is rarely up
+ * long enough to read a sentence, so it only flashed past as clutter.
  *
  * ── Light only, and every colour hard-coded ──────────────────────────────
  * The wordmark is solid dark ink on transparency, so on the CRM's dark theme
@@ -187,17 +188,16 @@ function LaunchTerminal() {
     );
   }
 
+  /* Logo and spinner only. The screen is typically on-screen for well under a
+   * second, which is not long enough to read a sentence — the copy landed as
+   * clutter that flashed past. The spinner keeps role="status" and its
+   * aria-label, so assistive tech is still told what is happening.
+   *
+   * The error branch above is the exception and still uses words: that state
+   * persists until the user acts, and it has to say what went wrong. */
   return (
     <Splash>
       <Spinner />
-      <div className="space-y-1.5">
-        <p className="text-sm font-medium text-neutral-900">
-          Opening your trading terminal…
-        </p>
-        <p className="text-xs text-neutral-500">
-          Signing you in securely from your {BRAND_NAME} account.
-        </p>
-      </div>
     </Splash>
   );
 }
