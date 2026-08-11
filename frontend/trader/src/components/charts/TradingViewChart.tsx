@@ -20,8 +20,9 @@
  *  - Pending orders draw a dashed entry (BUY blue / SELL purple) + SL/TP.
  *  - An HTML overlay pins an [SL] [TP] [✕] button group to each entry line:
  *    drag SL/TP up/down to set (dashed preview line + shaded zone + price/P&L
- *    label follows the cursor), or plain-click to type a price. ✕ closes at
- *    market. Committing always confirms first via the in-app dialog.
+ *    label follows the cursor), or plain-click to type a price. A drag commits
+ *    on release, MT4/MT5-style — no confirmation. ✕ closes at market and DOES
+ *    confirm: that one is irreversible, a mis-dragged bracket is not.
  *  - Persistent shaded zones fill entry→SL (red) and entry→TP (teal).
  *  - A stale-price watchdog greys the entry lines when the feed stalls.
  * All bracket edits go through PUT /positions/{id} with ONLY the changed leg
@@ -634,7 +635,7 @@ function TradingViewChartInner({
   //
   // Drag an [SL]/[TP] button up/down to set that bracket — a dashed preview
   // line + shaded zone + price/projected-P&L label follow the cursor; release
-  // opens the confirm dialog. A plain click opens the type-a-price dialog.
+  // commits it. A plain click opens the type-a-price dialog.
   useEffect(() => {
     const w = widgetRef.current;
     const overlay = overlayRef.current;
@@ -816,8 +817,8 @@ function TradingViewChartInner({
     };
 
     // Draggable SL/TP button: press & drag up/down → a dashed preview line
-    // (+ shaded zone + price/P&L label) follows the cursor → release → confirm
-    // → PUT. A plain click (no drag) falls back to the type-a-price prompt.
+    // (+ shaded zone + price/P&L label) follows the cursor → release → PUT.
+    // A plain click (no drag) falls back to the type-a-price prompt.
     // Pointer capture makes the same gesture work for mouse AND touch.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mkDragBtn = (txt: string, bg: string, title: string, p: any, kind: 'sl' | 'tp'): HTMLButtonElement => {
@@ -880,7 +881,7 @@ function TradingViewChartInner({
           const ey = entryY();
           if (ey != null) { zone.style.top = `${Math.min(ey, cy)}px`; zone.style.height = `${Math.abs(ey - cy)}px`; }
         };
-        const endDrag = (ev: PointerEvent, cancelled: boolean) => {
+        const endDrag = async (ev: PointerEvent, cancelled: boolean) => {
           b.onpointermove = null; b.onpointerup = null; b.onpointercancel = null;
           try { b.releasePointerCapture(ev.pointerId); } catch { /* ignore */ }
           cleanup();
@@ -895,28 +896,36 @@ function TradingViewChartInner({
           const proj = Number.isFinite(projGross)
             ? projGross - (Number(p.commission) || 0) + (Number(p.swap) || 0)
             : NaN;
-          const projTxt = Number.isFinite(proj) ? ` → ${proj >= 0 ? 'profit' : 'loss'} ${proj >= 0 ? '+' : '−'}$${Math.abs(proj).toFixed(2)}` : '';
-          const applyBracket = async () => {
-            try {
-              // Only the dragged bracket — the backend partial-update keeps
-              // the other intact (see setBracket note; `p` is a stale closure).
-              await api.put(`/positions/${p.id}`,
-                kind === 'sl' ? { stop_loss: price } : { take_profit: price });
-              toast.success(`${label} set @ ${price.toFixed(digits)}`);
-              await useTradingStore.getState().refreshPositions();
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : `Failed to set ${label}`);
-            }
-          };
-          openDialogRef.current({
-            title: `Set ${label} @ ${price.toFixed(digits)}`,
-            body: `${String(p.side).toUpperCase()} ${p.lots} ${sym}${projTxt}`,
-            confirmLabel: `Set ${kind.toUpperCase()}`,
-            onConfirm: () => { void applyBracket(); },
-          });
+          const projTxt = Number.isFinite(proj) ? `  ${proj >= 0 ? '+' : '−'}$${Math.abs(proj).toFixed(2)}` : '';
+          /* Drop commits immediately — no confirmation step.
+           *
+           * The dialog that used to sit here asked the user to re-approve a
+           * price they had just dragged a line to and watched follow their
+           * cursor, with the projected P&L live in the drag label the whole
+           * way. It restated what was already on screen, and it broke the
+           * gesture: the line snapped to the new level while a modal waited on
+           * a second confirmation, so the chart and the truth disagreed until
+           * it was answered. MT4/MT5 commit on drop, which is what traders
+           * coming from those platforms expect.
+           *
+           * The toast carries the projection so the outcome is still stated
+           * after the fact, and a wrong drop is undone by dragging again. */
+          try {
+            // Only the dragged bracket — the backend partial-update keeps the
+            // other intact (see setBracket note; `p` is a stale closure).
+            await api.put(`/positions/${p.id}`,
+              kind === 'sl' ? { stop_loss: price } : { take_profit: price });
+            toast.success(`${label} set @ ${price.toFixed(digits)}${projTxt}`);
+            await useTradingStore.getState().refreshPositions();
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : `Failed to set ${label}`);
+            // Put the line back where the server still has it, so a failed
+            // write cannot leave the chart showing a level that was never set.
+            await useTradingStore.getState().refreshPositions();
+          }
         };
-        b.onpointerup = (ev) => endDrag(ev, false);
-        b.onpointercancel = (ev) => endDrag(ev, true);
+        b.onpointerup = (ev) => { void endDrag(ev, false); };
+        b.onpointercancel = (ev) => { void endDrag(ev, true); };
       };
       return b;
     };
