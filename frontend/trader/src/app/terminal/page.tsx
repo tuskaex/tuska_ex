@@ -18,20 +18,52 @@
  */
 
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
-import { BRAND_NAME } from '@/config/brand';
+import { BRAND_LOGO, BRAND_NAME } from '@/config/brand';
 import {
   buildTerminalUrl,
   createHandoffCode,
   shouldHandOffToTerminal,
 } from '@/lib/terminalHandoff';
 
+/**
+ * Branded full-screen hold.
+ *
+ * This is the only thing the user sees between clicking Trade and the
+ * terminal domain taking over, and that gap is a whole network round-trip —
+ * mint a handoff code, then a cross-domain navigation. An unbranded spinner
+ * on a blank page in that window reads as a broken redirect, especially since
+ * the address bar is about to change to a different domain.
+ *
+ * Always TuskaEx branding: this page only ever renders on the CRM. On the
+ * terminal host the effect below redirects internally without a hand-off, and
+ * nginx serves SpeedTrade's assets there anyway.
+ */
 function Splash({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-bg-primary px-6 text-center">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-bg-primary px-6 text-center">
+      <Image
+        src={BRAND_LOGO}
+        alt={BRAND_NAME}
+        width={220}
+        height={48}
+        priority
+        className="h-9 w-auto sm:h-10"
+      />
       {children}
     </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <div
+      className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-[#D60101]"
+      role="status"
+      aria-label="Opening trading terminal"
+    />
   );
 }
 
@@ -116,15 +148,15 @@ function LaunchTerminal() {
 
   return (
     <Splash>
-      <div
-        className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-buy"
-        role="status"
-        aria-label="Opening trading terminal"
-      />
-      <p className="text-sm text-text-tertiary">Opening your trading terminal…</p>
-      <p className="text-xs text-text-tertiary/70">
-        You are being securely signed in from your {BRAND_NAME} account.
-      </p>
+      <Spinner />
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium text-text-primary">
+          Opening your trading terminal…
+        </p>
+        <p className="text-xs text-text-tertiary">
+          Signing you in securely from your {BRAND_NAME} account.
+        </p>
+      </div>
     </Splash>
   );
 }
@@ -136,7 +168,7 @@ export default function TerminalLaunchPage() {
     <Suspense
       fallback={
         <Splash>
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-buy" />
+          <Spinner />
         </Splash>
       }
     >
