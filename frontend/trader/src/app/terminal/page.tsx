@@ -57,10 +57,27 @@ const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
  * It shows SpeedTrade, not TuskaEx: the point of the screen is to explain where
  * the user is being taken. The TuskaEx account is named in the sub-line
  * instead, which is what makes the domain change read as intentional.
+ *
+ * ── Light only, and every colour hard-coded ──────────────────────────────
+ * The wordmark is solid dark ink on transparency, so on the CRM's dark theme
+ * it was black on black — the screen rendered with an invisible logo.
+ *
+ * Forcing light is not a workaround for that, it is the correct end state: the
+ * terminal this screen hands off to is itself light-only (see
+ * app/trading/layout.tsx, which pins data-theme="light" because the dark theme
+ * was retired). Matching it also removes a theme flip mid-handoff.
+ *
+ * The colours are literals rather than theme tokens on purpose. This is the one
+ * screen a user sees while the address bar changes to another domain; if it
+ * ever rendered wrong it would look like a hijack. A token whose light value is
+ * retuned later cannot break it.
  */
 function Splash({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-bg-primary px-6 text-center">
+    <div
+      className="theme-light flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-white px-6 text-center"
+      data-theme="light"
+    >
       <Image
         src={SPEEDTRADE_LOGO}
         alt="SpeedTrade"
@@ -74,10 +91,17 @@ function Splash({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* SpeedTrade blue (#1b4dff), not TuskaEx red — this screen wears the
+ * destination's brand. It is SpeedTrade's `--color-brand`, what its own buttons
+ * and links use; #0b2ecc is the matching hover.
+ *
+ * Its red `--color-speed` (#ff3b2f) is deliberately not used: the landing
+ * site's globals.css documents that token as accent-only at 3.5:1 contrast,
+ * for the logo mark, badges and the live dot. */
 function Spinner() {
   return (
     <div
-      className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-[#D60101]"
+      className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-200 border-t-[#1b4dff]"
       role="status"
       aria-label="Opening trading terminal"
     />
@@ -142,19 +166,19 @@ function LaunchTerminal() {
   if (error) {
     return (
       <Splash>
-        <p className="text-sm text-text-secondary">{error}</p>
+        <p className="text-sm text-neutral-600">{error}</p>
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-md bg-buy px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-md bg-[#1b4dff] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0b2ecc]"
           >
             Retry
           </button>
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
-            className="rounded-md border border-border px-4 py-2 text-sm font-semibold text-text-secondary"
+            className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50"
           >
             Back to dashboard
           </button>
@@ -167,10 +191,10 @@ function LaunchTerminal() {
     <Splash>
       <Spinner />
       <div className="space-y-1.5">
-        <p className="text-sm font-medium text-text-primary">
+        <p className="text-sm font-medium text-neutral-900">
           Opening your trading terminal…
         </p>
-        <p className="text-xs text-text-tertiary">
+        <p className="text-xs text-neutral-500">
           Signing you in securely from your {BRAND_NAME} account.
         </p>
       </div>
