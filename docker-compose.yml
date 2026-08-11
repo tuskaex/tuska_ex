@@ -197,7 +197,7 @@ services:
         # GoogleAuthButton returns null and the button silently disappears.
         NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
         # Origin of the trading terminal once it lives on its own domain
-        # (https://trade.speedtrade.tech). Baked into the bundle, so changing
+        # (https://speedtrade.tech). Baked into the bundle, so changing
         # it requires a REBUILD of this service, not just a restart.
         # Empty = terminal stays in-app on the TuskaEx domain.
         NEXT_PUBLIC_TERMINAL_ORIGIN: ${NEXT_PUBLIC_TERMINAL_ORIGIN:-}

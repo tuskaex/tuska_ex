@@ -95,7 +95,7 @@ services:
         #
         # Read from .env rather than hard-coded, and that is the point: this is
         # the switch that redirects every "Trade" click off this domain. Leave
-        # it blank until trade.speedtrade.tech is confirmed serving, then set it
+        # it blank until speedtrade.tech is confirmed serving, then set it
         # and rebuild. Blanking it and rebuilding is the rollback.
         NEXT_PUBLIC_TERMINAL_ORIGIN: ${NEXT_PUBLIC_TERMINAL_ORIGIN:-}
     ports: !override

@@ -111,13 +111,17 @@ if [ $NEEDS_NGINX -eq 1 ]; then
   if [ -f deploy/nginx/cloudflare-real-ip.conf ]; then
     sudo cp deploy/nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/cloudflare-real-ip.conf
   fi
-  # trade.speedtrade.tech — the trading terminal. Its own file because it is a
-  # different hostname, but very much this stack: it proxies to the
-  # trader_frontend and gateway_api upstreams declared in tuskaex.conf. nginx
-  # resolves upstreams across all loaded files, and the `nginx -t` below is
-  # what catches it if tuskaex.conf ever stops defining them.
-  sudo cp deploy/nginx/terminal.conf /etc/nginx/sites-available/terminal.conf
-  sudo ln -sf /etc/nginx/sites-available/terminal.conf /etc/nginx/sites-enabled/terminal.conf
+  # speedtrade.tech — the landing site AND the trading terminal share this
+  # hostname, so this vhost routes TuskaEx traffic and belongs to this repo.
+  # It used to live in speedtrade_landing/deploy/nginx/, which is gitignored
+  # here: nothing there could ever reach the server through a deploy, and the
+  # old `if [ -f ]` guard skipped it without a word. Unconditional now.
+  sudo cp deploy/nginx/speedtrade.conf /etc/nginx/sites-available/speedtrade.conf
+  sudo ln -sf /etc/nginx/sites-available/speedtrade.conf /etc/nginx/sites-enabled/speedtrade.conf
+  # An earlier iteration put the terminal on trade.speedtrade.tech. That
+  # hostname was never given a DNS record and the apex is used instead, so drop
+  # a stale vhost rather than leave one nobody can reach.
+  sudo rm -f /etc/nginx/sites-enabled/terminal.conf /etc/nginx/sites-available/terminal.conf
   sudo nginx -t
   sudo systemctl reload nginx
 fi

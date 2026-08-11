@@ -13,10 +13,10 @@ written from memory — 151 REST routes and 5 WebSocket endpoints.
 | Host | Serves |
 |------|--------|
 | `https://api.tuskaex.com` | Gateway — REST **and** all WebSockets |
-| `https://trade.speedtrade.tech` | **The trading terminal.** Same Next.js app, its own domain, its own `/ws/` upgrade block |
+| `https://speedtrade.tech/trading/terminal` | **The trading terminal.** Same Next.js app as the CRM, reached on this host; own `/ws/` upgrade block |
+| `https://speedtrade.tech/` | SpeedTrade marketing site — a *different* Next app (`speedtrade_landing/`) on the same hostname, split by path in nginx |
 | `https://tuskaex.com` | CRM: dashboard, wallet, KYC, deposits, IB, support, auth |
 | `https://trade.tuskaex.com` | Same app on a subdomain; kept working, no longer where the terminal lives |
-| `https://speedtrade.tech` | SpeedTrade marketing site (a separate Next app — `speedtrade_landing/`) |
 
 > **The terminal is on a different registrable domain from the CRM.**
 > That is the single fact that explains most of what follows. A cookie
@@ -28,8 +28,8 @@ written from memory — 151 REST routes and 5 WebSocket endpoints.
 > **WebSockets: connect to `api.tuskaex.com`, except from the terminal.**
 > `trade.tuskaex.com` proxies REST fine but does not upgrade WebSocket
 > connections — only `api.` has that block in `deploy/nginx/tuskaex.conf`.
-> `trade.speedtrade.tech` is the exception: it has its own `/ws/` block
-> (`speedtrade_landing/deploy/nginx/speedtrade.conf`) proxying to the same
+> `speedtrade.tech` is the exception: it has its own `/ws/` block
+> (`deploy/nginx/speedtrade.conf`) proxying to the same
 > gateway, and the terminal **must** use it. Its cookie lives on
 > `.speedtrade.tech`, so dialling `api.tuskaex.com` sends no credentials
 > and `/ws/trades` closes `4003`. `getWebSocketBaseUrl()` handles this.
@@ -82,7 +82,7 @@ The CRM holds a `.tuskaex.com` session; the terminal needs one on
 
 ```http
 POST /api/v1/auth/handoff          ← CRM, JWT-authed
-→ { "code": "<43 chars>", "expires_in": 60, "terminal_url": "https://trade.speedtrade.tech" }
+→ { "code": "<43 chars>", "expires_in": 60, "terminal_url": "https://speedtrade.tech" }
 
 POST /api/v1/auth/handoff/redeem   ← terminal, NO auth
 { "code": "..." }
@@ -106,7 +106,7 @@ Client side this is all in
 
 | Setting | Must contain | Symptom when missing |
 |---|---|---|
-| `CORS_ORIGINS` | `https://trade.speedtrade.tech` | Redeem POST 403s; every WebSocket closes `4003` |
+| `CORS_ORIGINS` | `https://speedtrade.tech` | Redeem POST 403s; every WebSocket closes `4003` |
 | `COOKIE_DOMAINS` | `.speedtrade.tech` | Redeem "succeeds" and sets a cookie for a domain the terminal can never send back — user lands on the login screen with no error anywhere |
 
 ### B. API key + secret — for bots, EAs, external terminals

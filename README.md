@@ -24,16 +24,28 @@ Open http://localhost:5173
 
 `tuskaex.com` keeps the CRM — dashboard, wallet, KYC, deposits, IB,
 support, auth. The **trading terminal** is served from
-`trade.speedtrade.tech`. Both are the same Next app in the same
+`speedtrade.tech`. Both are the same Next app in the same
 container; only the hostname differs, and the app branches on it at
 runtime.
 
-**Why a subdomain and not `speedtrade.tech/trading`.** Two Next apps
-(this one and `speedtrade_landing/`) both serve their assets from
-`/_next/static/`. Split by path on one hostname and that prefix can only
-proxy to one of them — the other boots with no CSS or JS. A separate
-hostname gives each app its own root. It also matches how
-`trade.tuskaex.com` already works.
+**Two apps on one hostname.** `speedtrade.tech/` is the SpeedTrade
+marketing site (`speedtrade_landing/`, a separate Next app); the terminal
+lives under `/trading/`. nginx splits them by path.
+
+That split has one genuine conflict: both apps serve their bundles from
+`/_next/static/`, and a shared prefix can only proxy to one of them — the
+other boots with no CSS or JS. The textbook fix is an `assetPrefix` on one
+app. We do it in nginx instead: try the landing, fall back to the trader
+on 404. Next content-hashes every chunk filename, so a name that exists in
+one build never exists in the other and the fallback cannot serve the
+wrong file.
+
+The reason is deployment, not elegance. `/opt/speedtrade` is **not** a git
+checkout — it was copied there by hand. An `assetPrefix` in its
+`next.config.ts` would be silently lost the next time anyone re-copies
+that tree, and the symptom would be a terminal that renders unstyled with
+nothing in any log. Keeping the whole fix in a file `deploy.sh` owns means
+a landing redeploy cannot break the terminal.
 
 **Why the session needs a handoff.** `tuskaex.com` and `speedtrade.tech`
 are different *registrable* domains, so a `.tuskaex.com` cookie is never
@@ -47,21 +59,26 @@ Three settings make it work, and each fails differently:
 
 | Setting | Value | If wrong |
 |---|---|---|
-| `NEXT_PUBLIC_TERMINAL_ORIGIN` | `https://trade.speedtrade.tech` | Terminal stays in-app on tuskaex.com. **Baked at build time** — rebuild `trader-frontend`, a restart does nothing |
+| `NEXT_PUBLIC_TERMINAL_ORIGIN` | `https://speedtrade.tech` | Terminal stays in-app on tuskaex.com. **Baked at build time** — rebuild `trader-frontend`, a restart does nothing |
 | `COOKIE_DOMAINS` | `.tuskaex.com,.speedtrade.tech` | Redeem sets a cookie the terminal cannot send back; user silently bounces to login |
-| `CORS_ORIGINS` | must include `https://trade.speedtrade.tech` | Redeem 403s and every WebSocket closes `4003` |
+| `CORS_ORIGINS` | must include `https://speedtrade.tech` | Redeem 403s and every WebSocket closes `4003` |
 
 **Rollback** is blanking `NEXT_PUBLIC_TERMINAL_ORIGIN` + `TERMINAL_APP_URL`
 and rebuilding: `tradingTerminalUrl()` goes back to returning
 `/trading/terminal` and the old apex → `trade.tuskaex.com` middleware
 bounce takes over again. Nothing else has to be reverted.
 
-Nginx for the terminal host is [`deploy/nginx/terminal.conf`](deploy/nginx/terminal.conf)
-— in **this** repo, not next to speedtrade.tech's own config, because
-`speedtrade_landing/` is gitignored here and a server block placed there
-would never reach the server through `deploy.sh`. It includes a `/ws/`
-upgrade block, which this host needs and `trade.tuskaex.com` does not
-(same cookie-domain reason).
+The vhost is [`deploy/nginx/speedtrade.conf`](deploy/nginx/speedtrade.conf)
+— in **this** repo, not next to the landing site's own config, because
+`speedtrade_landing/` is gitignored here: a server block placed there can
+never reach the server through `deploy.sh`, and the old `if [ -f ]` guard
+skipped it without a word, which looks exactly like a successful deploy.
+
+It includes a `/ws/` upgrade block. This host needs one and
+`trade.tuskaex.com` does not, for the same cookie-domain reason: the
+terminal's session cookie is scoped to `.speedtrade.tech`, so dialling
+`wss://api.tuskaex.com` sends no credentials and `/ws/trades` closes
+`4003` — the socket looks connected right up until it isn't.
 
 ## Event bus
 
