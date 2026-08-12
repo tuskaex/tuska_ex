@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { useAuthRehydrated } from '@/hooks/useAuthRehydrated';
 import { Loader2 } from 'lucide-react';
+import { landingRouteForCurrentAdmin } from '@/lib/landingRoute';
 
 export default function RootPage() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function RootPage() {
   useEffect(() => {
     if (!authRehydrated) return;
     if (isAuthenticated) {
-      router.replace('/dashboard');
+      void landingRouteForCurrentAdmin().then((r) => router.replace(r));
     } else {
       router.replace('/login');
     }

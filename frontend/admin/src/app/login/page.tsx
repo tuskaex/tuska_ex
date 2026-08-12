@@ -13,6 +13,7 @@ import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
+import { landingRouteForCurrentAdmin } from '@/lib/landingRoute';
 import {
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
   ShieldCheck, KeyRound, Activity,
@@ -36,7 +37,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     if (!authRehydrated) return;
-    if (isAuthenticated) router.replace('/dashboard');
+    if (isAuthenticated) void landingRouteForCurrentAdmin().then((r) => router.replace(r));
   }, [authRehydrated, isAuthenticated, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -46,7 +47,7 @@ export default function AdminLoginPage() {
     try {
       await login(email.trim().toLowerCase(), password);
       toast.success('Welcome back');
-      router.push('/dashboard');
+      router.push(await landingRouteForCurrentAdmin());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed';
       setError(msg);

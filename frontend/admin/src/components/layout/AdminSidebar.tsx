@@ -20,12 +20,23 @@ interface NavItem {
   icon: any;
   badge?: number;
   perm?: string;
+  /** Usable by a white-label sub-admin.
+   *
+   * The admin API fails closed: dependencies.py refuses a sub_admin any route
+   * not marked tenant_safe, because an unscoped list would hand a tenant every
+   * OTHER broker's clients. Only users.py and deposits.py carry that mark;
+   * branding is reachable because it is guarded by ownership instead.
+   *
+   * Everything else 403s — so without this the sidebar offered a tenant 15
+   * sections, 12 of which answered "not available to white-label sub-admins".
+   * Mirrors the backend by hand; if a route gains tenant_safe, add it here too. */
+  tenantSafe?: boolean;
   children?: { label: string; href: string; perm?: string }[];
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Users', href: '/users', icon: Users, perm: 'users.view' },
+  { tenantSafe: true, label: 'Users', href: '/users', icon: Users, perm: 'users.view' },
   {
     label: 'Identity verification',
     href: '/kyc',
@@ -34,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   { label: 'Trades', href: '/trades', icon: CandlestickChart, perm: 'trades.view' },
   { label: 'Book Management', href: '/book', icon: BookOpen, perm: 'trades.view' },
-  { label: 'Deposits', href: '/deposits', icon: Wallet, perm: 'deposits.view' },
+  { tenantSafe: true, label: 'Deposits', href: '/deposits', icon: Wallet, perm: 'deposits.view' },
   { label: 'Transactions', href: '/transactions', icon: Receipt, perm: 'deposits.view' },
   { label: 'Banks', href: '/banks', icon: Landmark, perm: 'banks.view' },
   { label: 'Account types', href: '/account-types', icon: Layers, perm: 'config.view' },
@@ -67,7 +78,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
   { label: 'Sub-admins', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
   // No perm: a sub-admin edits its own brand, a super-admin the platform's.
-  { label: 'Branding', href: '/branding', icon: Palette },
+  { tenantSafe: true, label: 'Branding', href: '/branding', icon: Palette },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 
@@ -101,6 +112,7 @@ export default function AdminSidebar({
   // by the API. Permissions stay optimistic so the ordinary menu still paints
   // immediately; only the super-admin-only entries wait to be confirmed.
   const [employeeRole, setEmployeeRole] = useState<string>('');
+  const [role, setRole] = useState<string>('');
 
   // Track viewport so the desktop "collapse" state never hides labels in the
   // mobile drawer (the drawer is always full-width on phones).
@@ -124,9 +136,10 @@ export default function AdminSidebar({
   useEffect(() => {
     (async () => {
       try {
-        const me = await adminApi.get<{ permissions: string[]; employee_role: string }>('/auth/me');
+        const me = await adminApi.get<{ permissions: string[]; employee_role: string; role: string }>('/auth/me');
         setPermissions(me.permissions || []);
         setEmployeeRole(me.employee_role || '');
+        setRole(me.role || '');
       } catch {}
     })();
   }, []);
@@ -146,7 +159,13 @@ export default function AdminSidebar({
 
   const isActive = (href?: string) => href && pathname === href;
 
-  const visibleItems = NAV_ITEMS.filter(item => hasAccess(item.perm));
+  /* A sub-admin only sees what the API will actually serve them. Showing a
+     door the backend answers 403 on is worse than not showing it: they click
+     it, get "not available to white-label sub-admins", and reasonably conclude
+     the product is broken. */
+  const visibleItems = NAV_ITEMS
+    .filter(item => role !== 'sub_admin' || item.tenantSafe)
+    .filter(item => hasAccess(item.perm));
 
   return (
     <div className={cn(
