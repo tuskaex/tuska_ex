@@ -205,8 +205,17 @@ export function middleware(req: NextRequest) {
    *
    * Runs before the marketing/trade host gate so it also covers hosts that
    * gate does not know about. */
+  // Only TuskaEx's own hosts bounce. A white-label tenant's custom domain
+  // serves its terminal in place — sending its traders to speedtrade.tech would
+  // take them off the broker's domain onto someone else's brand.
+  const crmHosts = [process.env.NEXT_PUBLIC_MARKETING_HOST, process.env.NEXT_PUBLIC_TRADE_HOST]
+    .filter(Boolean)
+    .map((h) => String(h).toLowerCase());
   const termHost = terminalHost();
-  if (termHost && host !== termHost && !isNeutral(pathname) && isTradePath(pathname)) {
+  if (
+    termHost && host !== termHost && crmHosts.includes(host)
+    && !isNeutral(pathname) && isTradePath(pathname)
+  ) {
     if (!isTopLevelNavigation(req)) return NextResponse.next();
     return noCacheRedirect(new URL(`/terminal${search}`, req.url).toString());
   }

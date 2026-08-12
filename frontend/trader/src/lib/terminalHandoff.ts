@@ -48,9 +48,27 @@ export function isOnTerminalHost(): boolean {
   }
 }
 
+/**
+ * Hosts whose "Trade" belongs on speedtrade.tech: TuskaEx's own CRM, and
+ * nothing else.
+ *
+ * This list is the whole point. One trader build serves TuskaEx AND every
+ * white-label tenant's custom domain, so a switch that only asked "is the
+ * terminal split on?" sent a tenant's traders to speedtrade.tech — off the
+ * broker's own domain and onto someone else's brand, mid-trade. A white-label
+ * domain has to keep its users on itself; its terminal renders in place.
+ */
+function isTuskaExCrmHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const here = window.location.host.toLowerCase();
+  return [process.env.NEXT_PUBLIC_MARKETING_HOST, process.env.NEXT_PUBLIC_TRADE_HOST]
+    .filter(Boolean)
+    .some((h) => String(h).toLowerCase() === here);
+}
+
 /** Hand off to the terminal domain, or render in place. */
 export function shouldHandOffToTerminal(): boolean {
-  return isExternalTerminalEnabled() && !isOnTerminalHost();
+  return isExternalTerminalEnabled() && isTuskaExCrmHost() && !isOnTerminalHost();
 }
 
 export const HANDOFF_QUERY_PARAM = 'handoff';
