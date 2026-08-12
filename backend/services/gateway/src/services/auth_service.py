@@ -146,17 +146,28 @@ def _cookie_domain(request: Request | None = None) -> str | None:
     lists every parent domain we may issue on and the one matching the served
     host wins; longest match first so a deeper parent beats a shallower one.
 
-    Falls back to the single COOKIE_DOMAIN when unset or unmatched, which is
-    the exact pre-split behaviour."""
+    A host that matches NOTHING in COOKIE_DOMAINS gets a host-only cookie (no
+    Domain attribute at all), not the COOKIE_DOMAIN fallback. That case is a
+    white-label tenant serving on its own domain, and stamping .tuskaex.com on
+    its cookies means the browser silently discards them: you cannot set a
+    cookie for a domain you are not on. Login returned 200 and the user stayed
+    signed out, with nothing in any log to say why.
+
+    Host-only is also the correct scope for a tenant — the session belongs to
+    that one hostname and has no subdomains to share with.
+
+    When COOKIE_DOMAINS is unset entirely (local dev) the old single-domain
+    behaviour is kept exactly as it was."""
     st = get_settings()
     candidates = [d.strip().lower() for d in (st.COOKIE_DOMAINS or "").split(",") if d.strip()]
-    if candidates and request is not None:
-        host = _served_host(request)
+    if candidates:
+        host = _served_host(request) if request is not None else ""
         if host:
             for d in sorted(candidates, key=len, reverse=True):
                 bare = d.lstrip(".")
                 if host == bare or host.endswith("." + bare):
                     return d
+            return None  # tenant domain → host-only cookie
     d = (st.COOKIE_DOMAIN or "").strip()
     return d or None
 

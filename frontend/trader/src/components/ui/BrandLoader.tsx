@@ -1,8 +1,5 @@
-import Image from 'next/image'
-import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
-
 /**
- * Centred TuskaEx logo for route-level loading states.
+ * Centred loading state for route transitions — brand COLOURED, brand-anonymous.
  *
  * Next.js renders a segment's `loading.tsx` while that segment's server
  * work is in flight. Before this existed the app had `error.tsx` and
@@ -14,10 +11,19 @@ import { BRAND_LOGO, BRAND_LOGO_LIGHT } from '@/config/brand'
  * and the animation is pure CSS, so it costs no JS on a route whose
  * whole problem is that it is still loading.
  *
- * `variant` picks the lockup, not a colour scheme — the stock logo is
- * black-on-transparent and disappears on a dark canvas, so dark surfaces
- * need the light lockup. Pass 'dark' on the terminal and the landing
- * home; 'light' everywhere else.
+ * ── Why there is no wordmark here ────────────────────────────────────
+ * This same build serves TuskaEx and every white-label tenant's own domain,
+ * and a `loading.tsx` fallback is rendered by the server before anything has
+ * resolved which host it is for — so it cannot know whose logo to draw. It
+ * used to draw TuskaEx's unconditionally, which meant a broker's clients saw
+ * the parent platform's mark, full screen, on every route change inside the
+ * broker's own site.
+ *
+ * The red bloom and sweep stay: colour reads as "this app" without naming
+ * anyone, and is correct on all 16 routes that use this.
+ *
+ * `variant` now picks only the canvas — dark surfaces (terminal, landing home)
+ * need the dark background and lighter track.
  */
 export default function BrandLoader({
   variant = 'light',
@@ -45,14 +51,9 @@ export default function BrandLoader({
           className="pointer-events-none absolute left-1/2 top-[38px] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(214,1,1,0.30),transparent_70%)] motion-safe:animate-pulse"
         />
 
-        <Image
-          src={isDark ? BRAND_LOGO_LIGHT : BRAND_LOGO}
-          alt="TuskaEx"
-          width={710}
-          height={187}
-          priority
-          className="relative h-auto w-44 motion-safe:animate-pulse sm:w-56"
-        />
+        {/* The bloom above is the only mark. Sized to hold the space the
+            wordmark used to occupy so the layout does not jump. */}
+        <span aria-hidden="true" className="block h-10 w-44 sm:w-56" />
 
         {/* Determinate-looking track. The fill sweeps on a loop because
             there is no real progress figure to report here — Next gives
