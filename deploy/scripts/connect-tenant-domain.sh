@@ -259,6 +259,25 @@ if ! sudo nginx -t; then
 fi
 sudo systemctl reload nginx
 
-echo "✓ $DOMAIN is being served."
-echo "  Next: confirm the domain is PROXIED (orange cloud) in Cloudflare, then"
-echo "  mark it provisioned in the admin panel so its status reaches READY."
+# ── Mark it live ─────────────────────────────────────────────────────────
+# find_by_domain() only resolves a host whose status is READY, and nothing in
+# the admin panel can set that — the UI stops at DNS_VERIFIED. Without this the
+# tenant connects a domain, verifies DNS, sees green, and their branding still
+# never appears, because the lookup that serves it rejects everything below
+# READY.
+#
+# This script IS the provisioning step that READY is supposed to mean, so it
+# says so here rather than leaving a manual API call nobody knows to make.
+# Done after the reload: the status must not claim "serving" before nginx
+# actually is.
+ROWS=$(docker exec tuskaex-postgres-1 psql -U tuskaex -d tuskaex -tAc   "UPDATE users SET custom_domain_status='READY', custom_domain_provisioned_at=NOW()    WHERE custom_domain='${DOMAIN}' RETURNING 1" 2>/dev/null | grep -c 1 || true)
+
+if [ "${ROWS:-0}" -gt 0 ]; then
+  echo "✓ $DOMAIN is being served, and marked READY (branding is now live on it)."
+else
+  echo "✓ $DOMAIN is being served."
+  echo "  NOTE: no account has this domain connected yet, so it was not marked"
+  echo "  READY and its branding will not resolve. Connect + Verify it in the"
+  echo "  admin panel, then re-run this script."
+fi
+echo "  Cloudflare: keep the records PROXIED (orange cloud), SSL/TLS = Full."
