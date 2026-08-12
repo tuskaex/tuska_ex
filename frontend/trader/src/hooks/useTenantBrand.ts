@@ -25,17 +25,17 @@ import {
  * logo — the caller shows the name as text. It still must not fall back to
  * TuskaEx's image.
  */
-export function useTenantBrand(): TenantBrand {
+export function useTenantBrand(serverHost?: string | null): TenantBrand {
   const [brand, setBrand] = useState<TenantBrand>(() =>
     // Decided synchronously from the hostname, so the first paint is already
     // correct on the platform and already blank (not wrong) on a tenant.
-    typeof window !== 'undefined' && isTenantHost()
+    isTenantHost(serverHost)
       ? { loading: true, isTenant: true, brandName: '', logoUrl: null }
       : PLATFORM_BRAND,
   );
 
   useEffect(() => {
-    if (!isTenantHost()) return;
+    if (!isTenantHost(serverHost)) return;
     let cancelled = false;
     void (async () => {
       const data = await fetchTenantBranding();
@@ -48,7 +48,7 @@ export function useTenantBrand(): TenantBrand {
       });
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [serverHost]);
 
   return brand;
 }

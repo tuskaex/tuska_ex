@@ -20,6 +20,10 @@ interface FullScreenSignupProps {
   /** 'signup' renders the create-account form, 'login' renders the sign-in
    *  form against the same chrome. Defaults to 'signup'. */
   mode?: Mode;
+  /** Host header, read server-side by the page. Lets the very first HTML know
+   *  whether this is a tenant domain, so the parent brand is never painted
+   *  and then replaced. */
+  serverHost?: string | null;
 }
 
 const COPY: Record<Mode, {
@@ -58,7 +62,7 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => {
+export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSignupProps) => {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const demoLogin = useAuthStore((s) => s.demoLogin);
@@ -84,7 +88,7 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
    * is true and we render a neutral gap rather than the platform logo; a flash
    * of the parent brand on a broker's own login page is the one thing this
    * page cannot do. */
-  const brand = useTenantBrand();
+  const brand = useTenantBrand(serverHost);
   const brandName = brand.isTenant ? brand.brandName : BRAND_NAME;
   const brandLogo = brand.isTenant ? brand.logoUrl : BRAND_LOGO;
   // "Sign in to <brand>" reads badly with an empty name, so the title drops the

@@ -49,13 +49,20 @@ function platformHosts(): string[] {
     .map((h) => String(h).toLowerCase());
 }
 
-export function isTenantHost(): boolean {
-  if (typeof window === 'undefined') return false;
+export function isTenantHost(host?: string | null): boolean {
+  /* `host` is passed in during SSR (from the Host header) and omitted in the
+   * browser. It has to be answerable on BOTH: the server renders the first
+   * HTML, and if it guesses "platform" there the markup ships TuskaEx's logo
+   * and the client swaps it after hydration — a visible flash of the parent
+   * brand on a tenant's own login page, which is exactly what this module
+   * exists to prevent. */
+  const here = (host ?? (typeof window !== 'undefined' ? window.location.host : '')).toLowerCase();
+  if (!here) return false;
   const hosts = platformHosts();
   // No hosts configured at all (local dev) → treat everything as TuskaEx,
   // otherwise `npm run dev` on localhost would render an unbranded shell.
   if (hosts.length === 0) return false;
-  return !hosts.includes(window.location.host.toLowerCase());
+  return !hosts.includes(here);
 }
 
 type PublicBranding = {
