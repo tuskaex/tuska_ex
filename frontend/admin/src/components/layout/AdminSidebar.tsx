@@ -47,7 +47,7 @@ const NAV_ITEMS: NavItem[] = [
   { tenantSafe: true, label: 'Trades', href: '/trades', icon: CandlestickChart, perm: 'trades.view' },
   { label: 'Book Management', href: '/book', icon: BookOpen, perm: 'trades.view' },
   { tenantSafe: true, label: 'Deposits', href: '/deposits', icon: Wallet, perm: 'deposits.view' },
-  { label: 'Transactions', href: '/transactions', icon: Receipt, perm: 'deposits.view' },
+  { tenantSafe: true, label: 'Transactions', href: '/transactions', icon: Receipt, perm: 'deposits.view' },
   { label: 'Banks', href: '/banks', icon: Landmark, perm: 'banks.view' },
   { label: 'Account types', href: '/account-types', icon: Layers, perm: 'config.view' },
   {
@@ -71,11 +71,11 @@ const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Analytics', href: '/analytics', icon: BarChart3, perm: 'analytics.view' },
-  { label: 'Audit logs', href: '/audit-logs', icon: ScrollText, perm: 'audit_logs.view' },
+  { tenantSafe: true, label: 'Audit logs', href: '/audit-logs', icon: ScrollText, perm: 'audit_logs.view' },
   { label: 'Admin audit logs', href: '/admin-audit-logs', icon: ScrollText, perm: 'audit_logs.view' },
   { label: 'Bonus', href: '/bonus', icon: Gift, perm: 'bonus.view' },
   { label: 'Banners', href: '/banners', icon: Image, perm: 'banners.view' },
-  { label: 'Support', href: '/support', icon: HeadphonesIcon, perm: 'tickets.view' },
+  { tenantSafe: true, label: 'Support', href: '/support', icon: HeadphonesIcon, perm: 'tickets.view' },
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
   { label: 'Sub-admins', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
   // No perm: a sub-admin edits its own brand, a super-admin the platform's.

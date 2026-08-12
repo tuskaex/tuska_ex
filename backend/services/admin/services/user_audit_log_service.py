@@ -44,6 +44,20 @@ def _apply_filters(
     return stmt
 
 
+def _scoped(query, column, scope_admin):
+    """Narrow a query to the caller's own clients.
+
+    scope_admin is None for platform staff and for every pre-existing caller,
+    in which case the query is returned untouched — this only ever subtracts
+    rows, and only for a white-label sub_admin.
+    """
+    if scope_admin is None:
+        return query
+    from dependencies import scope_user_ids
+    sub = scope_user_ids(scope_admin)
+    return query.where(column.in_(sub)) if sub is not None else query
+
+
 async def list_user_audit_logs(
     page: int,
     per_page: int,
@@ -52,13 +66,18 @@ async def list_user_audit_logs(
     date_from: date | None,
     date_to: date | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> PaginatedResponse:
     try:
         base = select(UserAuditLog, User).join(User, UserAuditLog.user_id == User.id, isouter=True)
         base = _apply_filters(base, user_id=user_id, action_type=action_type, date_from=date_from, date_to=date_to)
+        base = _scoped(base, UserAuditLog.user_id, scope_admin)
 
         count_q = select(func.count()).select_from(
-            _apply_filters(select(UserAuditLog), user_id=user_id, action_type=action_type, date_from=date_from, date_to=date_to).subquery()
+            _scoped(
+                _apply_filters(select(UserAuditLog), user_id=user_id, action_type=action_type, date_from=date_from, date_to=date_to),
+                UserAuditLog.user_id, scope_admin,
+            ).subquery()
         )
         total = (await db.execute(count_q)).scalar() or 0
 

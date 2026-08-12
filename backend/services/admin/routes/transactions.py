@@ -19,10 +19,10 @@ async def list_transactions(
     search: str = Query(None),
     user_id: uuid.UUID | None = Query(None),
     include_trade_pnl: bool = Query(False),
-    admin: User = Depends(require_permission("deposits.view")),
+    admin: User = Depends(require_permission("deposits.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await transaction_service.list_transactions(
+    return await transaction_service.list_transactions(scope_admin=admin, 
         page=page, per_page=per_page, type_filter=type_filter, search=search,
         user_id=user_id, include_trade_pnl=include_trade_pnl, db=db,
     )
@@ -30,7 +30,7 @@ async def list_transactions(
 
 @router.get("/summary")
 async def transaction_summary(
-    admin: User = Depends(require_permission("deposits.view")),
+    admin: User = Depends(require_permission("deposits.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await transaction_service.get_transaction_summary(db=db)
+    return await transaction_service.get_transaction_summary(scope_admin=admin, db=db)

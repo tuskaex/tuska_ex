@@ -21,10 +21,10 @@ async def list_user_audit_logs(
     action_type: str | None = Query(None),
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
-    admin: User = Depends(require_permission("audit_logs.view")),
+    admin: User = Depends(require_permission("audit_logs.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await user_audit_log_service.list_user_audit_logs(
+    return await user_audit_log_service.list_user_audit_logs(scope_admin=admin, 
         page=page, per_page=per_page, user_id=user_id, action_type=action_type,
         date_from=date_from, date_to=date_to, db=db,
     )

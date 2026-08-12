@@ -45,6 +45,20 @@ def _txn_to_out(
 _HIDDEN_FROM_ADMIN_TX = ("profit", "loss")
 
 
+def _scoped(query, column, scope_admin):
+    """Narrow a query to the caller's own clients.
+
+    scope_admin is None for platform staff and for every pre-existing caller,
+    in which case the query is returned untouched — this only ever subtracts
+    rows, and only for a white-label sub_admin.
+    """
+    if scope_admin is None:
+        return query
+    from dependencies import scope_user_ids
+    sub = scope_user_ids(scope_admin)
+    return query.where(column.in_(sub)) if sub is not None else query
+
+
 async def list_transactions(
     page: int,
     per_page: int,
@@ -53,6 +67,7 @@ async def list_transactions(
     db: AsyncSession,
     user_id: "uuid.UUID | None" = None,
     include_trade_pnl: bool = False,
+    scope_admin=None,
 ) -> PaginatedResponse:
     query = select(Transaction)
 
@@ -91,6 +106,7 @@ async def list_transactions(
             )
         )
 
+    query = _scoped(query, Transaction.user_id, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -141,21 +157,22 @@ async def list_transactions(
     return PaginatedResponse(items=items, total=total, page=page, per_page=per_page)
 
 
-async def get_transaction_summary(db: AsyncSession) -> dict:
+async def get_transaction_summary(db: AsyncSession, scope_admin=None) -> dict:
     # Mirror the visible-list filter — counts shown next to the
     # Transactions tab should match the rows the admin actually sees,
     # so the trade-P&L rows are excluded from totals too.
-    total_q = await db.execute(
+    total_q = await db.execute(_scoped(
         select(func.count(Transaction.id))
-        .where(Transaction.type.notin_(_HIDDEN_FROM_ADMIN_TX))
-    )
+        .where(Transaction.type.notin_(_HIDDEN_FROM_ADMIN_TX)),
+        Transaction.user_id, scope_admin,
+    ))
     total_count = total_q.scalar() or 0
 
-    type_counts_q = await db.execute(
+    type_counts_q = await db.execute(_scoped(
         select(Transaction.type, func.count(Transaction.id), func.coalesce(func.sum(Transaction.amount), 0))
-        .where(Transaction.type.notin_(_HIDDEN_FROM_ADMIN_TX))
-        .group_by(Transaction.type)
-    )
+        .where(Transaction.type.notin_(_HIDDEN_FROM_ADMIN_TX)),
+        Transaction.user_id, scope_admin,
+    ).group_by(Transaction.type))
     type_breakdown = {}
     for row in type_counts_q.all():
         type_breakdown[row[0]] = {"count": row[1], "total_amount": float(row[2])}

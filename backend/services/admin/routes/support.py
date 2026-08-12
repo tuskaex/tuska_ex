@@ -18,10 +18,10 @@ async def list_tickets(
     per_page: int = Query(20, ge=1, le=100),
     status_filter: str = Query(None, alias="status"),
     priority_filter: str = Query(None, alias="priority"),
-    admin: User = Depends(require_permission("tickets.view")),
+    admin: User = Depends(require_permission("tickets.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await support_service.list_tickets(
+    return await support_service.list_tickets(scope_admin=admin, 
         page=page, per_page=per_page,
         status_filter=status_filter, priority_filter=priority_filter, db=db,
     )
@@ -30,10 +30,10 @@ async def list_tickets(
 @router.get("/tickets/{ticket_id}")
 async def get_ticket_detail(
     ticket_id: uuid.UUID,
-    admin: User = Depends(require_permission("tickets.view")),
+    admin: User = Depends(require_permission("tickets.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await support_service.get_ticket_detail(ticket_id=ticket_id, db=db)
+    return await support_service.get_ticket_detail(scope_admin=admin, ticket_id=ticket_id, db=db)
 
 
 @router.post("/tickets/{ticket_id}/reply")
@@ -41,10 +41,10 @@ async def reply_to_ticket(
     ticket_id: uuid.UUID,
     body: TicketReplyRequest,
     request: Request,
-    admin: User = Depends(require_permission("tickets.reply")),
+    admin: User = Depends(require_permission("tickets.reply", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await support_service.reply_to_ticket(
+    return await support_service.reply_to_ticket(scope_admin=admin, 
         ticket_id=ticket_id, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )
@@ -55,10 +55,10 @@ async def assign_ticket(
     ticket_id: uuid.UUID,
     body: TicketAssignRequest,
     request: Request,
-    admin: User = Depends(require_permission("tickets.assign")),
+    admin: User = Depends(require_permission("tickets.assign", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await support_service.assign_ticket(
+    return await support_service.assign_ticket(scope_admin=admin, 
         ticket_id=ticket_id, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )
@@ -69,10 +69,10 @@ async def update_ticket_status(
     ticket_id: uuid.UUID,
     body: TicketStatusUpdate,
     request: Request,
-    admin: User = Depends(require_permission("tickets.assign")),
+    admin: User = Depends(require_permission("tickets.assign", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await support_service.update_ticket_status(
+    return await support_service.update_ticket_status(scope_admin=admin, 
         ticket_id=ticket_id, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )

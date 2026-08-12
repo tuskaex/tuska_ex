@@ -30,12 +30,26 @@ def _ticket_to_out(t: SupportTicket, user: User = None, msg_count: int = 0) -> T
     )
 
 
+def _scoped(query, scope_admin):
+    """Narrow a ticket query to the caller's own clients.
+
+    scope_admin is None for platform staff and for every pre-existing caller,
+    in which case the query is returned untouched.
+    """
+    if scope_admin is None:
+        return query
+    from dependencies import scope_user_ids
+    sub = scope_user_ids(scope_admin)
+    return query.where(SupportTicket.user_id.in_(sub)) if sub is not None else query
+
+
 async def list_tickets(
     page: int,
     per_page: int,
     status_filter: str | None,
     priority_filter: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> PaginatedResponse:
     query = select(SupportTicket)
     if status_filter:
@@ -43,6 +57,7 @@ async def list_tickets(
     if priority_filter:
         query = query.where(SupportTicket.priority == priority_filter)
 
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -65,11 +80,16 @@ async def list_tickets(
     return PaginatedResponse(items=items, total=total, page=page, per_page=per_page)
 
 
-async def get_ticket_detail(ticket_id: uuid.UUID, db: AsyncSession) -> TicketDetailOut:
+async def get_ticket_detail(ticket_id: uuid.UUID, db: AsyncSession, scope_admin=None) -> TicketDetailOut:
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Keyed by ticket id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's ticket exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, ticket.user_id, db)
 
     user_q = await db.execute(select(User).where(User.id == ticket.user_id))
     user = user_q.scalar_one_or_none()
@@ -111,11 +131,17 @@ async def reply_to_ticket(
     admin_id: uuid.UUID,
     ip_address: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Keyed by ticket id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's ticket exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, ticket.user_id, db)
 
     message = TicketMessage(
         ticket_id=ticket_id,
@@ -145,11 +171,17 @@ async def assign_ticket(
     admin_id: uuid.UUID,
     ip_address: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Keyed by ticket id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's ticket exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, ticket.user_id, db)
 
     old_assigned = str(ticket.assigned_to) if ticket.assigned_to else None
     ticket.assigned_to = uuid.UUID(body.admin_id)
@@ -171,11 +203,17 @@ async def update_ticket_status(
     admin_id: uuid.UUID,
     ip_address: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     result = await db.execute(select(SupportTicket).where(SupportTicket.id == ticket_id))
     ticket = result.scalar_one_or_none()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Keyed by ticket id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's ticket exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, ticket.user_id, db)
 
     valid_statuses = ["open", "in_progress", "resolved", "escalated", "closed"]
     if body.status not in valid_statuses:
