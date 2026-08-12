@@ -24,6 +24,9 @@
  */
 
 import { BRAND_LOGO, BRAND_NAME } from '@/config/brand';
+import { isTenantHost } from '@/lib/tenantHost';
+
+export { isTenantHost };
 
 export type TenantBrand = {
   /** True while we know we are on a tenant domain but not yet whose. */
@@ -34,36 +37,6 @@ export type TenantBrand = {
   logoUrl: string | null;
 };
 
-/** TuskaEx's own hostnames. Everything else is somebody's white label. */
-function platformHosts(): string[] {
-  return [
-    process.env.NEXT_PUBLIC_MARKETING_HOST,
-    process.env.NEXT_PUBLIC_TRADE_HOST,
-    (() => {
-      const t = (process.env.NEXT_PUBLIC_TERMINAL_ORIGIN ?? '').trim();
-      if (!t) return '';
-      try { return new URL(t).host; } catch { return ''; }
-    })(),
-  ]
-    .filter(Boolean)
-    .map((h) => String(h).toLowerCase());
-}
-
-export function isTenantHost(host?: string | null): boolean {
-  /* `host` is passed in during SSR (from the Host header) and omitted in the
-   * browser. It has to be answerable on BOTH: the server renders the first
-   * HTML, and if it guesses "platform" there the markup ships TuskaEx's logo
-   * and the client swaps it after hydration — a visible flash of the parent
-   * brand on a tenant's own login page, which is exactly what this module
-   * exists to prevent. */
-  const here = (host ?? (typeof window !== 'undefined' ? window.location.host : '')).toLowerCase();
-  if (!here) return false;
-  const hosts = platformHosts();
-  // No hosts configured at all (local dev) → treat everything as TuskaEx,
-  // otherwise `npm run dev` on localhost would render an unbranded shell.
-  if (hosts.length === 0) return false;
-  return !hosts.includes(here);
-}
 
 type PublicBranding = {
   brand_name: string | null;
