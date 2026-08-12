@@ -40,9 +40,33 @@ async def _get_live_price(symbol: str) -> dict | None:
     return None
 
 
+async def _owner_of_account(account_id, db: AsyncSession):
+    """The user a trading account belongs to, or None."""
+    from packages.common.src.models import TradingAccount as _TA
+    return (await db.execute(
+        select(_TA.user_id).where(_TA.id == account_id)
+    )).scalar_one_or_none()
+
+
+def _scoped(query, scope_admin):
+    """Narrow a trades query to the caller's own clients.
+
+    Positions, orders and history all reach a user through TradingAccount, so
+    the filter goes on TradingAccount.user_id — every one of these queries has
+    already joined it. scope_admin is None for platform staff, in which case
+    the query is untouched.
+    """
+    if scope_admin is None:
+        return query
+    from dependencies import scope_user_ids
+    from packages.common.src.models import TradingAccount as _TA
+    sub = scope_user_ids(scope_admin)
+    return query.where(_TA.user_id.in_(sub)) if sub is not None else query
+
+
 async def list_positions(
     page: int, per_page: int, status_filter: str, db: AsyncSession,
-    user_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None, scope_admin=None,
 ):
     # Exclude demo-account activity from admin views (demo trades are practice-only).
     query = (
@@ -60,6 +84,7 @@ async def list_positions(
     elif status_filter == "closed":
         query = query.where(Position.status == PositionStatus.CLOSED.value)
 
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -138,6 +163,7 @@ async def list_positions(
 
 async def list_orders(
     page: int, per_page: int, status_filter: str, db: AsyncSession,
+    scope_admin=None,
 ):
     query = (
         select(Order)
@@ -149,6 +175,7 @@ async def list_orders(
     elif status_filter == "filled":
         query = query.where(Order.status == OrderStatus.FILLED)
 
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -198,7 +225,7 @@ async def list_orders(
 
 async def list_trade_history(
     page: int, per_page: int, db: AsyncSession,
-    user_id: uuid.UUID | None = None,
+    user_id: uuid.UUID | None = None, scope_admin=None,
 ):
     query = (
         select(TradeHistory)
@@ -207,6 +234,7 @@ async def list_trade_history(
     )
     if user_id is not None:
         query = query.where(TradingAccount.user_id == user_id)
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -270,11 +298,17 @@ async def list_trade_history(
 async def modify_position(
     position_id: uuid.UUID, body: ModifyPositionRequest,
     admin_id: uuid.UUID, ip_address: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     result = await db.execute(select(Position).where(Position.id == position_id))
     pos = result.scalar_one_or_none()
     if not pos:
         raise HTTPException(status_code=404, detail="Position not found")
+
+    # Keyed by position id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's position exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, await _owner_of_account(pos.account_id, db), db)
     if (pos.status.value if hasattr(pos.status, 'value') else pos.status) != PositionStatus.OPEN.value:
         raise HTTPException(status_code=400, detail="Position is not open")
 
@@ -400,11 +434,17 @@ async def modify_position(
 async def close_position(
     position_id: uuid.UUID, body: ClosePositionRequest,
     admin_id: uuid.UUID, ip_address: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     result = await db.execute(select(Position).where(Position.id == position_id))
     pos = result.scalar_one_or_none()
     if not pos:
         raise HTTPException(status_code=404, detail="Position not found")
+
+    # Keyed by position id, which a sub_admin could guess. 404 rather than 403,
+    # so the answer cannot confirm another tenant's position exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, await _owner_of_account(pos.account_id, db), db)
     if (pos.status.value if hasattr(pos.status, 'value') else pos.status) != PositionStatus.OPEN.value:
         raise HTTPException(status_code=400, detail="Position is not open")
 
@@ -529,11 +569,15 @@ async def list_instruments(search: str | None, db: AsyncSession) -> dict:
 
 async def create_stealth_trade(
     body: CreateTradeRequest, admin_id: uuid.UUID, ip_address: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
     acc_q = await db.execute(
         select(TradingAccount).where(TradingAccount.id == uuid.UUID(body.account_id))
     )
     account = acc_q.scalar_one_or_none()
+    if account is not None:
+        from dependencies import assert_row_in_scope
+        await assert_row_in_scope(scope_admin, account.user_id, db)
     if not account:
         raise HTTPException(status_code=404, detail="Trading account not found")
 

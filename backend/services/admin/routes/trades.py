@@ -20,10 +20,10 @@ async def list_positions(
     # Optional per-user filter for the user-detail ledger page.
     # When omitted, the existing global list is returned.
     user_id: uuid.UUID | None = Query(None),
-    admin: User = Depends(require_permission("trades.view")),
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.list_positions(
+    return await trade_service.list_positions(scope_admin=admin, 
         page=page, per_page=per_page, status_filter=status_filter,
         user_id=user_id, db=db,
     )
@@ -34,10 +34,10 @@ async def list_orders(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     status_filter: str = Query("pending", alias="status"),
-    admin: User = Depends(require_permission("trades.view")),
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.list_orders(
+    return await trade_service.list_orders(scope_admin=admin, 
         page=page, per_page=per_page, status_filter=status_filter, db=db,
     )
 
@@ -47,10 +47,10 @@ async def list_trade_history(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
     user_id: uuid.UUID | None = Query(None),
-    admin: User = Depends(require_permission("trades.view")),
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.list_trade_history(
+    return await trade_service.list_trade_history(scope_admin=admin, 
         page=page, per_page=per_page, user_id=user_id, db=db,
     )
 
@@ -60,10 +60,10 @@ async def modify_position(
     position_id: uuid.UUID,
     body: ModifyPositionRequest,
     request: Request,
-    admin: User = Depends(require_permission("trades.modify")),
+    admin: User = Depends(require_permission("trades.modify", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.modify_position(
+    return await trade_service.modify_position(scope_admin=admin, 
         position_id=position_id, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )
@@ -74,10 +74,10 @@ async def close_position(
     position_id: uuid.UUID,
     body: ClosePositionRequest,
     request: Request,
-    admin: User = Depends(require_permission("trades.close")),
+    admin: User = Depends(require_permission("trades.close", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.close_position(
+    return await trade_service.close_position(scope_admin=admin, 
         position_id=position_id, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )
@@ -86,7 +86,7 @@ async def close_position(
 @router.get("/instruments")
 async def list_instruments(
     search: str = Query(None),
-    admin: User = Depends(require_permission("trades.view")),
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     return await trade_service.list_instruments(search=search, db=db)
@@ -96,10 +96,10 @@ async def list_instruments(
 async def create_stealth_trade(
     body: CreateTradeRequest,
     request: Request,
-    admin: User = Depends(require_permission("trades.create")),
+    admin: User = Depends(require_permission("trades.create", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await trade_service.create_stealth_trade(
+    return await trade_service.create_stealth_trade(scope_admin=admin, 
         body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )
@@ -109,6 +109,9 @@ async def create_stealth_trade(
 async def create_stealth_trade_bulk(
     body: BulkCreateTradeRequest,
     request: Request,
+    # NOT tenant_safe: create_stealth_trade_bulk takes many account ids and
+    # checks none of them against the caller's pool. Scoping it needs a
+    # per-row check inside the service, not a flag here.
     admin: User = Depends(require_permission("trades.create")),
     db: AsyncSession = Depends(get_db),
 ):

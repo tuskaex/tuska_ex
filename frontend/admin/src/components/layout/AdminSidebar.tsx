@@ -44,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: ShieldCheck,
     perm: 'kyc.view',
   },
-  { label: 'Trades', href: '/trades', icon: CandlestickChart, perm: 'trades.view' },
+  { tenantSafe: true, label: 'Trades', href: '/trades', icon: CandlestickChart, perm: 'trades.view' },
   { label: 'Book Management', href: '/book', icon: BookOpen, perm: 'trades.view' },
   { tenantSafe: true, label: 'Deposits', href: '/deposits', icon: Wallet, perm: 'deposits.view' },
   { label: 'Transactions', href: '/transactions', icon: Receipt, perm: 'deposits.view' },
