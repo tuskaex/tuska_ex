@@ -168,6 +168,25 @@ server {
         proxy_buffering off;
     }
 
+    # ── Branding, straight to the admin service ───────────────
+    # The trader app proxies /api/v1/* to the GATEWAY, which has no branding
+    # router — these two live on the admin service, so they have to bypass that
+    # proxy or they 404. Both are unauthenticated by design: a visitor who has
+    # not logged in yet still has to see whose site this is.
+    #
+    # Scoped to these exact prefixes on purpose. /api/v1/admin/* is otherwise
+    # the authenticated admin API, and routing all of it here would expose the
+    # back office on every tenant's domain.
+    location /api/v1/public/branding/ {
+        proxy_pass http://admin_api;
+        proxy_read_timeout 30;
+    }
+    location /api/v1/admin/branding/media/ {
+        proxy_pass http://admin_api;
+        proxy_read_timeout 30;
+        expires 7d;
+    }
+
     location /_next/static/ {
         proxy_pass http://trader_frontend;
         expires 365d;
