@@ -12,6 +12,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 import {
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
   ShieldCheck, KeyRound, Activity,
@@ -26,6 +27,7 @@ export default function AdminLoginPage() {
   const { login, isAuthenticated } = useAuthStore();
   const authRehydrated = useAuthRehydrated();
 
+  const brand = useTenantBrand();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -65,15 +67,26 @@ export default function AdminLoginPage() {
 
         {/* Left dark hero panel */}
         <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative overflow-hidden z-10 flex flex-col justify-between min-h-[22rem] md:min-h-[38rem]">
-          <span className="inline-flex items-center self-start relative z-10 bg-white/95 rounded-lg px-3 py-1.5">
-            <Image
-              src="/logo.png"
-              alt="TuskaEx"
-              width={200}
-              height={44}
-              priority
-              className="h-8 w-auto"
-            />
+          {/* Reserves its height so the panel does not jump when a tenant's
+              logo resolves after first paint. */}
+          <span className="inline-flex items-center self-start relative z-10 min-h-[3.25rem]">
+            {brand.isTenant ? (
+              brand.logoUrl ? (
+                <span className="inline-flex items-center bg-white/95 rounded-lg px-3 py-1.5">
+                  {/* Plain <img>: a tenant logo is served at runtime, so
+                      next/image would need its path in remotePatterns at BUILD
+                      time — impossible for domains added after the build. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={brand.logoUrl} alt={brand.brandName || ''} className="h-8 w-auto" />
+                </span>
+              ) : brand.brandName ? (
+                <span className="text-xl font-semibold tracking-tight text-white">{brand.brandName}</span>
+              ) : null
+            ) : (
+              <span className="inline-flex items-center bg-white/95 rounded-lg px-3 py-1.5">
+                <Image src="/logo.png" alt="TuskaEx" width={200} height={44} priority className="h-8 w-auto" />
+              </span>
+            )}
           </span>
 
           <div className="relative z-10">

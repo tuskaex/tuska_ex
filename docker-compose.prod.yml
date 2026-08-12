@@ -116,8 +116,14 @@ services:
     build:
       context: ./frontend/admin
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_PLATFORM_ADMIN_HOST: admin.tuskaex.com
     ports: !override
       - "127.0.0.1:3013:3001"
     environment:
       ADMIN_API_PROXY_TARGET: http://admin-api:8001
+      # TuskaEx's own admin hostname. Every OTHER host this container answers on
+      # is a white-label tenant's back office and must wear their brand, not
+      # ours. Unset ⇒ everything is treated as TuskaEx (local dev).
+      NEXT_PUBLIC_PLATFORM_ADMIN_HOST: admin.tuskaex.com
     restart: always

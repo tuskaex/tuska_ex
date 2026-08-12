@@ -233,6 +233,20 @@ server {
     proxy_set_header Upgrade           \$http_upgrade;
     proxy_set_header Connection        \$conn_upgrade_${SLUG};
 
+    # Same two branding endpoints as the trader host. The admin app's own
+    # proxy only reaches /api/v1/admin/*, so a lookup that lives under
+    # /api/v1/public/ cannot get there through it — without this the tenant's
+    # own back office renders the parent platform's logo.
+    location /api/v1/public/branding/ {
+        proxy_pass http://admin_api;
+        proxy_read_timeout 30;
+    }
+    location /api/v1/admin/branding/media/ {
+        proxy_pass http://admin_api;
+        proxy_read_timeout 30;
+        expires 7d;
+    }
+
     location /_next/static/ {
         proxy_pass http://admin_frontend;
         expires 365d;

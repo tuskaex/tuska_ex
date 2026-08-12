@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import ThemeInitScript from '@/components/ThemeInitScript';
@@ -11,10 +12,25 @@ const inter = Inter({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'TuskaEx Admin',
-  description: 'TuskaEx broker administration panel',
-};
+/**
+ * Resolved per request, not a constant.
+ *
+ * This build serves TuskaEx's own back office and every white-label tenant's,
+ * so a fixed title put the parent platform's name in the browser tab of a
+ * panel the tenant was sold as their own.
+ *
+ * Neutral wording on a tenant host rather than the tenant's own name: naming
+ * them would mean a lookup on every render of a page that must not break when
+ * the admin service blinks, and the sidebar already carries their logo.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const host = (await headers()).get('host');
+  const platform = (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_HOST ?? '').trim().toLowerCase();
+  const isTenant = Boolean(platform) && (host ?? '').toLowerCase() !== platform;
+  return isTenant
+    ? { title: 'Admin', description: 'Broker administration panel' }
+    : { title: 'TuskaEx Admin', description: 'TuskaEx broker administration panel' };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 import { adminApi } from '@/lib/api';
 import {
   LayoutDashboard, Users, CandlestickChart, Wallet, Landmark,
@@ -79,6 +80,7 @@ export default function AdminSidebar({
 } = {}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const brand = useTenantBrand();
   const [isMobile, setIsMobile] = useState(false);
   /* Collapsed by default. These were hard-coded open ('Config', 'Business'),
      which pushed nine sub-items into the list on every page and shoved half the
@@ -163,7 +165,26 @@ export default function AdminSidebar({
             flash and no hydration mismatch — a JS swap would have both.
             The wordmark's type is near-black and was all but invisible against
             the dark sidebar. */}
-        {!showLabels ? (
+        {brand.isTenant ? (
+          /* A tenant's own back office. Their uploaded logo, or their name as
+             text if they have not uploaded one — and while the lookup is in
+             flight, nothing at all. Never TuskaEx's mark: this panel is sold
+             to them as theirs. The single <img> is deliberate; the two-file
+             light/dark swap below only exists because the BUNDLED wordmark is
+             near-black, and a tenant's logo is whatever they uploaded. */
+          <Link href="/" className="flex items-center min-w-0 h-7">
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt={brand.brandName || ''}
+                className={cn('object-contain shrink-0', showLabels ? 'h-7 w-auto' : 'w-7 h-7 mx-auto')}
+              />
+            ) : showLabels && brand.brandName ? (
+              <span className="text-sm font-semibold text-text-primary truncate">{brand.brandName}</span>
+            ) : null}
+          </Link>
+        ) : !showLabels ? (
           <>
             <img src="/logo.png" alt="TuskaEx" className="w-7 h-7 object-contain mx-auto dark:hidden" />
             <img src="/tuskaex-logo-light.png" alt="TuskaEx" className="hidden w-7 h-7 object-contain mx-auto dark:block" />

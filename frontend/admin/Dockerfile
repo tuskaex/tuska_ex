@@ -13,6 +13,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # the dev override passes http://localhost:3010 (the published trader port).
 ARG NEXT_PUBLIC_TRADER_URL
 ENV NEXT_PUBLIC_TRADER_URL=$NEXT_PUBLIC_TRADER_URL
+# TuskaEx's own admin hostname. Client code compares the current host against
+# it to decide whether this panel belongs to a white-label tenant, and
+# NEXT_PUBLIC_* is inlined at BUILD time — a runtime env var alone reaches the
+# server metadata but never the browser bundle.
+ARG NEXT_PUBLIC_PLATFORM_ADMIN_HOST=
+ENV NEXT_PUBLIC_PLATFORM_ADMIN_HOST=$NEXT_PUBLIC_PLATFORM_ADMIN_HOST
 RUN npm run build
 
 FROM node:20-alpine AS runner
