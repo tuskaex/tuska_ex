@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, type FormEvent } from 'react';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore';
 import api from '@/lib/api/client';
 import AuthPanelArt from '@/components/ui/AuthPanelArt';
 import { scorePassword } from '@/lib/passwordStrength';
+import { BRAND_LOGO, BRAND_NAME } from '@/config/brand';
 
 type Mode = 'login' | 'signup';
 type SignupStep = 'credentials' | 'otp';
@@ -33,7 +34,7 @@ const COPY: Record<Mode, {
 }> = {
   signup: {
     hero: 'A precision-engineered trading platform for serious investors.',
-    eyebrow: 'Welcome to TuskaEx',
+    eyebrow: 'Welcome',
     title: 'Create your account',
     subtitle: 'Trade FX, indices, metals and crypto with bank-grade execution.',
     cta: 'Create account',
@@ -44,7 +45,7 @@ const COPY: Record<Mode, {
   login: {
     hero: 'A precision-engineered trading platform for serious investors.',
     eyebrow: 'Welcome back',
-    title: 'Sign in to TuskaEx',
+    title: 'Sign in',
     subtitle: 'Access your portfolio, positions and watchlists.',
     cta: 'Sign in',
     switchPrompt: "Don't have an account yet?",
@@ -76,6 +77,24 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
   // referral on verify. Without this the IB never gets credited.
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const copy = COPY[mode];
+
+  /* Whose brand this page wears. On a white-label domain the platform's name
+   * and mark must not appear at all — the visitor is the tenant's client and
+   * has no relationship with TuskaEx. While the lookup is in flight `loading`
+   * is true and we render a neutral gap rather than the platform logo; a flash
+   * of the parent brand on a broker's own login page is the one thing this
+   * page cannot do. */
+  const brand = useTenantBrand();
+  const brandName = brand.isTenant ? brand.brandName : BRAND_NAME;
+  const brandLogo = brand.isTenant ? brand.logoUrl : BRAND_LOGO;
+  // "Sign in to <brand>" reads badly with an empty name, so the title drops the
+  // brand entirely until it is known (or if the tenant never set one).
+  const title = mode === 'login'
+    ? (brandName ? `Sign in to ${brandName}` : 'Sign in')
+    : copy.title;
+  const eyebrow = mode === 'signup'
+    ? (brandName ? `Welcome to ${brandName}` : 'Welcome')
+    : copy.eyebrow;
 
   useEffect(() => {
     try {
@@ -157,7 +176,7 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
         otp: code,
       });
       await refreshUser();
-      toast.success('Email verified. Welcome to TuskaEx.');
+      toast.success(brandName ? `Email verified. Welcome to ${brandName}.` : 'Email verified.');
       router.push('/dashboard');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invalid or expired code.';
@@ -190,7 +209,7 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
     try {
       setSubmitting(true);
       await demoLogin();
-      toast.success('Demo account ready. Welcome to TuskaEx.');
+      toast.success(brandName ? `Demo account ready. Welcome to ${brandName}.` : 'Demo account ready.');
       router.push('/dashboard');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Could not start a demo session.';
@@ -227,20 +246,36 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
 
         {/* Left dark hero panel */}
         <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative overflow-hidden z-10 flex flex-col justify-between min-h-[20rem] md:min-h-[36rem]">
-          <Link
-            href="/"
-            aria-label="TuskaEx home"
-            className="inline-flex items-center self-start relative z-10 bg-white/95 rounded-lg px-3 py-1.5"
-          >
-            <Image
-              src="/marketing/tuskaex-logo.png"
-              alt="TuskaEx"
-              width={220}
-              height={48}
-              priority
-              className="h-8 w-auto"
-            />
-          </Link>
+          {/* Reserves its own height so the panel does not reflow when a
+              tenant's logo resolves a moment after first paint. */}
+          <div className="self-start relative z-10 min-h-[3.25rem] flex items-center">
+            {brandLogo ? (
+              <Link
+                href="/"
+                aria-label={`${brandName || 'Home'} home`}
+                className="inline-flex items-center bg-white/95 rounded-lg px-3 py-1.5"
+              >
+                {/* Plain <img>: a tenant logo is served from the admin service
+                    at runtime, so next/image would need every tenant's path in
+                    remotePatterns at BUILD time — impossible for domains added
+                    after the build. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={brandLogo}
+                  alt={brandName || ''}
+                  className="h-8 w-auto"
+                />
+              </Link>
+            ) : brandName ? (
+              <Link
+                href="/"
+                aria-label={`${brandName} home`}
+                className="text-xl font-semibold tracking-tight text-white"
+              >
+                {brandName}
+              </Link>
+            ) : null}
+          </div>
           {/* Fills the gap between the logo and the headline, which was
               an empty black rectangle on a 36rem-tall card. `flex-1`
               lets it take exactly the leftover space, so it grows and
@@ -260,9 +295,9 @@ export const FullScreenSignup = ({ mode = 'signup' }: FullScreenSignupProps) => 
             <>
               <div className="mb-8">
                 <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
-                  {copy.eyebrow}
+                  {eyebrow}
                 </p>
-                <h2 className="text-3xl font-medium mb-2 tracking-tight">{copy.title}</h2>
+                <h2 className="text-3xl font-medium mb-2 tracking-tight">{title}</h2>
                 <p className="text-[#5B5B5B]">{copy.subtitle}</p>
               </div>
 
