@@ -52,12 +52,13 @@ shift
 echo "$DOMAIN" | grep -qE '^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$' \
   || die "Not a bare domain: '$DOMAIN' (no https://, no www, no path)"
 
-APP_SUB=""; ADMIN_SUB=""; REMOVE=0
+APP_SUB=""; ADMIN_SUB=""; REMOVE=0; ISSUE_CERT=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --app)    APP_SUB="${2:-}"; shift 2 ;;
     --admin)  ADMIN_SUB="${2:-}"; shift 2 ;;
     --remove) REMOVE=1; shift ;;
+    --issue-cert) ISSUE_CERT=1; shift ;;
     *) die "Unknown argument: $1" ;;
   esac
 done
@@ -73,7 +74,20 @@ if [ "$REMOVE" -eq 1 ]; then
   exit 0
 fi
 
-[ -f "$CERT" ] || die "Origin certificate missing at $CERT"
+# A real certificate for THIS domain, if Let's Encrypt has issued one. The
+# origin cert covers *.tuskaex.com and cannot cover a customer's domain, so
+# without Cloudflare in front a browser shows "Not secure" — which on a login
+# page is the one thing a broker cannot show their staff.
+LE_DIR="/etc/letsencrypt/live/${DOMAIN}"
+if [ -f "$LE_DIR/fullchain.pem" ]; then
+  CERT="$LE_DIR/fullchain.pem"
+  CERT_KEY="$LE_DIR/privkey.pem"
+  echo "    tls:    Let's Encrypt (${DOMAIN})"
+else
+  echo "    tls:    origin cert — REQUIRES Cloudflare in front, or run --issue-cert"
+fi
+
+[ -f "$CERT" ] || die "Certificate missing at $CERT"
 
 # Which hostnames this tenant answers on. Mirrors hostnames_for() in
 # branding_service.py — if these two ever disagree, DNS verifies green and the
@@ -114,7 +128,18 @@ server {
     listen 80;
     listen [::]:80;
     server_name ${TRADER_NAMES}$([ -n "$ADMIN_SUB" ] && echo " ${ADMIN_SUB}.${DOMAIN}");
-    return 301 https://\$host\$request_uri;
+
+    # Let's Encrypt HTTP-01. Must sit ABOVE the redirect: certbot fetches this
+    # over plain HTTP, and a 301 to https would fail validation against a
+    # certificate that does not exist yet — the chicken-and-egg this avoids.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
 }
 
 server {
@@ -272,6 +297,39 @@ if ! sudo nginx -t; then
   die "nginx rejected the generated config; the tenant vhost was NOT enabled (everything else untouched)"
 fi
 sudo systemctl reload nginx
+
+# ── Certificate ──────────────────────────────────────────────────────────
+# Only on request. Issuing runs against Let's Encrypt's rate limits (5 per
+# exact name set per week), so it must not fire on every re-run of this script.
+#
+# Ordering is deliberate: the vhost is already live and serving
+# /.well-known/acme-challenge over plain HTTP by the time certbot asks for it.
+# Issue first and validation fails against a site that is not up yet.
+if [ "$ISSUE_CERT" -eq 1 ]; then
+  echo "▶ Requesting a certificate for $DOMAIN"
+  command -v certbot >/dev/null 2>&1 || {
+    echo "  installing certbot…"
+    sudo apt-get update -qq && sudo apt-get install -y -qq certbot
+  }
+  sudo mkdir -p /var/www/certbot
+
+  CERT_NAMES="-d ${DOMAIN} -d www.${DOMAIN}"
+  [ -n "$APP_SUB" ] && CERT_NAMES="-d ${APP_SUB}.${DOMAIN}"
+  [ -n "$ADMIN_SUB" ] && CERT_NAMES="$CERT_NAMES -d ${ADMIN_SUB}.${DOMAIN}"
+
+  # webroot, not --nginx: this file is generated, and the nginx plugin rewrites
+  # config in place, so the next run of this script would silently discard its
+  # edits. Webroot leaves the vhost ours.
+  if sudo certbot certonly --webroot -w /var/www/certbot       $CERT_NAMES --non-interactive --agree-tos       --register-unsafely-without-email --keep-until-expiring; then
+    echo "✓ certificate issued — re-running to bind it"
+    # Re-exec so the vhost is regenerated against the new cert paths. Without
+    # --issue-cert, so this cannot loop.
+    exec sudo bash "$0" "$DOMAIN"       $([ -n "$APP_SUB" ] && echo "--app $APP_SUB")       $([ -n "$ADMIN_SUB" ] && echo "--admin $ADMIN_SUB")
+  else
+    echo "✗ certbot failed — the site stays up on the origin certificate."
+    echo "  Check that ${DOMAIN} resolves to this server and port 80 is open."
+  fi
+fi
 
 # ── Mark it live ─────────────────────────────────────────────────────────
 # find_by_domain() only resolves a host whose status is READY, and nothing in
