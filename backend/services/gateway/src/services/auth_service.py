@@ -62,6 +62,25 @@ def assert_same_origin(request: Request) -> None:
     referer = (request.headers.get("referer") or "").strip()
     if not origin and not referer:
         return  # non-browser caller; id_token audience check still gates auth
+
+    # A request whose Origin IS the host we are serving is same-origin by
+    # definition, which is the only thing this function set out to prove.
+    #
+    # White-label tenants make this the common case: their domains are added by
+    # customers long after CORS_ORIGINS is written, so every one of them was
+    # rejected with 403 on login — correct password, "Origin not allowed", and
+    # no way to fix it but redeploying the env for each new customer. Comparing
+    # against the served host covers every tenant, present and future, without
+    # widening anything: the attacker's page is on the attacker's origin, which
+    # by definition is not the host we are answering as.
+    if origin:
+        try:
+            from urllib.parse import urlsplit
+            if (urlsplit(origin).hostname or "").lower() == _served_host(request):
+                return
+        except ValueError:
+            pass
+
     allowed = _allowed_origins()
     if not allowed:
         return  # not configured — trust CORS layer
