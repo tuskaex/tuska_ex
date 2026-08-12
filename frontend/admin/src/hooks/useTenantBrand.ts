@@ -24,15 +24,15 @@ const PLATFORM: TenantBrand = {
  * parent platform's logo. A tenant seeing TuskaEx's wordmark flash inside the
  * panel they were sold as their own is worse than seeing an empty space.
  */
-export function useTenantBrand(): TenantBrand {
+export function useTenantBrand(serverHost?: string | null): TenantBrand {
   const [brand, setBrand] = useState<TenantBrand>(() =>
-    typeof window !== 'undefined' && isTenantAdminHost()
+    isTenantAdminHost(serverHost)
       ? { loading: true, isTenant: true, brandName: '', logoUrl: null }
       : PLATFORM,
   );
 
   useEffect(() => {
-    if (!isTenantAdminHost()) return;
+    if (!isTenantAdminHost(serverHost)) return;
     let cancelled = false;
     void (async () => {
       const data = await fetchTenantBrand();
@@ -45,7 +45,7 @@ export function useTenantBrand(): TenantBrand {
       });
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [serverHost]);
 
   return brand;
 }
