@@ -13,7 +13,22 @@ from packages.common.src.notify import create_notification
 from dependencies import write_audit_log
 
 
-async def get_kyc_file(document_id: uuid.UUID, db: AsyncSession) -> FileResponse:
+def _scoped(query, scope_admin):
+    """Narrow a KYC list to the caller's own clients.
+
+    These queries select FROM users, so scope_filter is the right shape.
+    scope_admin is None for platform staff and for every pre-existing caller,
+    in which case the query is returned untouched — this only ever subtracts
+    rows, and only for a white-label sub_admin.
+    """
+    if scope_admin is None:
+        return query
+    from dependencies import scope_filter
+    crit = scope_filter(scope_admin)
+    return query.where(crit) if crit is not None else query
+
+
+async def get_kyc_file(document_id: uuid.UUID, db: AsyncSession, scope_admin=None) -> FileResponse:
     """Stream a KYC document for admin review (no user-ownership check)."""
     result = await db.execute(
         select(KYCDocument).where(KYCDocument.id == document_id)
@@ -22,6 +37,12 @@ async def get_kyc_file(document_id: uuid.UUID, db: AsyncSession) -> FileResponse
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Keyed by document id, which a sub_admin could guess — the list filter
+    # does not cover this route. 404 rather than 403, so the response cannot
+    # confirm another tenant's document exists.
+    from dependencies import assert_row_in_scope
+    await assert_row_in_scope(scope_admin, doc.user_id, db)
+
     file_path = Path(doc.file_url)
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="File not found on server")
@@ -29,11 +50,12 @@ async def get_kyc_file(document_id: uuid.UUID, db: AsyncSession) -> FileResponse
     return FileResponse(str(file_path), filename=file_path.name)
 
 
-async def list_kyc_pending(page: int, per_page: int, db: AsyncSession) -> dict:
+async def list_kyc_pending(page: int, per_page: int, db: AsyncSession, scope_admin=None) -> dict:
     query = select(User).where(
         User.kyc_status == "submitted",
         User.role.notin_(["admin", "super_admin"]),
     )
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -73,11 +95,12 @@ async def list_kyc_pending(page: int, per_page: int, db: AsyncSession) -> dict:
     return {"items": items, "total": total, "page": page, "per_page": per_page}
 
 
-async def list_kyc_approved(page: int, per_page: int, db: AsyncSession) -> dict:
+async def list_kyc_approved(page: int, per_page: int, db: AsyncSession, scope_admin=None) -> dict:
     query = select(User).where(
         User.kyc_status == "approved",
         User.role.notin_(["admin", "super_admin"]),
     )
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -119,11 +142,12 @@ async def list_kyc_approved(page: int, per_page: int, db: AsyncSession) -> dict:
     return {"items": items, "total": total, "page": page, "per_page": per_page}
 
 
-async def list_kyc_rejected(page: int, per_page: int, db: AsyncSession) -> dict:
+async def list_kyc_rejected(page: int, per_page: int, db: AsyncSession, scope_admin=None) -> dict:
     query = select(User).where(
         User.kyc_status == "rejected",
         User.role.notin_(["admin", "super_admin"]),
     )
+    query = _scoped(query, scope_admin)
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -167,7 +191,12 @@ async def approve_kyc(
     admin_id: uuid.UUID,
     ip_address: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
+    # Keyed by user_id, so the list filter does not protect it: without this a
+    # guessed id would let one tenant act on another tenant's client.
+    from dependencies import assert_user_in_scope
+    await assert_user_in_scope(scope_admin, user_id, db)
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
@@ -226,7 +255,12 @@ async def reject_kyc(
     admin_id: uuid.UUID,
     ip_address: str | None,
     db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
+    # Keyed by user_id, so the list filter does not protect it: without this a
+    # guessed id would let one tenant act on another tenant's client.
+    from dependencies import assert_user_in_scope
+    await assert_user_in_scope(scope_admin, user_id, db)
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

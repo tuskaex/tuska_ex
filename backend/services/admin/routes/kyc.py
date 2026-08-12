@@ -25,33 +25,33 @@ class RejectKYCRequest(BaseModel):
 async def list_pending_kyc(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("kyc.view")),
+    admin: User = Depends(require_permission("kyc.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """List all users with pending KYC submissions"""
-    return await kyc_service.list_kyc_pending(page=page, per_page=per_page, db=db)
+    return await kyc_service.list_kyc_pending(page=page, per_page=per_page, db=db, scope_admin=admin)
 
 
 @router.get("/approved")
 async def list_approved_kyc(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("kyc.view")),
+    admin: User = Depends(require_permission("kyc.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """List all users with approved KYC"""
-    return await kyc_service.list_kyc_approved(page=page, per_page=per_page, db=db)
+    return await kyc_service.list_kyc_approved(page=page, per_page=per_page, db=db, scope_admin=admin)
 
 
 @router.get("/rejected")
 async def list_rejected_kyc(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("kyc.view")),
+    admin: User = Depends(require_permission("kyc.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """List all users with rejected KYC"""
-    return await kyc_service.list_kyc_rejected(page=page, per_page=per_page, db=db)
+    return await kyc_service.list_kyc_rejected(page=page, per_page=per_page, db=db, scope_admin=admin)
 
 
 @router.post("/{user_id}/approve")
@@ -59,13 +59,14 @@ async def approve_kyc(
     user_id: uuid.UUID,
     body: ApproveKYCRequest,
     request: Request,
-    admin: User = Depends(require_permission("kyc.manage")),
+    admin: User = Depends(require_permission("kyc.manage", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """Approve user KYC"""
     return await kyc_service.approve_kyc(
         user_id=user_id, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
+        scope_admin=admin,
     )
 
 
@@ -74,21 +75,22 @@ async def reject_kyc(
     user_id: uuid.UUID,
     body: RejectKYCRequest,
     request: Request,
-    admin: User = Depends(require_permission("kyc.manage")),
+    admin: User = Depends(require_permission("kyc.manage", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """Reject user KYC"""
     return await kyc_service.reject_kyc(
         user_id=user_id, reason=body.reason, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
+        scope_admin=admin,
     )
 
 
 @router.get("/file/{doc_id}")
 async def view_kyc_file(
     doc_id: uuid.UUID,
-    admin: User = Depends(require_permission("kyc.view")),
+    admin: User = Depends(require_permission("kyc.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     """Serve a user's KYC document for admin review (inline image/PDF)."""
-    return await kyc_service.get_kyc_file(document_id=doc_id, db=db)
+    return await kyc_service.get_kyc_file(document_id=doc_id, db=db, scope_admin=admin)

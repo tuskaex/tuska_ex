@@ -38,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { tenantSafe: true, label: 'Users', href: '/users', icon: Users, perm: 'users.view' },
   {
+    tenantSafe: true,
     label: 'Identity verification',
     href: '/kyc',
     icon: ShieldCheck,
