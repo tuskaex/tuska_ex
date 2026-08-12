@@ -19,7 +19,6 @@ const EMPTY_FORM = {
   first_name: '',
   last_name: '',
   phone: '',
-  pnl_share_pct: '',
 };
 
 export default function SubAdminsPage() {
@@ -88,7 +87,6 @@ export default function SubAdminsPage() {
         last_name: form.last_name.trim() || null,
         phone: form.phone.trim() || null,
         permissions: checked,
-        pnl_share_pct: form.pnl_share_pct === '' ? null : Number(form.pnl_share_pct),
       });
       toast.success('Sub-admin created');
       setShowModal(false);
@@ -180,7 +178,6 @@ export default function SubAdminsPage() {
                 <th className="text-left font-medium px-3 py-2">Name</th>
                 <th className="text-left font-medium px-3 py-2">Email</th>
                 <th className="text-left font-medium px-3 py-2">Mobile</th>
-                <th className="text-right font-medium px-3 py-2">P&amp;L share</th>
                 <th className="text-right font-medium px-3 py-2">Clients</th>
                 <th className="text-left font-medium px-3 py-2">Status</th>
                 <th className="px-3 py-2 w-10" />
@@ -201,9 +198,6 @@ export default function SubAdminsPage() {
                   <td className="px-3 py-2 text-text-secondary">{s.email}</td>
                   <td className="px-3 py-2 tabular-nums text-text-secondary">
                     {s.phone || '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-text-secondary">
-                    {s.pnl_share_pct === null ? '—' : `${s.pnl_share_pct.toFixed(2)}%`}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums text-text-secondary">
                     {s.user_count}
@@ -290,18 +284,6 @@ export default function SubAdminsPage() {
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     placeholder="+91 98765 43210"
-                    className={inputCls}
-                  />
-                </Field>
-                <Field label="P&L share %">
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    value={form.pnl_share_pct}
-                    onChange={(e) => setForm((f) => ({ ...f, pnl_share_pct: e.target.value }))}
-                    placeholder="0.00"
                     className={inputCls}
                   />
                 </Field>

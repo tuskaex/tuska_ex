@@ -24,7 +24,6 @@ export default function SubAdminDetailPage() {
   const [clients, setClients] = useState<SubAdminClient[]>([]);
   const [catalog, setCatalog] = useState<PermissionCatalog>({});
   const [checked, setChecked] = useState<string[]>([]);
-  const [pnlShare, setPnlShare] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -50,7 +49,6 @@ export default function SubAdminDetailPage() {
       setClients(cl.items || []);
       setCatalog(cat.catalog || {});
       setChecked(s.permissions || []);
-      setPnlShare(s.pnl_share_pct === null ? '' : String(s.pnl_share_pct));
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to load sub-admin');
     } finally {
@@ -228,37 +226,6 @@ export default function SubAdminDetailPage() {
         </Panel>
 
         <div className="space-y-4">
-          <Panel title="P&L share">
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step="0.01"
-                value={pnlShare}
-                onChange={(e) => setPnlShare(e.target.value)}
-                className="w-32 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
-              />
-              <span className="text-xs text-text-tertiary">%</span>
-              <button
-                type="button"
-                disabled={busy || pnlShare === ''}
-                onClick={() =>
-                  void run(
-                    () =>
-                      adminApi.put(`/sub-admins/${id}/pnl-share`, {
-                        pnl_share_pct: Number(pnlShare),
-                      }),
-                    'P&L share updated',
-                  )
-                }
-                className="px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
-          </Panel>
-
           <Panel title="Reset password">
             <div className="flex items-center gap-2">
               <input

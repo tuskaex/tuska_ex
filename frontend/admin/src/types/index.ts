@@ -313,7 +313,6 @@ export interface SubAdmin {
   last_name: string | null;
   phone: string | null;
   status: UserStatus;
-  pnl_share_pct: number | null;
   /** Extra permissions granted on top of the sub_admin role defaults. */
   permissions: string[];
   /** The role's built-in permissions — always granted, not editable here. */
@@ -335,7 +334,6 @@ export interface SubAdminClient {
 export interface SubAdminReport {
   sub_admin_id: string;
   full_name: string;
-  pnl_share_pct: number | null;
   client_count: number;
   account_count: number;
   total_balance: number;

@@ -12,8 +12,7 @@ from packages.common.src.database import get_db
 from packages.common.src.models import User
 from packages.common.src.admin_schemas import (
     CreateSubAdminRequest, UpdateSubAdminRequest,
-    UpdateSubAdminPermissionsRequest, UpdatePnlShareRequest,
-    ResetSubAdminPasswordRequest, AssignUserRequest, BulkAssignRequest,
+    UpdateSubAdminPermissionsRequest,     ResetSubAdminPasswordRequest, AssignUserRequest, BulkAssignRequest,
 )
 from dependencies import get_current_admin
 from services import sub_admin_service
@@ -50,7 +49,7 @@ async def create_sub_admin(
     return await sub_admin_service.create_sub_admin(
         email=body.email, password=body.password,
         first_name=body.first_name, last_name=body.last_name, phone=body.phone,
-        permissions=body.permissions, pnl_share_pct=body.pnl_share_pct,
+        permissions=body.permissions,
         admin=admin, ip_address=_ip(request), db=db,
     )
 
@@ -126,18 +125,6 @@ async def update_permissions(
     )
 
 
-@router.put("/{sub_admin_id}/pnl-share")
-async def set_pnl_share(
-    sub_admin_id: uuid.UUID,
-    body: UpdatePnlShareRequest,
-    request: Request,
-    admin: User = Depends(get_current_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    return await sub_admin_service.set_pnl_share(
-        sub_admin_id=sub_admin_id, pct=body.pnl_share_pct,
-        admin=admin, ip_address=_ip(request), db=db,
-    )
 
 
 @router.post("/{sub_admin_id}/block")

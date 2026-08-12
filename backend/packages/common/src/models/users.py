@@ -94,7 +94,6 @@ class User(Base):
     last_transferred_at = Column(DateTime(timezone=True), nullable=True)
     last_transferred_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     # Revenue split for a sub-admin (role='sub_admin'), 0..100. NULL on clients.
-    pnl_share_pct = Column(Numeric(5, 2), nullable=True)
 
     # ── White-label branding (migration 0058) ────────────────────────────
     # Set on a sub-admin; their clients inherit it. All NULL on a client row.

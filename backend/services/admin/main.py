@@ -109,8 +109,7 @@ async def _apply_startup_ddl():
                     ADD COLUMN IF NOT EXISTS assigned_admin_id UUID REFERENCES users(id),
                     ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES users(id),
                     ADD COLUMN IF NOT EXISTS last_transferred_at TIMESTAMPTZ,
-                    ADD COLUMN IF NOT EXISTS last_transferred_by UUID REFERENCES users(id),
-                    ADD COLUMN IF NOT EXISTS pnl_share_pct NUMERIC(5, 2)
+                    ADD COLUMN IF NOT EXISTS last_transferred_by UUID REFERENCES users(id)
             """))
             await conn.execute(text("""
                 CREATE INDEX IF NOT EXISTS ix_users_assigned_admin_role

@@ -2,7 +2,7 @@
 
 A sub-admin is two rows:
 
-  * `users`     — role='sub_admin', carrying pnl_share_pct and created_by
+  * `users`     — role='sub_admin', carrying created_by
   * `employees` — role='sub_admin', carrying the granted permission strings
 
 The Employee row is not decoration: `require_permission` resolves permissions by
@@ -80,7 +80,6 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         "last_name": row.last_name,
         "phone": row.phone,
         "status": row.status,
-        "pnl_share_pct": float(row.pnl_share_pct) if row.pnl_share_pct is not None else None,
         "permissions": sorted(set((emp.extra_permissions if emp else None) or [])),
         "default_permissions": sorted(EMPLOYEE_ROLE_PERMISSIONS.get(SUB_ADMIN_ROLE, set())),
         "is_active": bool(emp.is_active) if emp else False,
@@ -192,7 +191,6 @@ async def pool_report(*, sub_admin_id: uuid.UUID, admin: User, db: AsyncSession)
     return {
         "sub_admin_id": str(sub.id),
         "full_name": _full_name(sub),
-        "pnl_share_pct": float(sub.pnl_share_pct) if sub.pnl_share_pct is not None else None,
         "client_count": len(client_ids),
         "account_count": account_count,
         "total_balance": float(totals["balance"]),
@@ -205,7 +203,7 @@ async def pool_report(*, sub_admin_id: uuid.UUID, admin: User, db: AsyncSession)
 
 async def create_sub_admin(
     *, email: str, password: str, first_name: str | None, last_name: str | None,
-    phone: str | None, permissions: list[str], pnl_share_pct: Decimal | None,
+    phone: str | None, permissions: list[str],
     admin: User, ip_address: str | None, db: AsyncSession,
 ) -> dict:
     _only_super_admin(admin)
@@ -241,7 +239,6 @@ async def create_sub_admin(
         kyc_status="approved",
         email_verified=True,
         created_by=admin.id,
-        pnl_share_pct=pnl_share_pct,
     )
     db.add(user)
     await db.flush()
@@ -264,8 +261,7 @@ async def create_sub_admin(
 
     await write_audit_log(
         db, admin.id, "create_sub_admin", "sub_admin", user.id,
-        new_values={"email": email, "permissions": clean,
-                    "pnl_share_pct": pnl_share_pct},
+        new_values={"email": email, "permissions": clean},
         ip_address=ip_address,
     )
     await db.commit()
@@ -321,23 +317,6 @@ async def update_permissions(
     return await _to_dto(sub, db)
 
 
-async def set_pnl_share(
-    *, sub_admin_id: uuid.UUID, pct: Decimal,
-    admin: User, ip_address: str | None, db: AsyncSession,
-) -> dict:
-    _only_super_admin(admin)
-    sub = await _load_sub_admin(sub_admin_id, db)
-
-    old = float(sub.pnl_share_pct) if sub.pnl_share_pct is not None else None
-    sub.pnl_share_pct = pct
-
-    await write_audit_log(
-        db, admin.id, "update_sub_admin_pnl_share", "sub_admin", sub.id,
-        old_values={"pnl_share_pct": old}, new_values={"pnl_share_pct": float(pct)},
-        ip_address=ip_address,
-    )
-    await db.commit()
-    return await _to_dto(sub, db)
 
 
 async def set_blocked(

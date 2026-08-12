@@ -761,7 +761,6 @@ class CreateSubAdminRequest(BaseModel):
     # Permission strings from GET /employees/permissions/catalog. Empty means
     # the sub_admin role defaults only.
     permissions: list[str] = []
-    pnl_share_pct: Optional[Decimal] = Field(default=None, ge=0, le=100)
 
 
 class UpdateSubAdminRequest(BaseModel):
@@ -772,10 +771,6 @@ class UpdateSubAdminRequest(BaseModel):
 
 class UpdateSubAdminPermissionsRequest(BaseModel):
     permissions: list[str] = []
-
-
-class UpdatePnlShareRequest(BaseModel):
-    pnl_share_pct: Decimal = Field(ge=0, le=100)
 
 
 class ResetSubAdminPasswordRequest(BaseModel):
