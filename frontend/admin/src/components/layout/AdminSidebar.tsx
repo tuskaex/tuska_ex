@@ -79,7 +79,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
   { label: 'Sub-admins', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
   // No perm: a sub-admin edits its own brand, a super-admin the platform's.
-  { tenantSafe: true, label: 'Branding', href: '/branding', icon: Palette },
+  { tenantSafe: true, label: 'White-label', href: '/branding', icon: Palette },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 
