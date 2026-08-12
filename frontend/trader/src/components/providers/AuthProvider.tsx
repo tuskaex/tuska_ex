@@ -6,50 +6,33 @@ import { usePlatformStatusStore } from '@/stores/platformStatusStore';
 import { useRouter, usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { redeemHandoffFromUrl } from '@/lib/terminalHandoff';
+import { isMarketingPath } from '@/config/marketingPaths';
 
 const STAFF_ROLES = new Set(['admin', 'super_admin', 'employee', 'manager', 'support']);
 
-/** Single source of truth for "this URL renders without auth".
- *  Covers the marketing site (home + every (landing)/* route),
- *  legal pages, the public trade-share short URLs, and /auth/*. */
-const PUBLIC_EXACT_PATHS = new Set<string>([
-  '/',
+/** Single source of truth for "this URL renders without auth": the marketing
+ *  site, the public trade-share short URLs, /auth/*, and the hand-off screen.
+ *
+ *  The marketing list itself lives in config/marketingPaths — middleware needs
+ *  the same set to keep TuskaEx's marketing off a white-label tenant's domain,
+ *  and two copies of it would drift. */
+function isPublicPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  if (pathname.startsWith('/auth')) return true;
+  if (pathname.startsWith('/s/')) return true;       // public share-trade short links
   /* The cross-domain hand-off hold screen. Not public in the sense of
-   * "unauthenticated users may use it" — it is listed here so it can PAINT
-   * before auth resolves. Everything else in this app is fine rendering
-   * nothing during that window; this page is the one thing standing between a
-   * Trade click and the address bar changing to another domain, so a blank
-   * gap there is exactly what it exists to prevent.
+   * "unauthenticated users may use it" — it is listed so it can PAINT before
+   * auth resolves. Everything else in this app is fine rendering nothing during
+   * that window; this page is the one thing standing between a Trade click and
+   * the address bar changing to another domain, so a blank gap there is exactly
+   * what it exists to prevent.
    *
    * The page does its own auth gate: it waits for isAuthenticated before
    * minting a handoff code, and sends an unauthenticated visitor to
    * /auth/login itself, since being on this list opts it out of the redirect
    * effect below. */
-  '/terminal',
-  // Top-level marketing pages (light + dark legacy)
-  '/about', '/contact', '/how-it-works', '/platforms', '/white-label',
-  '/privacy', '/terms', '/risk',
-  // New Swistrade-port marketing pages
-  '/careers', '/collaboration', '/group', '/institutional',
-  '/introducing-brokers', '/money-managers', '/partners',
-  // home/page marketing rebuild pages
-  '/policy', '/markets', '/cfds', '/currency-pairs',
-  '/precious-metals', '/demo-account',
-  // Legacy marketing routes still in the (landing) group
-  '/trading/overview', '/protocol',
-  '/trading/forex', '/trading/commodities', '/trading/indices', '/trading/crypto',
-  '/platforms/web', '/platforms/copy-trading', '/platforms/prop-trading',
-  '/platforms/ib-management', '/platforms/super-admin',
-  '/accounts/standard', '/accounts/pro', '/accounts/demo',
-]);
-
-function isPublicPath(pathname: string | null | undefined): boolean {
-  if (!pathname) return false;
-  if (pathname.startsWith('/auth')) return true;
-  if (pathname.startsWith('/s/')) return true;       // public share-trade short links
-  if (pathname.startsWith('/company')) return true;  // legacy company/* tree
-  if (pathname.startsWith('/education')) return true;
-  return PUBLIC_EXACT_PATHS.has(pathname);
+  if (pathname === '/terminal') return true;
+  return isMarketingPath(pathname);
 }
 
 function MaintenanceScreen() {

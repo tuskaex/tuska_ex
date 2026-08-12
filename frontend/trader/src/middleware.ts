@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { isMarketingPath } from '@/config/marketingPaths';
 
 /**
  * ── Terminal on its own domain (NEXT_PUBLIC_TERMINAL_ORIGIN) ──────
@@ -212,6 +213,26 @@ export function middleware(req: NextRequest) {
     .filter(Boolean)
     .map((h) => String(h).toLowerCase());
   const termHost = terminalHost();
+
+  /* ── White-label tenant domains: login, never marketing ────────────
+   * Any host this app serves that is NOT one of TuskaEx's own is a tenant's
+   * domain. One build serves them all, so without this a visitor typing a
+   * broker's domain lands on TuskaEx's marketing site — someone else's brand,
+   * someone else's pricing, on the domain they paid to make theirs.
+   *
+   * They go to the login screen instead, which is what "Apex mode" already
+   * promises in the admin panel: "Visitors landing on the root go straight to
+   * login."
+   *
+   * Only marketing is redirected. /auth, /s/ share links, the API, static
+   * assets and every authenticated app route are untouched — a tenant's users
+   * need all of those. */
+  const platformHosts = [...crmHosts, termHost].filter(Boolean);
+  const onTenantDomain = platformHosts.length > 0 && !platformHosts.includes(host);
+  if (onTenantDomain && !isNeutral(pathname) && isMarketingPath(pathname)) {
+    if (!isTopLevelNavigation(req)) return NextResponse.next();
+    return noCacheRedirect(new URL('/auth/login', req.url).toString());
+  }
   if (
     termHost && host !== termHost && crmHosts.includes(host)
     && !isNeutral(pathname) && isTradePath(pathname)
