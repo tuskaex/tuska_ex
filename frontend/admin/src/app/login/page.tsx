@@ -1,12 +1,13 @@
 'use client';
 
 /**
- * Admin sign-in (TuskaEx Admin) — two-panel card matching the
- * trader auth page: dark hero on the left, white form on the right,
- * brand-red accent. Functional layer unchanged: email + password against
- * the admin JWT store; redirect to /dashboard on success; the
- * security context (audit-logged, isolated JWT, IP-fingerprinted) is
- * surfaced as chips on the hero panel.
+ * Admin sign-in — a single centred card: brand mark, then email + password.
+ *
+ * This page is served on TuskaEx's own admin host AND on every white-label
+ * tenant's, so the mark comes from whoever owns the hostname and no copy on it
+ * names anybody. Functional layer unchanged: email + password against the admin
+ * JWT store, then landingRouteForCurrentAdmin() decides where to go — a
+ * sub-admin cannot open /dashboard.
  */
 
 import { useState, useEffect, type FormEvent } from 'react';
@@ -16,7 +17,6 @@ import { useTenantBrand } from '@/hooks/useTenantBrand';
 import { landingRouteForCurrentAdmin } from '@/lib/landingRoute';
 import {
   Lock, Mail, Loader2, AlertCircle, Eye, EyeOff,
-  ShieldCheck, KeyRound, Activity,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -57,66 +57,44 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center overflow-hidden bg-[#FAFAFA] p-4">
-      <div className="w-full relative max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl ring-1 ring-black/5">
-        {/* Decorative brand-red ball behind the left panel */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-t from-transparent to-black/60" />
-          <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#D60101] rounded-full opacity-90" />
-          <div className="absolute -bottom-6 left-32 w-32 h-20 bg-white rounded-full opacity-90 blur-2xl" />
+    /* Single centred column, logo above the form.
+     *
+     * The old layout was a two-panel card whose left half was a dark hero
+     * reading "Operator console for the TuskaEx platform" — the parent
+     * platform named, in bold, on every white-label tenant's own admin login,
+     * in front of that tenant's staff. A hero panel that cannot be written
+     * without naming somebody is the wrong shape for a page that has to serve
+     * every brand, so it is gone rather than made conditional: one layout,
+     * nothing to keep in sync, and no copy that can leak the wrong name.
+     */
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl ring-1 ring-black/5 p-8 md:p-10">
+
+        {/* Brand mark. Fixed height so the card does not jump when a tenant's
+            logo resolves a moment after first paint. */}
+        <div className="flex items-center justify-center min-h-[3.5rem] mb-6">
+          {brand.isTenant ? (
+            brand.logoUrl ? (
+              /* Plain <img>: a tenant logo is served at runtime, so next/image
+                 would need its path in remotePatterns at BUILD time —
+                 impossible for domains added after the build. */
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={brand.logoUrl} alt={brand.brandName || ''} className="h-11 w-auto object-contain" />
+            ) : brand.brandName ? (
+              <span className="text-xl font-semibold tracking-tight text-[#0A0A0A]">{brand.brandName}</span>
+            ) : null
+          ) : (
+            <Image src="/logo.png" alt="TuskaEx" width={200} height={44} priority className="h-11 w-auto object-contain" />
+          )}
         </div>
 
-        {/* Left dark hero panel */}
-        <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative overflow-hidden z-10 flex flex-col justify-between min-h-[22rem] md:min-h-[38rem]">
-          {/* Reserves its height so the panel does not jump when a tenant's
-              logo resolves after first paint. */}
-          <span className="inline-flex items-center self-start relative z-10 min-h-[3.25rem]">
-            {brand.isTenant ? (
-              brand.logoUrl ? (
-                <span className="inline-flex items-center bg-white/95 rounded-lg px-3 py-1.5">
-                  {/* Plain <img>: a tenant logo is served at runtime, so
-                      next/image would need its path in remotePatterns at BUILD
-                      time — impossible for domains added after the build. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={brand.logoUrl} alt={brand.brandName || ''} className="h-8 w-auto" />
-                </span>
-              ) : brand.brandName ? (
-                <span className="text-xl font-semibold tracking-tight text-white">{brand.brandName}</span>
-              ) : null
-            ) : (
-              <span className="inline-flex items-center bg-white/95 rounded-lg px-3 py-1.5">
-                <Image src="/logo.png" alt="TuskaEx" width={200} height={44} priority className="h-8 w-auto" />
-              </span>
-            )}
-          </span>
-
-          <div className="relative z-10">
-            <h1 className="text-2xl md:text-3xl font-medium leading-tight tracking-tight">
-              Operator console for the TuskaEx platform.
-            </h1>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
-                <ShieldCheck size={13} /> Audit-logged
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
-                <KeyRound size={13} /> Isolated admin JWT
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/80">
-                <Activity size={13} /> IP-fingerprinted
-              </span>
-            </div>
-          </div>
+        <div className="mb-7 text-center">
+          <p className="text-xs uppercase tracking-wider text-[#D60101] font-semibold mb-2">
+            Admin access
+          </p>
+          <h2 className="text-2xl font-medium mb-1.5 tracking-tight text-[#0A0A0A]">Operator console</h2>
+          <p className="text-sm text-[#5B5B5B]">Authorised personnel only.</p>
         </div>
-
-        {/* Right form panel */}
-        <div className="p-8 md:p-12 md:w-1/2 flex flex-col justify-center bg-white text-[#0A0A0A] relative z-20">
-          <div className="mb-8">
-            <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
-              Admin access
-            </p>
-            <h2 className="text-3xl font-medium mb-2 tracking-tight">Operator console</h2>
-            <p className="text-[#5B5B5B]">Authorised personnel only.</p>
-          </div>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit} noValidate>
             <div>
@@ -127,7 +105,7 @@ export default function AdminLoginPage() {
                   type="email"
                   id="email"
                   autoComplete="email"
-                  placeholder="admin@tuskaex.com"
+                  placeholder="you@example.com"
                   className="text-sm w-full py-2.5 pl-10 pr-3 border border-[#E5E5E5] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D60101]/20 focus:border-[#D60101] bg-white text-black transition-colors"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -179,7 +157,6 @@ export default function AdminLoginPage() {
               All sign-in attempts are logged with IP and device fingerprint.
             </p>
           </form>
-        </div>
       </div>
     </div>
   );
