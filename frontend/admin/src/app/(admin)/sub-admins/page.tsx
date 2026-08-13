@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import type { PaginatedResponse, SubAdmin } from '@/types';
 import RowMenu from './RowMenu';
-import { PERMISSION_GROUPS, groupChecked, toggleGroup } from './permissions';
+import { PERMISSION_GROUPS, groupChecked, toggleGroup, isGrantable } from './permissions';
 
 const EMPTY_FORM = {
   email: '',
@@ -313,7 +313,7 @@ export default function SubAdminsPage() {
 
               <div>
                 <span className="block text-xxs text-text-tertiary mb-1.5">
-                  Permissions — granted on top of the defaults every sub-admin gets
+                  Permissions — a sub-admin gets exactly what is ticked here
                 </span>
                 <div className="border border-border-primary rounded-md p-2.5 space-y-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
@@ -324,6 +324,8 @@ export default function SubAdminsPage() {
                         hint={g.hint}
                         checked={groupChecked(g, checked)}
                         onToggle={() => setChecked((c) => toggleGroup(g, c))}
+                        disabled={!isGrantable(g)}
+                        disabledReason={g.unavailableReason}
                       />
                     ))}
                   </div>
@@ -340,6 +342,8 @@ export default function SubAdminsPage() {
                           hint={g.hint}
                           checked={groupChecked(g, checked)}
                           onToggle={() => setChecked((c) => toggleGroup(g, c))}
+                          disabled={!isGrantable(g)}
+                          disabledReason={g.unavailableReason}
                         />
                       ))}
                     </div>
@@ -376,17 +380,39 @@ export default function SubAdminsPage() {
 const inputCls =
   'w-full px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary';
 
+/* Sections that cannot be delegated are shown, not hidden: the operator is
+ * looking at their own sidebar and asking which of it they can hand over, and a
+ * shortened list answers a different question. Disabled with the reason beats a
+ * checkbox that writes a permission string and changes nothing. */
 function PermissionRow({
-  label, hint, checked, onToggle,
+  label, hint, checked, onToggle, disabled, disabledReason,
 }: {
   label: string; hint?: string; checked: boolean; onToggle: () => void;
+  disabled?: boolean; disabledReason?: string;
 }) {
   return (
-    <label className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer">
-      <input type="checkbox" checked={checked} onChange={onToggle} className="mt-0.5" />
+    <label
+      className={`flex items-start gap-2 text-xs ${
+        disabled
+          ? 'text-text-tertiary cursor-not-allowed opacity-60'
+          : 'text-text-secondary cursor-pointer'
+      }`}
+      title={disabled ? disabledReason : undefined}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        disabled={disabled}
+        className="mt-0.5"
+      />
       <span>
         {label}
-        {hint && <span className="block text-xxs text-text-tertiary">{hint}</span>}
+        {(disabled ? disabledReason : hint) && (
+          <span className="block text-xxs text-text-tertiary">
+            {disabled ? disabledReason : hint}
+          </span>
+        )}
       </span>
     </label>
   );

@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 import type {
   PaginatedResponse, SubAdmin, SubAdminClient, SubAdminReport,
 } from '@/types';
-import { PERMISSION_GROUPS, groupChecked, toggleGroup } from '../permissions';
+import { PERMISSION_GROUPS, groupChecked, toggleGroup, isGrantable } from '../permissions';
 
 export default function SubAdminDetailPage() {
   const params = useParams();
@@ -188,18 +188,26 @@ export default function SubAdminDetailPage() {
             {PERMISSION_GROUPS.filter((g) => !g.sensitive).map((g) => (
               <label
                 key={g.key}
-                className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer py-1"
+                title={!isGrantable(g) ? g.unavailableReason : undefined}
+                className={`flex items-start gap-2 text-xs py-1 ${
+                  isGrantable(g)
+                    ? 'text-text-secondary cursor-pointer'
+                    : 'text-text-tertiary cursor-not-allowed opacity-60'
+                }`}
               >
                 <input
                   type="checkbox"
                   className="mt-0.5"
+                  disabled={!isGrantable(g)}
                   checked={groupChecked(g, checked)}
                   onChange={() => setChecked((c) => toggleGroup(g, c))}
                 />
                 <span>
                   {g.label}
-                  {g.hint && (
-                    <span className="block text-xxs text-text-tertiary">{g.hint}</span>
+                  {(isGrantable(g) ? g.hint : g.unavailableReason) && (
+                    <span className="block text-xxs text-text-tertiary">
+                      {isGrantable(g) ? g.hint : g.unavailableReason}
+                    </span>
                   )}
                 </span>
               </label>
@@ -211,18 +219,26 @@ export default function SubAdminDetailPage() {
             {PERMISSION_GROUPS.filter((g) => g.sensitive).map((g) => (
               <label
                 key={g.key}
-                className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer py-1"
+                title={!isGrantable(g) ? g.unavailableReason : undefined}
+                className={`flex items-start gap-2 text-xs py-1 ${
+                  isGrantable(g)
+                    ? 'text-text-secondary cursor-pointer'
+                    : 'text-text-tertiary cursor-not-allowed opacity-60'
+                }`}
               >
                 <input
                   type="checkbox"
                   className="mt-0.5"
+                  disabled={!isGrantable(g)}
                   checked={groupChecked(g, checked)}
                   onChange={() => setChecked((c) => toggleGroup(g, c))}
                 />
                 <span>
                   {g.label}
-                  {g.hint && (
-                    <span className="block text-xxs text-text-tertiary">{g.hint}</span>
+                  {(isGrantable(g) ? g.hint : g.unavailableReason) && (
+                    <span className="block text-xxs text-text-tertiary">
+                      {isGrantable(g) ? g.hint : g.unavailableReason}
+                    </span>
                   )}
                 </span>
               </label>
