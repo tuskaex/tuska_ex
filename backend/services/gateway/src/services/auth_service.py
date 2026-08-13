@@ -451,7 +451,17 @@ async def register_user(
     referral_code: str | None,
     request: Request,
     db: AsyncSession,
+    mark_email_verified: bool = False,
 ) -> JSONResponse:
+    """Create the account and sign the user in.
+
+    `mark_email_verified` is set by the no-OTP path (see
+    pending_registration_service, `require_email_verification` off). With the
+    verification step gone nothing else would ever set the flag, and login_user
+    refuses an unverified address — so the account would register cleanly and
+    then be unable to sign in. Defaults False so the OTP flow, which sets it in
+    complete_pending_registration, is unaffected.
+    """
     assert_same_origin(request)
     from packages.common.src.settings_store import get_bool_setting
 
@@ -488,6 +498,9 @@ async def register_user(
         user.role = "user"
         user.status = "active"
         user.kyc_status = "pending"
+        if mark_email_verified:
+            user.email_verified = True
+            user.email_verified_at = datetime.now(timezone.utc)
         await db.flush()
     else:
         user = User(
@@ -500,6 +513,10 @@ async def register_user(
             role="user",
             status="active",
             kyc_status="pending",
+            email_verified=mark_email_verified,
+            email_verified_at=(
+                datetime.now(timezone.utc) if mark_email_verified else None
+            ),
         )
         db.add(user)
         await db.flush()

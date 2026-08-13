@@ -144,13 +144,28 @@ export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSign
       // only after the OTP is verified in submitOtp(). If the user
       // typo'd their email, they can hit the X / "Use a different
       // email" button and the pending entry expires harmlessly.
-      await api.post('/auth/register/start', {
-        email: normalizedEmail,
-        password,
-        first_name: 'New',
-        last_name: 'Trader',
-        ...(referralCode ? { referral_code: referralCode } : {}),
-      });
+      const started = await api.post<{ user?: unknown; access_token?: string }>(
+        '/auth/register/start',
+        {
+          email: normalizedEmail,
+          password,
+          first_name: 'New',
+          last_name: 'Trader',
+          ...(referralCode ? { referral_code: referralCode } : {}),
+        },
+      );
+
+      // With `require_email_verification` off the backend has no second step:
+      // it creates the account and signs the user in on this same call, so the
+      // reply carries a session instead of the "code sent" ack. Sending them to
+      // an OTP screen then would strand them on a code that will never arrive.
+      if (started && (started.user || started.access_token)) {
+        await refreshUser();
+        toast.success(brandName ? `Welcome to ${brandName}.` : 'Account created.');
+        router.push('/dashboard');
+        return;
+      }
+
       toast.success('Verification code sent. Check your email.');
       setStep('otp');
     } catch (err) {

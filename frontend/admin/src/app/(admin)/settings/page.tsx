@@ -16,6 +16,7 @@ interface Settings {
   min_lot_size: number;
   maintenance_mode: boolean;
   allow_new_registrations: boolean;
+  require_email_verification: boolean;
   allow_deposits: boolean;
   allow_withdrawals: boolean;
   [key: string]: number | boolean | string;
@@ -36,6 +37,7 @@ const DEFAULT_SETTINGS: Settings = {
   min_lot_size: 0.01,
   maintenance_mode: false,
   allow_new_registrations: true,
+  require_email_verification: true,
   allow_deposits: true,
   allow_withdrawals: true,
 };
@@ -67,6 +69,7 @@ function rowsToSettings(rows: SystemSettingRow[]): Settings {
     min_lot_size: num('min_lot_size', DEFAULT_SETTINGS.min_lot_size),
     maintenance_mode: bool('maintenance_mode', DEFAULT_SETTINGS.maintenance_mode),
     allow_new_registrations: bool('allow_new_registrations', DEFAULT_SETTINGS.allow_new_registrations),
+    require_email_verification: bool('require_email_verification', DEFAULT_SETTINGS.require_email_verification),
     allow_deposits: bool('allow_deposits', DEFAULT_SETTINGS.allow_deposits),
     allow_withdrawals: bool('allow_withdrawals', DEFAULT_SETTINGS.allow_withdrawals),
   };
@@ -83,6 +86,7 @@ function settingsToPayload(s: Settings): Record<string, number | boolean> {
     min_lot_size: s.min_lot_size,
     maintenance_mode: s.maintenance_mode,
     allow_new_registrations: s.allow_new_registrations,
+    require_email_verification: s.require_email_verification,
     allow_deposits: s.allow_deposits,
     allow_withdrawals: s.allow_withdrawals,
   };
@@ -259,6 +263,7 @@ export default function SettingsPage() {
                   {[
                     { key: 'maintenance_mode', label: 'Maintenance Mode', desc: 'Disables all trading and user access', danger: true },
                     { key: 'allow_new_registrations', label: 'Allow New Registrations', desc: 'Enable or disable new user sign-ups' },
+                    { key: 'require_email_verification', label: 'Require Email Verification', desc: 'Off = sign-up creates the account immediately, no OTP step' },
                     { key: 'allow_deposits', label: 'Allow Deposits', desc: 'Enable or disable deposit functionality' },
                     { key: 'allow_withdrawals', label: 'Allow Withdrawals', desc: 'Enable or disable withdrawal requests' },
                   ].map((toggle) => (

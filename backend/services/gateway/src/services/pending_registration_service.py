@@ -126,6 +126,26 @@ async def start_pending_registration(
     if not await get_bool_setting("allow_new_registrations", True):
         raise HTTPException(status_code=403, detail="New registrations are currently disabled")
 
+    # ── Verification switched off ────────────────────────────────────────
+    # With `require_email_verification` off there is no second step, so the row
+    # has to be created here — and marked verified as it is written. Leaving
+    # email_verified false would mint an account that registers cleanly and then
+    # cannot log in: login_user refuses an unverified address, and with the OTP
+    # step gone nothing would ever set the flag.
+    #
+    # A setting rather than deleted code, so turning it back on is a toggle and
+    # not a deploy. Default True — an operator who never touches it keeps the
+    # OTP flow exactly as it was.
+    if not await get_bool_setting("require_email_verification", True):
+        from .auth_service import register_user
+
+        return await register_user(
+            email=email_lower, password=password,
+            first_name=first_name, last_name=last_name,
+            phone=phone, country=country, referral_code=referral_code,
+            request=request, db=db, mark_email_verified=True,
+        )
+
     # Idempotency cooldown: a duplicate /register/start for the same email
     # within this window (double-click, client retry while the SMTP send is
     # still in flight, back-then-submit) must NOT mint + email a second OTP.
