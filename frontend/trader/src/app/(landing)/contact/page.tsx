@@ -1,7 +1,7 @@
 import { Phone, Mail, MessageCircle, MapPin, Clock } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
-export const metadata = { title: 'Contact Us — TuskaEx' }
+export const metadata = { title: 'Contact Us' }
 
 export default function ContactPage() {
   return (

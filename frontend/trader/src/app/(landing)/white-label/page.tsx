@@ -1,6 +1,6 @@
 import { Building2, Zap, Users, Shield, TrendingUp, Clock } from 'lucide-react'
 
-export const metadata = { title: 'White Label Solutions — TuskaEx' }
+export const metadata = { title: 'White Label Solutions' }
 
 export default function WhiteLabelPage() {
   return (

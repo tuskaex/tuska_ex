@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Home, ArrowLeft } from 'lucide-react'
 
-export const metadata = { title: 'Page Not Found — TuskaEx' }
+export const metadata = { title: 'Page Not Found' }
 
 /**
  * Marketing-scope 404. Light theme + LandingHeader/Footer from the

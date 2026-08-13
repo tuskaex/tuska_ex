@@ -1,9 +1,10 @@
+import { appMetadata } from '@/lib/appMetadata'
 import Link from 'next/link'
 import { Home, ArrowLeft } from 'lucide-react'
 
-export const metadata = { title: 'Page Not Found — TuskaEx' }
-
-/**
+export async function generateMetadata() {
+  return appMetadata('Page Not Found')
+}/**
  * Root-level 404 — catches any path that doesn't match a route AND
  * isn't covered by a more specific not-found.tsx. The landing route
  * group has its own light-themed variant for marketing 404s.

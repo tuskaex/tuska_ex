@@ -4,9 +4,8 @@ import { authMetadata } from '../metadata'
 /** Per request, not a constant — see app/auth/metadata.ts. */
 export async function generateMetadata() {
   return authMetadata({
-    platformTitle: 'Create Account — TuskaEx',
+    title: 'Create Account',
     platformDescription: 'Open a TuskaEx trading account in under 2 minutes.',
-    neutralTitle: 'Create Account',
     neutralDescription: 'Open a trading account in under 2 minutes.',
   })
 }

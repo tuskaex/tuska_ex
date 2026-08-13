@@ -1,5 +1,5 @@
 export const metadata = {
-  title: 'Account & Data Deletion — TuskaEx',
+  title: 'Account & Data Deletion',
   description:
     'How to request deletion of your TuskaEx account and associated data, what is removed, and what we are legally required to retain.',
 }

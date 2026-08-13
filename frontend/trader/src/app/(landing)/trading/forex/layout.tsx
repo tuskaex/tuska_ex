@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Trade Forex — TuskaEx',
+  title: 'Trade Forex',
   description: '50+ currency pairs with leverage up to 1:500 and spreads from 0.0 pips.',
 }
 

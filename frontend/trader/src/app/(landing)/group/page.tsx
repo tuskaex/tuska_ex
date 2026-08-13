@@ -14,7 +14,7 @@ import Sponsors from '@/landing/marketing/Sponsors'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
 export const metadata = {
-  title: 'Group — TuskaEx',
+  title: 'Group',
   description: 'A trading platform unlike any other. The TuskaEx Group.',
 }
 

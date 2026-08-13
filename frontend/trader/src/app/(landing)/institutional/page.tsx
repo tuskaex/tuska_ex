@@ -13,7 +13,7 @@ import Sponsors from '@/landing/marketing/Sponsors'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
 export const metadata = {
-  title: 'Institutional — TuskaEx',
+  title: 'Institutional',
   description: 'Institutional solutions for banks, brokers, funds and corporates.',
 }
 

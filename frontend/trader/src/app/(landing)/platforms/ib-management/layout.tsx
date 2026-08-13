@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'IB Management — TuskaEx',
+  title: 'IB Management',
   description: 'Introducing-broker portal with multi-tier commissions and real-time reporting.',
 }
 

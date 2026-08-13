@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react'
 
-export const metadata = { title: 'Risk Disclosure — TuskaEx' }
+export const metadata = { title: 'Risk Disclosure' }
 
 export default function RiskPage() {
   return (

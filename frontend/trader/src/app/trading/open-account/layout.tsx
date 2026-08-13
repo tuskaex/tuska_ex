@@ -1,8 +1,8 @@
+import { appMetadata } from '@/lib/appMetadata'
 import type { ReactNode } from 'react'
 
-export const metadata = {
-  title: 'Open Trading Account — TuskaEx',
-  description: 'Choose your account type and open a new trading account.',
+export async function generateMetadata() {
+  return appMetadata('Open Trading Account', 'Choose your account type and open a new trading account.')
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Web Trading Platform — TuskaEx',
+  title: 'Web Trading Platform',
   description: 'Trade from any browser with no installation. Full-featured terminal in your tab.',
 }
 

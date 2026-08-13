@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { Monitor, Smartphone, Globe, Zap, BarChart3, Shield, Check, ArrowRight } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
-export const metadata = { title: 'Trading Platforms — TuskaEx' }
+export const metadata = { title: 'Trading Platforms' }
 
 export default function PlatformsPage() {
   return (

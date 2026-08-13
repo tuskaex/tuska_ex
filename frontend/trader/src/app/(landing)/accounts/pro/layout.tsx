@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Pro Account — TuskaEx',
+  title: 'Pro Account',
   description: 'Tight spreads from 0.0 pips with professional-grade execution.',
 }
 

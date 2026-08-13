@@ -1,8 +1,8 @@
+import { appMetadata } from '@/lib/appMetadata'
 import type { ReactNode } from 'react'
 
-export const metadata = {
-  title: 'Wallet — TuskaEx',
-  description: 'Deposit, withdraw, and manage funds across your trading accounts.',
+export async function generateMetadata() {
+  return appMetadata('Wallet', 'Deposit, withdraw, and manage funds across your trading accounts.')
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

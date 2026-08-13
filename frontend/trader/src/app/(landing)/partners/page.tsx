@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 
 export const metadata = {
-  title: 'Partners & Introducing Brokers — TuskaEx',
+  title: 'Partners & Introducing Brokers',
   description:
     'Refer traders to TuskaEx and earn a rebate on the volume they trade. Transparent payouts, lifetime client value, and a partner dashboard that shows the accrual daily.',
 }

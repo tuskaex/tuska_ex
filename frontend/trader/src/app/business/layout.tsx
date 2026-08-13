@@ -1,8 +1,8 @@
+import { appMetadata } from '@/lib/appMetadata'
 import type { ReactNode } from 'react'
 
-export const metadata = {
-  title: 'Business Dashboard — TuskaEx',
-  description: 'IB partner stats, commissions, and referral analytics.',
+export async function generateMetadata() {
+  return appMetadata('Business Dashboard', 'IB partner stats, commissions, and referral analytics.')
 }
 
 export default function Layout({ children }: { children: ReactNode }) {

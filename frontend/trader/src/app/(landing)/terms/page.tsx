@@ -1,6 +1,6 @@
 import { FileText } from 'lucide-react'
 
-export const metadata = { title: 'Terms and Conditions — TuskaEx' }
+export const metadata = { title: 'Terms and Conditions' }
 
 export default function TermsPage() {
   return (

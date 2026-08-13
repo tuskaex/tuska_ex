@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Wallet, Clock, Activity, ShieldCheck, ArrowRight } from 'lucide-react'
 
-export const metadata = { title: 'Demo Account — TuskaEx' }
+export const metadata = { title: 'Demo Account' }
 
 const FEATURES = [
   {

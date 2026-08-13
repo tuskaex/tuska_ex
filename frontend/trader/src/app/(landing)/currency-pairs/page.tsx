@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Globe, Zap, Activity, ShieldCheck, ArrowRight } from 'lucide-react'
 
-export const metadata = { title: 'Currency Pairs — TuskaEx' }
+export const metadata = { title: 'Currency Pairs' }
 
 const PAIRS = [
   { symbol: 'EUR/USD', name: 'Euro / US Dollar', spread: 'from 0.1', leverage: 'up to 1:500' },

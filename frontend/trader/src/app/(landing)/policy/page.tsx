@@ -4,7 +4,7 @@ import Disclaimer from '@/landing/marketing/Disclaimer'
 import PolicyHeroVisual from '@/landing/marketing/ui/PolicyHeroVisual'
 
 export const metadata = {
-  title: 'Policies & Legal — TuskaEx',
+  title: 'Policies & Legal',
   description:
     'Privacy, terms of service, risk disclosure, and vulnerability reporting policies for TuskaEx clients and partners.',
 }

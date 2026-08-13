@@ -1,7 +1,7 @@
 import { Users, Target, Shield, Globe } from 'lucide-react'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
-export const metadata = { title: 'About Us — TuskaEx' }
+export const metadata = { title: 'About Us' }
 
 export default function AboutPage() {
   return (

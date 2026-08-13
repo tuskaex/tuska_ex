@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Layers, TrendingUp, TrendingDown, BarChart4, AlertTriangle, ArrowRight } from 'lucide-react'
 
-export const metadata = { title: 'CFDs — TuskaEx' }
+export const metadata = { title: 'CFDs' }
 
 const CFD_GROUPS = [
   { name: 'Indices', body: 'S&P 500, NASDAQ 100, DAX, FTSE 100, Nikkei 225 — the world’s benchmark indices, traded around the clock.' },

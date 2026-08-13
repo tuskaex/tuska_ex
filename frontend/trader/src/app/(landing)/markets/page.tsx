@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, Coins, Globe, Layers, Briefcase, Bitcoin } from 'lucide-react'
 
-export const metadata = { title: 'Markets — TuskaEx' }
+export const metadata = { title: 'Markets' }
 
 const MARKETS = [
   {

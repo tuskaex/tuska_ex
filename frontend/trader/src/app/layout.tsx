@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Suspense } from 'react';
+import TenantFavicon from '@/components/TenantFavicon';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
@@ -12,12 +13,27 @@ import TopLoader from '@/components/TopLoader';
 import { fontVariableClass } from '@/styles/fonts';
 
 /**
- * Favicon comes from `src/app/icon.png` — Next.js App Router auto-
- * registers it. No `metadata.icons` override needed (any override
- * here would beat the file convention).
+ * Titles compose from a template: a page says "Dashboard", this appends the
+ * platform name. White-label tenants defeat the suffix with `title.absolute`
+ * from `appMetadata()` — see src/lib/appMetadata.ts for why it is done there
+ * and not here.
+ *
+ * This block is deliberately STATIC. An earlier version read `headers()` here
+ * to pick the suffix per host, which is correct but costs the whole site its
+ * static rendering: `headers()` in the ROOT layout opts every route into
+ * dynamic rendering, and the marketing pages went from 67 prerendered routes to
+ * 2. Only the authenticated app needs the host-aware title, and those routes
+ * are dynamic anyway, so the decision belongs in their layouts.
+ *
+ * Favicon comes from `src/app/icon.png` (App Router file convention). On a
+ * tenant host <TenantFavicon /> swaps it for that tenant's own logo once the
+ * brand resolves.
  */
 export const metadata: Metadata = {
-  title: 'TuskaEx',
+  title: {
+    template: '%s — TuskaEx',
+    default: 'TuskaEx',
+  },
   description: 'TuskaEx — professional forex and CFD trading platform',
 };
 
@@ -72,6 +88,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full notranslate" translate="no" suppressHydrationWarning>
+        <TenantFavicon />
         <Suspense fallback={null}>
           <TopLoader />
         </Suspense>

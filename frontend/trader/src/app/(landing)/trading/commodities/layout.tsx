@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Trade Commodities — TuskaEx',
+  title: 'Trade Commodities',
   description: 'Gold, silver, oil and other commodity CFDs with tight spreads.',
 }
 

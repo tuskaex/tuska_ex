@@ -8,7 +8,7 @@ import Sponsors from '@/landing/marketing/Sponsors'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
 export const metadata = {
-  title: 'Careers — TuskaEx',
+  title: 'Careers',
   description: 'Join the TuskaEx team. We are all in.',
 }
 

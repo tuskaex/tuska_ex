@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Coins, Shield, Clock, BarChart3, ArrowRight } from 'lucide-react'
 
-export const metadata = { title: 'Precious Metals — TuskaEx' }
+export const metadata = { title: 'Precious Metals' }
 
 const METALS = [
   { symbol: 'XAU/USD', name: 'Gold', spread: 'from 0.18', leverage: 'up to 1:100' },

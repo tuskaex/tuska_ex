@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export const metadata = {
-  title: 'Trading Overview — TuskaEx',
+  title: 'Trading Overview',
   description: 'Asset classes, execution model, spreads, and account types — at a glance.',
 }
 

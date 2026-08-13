@@ -11,7 +11,7 @@ import Sponsors from '@/landing/marketing/Sponsors'
 import Disclaimer from '@/landing/marketing/Disclaimer'
 
 export const metadata = {
-  title: 'Introducing Brokers — TuskaEx',
+  title: 'Introducing Brokers',
   description: "Build your client base with TuskaEx's IB program.",
 }
 
