@@ -186,7 +186,23 @@ def _cookie_domain(request: Request | None = None) -> str | None:
                 bare = d.lstrip(".")
                 if host == bare or host.endswith("." + bare):
                     return d
-            return None  # tenant domain → host-only cookie
+            # Apex-mode tenants serve broker.com AND www.broker.com, and a user
+            # who signs in on one must stay signed in on the other, so those two
+            # need a shared `.broker.com` cookie.
+            #
+            # Widened ONLY when the bare apex is itself a host we serve. In
+            # subdomain mode it is not: the tenant keeps the apex for their own
+            # landing page on Vercel/Webflow, and a `.broker.com` cookie would
+            # be attached to every request the browser makes to that third-party
+            # host — handing our session credential to somebody else's server.
+            # Subdomain mode needs no widening regardless: the terminal renders
+            # in place on the same host (see terminalHandoff.shouldHandOffToTerminal)
+            # and the admin panel uses a different cookie name.
+            from packages.common.src import tenant_hosts as _tenant_hosts
+            apex = _tenant_hosts.apex_for_host(host)
+            if apex and _tenant_hosts.is_tenant_host(apex):
+                return f".{apex}"
+            return None  # subdomain-mode or unknown host → host-only cookie
     d = (st.COOKIE_DOMAIN or "").strip()
     return d or None
 
@@ -521,7 +537,22 @@ async def register_user(
         db.add(user)
         await db.flush()
 
-    if referral_code:
+    # White-label attribution. A signup that arrived through a tenant's ?ref=
+    # code, or simply on the tenant's own domain, joins that tenant's pool.
+    # Anything else keeps the NULL assigned_admin_id it has always had, so the
+    # platform-pool path is byte-identical to before this existed.
+    from .tenant_resolver import apply_signup_owner, resolve_signup_owner
+
+    owner_id, signup_origin, code_was_tenant = await resolve_signup_owner(
+        referral_code=referral_code, request=request, db=db,
+    )
+    apply_signup_owner(user, owner_id, signup_origin)
+    await db.flush()
+
+    # A tenant code and an IB referral code live in different namespaces. Passing
+    # a tenant's code to the IB engine would credit a commission against a broker
+    # row that never referred anybody.
+    if referral_code and not code_was_tenant:
         await _consume_referral(db, user.id, referral_code)
 
     response = await issue_auth_json_response(
@@ -575,6 +606,25 @@ async def login_user(
     if user.role in STAFF_ROLES:
         raise AuthServiceError(
             "Staff accounts must sign in via the admin portal.", 403
+        )
+
+    # Tenant isolation. A white-label login page belongs to one broker, and only
+    # that broker's clients may use it — otherwise every tenant's site doubles
+    # as a login form for every other tenant's users, which both places a client
+    # on a site that is not theirs and confirms to a stranger that an account
+    # exists. Checked after the password so a wrong host cannot be used to probe
+    # which emails are registered.
+    #
+    # Fails OPEN when the host belongs to no tenant: the platform's own
+    # hostnames, local development, and domains that are connected but not yet
+    # served all land there, and none of them should lock anyone out.
+    from .tenant_resolver import assert_login_allowed_on_host
+
+    if not await assert_login_allowed_on_host(user, request, db):
+        raise AuthServiceError(
+            "This account belongs to a different broker. Please sign in on your "
+            "own broker's site.",
+            403,
         )
 
     # Email-verification gate. A user who never verified the email they
@@ -810,7 +860,20 @@ async def google_oauth(
             db.add(user)
             await db.flush()
             is_new = True
-            if referral_code:
+
+            # Same white-label attribution as the password signup paths. Without
+            # it, "Continue with Google" on a tenant's own domain silently drops
+            # the new client into the platform pool — the one signup route that
+            # leaked, and the hardest to notice because it works perfectly.
+            from .tenant_resolver import apply_signup_owner, resolve_signup_owner
+
+            owner_id, signup_origin, code_was_tenant = await resolve_signup_owner(
+                referral_code=referral_code, request=request, db=db,
+            )
+            apply_signup_owner(user, owner_id, signup_origin)
+            await db.flush()
+
+            if referral_code and not code_was_tenant:
                 await _consume_referral(db, user.id, referral_code)
 
     if user.status == "banned":
@@ -825,6 +888,18 @@ async def google_oauth(
     if user.role in STAFF_ROLES:
         raise AuthServiceError(
             "Staff accounts must sign in via the admin portal.", 403
+        )
+
+    # Tenant isolation — same rule as login_user(). A broker's Google button
+    # must not sign in another broker's client. Passes trivially for the row
+    # just created above, which was assigned to this host's tenant.
+    from .tenant_resolver import assert_login_allowed_on_host
+
+    if not await assert_login_allowed_on_host(user, request, db):
+        raise AuthServiceError(
+            "This account belongs to a different broker. Please sign in on your "
+            "own broker's site.",
+            403,
         )
 
     # Single commit point — issue_auth_json_response below adds session + refresh

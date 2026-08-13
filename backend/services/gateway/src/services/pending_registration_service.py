@@ -44,6 +44,7 @@ import json
 import logging
 import secrets
 import hashlib
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -133,6 +134,10 @@ async def start_pending_registration(
     # cannot log in: login_user refuses an unverified address, and with the OTP
     # step gone nothing would ever set the flag.
     #
+    # Returns early, and that is safe for white-label attribution: register_user
+    # resolves the tenant itself, so a signup on a broker's domain lands in that
+    # broker's pool on this path too.
+    #
     # A setting rather than deleted code, so turning it back on is a toggle and
     # not a deploy. Default True — an operator who never touches it keeps the
     # OTP flow exactly as it was.
@@ -145,6 +150,22 @@ async def start_pending_registration(
             phone=phone, country=country, referral_code=referral_code,
             request=request, db=db, mark_email_verified=True,
         )
+
+    # White-label attribution is resolved HERE, at start, not at verify: the
+    # ?ref= code and the Host the form was submitted on are both signals of
+    # where the user began, and only `start` sees the code at all (`verify`
+    # carries an email and an OTP and nothing else). The outcome rides in the
+    # staged payload so the row created two steps later lands in the right pool.
+    from .tenant_resolver import resolve_signup_owner
+
+    _owner_id, _signup_origin, _code_is_tenant = await resolve_signup_owner(
+        referral_code=referral_code, request=request, db=db,
+    )
+    tenant_fields = {
+        "tenant_owner_id": str(_owner_id) if _owner_id else None,
+        "signup_origin": _signup_origin,
+        "code_is_tenant": _code_is_tenant,
+    }
 
     # Idempotency cooldown: a duplicate /register/start for the same email
     # within this window (double-click, client retry while the SMTP send is
@@ -167,6 +188,7 @@ async def start_pending_registration(
                     "phone": (phone or "").strip() or None,
                     "country": (country or "").strip() or None,
                     "referral_code": (referral_code or "").strip() or None,
+                    **tenant_fields,
                 })
                 ttl = await redis_client.ttl(_redis_key(email_lower))
                 await redis_client.setex(
@@ -192,6 +214,7 @@ async def start_pending_registration(
         "phone": (phone or "").strip() or None,
         "country": (country or "").strip() or None,
         "referral_code": (referral_code or "").strip() or None,
+        **tenant_fields,
         "otp_hash": _hash_otp(otp, salt),
         "otp_salt": salt,
         "attempts": 0,
@@ -298,11 +321,30 @@ async def complete_pending_registration(
         email_verified=True,
         email_verified_at=datetime.now(timezone.utc),
     )
+    # Pool membership decided at /register/start (see the tenant_fields block
+    # there). A malformed or missing value leaves the row in the platform pool,
+    # which is where every row sat before white-label attribution existed — a
+    # signup must never fail over this.
+    from .tenant_resolver import ORIGIN_PLATFORM, apply_signup_owner
+
+    _owner_raw = payload.get("tenant_owner_id")
+    _owner_id = None
+    if _owner_raw:
+        try:
+            _owner_id = uuid.UUID(str(_owner_raw))
+        except (TypeError, ValueError):
+            logger.warning("staged tenant_owner_id %r is not a UUID", _owner_raw)
+    apply_signup_owner(
+        user, _owner_id, payload.get("signup_origin") or ORIGIN_PLATFORM
+    )
+
     db.add(user)
     await db.flush()
 
     referral_code = payload.get("referral_code")
-    if referral_code:
+    # A code already consumed as a tenant code is not an IB code — handing it to
+    # the referral engine would credit a commission against a broker row.
+    if referral_code and not payload.get("code_is_tenant"):
         # Lazy import — auth_service imports from us via the route
         # handler, so going the other way at module-load time would
         # produce a circular import.
