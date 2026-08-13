@@ -18,7 +18,6 @@ from packages.common.src.kafka_client import close_producer
 from packages.common.src.auth import decode_token, require_onboarded
 from packages.common.src.models import TradingAccount
 from packages.common.src.instrumentation import init_sentry, add_middleware_stack
-from packages.common.src.tenant_cors import install_tenant_cors
 
 from .api import (
     auth, orders, positions, accounts, instruments, deposits, webhooks,
@@ -285,11 +284,6 @@ app.add_middleware(
 )
 
 add_middleware_stack(app)
-
-# White-label tenant origins. Registered LAST so it is the OUTERMOST middleware
-# — Starlette prepends, and CORSMiddleware above would otherwise 400 a tenant's
-# preflight before this ever runs. See packages/common/src/tenant_cors.py.
-install_tenant_cors(app, static_origins=set(_cors_origins))
 
 # REST API Routes
 #
