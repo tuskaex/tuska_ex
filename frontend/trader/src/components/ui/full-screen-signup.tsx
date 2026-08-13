@@ -237,18 +237,41 @@ export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSign
     }
   };
 
+  /* Tenant domains get a single centred card; the platform keeps the
+   * two-panel hero.
+   *
+   * The hero's headline is TuskaEx's own marketing ("A precision-engineered
+   * trading platform for serious investors"), and on a broker's own domain it
+   * was the parent platform's pitch shown to that broker's customers. The admin
+   * login hit the same problem and removed its hero outright; here the copy
+   * still earns its place on tuskaex.com, so the panel is dropped only where it
+   * does not belong rather than everywhere.
+   *
+   * Safe to branch on: `brand.isTenant` is decided synchronously from the host
+   * (see useTenantBrand), so the server and the first client render already
+   * agree and there is no hydration flip.
+   */
+  const isTenant = brand.isTenant;
+
   return (
     <div className="min-h-screen flex items-center justify-center overflow-hidden bg-[#FAFAFA] p-4">
-      <div className="w-full relative max-w-5xl rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl ring-1 ring-black/5">
+      <div
+        className={`w-full relative rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl ring-1 ring-black/5 ${
+          isTenant ? 'max-w-md' : 'max-w-5xl'
+        }`}
+      >
         {/* Decorative brand-red ball + blurred bands behind the left panel */}
+        {!isTenant && (
         <div className="absolute inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-t from-transparent to-black/60" />
           <div className="absolute -bottom-12 -left-8 w-60 h-60 bg-[#D60101] rounded-full opacity-90" />
           <div className="absolute -bottom-6 left-32 w-32 h-20 bg-white rounded-full opacity-90 blur-2xl" />
           <div className="absolute bottom-2 left-12 w-32 h-20 bg-white rounded-full opacity-70 blur-xl" />
         </div>
+        )}
 
-        {/* Left dark hero panel */}
+        {/* Left dark hero panel — platform only */}
+        {!isTenant && (
         <div className="bg-black text-white p-8 md:p-12 md:w-1/2 relative overflow-hidden z-10 flex flex-col justify-between min-h-[20rem] md:min-h-[36rem]">
           {/* Reserves its own height so the panel does not reflow when a
               tenant's logo resolves a moment after first paint. */}
@@ -292,12 +315,39 @@ export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSign
             {copy.hero}
           </h1>
         </div>
+        )}
 
-        {/* Right form panel */}
-        <div className="p-8 md:p-12 md:w-1/2 flex flex-col bg-white text-[#0A0A0A] relative z-20">
+        {/* Right form panel — the whole card on a tenant domain */}
+        <div
+          className={`p-8 md:p-12 flex flex-col bg-white text-[#0A0A0A] relative z-20 ${
+            isTenant ? 'w-full' : 'md:w-1/2'
+          }`}
+        >
+          {/* Tenant brand mark. Lives in the hero on the platform, so it only
+              needs rendering here when that panel is gone. Fixed height so the
+              card does not jump when the logo resolves after first paint. */}
+          {isTenant && (
+            <div className="flex items-center justify-center min-h-[5.5rem] mb-6">
+              {brandLogo ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={brandLogo}
+                  alt={brandName || ''}
+                  className="h-20 w-auto object-contain"
+                />
+              ) : brandName ? (
+                <span className="text-2xl font-semibold tracking-tight text-[#0A0A0A]">
+                  {brandName}
+                </span>
+              ) : null}
+            </div>
+          )}
+
           {step === 'credentials' && (
             <>
-              <div className="mb-8">
+              {/* Centred in the narrow tenant card, left-aligned beside the
+                  platform's hero where it has a full half-panel to sit in. */}
+              <div className={`mb-8 ${isTenant ? 'text-center' : ''}`}>
                 <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
                   {eyebrow}
                 </p>
