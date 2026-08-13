@@ -486,17 +486,39 @@ async def verify_domain(*, admin: User, db: AsyncSession) -> dict:
     if not admin.custom_domain:
         raise HTTPException(status_code=400, detail="No domain connected.")
 
+    was_live = admin.custom_domain_status == STATUS_READY
     result = await check_dns(admin.custom_domain, admin.app_subdomain, admin.admin_subdomain)
     if result["all_matched"]:
-        admin.custom_domain_status = STATUS_DNS_VERIFIED
+        # READY is further along than DNS_VERIFIED; a passing re-check is no
+        # reason to walk a live domain backwards.
+        if not was_live:
+            admin.custom_domain_status = STATUS_DNS_VERIFIED
         admin.custom_domain_last_error = None
     else:
-        admin.custom_domain_status = STATUS_PENDING_DNS
         bad = [r for r in result["records"] if not r["matched"]]
-        admin.custom_domain_last_error = "; ".join(
+        detail = "; ".join(
             f"{r['host']}: {r['error'] or ('points to ' + ', '.join(r['ips']) if r['ips'] else 'no A record')}"
             for r in bad
         )
+        if was_live:
+            # NEVER downgrade a domain we are already serving. This check
+            # cannot succeed for a tenant behind Cloudflare — connect-tenant-
+            # domain.sh requires the A records to be PROXIED, so they resolve
+            # to Cloudflare's IPs and never to PLATFORM_PUBLIC_IP. Downgrading
+            # on that basis took a working white-label site down: status left
+            # READY means find_by_domain stops matching, the branding API
+            # returns nulls, and the tenant's logo and favicon vanish while
+            # the site keeps serving. Record what the lookup saw and leave the
+            # status alone.
+            admin.custom_domain_last_error = (
+                f"{detail} — status left READY because the site is already being "
+                f"served. A proxied (orange-cloud) Cloudflare record resolves to "
+                f"Cloudflare, not to this platform's IP, so this check cannot pass "
+                f"for that setup."
+            )
+        else:
+            admin.custom_domain_status = STATUS_PENDING_DNS
+            admin.custom_domain_last_error = detail
     await db.commit()
 
     out = domain_payload(admin)

@@ -97,10 +97,33 @@ export default function DomainSection({
     try {
       const res = await adminApi.post<DomainState>('/branding/domain/verify');
       if (res.status === 'DNS_VERIFIED') toast.success('DNS verified');
+      else if (res.status === 'READY') toast.success('Site is live — status unchanged');
       else toast.error('DNS does not point here yet');
       onChanged();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Verification failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * The last step of connecting a domain — telling the platform we are actually
+   * serving it — was API-only, so an operator who had run
+   * connect-tenant-domain.sh had no way to finish from here and the domain sat
+   * short of READY. Below READY `find_by_domain` does not match it, so the
+   * tenant's branding API answers nulls and their logo and favicon disappear
+   * while the site otherwise works. This is also the way back if a domain ever
+   * loses READY.
+   */
+  const markLive = async () => {
+    setBusy(true);
+    try {
+      await adminApi.post<DomainState>('/branding/domain/provisioned', { ok: true });
+      toast.success('Marked live — branding is now served on this domain');
+      onChanged();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Could not mark live');
     } finally {
       setBusy(false);
     }
@@ -349,6 +372,22 @@ export default function DomainSection({
               {busy ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
               Verify DNS
             </button>
+
+            {/* Shown until the domain is live. Behind Cloudflare "Verify DNS"
+                can never pass — proxied records resolve to Cloudflare, not to
+                us — so without this the domain could not reach READY from the
+                UI at all, and the tenant's branding stayed switched off. */}
+            {domain.status !== 'READY' && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void markLive()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border text-fg disabled:opacity-50"
+                title="Use once the server is serving this domain (connect-tenant-domain.sh has been run)"
+              >
+                Mark as live
+              </button>
+            )}
 
             {confirmOff ? (
               <>
