@@ -23,7 +23,11 @@ export async function authMetadata(opts: {
   const host = (await headers()).get('host');
   const tenant = isTenantHost(host);
   return {
-    title: opts.title,
+    // `absolute` opts out of the root layout's "%s — TuskaEx" template. Without
+    // it the template re-attached the platform name to the very page this
+    // helper exists to keep clean, and the tenant's login tab read
+    // "Sign In — TuskaEx" again.
+    title: tenant ? { absolute: opts.title } : opts.title,
     description: tenant ? opts.neutralDescription : opts.platformDescription,
   };
 }
