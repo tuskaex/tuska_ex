@@ -89,7 +89,7 @@ export default function AdminLoginForm({ serverHost }: { serverHost?: string | n
         </div>
 
         <div className="mb-7 text-center">
-          <h2 className="text-2xl font-medium mb-1.5 tracking-tight text-[#0A0A0A]">Operator console</h2>
+          <h2 className="text-2xl font-medium mb-1.5 tracking-tight text-[#0A0A0A]">Admin login</h2>
           <p className="text-sm text-[#5B5B5B]">Authorised personnel only.</p>
         </div>
 
