@@ -19,12 +19,13 @@
  * because the platform owner asked for them to be, and they carry that warning
  * in their hint so the tick is never an accident.
  *
- * ── WHAT STILL CANNOT BE GRANTED ──────────────────────────────────────────
- * Employees, Sub-admins and Settings are guarded by `get_platform_admin` and
- * `_only_super_admin`, not by the permission factory, so no permission reaches
- * them. That is deliberate: a sub-admin who can mint sub-admins and edit
- * platform settings is not a tenant any more. White-label needs no grant — it
- * authorises on brand ownership, so every tenant already has it.
+ * ── WHAT IS NOT LISTED, AND WHY ───────────────────────────────────────────
+ * Employees, Sub-admins and Settings are the platform's own administration.
+ * They are guarded by `get_platform_admin` and `_only_super_admin` rather than
+ * by the permission factory, so no permission reaches them and offering a row
+ * would only mislead. White-label authorises on brand ownership, so every
+ * tenant already has it and there is nothing to grant. Banks, Bonus and Banners
+ * were dropped at the operator's request.
  *
  * When a platform-wide section is later pool-scoped, drop its `platformWide`
  * flag in the same commit as the backend change, or the warning outlives the
@@ -37,15 +38,16 @@ export interface PermissionGroup {
   perms: string[];
   /** Destructive or money-moving — rendered apart from the routine ones. */
   sensitive?: boolean;
-  /** False ⇒ guarded outside require_permission; shown but not grantable. */
+  /** False ⇒ guarded outside require_permission; shown but not grantable.
+   *  No row sets it today — every listed section is grantable — but the render
+   *  path honours it, so a section that gains a hard guard can be surfaced
+   *  honestly instead of silently disappearing. */
   available?: boolean;
   /** Why it cannot be delegated. Required when `available` is false. */
   unavailableReason?: string;
   /** Grantable, but the page shows EVERY tenant's data, not just this one's. */
   platformWide?: boolean;
 }
-
-const PLATFORM_ADMIN = 'Platform administration — no permission reaches it';
 
 /** Sidebar order, top to bottom. */
 export const PERMISSION_GROUPS: PermissionGroup[] = [
@@ -84,7 +86,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: 'deposits',
     label: 'Deposits',
     // Both sidebar entries read `deposits.view`, so this one tick opens both.
-    hint: 'Review and approve incoming funds — also opens Transactions',
+    hint: 'Review and approve incoming funds',
     perms: ['deposits.view', 'deposits.approve', 'deposits.reject'],
   },
   {
@@ -92,13 +94,6 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     label: 'Withdrawals',
     hint: 'Review and approve payouts',
     perms: ['withdrawals.view', 'withdrawals.approve', 'withdrawals.reject'],
-  },
-  {
-    key: 'banks',
-    label: 'Banks',
-    hint: '⚠ Platform deposit banks — shows every tenant',
-    perms: ['banks.view', 'banks.create', 'banks.update'],
-    platformWide: true,
   },
   {
     key: 'account_types',
@@ -149,52 +144,10 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     platformWide: true,
   },
   {
-    key: 'bonus',
-    label: 'Bonus',
-    hint: '⚠ Platform-wide — shows every tenant',
-    perms: ['bonus.view', 'bonus.create', 'bonus.update'],
-    platformWide: true,
-  },
-  {
-    key: 'banners',
-    label: 'Banners',
-    hint: '⚠ Platform-wide — shows every tenant',
-    perms: ['banners.view', 'banners.create', 'banners.update', 'banners.delete'],
-    platformWide: true,
-  },
-  {
     key: 'support',
     label: 'Support',
     hint: 'Read and reply to their clients’ tickets',
     perms: ['tickets.view', 'tickets.reply', 'tickets.assign'],
-  },
-  {
-    key: 'employees',
-    label: 'Employees',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_ADMIN,
-  },
-  {
-    key: 'sub_admins',
-    label: 'Sub-admins',
-    perms: [],
-    available: false,
-    unavailableReason: 'The tenant list itself — super-admin only',
-  },
-  {
-    key: 'white_label',
-    label: 'White-label',
-    perms: [],
-    available: false,
-    unavailableReason: 'Always on — every tenant manages their own brand',
-  },
-  {
-    key: 'settings',
-    label: 'Settings',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_ADMIN,
   },
 
   {
