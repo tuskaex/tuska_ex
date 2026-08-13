@@ -347,12 +347,19 @@ export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSign
             <>
               {/* Centred in the narrow tenant card, left-aligned beside the
                   platform's hero where it has a full half-panel to sit in. */}
+              {/* The eyebrow and subtitle are the platform's voice, and the
+                  narrow tenant card reads better without them: the logo already
+                  says whose site this is and the heading already says what the
+                  page does. Kept beside the platform's hero, where the panel is
+                  wide enough for them to sit without crowding. */}
               <div className={`mb-8 ${isTenant ? 'text-center' : ''}`}>
-                <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
-                  {eyebrow}
-                </p>
+                {!isTenant && (
+                  <p className="text-sm uppercase tracking-wider text-[#D60101] font-semibold mb-3">
+                    {eyebrow}
+                  </p>
+                )}
                 <h2 className="text-3xl font-medium mb-2 tracking-tight">{title}</h2>
-                <p className="text-[#5B5B5B]">{copy.subtitle}</p>
+                {!isTenant && <p className="text-[#5B5B5B]">{copy.subtitle}</p>}
               </div>
 
               <form className="flex flex-col gap-4" onSubmit={submitCredentials} noValidate>
@@ -414,20 +421,31 @@ export const FullScreenSignup = ({ mode = 'signup', serverHost }: FullScreenSign
                   {submitting ? 'Please wait…' : copy.cta}
                 </button>
 
-                <div className="flex items-center gap-3 my-1">
-                  <span className="flex-1 h-px bg-[#E5E5E5]" aria-hidden />
-                  <span className="text-xs uppercase tracking-wider text-[#9A9A9A]">or</span>
-                  <span className="flex-1 h-px bg-[#E5E5E5]" aria-hidden />
-                </div>
+                {/* Demo sign-in is platform-only, and not just for tidiness:
+                    `demoLogin` signs the visitor into ONE shared demo account
+                    that lives in the platform pool (assigned_admin_id NULL). On
+                    a broker's own domain that hands their visitor an account
+                    belonging to the parent platform, which the broker can
+                    neither see nor manage. Hidden until a per-tenant demo
+                    account exists. */}
+                {!isTenant && (
+                  <>
+                    <div className="flex items-center gap-3 my-1">
+                      <span className="flex-1 h-px bg-[#E5E5E5]" aria-hidden />
+                      <span className="text-xs uppercase tracking-wider text-[#9A9A9A]">or</span>
+                      <span className="flex-1 h-px bg-[#E5E5E5]" aria-hidden />
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={handleDemo}
-                  disabled={submitting}
-                  className="w-full bg-white hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed border border-[#E5E5E5] text-[#0A0A0A] font-medium py-2.5 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
-                >
-                  Try with demo
-                </button>
+                    <button
+                      type="button"
+                      onClick={handleDemo}
+                      disabled={submitting}
+                      className="w-full bg-white hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed border border-[#E5E5E5] text-[#0A0A0A] font-medium py-2.5 px-4 rounded-lg transition-colors inline-flex items-center justify-center gap-2"
+                    >
+                      Try with demo
+                    </button>
+                  </>
+                )}
 
                 <div className="text-center text-[#5B5B5B] text-sm">
                   {copy.switchPrompt}{' '}
