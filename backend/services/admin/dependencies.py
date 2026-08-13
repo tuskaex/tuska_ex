@@ -48,18 +48,26 @@ EMPLOYEE_ROLE_PERMISSIONS = {
         "bonus.view", "bonus.create", "bonus.update",
         "ib.view", "ib.manage",
     },
-    # White-label tenant operator. Deliberately conservative: everything here is
-    # read-or-service, nothing that moves money or changes platform config. A
-    # super-admin grants more per sub-admin through extra_permissions, which is
-    # additive-only (see require_permission below).
-    "sub_admin": {
-        "users.view",
-        "kyc.view", "kyc.manage",
-        "deposits.view", "withdrawals.view",
-        "trades.view", "positions.view", "orders.view",
-        "tickets.view", "tickets.reply",
-        "analytics.view",
-    },
+    # White-label tenant operator. EMPTY ON PURPOSE — a sub-admin holds exactly
+    # what the super-admin granted in `extra_permissions`, and nothing else.
+    #
+    # Every other key here is an internal job description: "support" means a
+    # person who answers tickets, so the role implying a duty set is right. A
+    # sub_admin is not a job, it is a separate company. What one tenant may do
+    # is a per-tenant commercial decision, so there is no set of permissions
+    # that is correct to hand out by default.
+    #
+    # This used to carry eleven read/service permissions. Because
+    # require_permission (below) and /me both compute `role_perms | extra`, a
+    # union, those eleven were granted to every tenant whether or not the
+    # super-admin chose them — and could not be taken away, since extras only
+    # add. A tenant granted two permissions was served seven sidebar sections
+    # and the API behind them. Emptying it makes the grant mean what it says.
+    #
+    # A tenant with nothing granted can still reach /branding: those routes
+    # authorise on brand ownership (assert_brand_owner), not on a permission,
+    # so a tenant can always manage their own brand.
+    "sub_admin": set(),
 }
 
 # Roles that reach the admin API at all. 'sub_admin' is here so a tenant
