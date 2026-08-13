@@ -169,16 +169,29 @@ def require_permission(permission: str, *, tenant_safe: bool = False):
     `tenant_safe` marks a route as having been made aware of white-label pools —
     i.e. it filters its results (or its target) to the caller's own clients.
 
-    A sub_admin is REFUSED any route not carrying that mark. This is deliberate
-    and fails closed: a tenant operator holds real permissions like
-    `deposits.view` and `kyc.manage`, and an unscoped list endpoint would hand
-    them every other broker's clients. Rather than trust that each of the ~30
-    reachable endpoints remembered to filter, the default is "no", and a route
-    opts in once it genuinely scopes.
+    Two different things gate a sub_admin, and it matters which:
 
-    Adding a new admin endpoint therefore cannot silently leak across tenants —
-    the worst case is a sub_admin seeing a 403 on something they should be able
-    to use, which is visible and fixable, instead of data they should never see.
+      tenant_safe=True  — the route scopes to the caller's pool. Granting the
+                          permission shows them THEIR clients.
+      tenant_safe=False — the route is platform-wide. Granting the permission
+                          shows them EVERY tenant's data on that page.
+
+    The second case used to be refused outright, whatever the super-admin had
+    granted. That default was right while nobody could express an opinion; it is
+    wrong now that the permission form lists these sections explicitly and the
+    platform owner ticks them on purpose. A route is no longer allowed to
+    overrule the person who owns the platform.
+
+    What has NOT changed is fail-closed: a permission that was never granted is
+    still refused. Nothing opens by default, and adding a new endpoint still
+    grants a sub_admin nothing until somebody ticks it. What changed is that the
+    tick now decides, instead of being silently discarded.
+
+    Three sections stay unreachable regardless, because they are guarded
+    elsewhere and not by this factory: Employees and Settings depend on
+    `get_platform_admin`, and sub-admin management calls `_only_super_admin`.
+    Those are the platform's own administration — a sub_admin holding them would
+    not be a tenant any more.
     """
     async def _check(
         admin: User = Depends(get_current_admin),
@@ -187,15 +200,6 @@ def require_permission(permission: str, *, tenant_safe: bool = False):
         # Full admins (role 'admin' or 'super_admin') bypass per-permission checks.
         if admin.role in ADMIN_BYPASS_ROLES:
             return admin
-
-        if admin.role == "sub_admin" and not tenant_safe:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    "This section is not available to white-label sub-admins yet — "
-                    "it would show clients outside your pool."
-                ),
-            )
 
         result = await db.execute(
             select(Employee).where(Employee.user_id == admin.id, Employee.is_active == True)

@@ -169,8 +169,13 @@ export default function AdminSidebar({
      door the backend answers 403 on is worse than not showing it: they click
      it, get "not available to white-label sub-admins", and reasonably conclude
      the product is broken. */
+  // A sub_admin sees a section when it is pool-scoped (tenantSafe) OR when the
+  // super-admin explicitly granted its permission. The second half is what the
+  // permission form's platform-wide rows now mean: ticked on purpose, showing
+  // platform data. Sections with no `perm` at all stay platform-only — there is
+  // nothing to grant, so there is no way to have opted in.
   const visibleItems = NAV_ITEMS
-    .filter(item => role !== 'sub_admin' || item.tenantSafe)
+    .filter(item => role !== 'sub_admin' || item.tenantSafe || !!item.perm)
     .filter(item => hasAccess(item.perm));
 
   return (

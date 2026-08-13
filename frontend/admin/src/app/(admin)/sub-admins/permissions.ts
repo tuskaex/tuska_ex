@@ -8,27 +8,27 @@
  * means deposits.view + deposits.approve + deposits.reject produced sub-admins
  * whose menu opened and whose buttons then failed.
  *
- * ── WHY SOME ROWS ARE NOT GRANTABLE ───────────────────────────────────────
- * The admin API fails closed for sub-admins: `require_permission(tenant_safe=)`
- * refuses them any route not explicitly marked pool-scoped. A section can only
- * carry that mark once its queries filter to the caller's own clients — see
- * dashboard_service.scope_ids for what that takes.
+ * ── TWO KINDS OF GRANT, AND THE DIFFERENCE MATTERS ────────────────────────
+ * Pool-scoped rows show the sub-admin THEIR OWN clients: Users, Trades,
+ * Deposits, Support, Audit logs, Dashboard. Their queries filter on the pool,
+ * so a tenant sees a tenant's worth of data.
  *
- * The rest are platform-wide by nature. Account types, Config, Banks, Book
- * Management, Business, Social and the marketing sections hold data shared
- * across every tenant — a sub-admin editing spreads or charges would move them
- * for the whole platform, including the operator's own clients. Employees,
- * Sub-admins, Admin audit logs and Settings are the platform's own
- * administration.
+ * Rows marked `platformWide` show EVERY tenant's data on that page, and in the
+ * case of Config, edits apply to the whole platform — a sub-admin who changes a
+ * spread changes it for the operator's own clients too. They are grantable
+ * because the platform owner asked for them to be, and they carry that warning
+ * in their hint so the tick is never an accident.
  *
- * Those rows are still LISTED, because the operator asked "which of my menu can
- * I delegate?" and a silently-shortened list answers a different question. They
- * are rendered disabled with the reason, rather than as checkboxes that write a
- * permission string and change nothing — that is the shape this file had
- * before, and it made grants look effective when they were not.
+ * ── WHAT STILL CANNOT BE GRANTED ──────────────────────────────────────────
+ * Employees, Sub-admins and Settings are guarded by `get_platform_admin` and
+ * `_only_super_admin`, not by the permission factory, so no permission reaches
+ * them. That is deliberate: a sub-admin who can mint sub-admins and edit
+ * platform settings is not a tenant any more. White-label needs no grant — it
+ * authorises on brand ownership, so every tenant already has it.
  *
- * When a section is made tenant-safe, flip `available` here in the same commit
- * as the backend change, or the two drift apart again.
+ * When a platform-wide section is later pool-scoped, drop its `platformWide`
+ * flag in the same commit as the backend change, or the warning outlives the
+ * problem.
  */
 export interface PermissionGroup {
   key: string;
@@ -37,14 +37,15 @@ export interface PermissionGroup {
   perms: string[];
   /** Destructive or money-moving — rendered apart from the routine ones. */
   sensitive?: boolean;
-  /** False ⇒ platform-wide; shown but not grantable. Defaults to true. */
+  /** False ⇒ guarded outside require_permission; shown but not grantable. */
   available?: boolean;
   /** Why it cannot be delegated. Required when `available` is false. */
   unavailableReason?: string;
+  /** Grantable, but the page shows EVERY tenant's data, not just this one's. */
+  platformWide?: boolean;
 }
 
-const PLATFORM_WIDE = 'Platform-wide — holds every tenant’s data';
-const PLATFORM_ADMIN = 'Platform administration';
+const PLATFORM_ADMIN = 'Platform administration — no permission reaches it';
 
 /** Sidebar order, top to bottom. */
 export const PERMISSION_GROUPS: PermissionGroup[] = [
@@ -75,9 +76,9 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'book',
     label: 'Book Management',
-    perms: [],
-    available: false,
-    unavailableReason: 'Platform risk book',
+    hint: '⚠ Platform risk book — shows every tenant',
+    perms: ['trades.view'],
+    platformWide: true,
   },
   {
     key: 'deposits',
@@ -95,44 +96,44 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'banks',
     label: 'Banks',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_WIDE,
+    hint: '⚠ Platform deposit banks — shows every tenant',
+    perms: ['banks.view', 'banks.create', 'banks.update'],
+    platformWide: true,
   },
   {
     key: 'account_types',
     label: 'Account types',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_WIDE,
+    hint: '⚠ Platform account tiers — edits apply to everyone',
+    perms: ['config.view'],
+    platformWide: true,
   },
   {
     key: 'config',
     label: 'Config',
-    perms: [],
-    available: false,
-    unavailableReason: 'Charges, spreads and swaps — shared by every tenant',
+    hint: '⚠ Charges, spreads, swaps — edits apply platform-wide',
+    perms: ['config.view'],
+    platformWide: true,
   },
   {
     key: 'social',
     label: 'Social',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_WIDE,
+    hint: '⚠ Platform-wide — shows every tenant',
+    perms: ['social.view', 'social.manage'],
+    platformWide: true,
   },
   {
     key: 'business',
     label: 'Business',
-    perms: [],
-    available: false,
-    unavailableReason: 'IB, MLM and copy programs run platform-wide',
+    hint: '⚠ IB, MLM and copy programs — shows every tenant',
+    perms: ['ib.view', 'ib.manage'],
+    platformWide: true,
   },
   {
     key: 'analytics',
     label: 'Analytics',
-    perms: [],
-    available: false,
-    unavailableReason: 'Not pool-scoped yet — Dashboard covers their own numbers',
+    hint: '⚠ Platform totals — not scoped to their pool',
+    perms: ['analytics.view', 'exposure.view'],
+    platformWide: true,
   },
   {
     key: 'ledger',
@@ -143,23 +144,23 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'admin_audit',
     label: 'Admin audit logs',
-    perms: [],
-    available: false,
-    unavailableReason: 'Every admin’s actions, across all tenants',
+    hint: '⚠ Every admin’s actions, across all tenants',
+    perms: ['audit_logs.view'],
+    platformWide: true,
   },
   {
     key: 'bonus',
     label: 'Bonus',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_WIDE,
+    hint: '⚠ Platform-wide — shows every tenant',
+    perms: ['bonus.view', 'bonus.create', 'bonus.update'],
+    platformWide: true,
   },
   {
     key: 'banners',
     label: 'Banners',
-    perms: [],
-    available: false,
-    unavailableReason: PLATFORM_WIDE,
+    hint: '⚠ Platform-wide — shows every tenant',
+    perms: ['banners.view', 'banners.create', 'banners.update', 'banners.delete'],
+    platformWide: true,
   },
   {
     key: 'support',
@@ -179,7 +180,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     label: 'Sub-admins',
     perms: [],
     available: false,
-    unavailableReason: 'The tenant list itself',
+    unavailableReason: 'The tenant list itself — super-admin only',
   },
   {
     key: 'white_label',
