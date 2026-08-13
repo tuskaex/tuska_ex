@@ -1,35 +1,36 @@
 /**
- * The admin sidebar, as a permission form.
+ * The super-admin's own sidebar, as a permission form.
  *
- * One row per section of the super-admin's own sidebar, in the same order, so
- * granting reads like pointing at the menu. The backend speaks in dotted
- * strings (`users.view`, `deposits.approve`); a row grants the whole set behind
- * one decision, because making the operator work out that "handle deposits"
- * means deposits.view + deposits.approve + deposits.reject produced sub-admins
- * whose menu opened and whose buttons then failed.
+ * One row per section, same names, same order, so granting reads like pointing
+ * at the menu. The backend speaks in dotted strings (`users.view`,
+ * `deposits.approve`); a row grants the whole set behind one decision, because
+ * making the operator work out that "handle deposits" means deposits.view +
+ * deposits.approve + deposits.reject produced sub-admins whose menu opened and
+ * whose buttons then failed.
  *
- * ── TWO KINDS OF GRANT, AND THE DIFFERENCE MATTERS ────────────────────────
- * Pool-scoped rows show the sub-admin THEIR OWN clients: Users, Trades,
- * Deposits, Support, Audit logs, Dashboard. Their queries filter on the pool,
- * so a tenant sees a tenant's worth of data.
+ * Two sections are deliberately absent. Sub-admins is the tenant list itself —
+ * a tenant who can mint tenants is not a tenant. White-label authorises on brand
+ * ownership rather than on a permission, so every tenant already has it and
+ * there is nothing to grant. Both stay with the platform owner.
  *
- * Rows marked `platformWide` show EVERY tenant's data on that page, and in the
- * case of Config, edits apply to the whole platform — a sub-admin who changes a
- * spread changes it for the operator's own clients too. They are grantable
- * because the platform owner asked for them to be, and they carry that warning
- * in their hint so the tick is never an accident.
+ * ── ownedByTenant: THE DISTINCTION THAT MATTERS ───────────────────────────
+ * The goal is that a sub-admin is a separate broker: their domain, their users,
+ * their book, nothing to do with the parent platform.
  *
- * ── WHAT IS NOT LISTED, AND WHY ───────────────────────────────────────────
- * Employees, Sub-admins and Settings are the platform's own administration.
- * They are guarded by `get_platform_admin` and `_only_super_admin` rather than
- * by the permission factory, so no permission reaches them and offering a row
- * would only mislead. White-label authorises on brand ownership, so every
- * tenant already has it and there is nothing to grant. Banks, Bonus and Banners
- * were dropped at the operator's request.
+ * Rows WITHOUT `platformWide` already behave that way — their queries filter to
+ * the sub-admin's own pool, so the page shows a tenant's worth of data.
  *
- * When a platform-wide section is later pool-scoped, drop its `platformWide`
- * flag in the same commit as the backend change, or the warning outlives the
- * problem.
+ * Rows WITH `platformWide` do NOT, yet. The tables behind them
+ * (charge_configs, spread_configs, swap_configs, banners, bonus templates,
+ * employees, system_settings, company banks) have no tenant column at all —
+ * they are platform singletons. Granting one today shows that sub-admin the
+ * PLATFORM's data, and in the case of Config lets them edit values that apply
+ * to every tenant including the operator's own clients.
+ *
+ * Making those per-tenant is a schema change plus a scoping pass per section,
+ * not a permission change. Until then the flag keeps the warning in front of
+ * whoever ticks the box. Drop it in the same commit that adds the tenant
+ * column, or the warning outlives the problem.
  */
 export interface PermissionGroup {
   key: string;
@@ -38,23 +39,23 @@ export interface PermissionGroup {
   perms: string[];
   /** Destructive or money-moving — rendered apart from the routine ones. */
   sensitive?: boolean;
-  /** False ⇒ guarded outside require_permission; shown but not grantable.
-   *  No row sets it today — every listed section is grantable — but the render
-   *  path honours it, so a section that gains a hard guard can be surfaced
-   *  honestly instead of silently disappearing. */
+  /** False ⇒ guarded outside require_permission; shown but not grantable. */
   available?: boolean;
   /** Why it cannot be delegated. Required when `available` is false. */
   unavailableReason?: string;
-  /** Grantable, but the page shows EVERY tenant's data, not just this one's. */
+  /** Grantable, but the page still shows the PLATFORM's data, not this
+   *  tenant's — the table behind it has no tenant column yet. */
   platformWide?: boolean;
 }
 
-/** Sidebar order, top to bottom. */
+const NO_TENANT_COLUMN = 'Platform administration — not per-tenant yet';
+
+/** Sidebar order, top to bottom. Sub-admins and White-label omitted on purpose. */
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'dashboard',
     label: 'Dashboard',
-    hint: 'Headline numbers for their own clients only',
+    hint: 'Headline numbers for their own clients',
     perms: ['analytics.view'],
   },
   {
@@ -66,13 +67,13 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'kyc',
     label: 'Identity verification',
-    hint: 'Approve or reject identity documents',
+    hint: 'Approve or reject their clients’ documents',
     perms: ['kyc.view', 'kyc.manage'],
   },
   {
     key: 'trading',
     label: 'Trades',
-    hint: 'Read positions, orders and trade history',
+    hint: 'Their clients’ positions, orders and history',
     perms: ['trades.view', 'positions.view', 'orders.view'],
   },
   {
@@ -85,27 +86,42 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'deposits',
     label: 'Deposits',
-    // Both sidebar entries read `deposits.view`, so this one tick opens both.
-    hint: 'Review and approve incoming funds',
+    hint: 'Review and approve their clients’ incoming funds',
     perms: ['deposits.view', 'deposits.approve', 'deposits.reject'],
+  },
+  {
+    key: 'transactions',
+    label: 'Transactions',
+    // Shares deposits.view with the Deposits page, so the two rows tick
+    // together. Listed separately because the sidebar lists it separately and
+    // an operator looking for "Transactions" should find it.
+    hint: 'Their clients’ money movements — granted with Deposits',
+    perms: ['deposits.view'],
   },
   {
     key: 'withdrawals',
     label: 'Withdrawals',
-    hint: 'Review and approve payouts',
+    hint: 'Review and approve their clients’ payouts',
     perms: ['withdrawals.view', 'withdrawals.approve', 'withdrawals.reject'],
+  },
+  {
+    key: 'banks',
+    label: 'Banks',
+    hint: '⚠ Platform deposit banks — not per-tenant yet',
+    perms: ['banks.view', 'banks.create', 'banks.update'],
+    platformWide: true,
   },
   {
     key: 'account_types',
     label: 'Account types',
-    hint: '⚠ Platform account tiers — edits apply to everyone',
+    hint: '⚠ Platform account tiers — edits apply to every tenant',
     perms: ['config.view'],
     platformWide: true,
   },
   {
     key: 'config',
     label: 'Config',
-    hint: '⚠ Charges, spreads, swaps — edits apply platform-wide',
+    hint: '⚠ Charges, spreads, swaps — edits apply to every tenant',
     perms: ['config.view'],
     platformWide: true,
   },
@@ -119,21 +135,21 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'business',
     label: 'Business',
-    hint: '⚠ IB, MLM and copy programs — shows every tenant',
+    hint: '⚠ IB, MLM and copy programs run platform-wide',
     perms: ['ib.view', 'ib.manage'],
     platformWide: true,
   },
   {
     key: 'analytics',
     label: 'Analytics',
-    hint: '⚠ Platform totals — not scoped to their pool',
+    hint: '⚠ Platform totals — Dashboard has their own numbers',
     perms: ['analytics.view', 'exposure.view'],
     platformWide: true,
   },
   {
     key: 'ledger',
     label: 'Audit logs',
-    hint: 'Read the activity trail for their own clients',
+    hint: 'Activity trail for their own clients',
     perms: ['audit_logs.view'],
   },
   {
@@ -144,16 +160,44 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     platformWide: true,
   },
   {
+    key: 'bonus',
+    label: 'Bonus',
+    hint: '⚠ Platform bonus templates — not per-tenant yet',
+    perms: ['bonus.view', 'bonus.create', 'bonus.update'],
+    platformWide: true,
+  },
+  {
+    key: 'banners',
+    label: 'Banners',
+    hint: '⚠ Platform banners — not per-tenant yet',
+    perms: ['banners.view', 'banners.create', 'banners.update', 'banners.delete'],
+    platformWide: true,
+  },
+  {
     key: 'support',
     label: 'Support',
     hint: 'Read and reply to their clients’ tickets',
     perms: ['tickets.view', 'tickets.reply', 'tickets.assign'],
   },
+  {
+    key: 'employees',
+    label: 'Employees',
+    perms: [],
+    available: false,
+    unavailableReason: NO_TENANT_COLUMN,
+  },
+  {
+    key: 'settings',
+    label: 'Settings',
+    perms: [],
+    available: false,
+    unavailableReason: NO_TENANT_COLUMN,
+  },
 
   {
     key: 'funds',
     label: 'Adjust balances',
-    hint: 'Add or deduct funds on a client account',
+    hint: 'Add or deduct funds on their clients’ accounts',
     perms: ['users.add_fund', 'users.deduct_fund'],
     sensitive: true,
   },
