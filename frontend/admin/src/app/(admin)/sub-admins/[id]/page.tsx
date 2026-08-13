@@ -11,8 +11,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
-  PaginatedResponse, PermissionCatalog, SubAdmin, SubAdminClient, SubAdminReport,
+  PaginatedResponse, SubAdmin, SubAdminClient, SubAdminReport,
 } from '@/types';
+import { PERMISSION_GROUPS, groupChecked, toggleGroup } from '../permissions';
 
 export default function SubAdminDetailPage() {
   const params = useParams();
@@ -22,7 +23,6 @@ export default function SubAdminDetailPage() {
   const [sub, setSub] = useState<SubAdmin | null>(null);
   const [report, setReport] = useState<SubAdminReport | null>(null);
   const [clients, setClients] = useState<SubAdminClient[]>([]);
-  const [catalog, setCatalog] = useState<PermissionCatalog>({});
   const [checked, setChecked] = useState<string[]>([]);
   const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(true);
@@ -33,21 +33,17 @@ export default function SubAdminDetailPage() {
     if (!id) return;
     setLoading(true);
     try {
-      const [s, rep, cl, cat] = await Promise.all([
+      const [s, rep, cl] = await Promise.all([
         adminApi.get<SubAdmin>(`/sub-admins/${id}`),
         adminApi.get<SubAdminReport>(`/sub-admins/${id}/report`),
         adminApi.get<PaginatedResponse<SubAdminClient>>(`/sub-admins/${id}/users`, {
           page: '1',
           per_page: '50',
         }),
-        adminApi
-          .get<{ catalog: PermissionCatalog }>('/employees/permissions/catalog')
-          .catch(() => ({ catalog: {} as PermissionCatalog })),
       ]);
       setSub(s);
       setReport(rep);
       setClients(cl.items || []);
-      setCatalog(cat.catalog || {});
       setChecked(s.permissions || []);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to load sub-admin');
@@ -72,9 +68,6 @@ export default function SubAdminDetailPage() {
       setBusy(false);
     }
   };
-
-  const toggle = (perm: string) =>
-    setChecked((c) => (c.includes(perm) ? c.filter((p) => p !== perm) : [...c, perm]));
 
   const impersonate = async () => {
     try {
@@ -181,32 +174,58 @@ export default function SubAdminDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Panel title="Permissions">
+          {/* One row per sidebar section the sub-admin will see, not the raw
+              dotted strings. Those made the operator work out which of
+              `deposits.view`, `deposits.approve` and `deposits.reject` adds up
+              to "can handle deposits", and half-ticking a set produced an admin
+              whose menu entry worked until they pressed a button. Same groups
+              the create form uses, so granting and editing read alike. */}
           <p className="text-xxs text-text-tertiary mb-2">
-            Always granted by the role:{' '}
-            <span className="text-text-secondary">
-              {sub.default_permissions.join(', ') || '—'}
-            </span>
+            Tick the sections this sub-admin should see. White-label is always
+            available — every tenant manages their own brand.
           </p>
-          <div className="border border-border-primary rounded-md max-h-64 overflow-y-auto p-2 space-y-2">
-            {Object.entries(catalog).map(([group, perms]) => (
-              <div key={group}>
-                <p className="text-xxs text-text-tertiary mb-1">{group}</p>
-                <div className="grid grid-cols-2 gap-1">
-                  {perms.map((p) => (
-                    <label
-                      key={p}
-                      className="flex items-center gap-2 text-xs text-text-secondary cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked.includes(p)}
-                        onChange={() => toggle(p)}
-                      />
-                      {p}
-                    </label>
-                  ))}
-                </div>
-              </div>
+          <div className="border border-border-primary rounded-md max-h-64 overflow-y-auto p-2 space-y-1">
+            {PERMISSION_GROUPS.filter((g) => !g.sensitive).map((g) => (
+              <label
+                key={g.key}
+                className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer py-1"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={groupChecked(g, checked)}
+                  onChange={() => setChecked((c) => toggleGroup(g, c))}
+                />
+                <span>
+                  {g.label}
+                  {g.hint && (
+                    <span className="block text-xxs text-text-tertiary">{g.hint}</span>
+                  )}
+                </span>
+              </label>
+            ))}
+
+            <p className="text-xxs text-text-tertiary pt-2 mt-1 border-t border-border-primary">
+              Moves money or changes a client account
+            </p>
+            {PERMISSION_GROUPS.filter((g) => g.sensitive).map((g) => (
+              <label
+                key={g.key}
+                className="flex items-start gap-2 text-xs text-text-secondary cursor-pointer py-1"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={groupChecked(g, checked)}
+                  onChange={() => setChecked((c) => toggleGroup(g, c))}
+                />
+                <span>
+                  {g.label}
+                  {g.hint && (
+                    <span className="block text-xxs text-text-tertiary">{g.hint}</span>
+                  )}
+                </span>
+              </label>
             ))}
           </div>
           <button
