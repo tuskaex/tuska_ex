@@ -102,3 +102,8 @@ backend/services/market_data/
 # tree for convenience only; this repo is PUBLIC, so it must never be committed
 # here. Its own .git is what tracks it.
 /speedtrade_landing/
+
+# Reference copy of the Stock4X codebase, kept locally while porting the
+# white-label work across. A separate product, ~72 MB, and this repo is
+# public — one `git add .` away from being published by accident.
+Stock4x_new/
