@@ -35,7 +35,12 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  // Pool-scoped since dashboard_service learned `scope_ids`: a sub-admin reads
+  // their own clients' totals, an admin still reads the platform's. Carries a
+  // perm now so the menu entry and the API agree — the route asks for
+  // analytics.view, and a sub-admin without it would otherwise see the entry
+  // and get a 403 on click. Super-admins hold '*', so nothing changes for them.
+  { tenantSafe: true, label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, perm: 'analytics.view' },
   { tenantSafe: true, label: 'Users', href: '/users', icon: Users, perm: 'users.view' },
   {
     tenantSafe: true,

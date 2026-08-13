@@ -11,8 +11,8 @@
  * refuses them any route not explicitly marked as pool-scoped. Only these
  * sections carry that mark:
  *
- *     Users · Identity verification · Trades · Deposits · Transactions
- *     Audit logs · Support · White-label
+ *     Dashboard · Users · Identity verification · Trades · Deposits
+ *     Transactions · Audit logs · Support · White-label
  *
  * This list used to offer Bank accounts, Reports & analytics, IB / brokerage
  * and Banners & bonuses too. Those sections are platform-wide and hold every
@@ -39,6 +39,12 @@ export interface PermissionGroup {
 }
 
 export const PERMISSION_GROUPS: PermissionGroup[] = [
+  {
+    key: 'dashboard',
+    label: 'Dashboard',
+    hint: 'Headline numbers for their own clients only',
+    perms: ['analytics.view'],
+  },
   {
     key: 'users',
     label: 'Users',
