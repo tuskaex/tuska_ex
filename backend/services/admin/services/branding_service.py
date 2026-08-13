@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from packages.common.src import tenant_hosts as _tenant_hosts
 from packages.common.src.config import get_settings
 from packages.common.src.file_validation import validate_upload
 from packages.common.src.models import User
@@ -341,11 +342,14 @@ def normalise_label(raw: str, *, for_admin_panel: bool = False) -> str | None:
 
 def hostnames_for(domain: str, app_subdomain: str | None,
                   admin_subdomain: str | None) -> list[str]:
-    """Every hostname we will answer on for this tenant."""
-    hosts = [f"{app_subdomain}.{domain}"] if app_subdomain else [domain, f"www.{domain}"]
-    if admin_subdomain:
-        hosts.append(f"{admin_subdomain}.{domain}")
-    return hosts
+    """Every hostname we will answer on for this tenant.
+
+    Delegates to packages.common so the set the CORS layer allows, the set the
+    cookie scope covers, and the set the operator is told to serve all come from
+    one definition. When these drifted, the symptom was a tenant reporting that
+    one of their hosts 403s while another works — with nothing in any log.
+    """
+    return _tenant_hosts.hostnames_for(domain, app_subdomain, admin_subdomain)
 
 
 def _resolver():
@@ -523,6 +527,10 @@ async def mark_provisioned(*, admin: User, db: AsyncSession, ok: bool,
         admin.custom_domain_status = STATUS_FAILED
         admin.custom_domain_last_error = error or "Provisioning failed."
     await db.commit()
+    # The tenant-host snapshot drives CORS and cookie scope. Without this the
+    # operator marks a domain live and it keeps being refused for up to the
+    # cache TTL — which reads exactly like the provisioning step not working.
+    _tenant_hosts.invalidate()
     return domain_payload(admin)
 
 
@@ -536,6 +544,9 @@ async def disconnect_domain(*, admin: User, db: AsyncSession) -> dict:
     admin.custom_domain_last_error = None
     admin.custom_domain_provisioned_at = None
     await db.commit()
+    # Drop the host from the snapshot now rather than leaving a disconnected
+    # domain able to pass CORS and capture signups for another minute.
+    _tenant_hosts.invalidate()
     return domain_payload(admin)
 
 

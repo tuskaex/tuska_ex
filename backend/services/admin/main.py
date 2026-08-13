@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from packages.common.src.config import get_settings
 from packages.common.src.database import engine
 from packages.common.src.instrumentation import init_sentry, add_middleware_stack
+from packages.common.src.tenant_cors import install_tenant_cors
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)-5s [%(name)s] %(message)s")
 logger = logging.getLogger("admin-api")
@@ -150,6 +151,11 @@ app.add_middleware(
 )
 
 add_middleware_stack(app)
+
+# A tenant serving its admin panel on admin.broker.com calls this service from
+# an origin CORS_ORIGINS has never heard of. Must be registered last — see
+# packages/common/src/tenant_cors.py for why the order matters.
+install_tenant_cors(app, static_origins=set(_cors_origins))
 
 
 @app.exception_handler(Exception)
