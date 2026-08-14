@@ -435,6 +435,28 @@ async def connect_domain(
 ) -> dict:
     assert_enabled()
     assert_brand_owner(admin)
+
+    # A super-admin holding a custom domain is always a misconfiguration, and a
+    # silent one. tenant_resolver._pool_id maps a super_admin owner to the
+    # PLATFORM pool — that is what a NULL assigned_admin_id means — so every
+    # signup on the domain lands in the platform's own book while the tenant's
+    # logo, favicon and copy render perfectly. Nothing errors, nothing logs, and
+    # the tenant's Users page just stays empty. It reads as broken attribution
+    # and is actually the domain sitting on the wrong row.
+    #
+    # The platform's own hostnames come from the environment, never from this
+    # column, so there is no case where a super-admin needs one.
+    if admin.role == "super_admin":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "A custom domain belongs to a sub-admin, not to the platform "
+                "owner — signups on it would land in the platform pool and the "
+                "tenant's Users page would stay empty. Assign it from "
+                "Sub-admins → (the tenant) → White-label domain."
+            ),
+        )
+
     if not (get_settings().PLATFORM_PUBLIC_IP or "").strip():
         raise HTTPException(
             status_code=503,
