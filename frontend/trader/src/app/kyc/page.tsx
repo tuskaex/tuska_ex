@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 import toast from 'react-hot-toast';
 import DashboardShell from '@/components/layout/DashboardShell';
 import api, { getApiBase } from '@/lib/api/client';
+import { useBrandName } from '@/hooks/useTenantBrand';
 import {
   ShieldCheck,
   Clock,
@@ -94,6 +95,7 @@ function StatusBadge({ status, kind = 'user' }: { status: string; kind?: 'user' 
 }
 
 export default function KycPage() {
+  const brandName = useBrandName('this platform');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -226,7 +228,7 @@ export default function KycPage() {
               <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">KYC Verification</h1>
               <p className="text-sm text-text-secondary mt-1 max-w-2xl">
                 Complete identity verification to unlock deposits, withdrawals, and live trading — same secure styling as
-                the rest of TuskaEx.
+                the rest of {brandName}.
               </p>
             </div>
           </section>

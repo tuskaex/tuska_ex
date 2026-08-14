@@ -30,6 +30,7 @@ import {
 } from '@/lib/tradingNav';
 import Modal from '@/components/ui/Modal';
 import AccountTypePickerModal from '@/components/accounts/AccountTypePickerModal';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 const ALIAS_PREFIX = 'ptd-account-alias:';
 
@@ -624,6 +625,7 @@ function AccountCard({
   onTrade: () => void;
   onRemoved: (id: string) => void;
 }) {
+  const brandName = useBrandName('this platform');
   const [menuOpen, setMenuOpen] = useState(false);
   const [closeModal, setCloseModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -660,8 +662,10 @@ function AccountCard({
   // is a known copy/pool prefix (CF/IF followers, CT/PM/MM pools).
   const isManagedAccount = !!row.is_copy_trading || /^(CF|IF|CT|PM|MM)/.test(row.account_number);
   const groupName = row.account_group?.name?.trim() || 'Standard';
-  /* TuskaEx has a single server — Live for real, Demo for demo accounts. */
-  const serverLabel = row.is_demo ? 'TuskaEx-Demo' : 'TuskaEx-Live';
+  /* One server — Live for real accounts, Demo for demo. The prefix is the
+     brand the client is actually with, so on a white-label domain it is the
+     tenant's name and not the parent platform's. */
+  const serverLabel = `${brandName}-${row.is_demo ? 'Demo' : 'Live'}`;
   /* Avatar mark — first letter of the group name; falls back to "S". */
 
   const balance = Number.isFinite(row.balance) ? row.balance : 0;

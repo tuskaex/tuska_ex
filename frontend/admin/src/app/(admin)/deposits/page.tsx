@@ -1,4 +1,5 @@
 'use client';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -219,6 +220,7 @@ function withdrawalPayoutSummary(w: Withdrawal): string {
 const PAGE_SIZE = 20;
 
 export default function DepositsPage() {
+  const brandName = useTenantBrand().brandName;
   const [activeTab, setActiveTab] = useState<TabId>('deposits');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('pending');
   // Method filter — client-side, so admin can isolate "local_banking" rows
@@ -431,6 +433,7 @@ export default function DepositsPage() {
     const stamp = new Date().toISOString().slice(0, 10);
     if (activeTab === 'deposits') {
       void downloadReportPdf({
+      brandName,
         title: 'Deposits Report',
         subtitleLines: [`Status: ${statusFilter}`, methodFilter !== 'all' ? `Method: ${methodFilter}` : ''].filter(Boolean),
         columns: [
@@ -442,6 +445,7 @@ export default function DepositsPage() {
       });
     } else if (activeTab === 'withdrawals') {
       void downloadReportPdf({
+      brandName,
         title: 'Withdrawals Report',
         subtitleLines: [`Status: ${statusFilter}`],
         columns: [
@@ -453,6 +457,7 @@ export default function DepositsPage() {
       });
     } else {
       void downloadReportPdf({
+      brandName,
         title: 'Money-flow History',
         columns: [
           { header: 'Type' }, { header: 'User' }, { header: 'Amount', align: 'right', mono: true },

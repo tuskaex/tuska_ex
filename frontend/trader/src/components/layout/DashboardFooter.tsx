@@ -18,10 +18,12 @@
  */
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 const YEAR = new Date().getUTCFullYear();
 
 export default function DashboardFooter() {
+  const brandName = useBrandName('this platform');
   return (
     <footer className="w-full mt-8 border-t border-border-glass bg-bg-secondary/50">
       <div className="w-full px-4 sm:px-6 md:px-8 py-5 space-y-3">
@@ -43,7 +45,7 @@ export default function DashboardFooter() {
             wraps on narrow viewports. */}
         <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 text-[11px]">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-text-tertiary">
-            <span>© {YEAR} TuskaEx. All rights reserved.</span>
+            <span>© {YEAR} {brandName}. All rights reserved.</span>
             <Link href="/terms" className="hover:text-[#D60101] transition-colors">
               Terms &amp; Conditions
             </Link>

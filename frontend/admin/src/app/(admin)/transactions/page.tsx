@@ -1,4 +1,5 @@
 'use client';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -120,6 +121,7 @@ function formatDate(d: string) {
 const PAGE_SIZE = 25;
 
 export default function TransactionsPage() {
+  const brandName = useTenantBrand().brandName;
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -236,6 +238,7 @@ export default function TransactionsPage() {
   const handleExportPdf = () => {
     if (transactions.length === 0) { toast.error('No transactions to export'); return; }
     void downloadReportPdf({
+      brandName,
       title: 'Transactions Report',
       subtitleLines: [
         typeFilter !== 'all' ? `Type filter: ${typeFilter}` : 'Type filter: all',

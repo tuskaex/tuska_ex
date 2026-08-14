@@ -362,7 +362,7 @@ export default function BanksPage() {
                   {
                     key: 'account_holder',
                     label: 'Account Holder',
-                    placeholder: 'e.g. TuskaEx Pvt Ltd',
+                    placeholder: 'e.g. Acme Pvt Ltd',
                   },
                   {
                     key: 'account_number',

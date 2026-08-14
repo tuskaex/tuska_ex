@@ -26,6 +26,7 @@ import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 const STORAGE_PREFIX = 'sc-feature-tour:v1:';
 
@@ -40,7 +41,9 @@ type Step = {
 const STEPS: readonly Step[] = [
   {
     key: 'welcome',
-    title: 'Welcome to TuskaEx 👋',
+    // Filled in at render from the tenant's brand — this is the first thing
+    // a new client reads, and it named the parent platform.
+    title: 'Welcome to {brand} 👋',
     body: "Here's a 30-second tour of the main features. You can skip anytime.",
   },
   {
@@ -154,6 +157,7 @@ export default function FeatureTour() {
     }
   }, [storageKey]);
 
+  const brandName = useBrandName('this platform');
   const step = STEPS[index];
 
   // Measure the current step's target. Re-measured on step change, resize
@@ -278,7 +282,9 @@ export default function FeatureTour() {
           <X size={16} />
         </button>
 
-        <h3 className="pr-6 text-base font-bold text-[#0A0A0A]">{step.title}</h3>
+        <h3 className="pr-6 text-base font-bold text-[#0A0A0A]">
+          {step.title.replace('{brand}', brandName)}
+        </h3>
         <p className="mt-1.5 text-sm leading-relaxed text-[#5B5B5B]">{step.body}</p>
 
         {/* Progress dots */}

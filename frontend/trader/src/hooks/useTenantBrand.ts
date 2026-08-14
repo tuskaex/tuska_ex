@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BRAND_NAME } from '@/config/brand';
 import {
   PLATFORM_BRAND,
   fetchTenantBranding,
@@ -51,4 +52,24 @@ export function useTenantBrand(serverHost?: string | null): TenantBrand {
   }, [serverHost]);
 
   return brand;
+}
+
+/**
+ * The brand name to PRINT — the tenant's on their own domain, TuskaEx on ours.
+ *
+ * Copy scattered across the app named the platform outright: the dashboard
+ * footer's copyright, the KYC blurb, the affiliate pitch, the welcome toast.
+ * Each one was invisible in a scan for logos and each one told a broker's
+ * client whose platform they were actually on.
+ *
+ * While a tenant's brand is still resolving this returns an empty string rather
+ * than "TuskaEx", so a sentence renders a beat late instead of naming the wrong
+ * company and correcting itself. Call sites that need a guaranteed non-empty
+ * label pass a fallback.
+ */
+export function useBrandName(fallbackWhileLoading = ''): string {
+  const brand = useTenantBrand();
+  if (!brand.isTenant) return BRAND_NAME;
+  if (brand.loading) return fallbackWhileLoading;
+  return brand.brandName || fallbackWhileLoading;
 }

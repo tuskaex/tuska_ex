@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/authStore';
 import api from '@/lib/api/client';
 import { getErrorMessage } from '@/lib/errors';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 type FormState = {
   first_name: string;
@@ -79,6 +80,7 @@ function _toDateInput(s: string | null | undefined): string {
 }
 
 export default function ProfileCompleteGate() {
+  const brandName = useBrandName('this platform');
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isInitialized = useAuthStore((s) => s.isInitialized);
@@ -179,7 +181,7 @@ export default function ProfileCompleteGate() {
         date_of_birth: form.date_of_birth,
       });
       await refreshUser();
-      toast.success('Profile completed — welcome to TuskaEx');
+      toast.success(`Profile completed — welcome to ${brandName}`);
     } catch (err: unknown) {
       toast.error(getErrorMessage(err, 'Could not save profile'));
     } finally {

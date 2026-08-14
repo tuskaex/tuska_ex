@@ -20,6 +20,7 @@ import DemoLockGate from '@/components/demo/DemoLockGate';
 import { useAuthStore } from '@/stores/authStore';
 import { getErrorMessage } from '@/lib/errors';
 import api from '@/lib/api/client';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 
 type TabId = 'ib' | 'sub-broker' | 'network';
@@ -86,6 +87,7 @@ function BenefitItem({ children }: { children: React.ReactNode }) {
 }
 
 export default function BusinessPage() {
+  const brandName = useBrandName('this platform');
   const isDemo = useAuthStore((s) => s.user?.is_demo);
   const [tab, setTab] = useState<TabId>('ib');
 
@@ -118,7 +120,7 @@ export default function BusinessPage() {
                 Partner Programs
               </span>
               <h1 className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-text-primary">
-                Grow with TuskaEx
+                Grow with {brandName}
               </h1>
               <p className="mt-2 text-sm text-text-secondary leading-relaxed">
                 Refer traders, build a team, or partner as a sub-broker. Earn revenue share on every trade your network places.
@@ -169,6 +171,7 @@ export default function BusinessPage() {
 
 
 function IBTab() {
+  const brandName = useBrandName('this platform');
   const [status, setStatus] = useState<any>(null);
   const [dashboard, setDashboard] = useState<any>(null);
   const [referrals, setReferrals] = useState<any[]>([]);
@@ -222,7 +225,7 @@ function IBTab() {
       <CtaCard
         eyebrow="IB Program"
         title="Become an Introducing Broker"
-        subtitle="Refer traders to TuskaEx and earn a lifetime share of their trading commissions — up to 5 levels deep."
+        subtitle={`Refer traders to ${brandName} and earn a lifetime share of their trading commissions — up to 5 levels deep.`}
         benefits={[
           'Lifetime commission on every trade your referrals place',
           'Multi-level network — earn from sub-referrals too',

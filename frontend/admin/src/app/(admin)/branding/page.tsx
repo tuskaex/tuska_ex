@@ -235,7 +235,7 @@ export default function BrandingPage() {
             <input
               value={brand.brand_name}
               onChange={(e) => setBrand((b) => ({ ...b, brand_name: e.target.value }))}
-              placeholder="Shown instead of TuskaEx"
+              placeholder="Shown to your clients instead of the platform name"
               className={inputCls}
             />
           </label>

@@ -1,4 +1,5 @@
 'use client';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 /**
  * Per-IB detail page — full commission history + summary.
@@ -56,6 +57,7 @@ function fmtDateTime(s: string | null) {
 }
 
 export default function IBDetailPage() {
+  const brandName = useTenantBrand().brandName;
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const ibId = params?.id;
@@ -193,7 +195,7 @@ export default function IBDetailPage() {
           doc.setFontSize(8);
           doc.setTextColor(140);
           doc.text(`Page ${d.pageNumber}`, w - 40, h - 20, { align: 'right' });
-          doc.text(`TuskaEx - confidential`, 40, h - 20);
+          doc.text(`${brandName || 'Confidential'} - confidential`, 40, h - 20);
         },
       });
 

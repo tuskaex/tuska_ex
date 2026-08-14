@@ -1,8 +1,11 @@
 /**
  * Shared client-side PDF report builder for the admin panel.
- * TuskaEx-branded header + jspdf-autotable body + page footer.
+ * Brand-bar header + jspdf-autotable body + page footer. The brand is passed
+ * in per call so a white-label tenant's exports carry their own name.
  * jspdf is dynamically imported so it isn't in the initial bundle.
  */
+
+import { BRAND_NAME } from '@/config/brand';
 
 export type PdfColumn = {
   header: string;
@@ -23,6 +26,12 @@ export type ReportPdfOptions = {
   totalsRow?: (string | number)[];
   filename: string;
   orientation?: 'portrait' | 'landscape';
+  /** Name printed in the brand bar and the page footer. A white-label tenant
+   *  exporting a report should get their own name on it, not the parent
+   *  platform's — these PDFs are forwarded to clients and regulators, so a
+   *  wrong name here travels further than anything on screen. Falls back to
+   *  the platform brand for TuskaEx's own staff. */
+  brandName?: string;
 };
 
 export function fmtMoney(n: number): string {
@@ -67,7 +76,8 @@ export async function downloadReportPdf(opts: ReportPdfOptions): Promise<void> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('TuskaEx', margin, 7);
+  const brand = (opts.brandName || '').trim() || BRAND_NAME;
+  doc.text(brand, margin, 7);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.text('Admin report', pageW - margin, 7, { align: 'right' });
@@ -119,7 +129,7 @@ export async function downloadReportPdf(opts: ReportPdfOptions): Promise<void> {
       doc.setFontSize(7);
       doc.setTextColor(140, 140, 140);
       doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageW - margin - 24, pageH - 6);
-      doc.text('TuskaEx — internal report. Confidential.', margin, pageH - 6);
+      doc.text(`${brand} — internal report. Confidential.`, margin, pageH - 6);
     },
   });
 

@@ -1,4 +1,5 @@
 'use client';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -170,6 +171,7 @@ const TABS: { id: TabId; label: string; icon: typeof UserRound }[] = [
 ];
 
 export default function UserDetailPage() {
+  const brandName = useTenantBrand().brandName;
   const params = useParams();
   const router = useRouter();
   const userId = params.id as string;
@@ -290,6 +292,7 @@ export default function UserDetailPage() {
 
   const handleDownloadStatement = () => {
     void downloadReportPdf({
+      brandName,
       title: 'Account Statement',
       subtitleLines: [
         `User: ${name}  ·  ${user.email}`,
