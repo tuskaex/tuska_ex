@@ -25,6 +25,9 @@ export default function SubAdminDetailPage() {
   const [clients, setClients] = useState<SubAdminClient[]>([]);
   const [checked, setChecked] = useState<string[]>([]);
   const [newPassword, setNewPassword] = useState('');
+  const [domain, setDomain] = useState('');
+  const [appSub, setAppSub] = useState('');
+  const [adminSub, setAdminSub] = useState('admin');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -261,6 +264,63 @@ export default function SubAdminDetailPage() {
         </Panel>
 
         <div className="space-y-4">
+          {/* Attaching a domain used to be possible only from the tenant's own
+              White-label page, because /admin/branding/domain acts on the
+              caller's row. So a super-admin had to hand over a login — and a
+              domain left on the super-admin's own row sends every signup to the
+              platform pool while rendering the tenant's brand perfectly, which
+              is indistinguishable from a broken feature. */}
+          <Panel title="White-label domain">
+            <p className="text-xxs text-text-tertiary mb-2">
+              Points the domain at this sub-admin and marks it live. Moves it off
+              whoever holds it now, including your own account.
+            </p>
+            <div className="space-y-2">
+              <input
+                value={domain}
+                placeholder="broker.com"
+                onChange={(e) => setDomain(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  value={appSub}
+                  placeholder="app subdomain (blank = apex)"
+                  onChange={(e) => setAppSub(e.target.value)}
+                  className="flex-1 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+                />
+                <input
+                  value={adminSub}
+                  placeholder="admin"
+                  onChange={(e) => setAdminSub(e.target.value)}
+                  className="w-24 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={busy || domain.trim().length < 3}
+                onClick={() =>
+                  void run(async () => {
+                    await adminApi.post(`/sub-admins/${id}/domain`, {
+                      domain: domain.trim(),
+                      app_subdomain: appSub.trim() || null,
+                      admin_subdomain: adminSub.trim() || null,
+                    });
+                  }, 'Domain assigned and marked live')
+                }
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+              >
+                <Save size={13} />
+                Assign domain
+              </button>
+              <p className="text-xxs text-text-tertiary">
+                The server must already serve these hostnames —
+                connect-tenant-domain.sh. &quot;Verify DNS&quot; cannot confirm a
+                Cloudflare-proxied record, which is why this marks live directly.
+              </p>
+            </div>
+          </Panel>
+
           <Panel title="Reset password">
             <div className="flex items-center gap-2">
               <input

@@ -6,6 +6,7 @@ super_admin, matching how routes/employees.py is written.
 import uuid
 
 from fastapi import APIRouter, Depends, Query, Request
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
@@ -121,6 +122,35 @@ async def update_permissions(
 ):
     return await sub_admin_service.update_permissions(
         sub_admin_id=sub_admin_id, permissions=body.permissions,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+class AssignDomainRequest(BaseModel):
+    domain: str
+    app_subdomain: str | None = None
+    admin_subdomain: str | None = None
+
+
+@router.post("/{sub_admin_id}/domain")
+async def assign_domain(
+    sub_admin_id: uuid.UUID,
+    body: AssignDomainRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Point a white-label domain at this sub-admin.
+
+    /admin/branding/domain acts on the caller's OWN row, so a super-admin had no
+    way to give a tenant a domain — and a domain left on the super-admin's row
+    sends every signup to the platform pool while rendering the tenant's brand
+    perfectly, which looks exactly like a broken feature. Moves the domain off
+    whoever holds it, this account included.
+    """
+    return await sub_admin_service.assign_domain(
+        sub_admin_id=sub_admin_id, domain=body.domain,
+        app_subdomain=body.app_subdomain, admin_subdomain=body.admin_subdomain,
         admin=admin, ip_address=_ip(request), db=db,
     )
 

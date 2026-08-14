@@ -483,3 +483,90 @@ async def impersonate(
         "sub_admin": {"id": str(sub.id), "email": sub.email,
                       "full_name": _full_name(sub)},
     }
+
+async def assign_domain(
+    *, sub_admin_id: uuid.UUID, domain: str, app_subdomain: str | None,
+    admin_subdomain: str | None, admin: User, ip_address: str | None,
+    db: AsyncSession,
+) -> dict:
+    """Point a white-label domain at a sub-admin, from the super-admin's side.
+
+    Until this existed the only way to attach a domain was `PUT/POST
+    /admin/branding/domain`, which acts on `admin.id` — the caller's OWN row. So
+    a super-admin could not put a domain on a tenant: they had to hand the
+    tenant their own login and have them do it, and a domain the super-admin had
+    already claimed had to be disconnected from that account first.
+
+    That mattered more than it looks. A domain sitting on the super-admin's row
+    resolves, via tenant_resolver._pool_id, to the PLATFORM pool — super_admin
+    is what NULL assigned_admin_id means — so every signup on it landed in
+    TuskaEx and the tenant's own Users page stayed empty while their branding
+    rendered perfectly. Indistinguishable from a broken feature.
+
+    Moves rather than copies: `custom_domain` is uniquely indexed, so whoever
+    holds it now (super-admin included) is cleared in the same transaction.
+
+    Status goes straight to READY. The operator is asserting that nginx already
+    serves these hostnames — which is true whenever the domain is being moved
+    off a row where it was already live. `verify_domain` cannot confirm it
+    anyway: tenant hosts are proxied through Cloudflare, so their A records
+    resolve to Cloudflare and never to PLATFORM_PUBLIC_IP.
+    """
+    from services import branding_service as _b
+
+    _only_super_admin(admin)
+    sub = await _load_sub_admin(sub_admin_id, db)
+
+    d = _b.normalise_domain(domain)
+    app_label = _b.normalise_label(app_subdomain) if app_subdomain else None
+    admin_label = (
+        _b.normalise_label(admin_subdomain, for_admin_panel=True)
+        if admin_subdomain else None
+    )
+    if app_label and admin_label and app_label == admin_label:
+        raise HTTPException(
+            status_code=400, detail="The app and admin hosts must differ."
+        )
+
+    previous = (
+        await db.execute(
+            select(User).where(User.custom_domain == d, User.id != sub.id)
+        )
+    ).scalars().all()
+    for row in previous:
+        row.custom_domain = None
+        row.app_subdomain = None
+        row.admin_subdomain = None
+        row.custom_domain_status = None
+        row.custom_domain_last_error = None
+        row.custom_domain_provisioned_at = None
+
+    old = {
+        "custom_domain": sub.custom_domain,
+        "custom_domain_status": sub.custom_domain_status,
+    }
+    sub.custom_domain = d
+    sub.app_subdomain = app_label
+    sub.admin_subdomain = admin_label
+    sub.custom_domain_status = _b.STATUS_READY
+    sub.custom_domain_last_error = None
+    sub.custom_domain_provisioned_at = datetime.now(timezone.utc)
+
+    await write_audit_log(
+        db, admin.id, "assign_sub_admin_domain", "sub_admin", sub.id,
+        old_values=old,
+        new_values={
+            "custom_domain": d,
+            "app_subdomain": app_label,
+            "admin_subdomain": admin_label,
+            "custom_domain_status": _b.STATUS_READY,
+            "taken_from": [r.email for r in previous] or None,
+        },
+        ip_address=ip_address,
+    )
+    await db.commit()
+
+    # CORS + cookie scope read a 60-second snapshot of READY domains; without
+    # this the tenant's own host is refused for up to a minute after the move.
+    _b._tenant_hosts.invalidate()
+    return await _to_dto(sub, db)
