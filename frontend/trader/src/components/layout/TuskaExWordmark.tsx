@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { isOnTerminalHost } from '@/lib/terminalHandoff';
+import { isTenantHost } from '@/lib/tenantHost';
 
 /**
  * Brand marks, chosen by the host this is being served on.
@@ -30,6 +31,18 @@ const BRAND_BY_HOST = {
 
 function brand() {
   return isOnTerminalHost() ? BRAND_BY_HOST.speedtrade : BRAND_BY_HOST.tuskaex;
+}
+
+/**
+ * A white-label host is neither of the two platform brands, and picking either
+ * one puts the parent platform's mark inside a broker's terminal. The rail is
+ * ~36px, so there is no room for a tenant logo of unknown aspect ratio and no
+ * useful text fallback either — the honest render is nothing, which is what a
+ * neutral spacer gives. The terminal chrome around it already carries the
+ * tenant's brand from AppNavbar.
+ */
+function isPlatformBrandHost() {
+  return !isTenantHost();
 }
 
 type Props = {
@@ -78,7 +91,9 @@ export function TuskaExWordmark({
           className,
         )}
       >
-        {hideFlag ? (
+        {!isPlatformBrandHost() ? (
+          <span className="w-7 h-7" aria-hidden />
+        ) : hideFlag ? (
           <span className="inline-flex items-baseline font-bold tracking-tight text-base select-none">
             <span className="text-text-primary">T</span>
             <span className="text-[#D60101]">E</span>
@@ -113,14 +128,21 @@ export function TuskaExWordmark({
         className,
       )}
     >
-      <Image
-        src={brand().logo}
-        alt={brand().name}
-        width={220}
-        height={48}
-        priority
-        className="h-9 sm:h-10 w-auto"
-      />
+      {isPlatformBrandHost() ? (
+        <Image
+          src={brand().logo}
+          alt={brand().name}
+          width={220}
+          height={48}
+          priority
+          className="h-9 sm:h-10 w-auto"
+        />
+      ) : (
+        /* White-label host — hold the space rather than paint the parent
+           platform's wordmark. Callers that need a tenant logo use AppNavbar,
+           which resolves it through useTenantBrand. */
+        <span className="h-9 sm:h-10 w-24" aria-hidden />
+      )}
     </Link>
   );
 }

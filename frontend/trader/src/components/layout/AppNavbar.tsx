@@ -44,6 +44,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useShellStore } from '@/stores/shellStore';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 import { useAuthStore } from '@/stores/authStore';
 import { NotificationBell } from '@/components/NotificationListener';
 import AppThemeToggle from '@/components/layout/AppThemeToggle';
@@ -121,6 +122,7 @@ export default function AppNavbar() {
   const pathname = usePathname() ?? '';
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const brand = useTenantBrand();
   const { sidebarOpen, setSidebarOpen } = useShellStore();
 
   const [moreOpen, setMoreOpen] = useState(false);
@@ -175,24 +177,62 @@ export default function AppNavbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border-primary bg-bg-glass backdrop-blur">
       <div className="mx-auto flex h-[60px] max-w-[1400px] items-center px-4 lg:px-6">
-        {/* LEFT — Logo (same PNG as the marketing navbar) */}
-        <Link href="/dashboard" className="flex items-center shrink-0" aria-label="TuskaEx home">
-          <Image
-            src="/marketing/tuskaex-logo.png"
-            alt="TuskaEx"
-            width={200}
-            height={44}
-            priority
-            className="h-9 w-auto dark:hidden"
-          />
-          <Image
-            src="/marketing/tuskaex-logo-light.png"
-            alt="TuskaEx"
-            width={200}
-            height={44}
-            priority
-            className="hidden h-9 w-auto dark:block"
-          />
+        {/* LEFT — brand mark.
+            On a white-label host this is the tenant's own logo, not TuskaEx's.
+            The auth pages were made tenant-aware earlier; this header was not,
+            so a broker's client signed in through their broker's branding and
+            then looked at the parent platform's wordmark on every page after
+            login — the one place they spend all their time.
+
+            Client-only resolution is safe here: everything that renders this
+            sits under AuthProvider, which returns null until the session
+            resolves, so there is no SSR pass to disagree with and no flash of
+            the wrong brand. A tenant with no logo uploaded falls back to their
+            brand name as text, never to TuskaEx's image. */}
+        <Link
+          href="/dashboard"
+          className="flex items-center shrink-0"
+          aria-label={`${brand.isTenant ? brand.brandName || 'Broker' : 'TuskaEx'} home`}
+        >
+          {brand.isTenant ? (
+            brand.logoUrl ? (
+              /* Plain <img>: a tenant logo is served at runtime, so next/image
+                 would need its path in remotePatterns at BUILD time. */
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={brand.logoUrl}
+                alt={brand.brandName || ''}
+                className="h-9 w-auto object-contain"
+              />
+            ) : brand.brandName ? (
+              <span className="text-lg font-semibold tracking-tight text-text-primary">
+                {brand.brandName}
+              </span>
+            ) : (
+              /* Brand still resolving — hold the space rather than paint
+                 TuskaEx's mark for a frame. */
+              <span className="h-9 w-24" aria-hidden />
+            )
+          ) : (
+            <>
+              <Image
+                src="/marketing/tuskaex-logo.png"
+                alt="TuskaEx"
+                width={200}
+                height={44}
+                priority
+                className="h-9 w-auto dark:hidden"
+              />
+              <Image
+                src="/marketing/tuskaex-logo-light.png"
+                alt="TuskaEx"
+                width={200}
+                height={44}
+                priority
+                className="hidden h-9 w-auto dark:block"
+              />
+            </>
+          )}
         </Link>
 
         {/* CENTER — Primary nav (lg+) */}
