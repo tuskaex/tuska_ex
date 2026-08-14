@@ -222,18 +222,36 @@ def require_permission(permission: str, *, tenant_safe: bool = False):
 def scope_filter(admin: User):
     """SQLAlchemy criterion restricting a `users` query to the caller's pool.
 
-    Returns None when the caller sees everything, so call sites read:
+    Every role now has a pool, so this never returns None. Call sites still
+    read:
 
         crit = scope_filter(admin)
         if crit is not None:
             query = query.where(crit)
 
-    super_admin / admin see the whole platform, exactly as before this feature
-    existed. A sub_admin sees only clients carrying their id.
+    A sub_admin sees clients carrying their id. Platform staff — admin and
+    super_admin — see the PLATFORM's own pool, meaning `assigned_admin_id IS
+    NULL`, and no longer every tenant's clients alongside their own.
+
+    That last part is the white-label promise taken literally: a tenant is a
+    separate broker, their clients are theirs, and the parent's user list is the
+    parent's own book. Before this, a sub-admin's client appeared in both
+    panels, which made "separate broker" true in the tenant's view and false in
+    the platform's.
+
+    WHAT THIS COSTS, deliberately accepted: the platform owner stops seeing
+    tenant clients in Users, Deposits, Trades, Tickets and the dashboard
+    totals. On a B-book that also hides exposure the platform still carries —
+    the house is counterparty to those trades whether or not it can see them.
+    Reverting is this function and `scope_user_ids` below.
+
+    Super-admin can still reach an individual tenant client by id
+    (`assert_user_in_scope` lets ADMIN_BYPASS_ROLES through), which keeps a
+    support path open without putting those rows back in every list.
     """
     if admin.role == "sub_admin":
         return User.assigned_admin_id == admin.id
-    return None
+    return User.assigned_admin_id.is_(None)
 
 
 def scope_user_ids(admin: User | None):
@@ -247,12 +265,19 @@ def scope_user_ids(admin: User | None):
         if sub is not None:
             query = query.where(Deposit.user_id.in_(sub))
 
-    None for admin/super_admin, so every pre-existing caller keeps the exact
-    query it had before white-label existed.
+    Mirrors `scope_filter`: a sub_admin gets their own clients, platform staff
+    get the platform's own pool (`assigned_admin_id IS NULL`) rather than
+    everybody's.
+
+    Still returns None when `admin` is None — several callers pass that to mean
+    "no scoping at all", and those are internal paths with no caller identity,
+    not a role decision.
     """
-    if admin is not None and admin.role == "sub_admin":
+    if admin is None:
+        return None
+    if admin.role == "sub_admin":
         return select(User.id).where(User.assigned_admin_id == admin.id).scalar_subquery()
-    return None
+    return select(User.id).where(User.assigned_admin_id.is_(None)).scalar_subquery()
 
 
 async def assert_row_in_scope(
