@@ -5,6 +5,7 @@ import { adminApi } from '@/lib/api';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
+import TenantDomainPanel from './TenantDomainPanel';
 import toast from 'react-hot-toast';
 import type { BrandingProfile } from '@/types';
 
@@ -312,7 +313,15 @@ export default function BrandingPage() {
         </div>
         <div className="p-3">
           {profile?.domain ? (
-            <DomainSection domain={profile.domain} onChanged={() => void fetchData()} />
+            // `connectable` is false only on the platform owner's own row, where
+            // connect_domain refuses outright — a domain there resolves to the
+            // platform pool and swallows the tenant's signups. Same section,
+            // different question: which tenant is this domain for.
+            profile.domain.connectable ? (
+              <DomainSection domain={profile.domain} onChanged={() => void fetchData()} />
+            ) : (
+              <TenantDomainPanel platformIp={profile.domain.platform_ip} />
+            )
           ) : null}
         </div>
       </section>

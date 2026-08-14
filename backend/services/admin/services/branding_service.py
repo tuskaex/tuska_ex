@@ -413,6 +413,12 @@ def domain_payload(owner: User) -> dict:
         "custom_domain": owner.custom_domain,
         "app_subdomain": owner.app_subdomain,
         "admin_subdomain": owner.admin_subdomain,
+        # Whether THIS row may hold a domain. Mirrors the super_admin refusal in
+        # connect_domain, derived from the same condition rather than re-deriving
+        # the role client-side. False means the UI must ask which tenant the
+        # domain is for instead of connecting it to the caller — a domain on the
+        # platform owner's row sends every signup on it to the platform pool.
+        "connectable": owner.role != "super_admin",
         "mode": "subdomain" if owner.app_subdomain else ("apex" if owner.custom_domain else None),
         "status": owner.custom_domain_status,
         "last_error": owner.custom_domain_last_error,
