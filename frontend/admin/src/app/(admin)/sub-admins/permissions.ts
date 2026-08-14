@@ -227,6 +227,26 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     perms: ['trades.close'],
     sensitive: true,
   },
+  {
+    key: 'impersonate',
+    label: 'Log in as a client',
+    hint: 'Open the trader app as one of their own clients',
+    perms: ['users.impersonate'],
+    sensitive: true,
+  },
+  {
+    key: 'delete_users',
+    label: 'Delete clients',
+    // The endpoint is require_user_in_scope("users.delete"), so a tenant can
+    // only ever reach their own pool — another broker's client answers 404, not
+    // 403, so they cannot even confirm the id exists. Kept a separate grant from
+    // users.view because it is irreversible: the service closes positions and
+    // orders, then wipes trading accounts, copy allocations, deposits,
+    // withdrawals, transactions, referrals and the IB profile before the row.
+    hint: '⚠ Irreversible — wipes their accounts, deposits and full history',
+    perms: ['users.delete'],
+    sensitive: true,
+  },
 ];
 
 export function isGrantable(group: PermissionGroup): boolean {
