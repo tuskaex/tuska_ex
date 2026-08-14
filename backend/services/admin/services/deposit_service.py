@@ -1,6 +1,6 @@
 """Admin Finance Service — deposit/withdrawal listing, approval, rejection, screenshots."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -355,7 +355,13 @@ async def approve_deposit(
 
     bonus_msg = ""
     applied_bonuses: list[tuple[str, Decimal]] = []
-    now = datetime.utcnow()
+    # Timezone-AWARE: bonus_offers.starts_at / expires_at are TIMESTAMPTZ, so
+    # asyncpg hands them back aware. datetime.utcnow() is naive, and comparing
+    # the two raises "can't compare offset-naive and offset-aware datetimes" —
+    # which surfaced as a 500 on Approve for any deposit while an active bonus
+    # offer carried either date. The write-only uses below stay as they are;
+    # only the comparison was ever wrong.
+    now = datetime.now(timezone.utc)
     offers_q = await db.execute(
         select(BonusOffer).where(
             BonusOffer.is_active == True,
