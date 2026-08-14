@@ -83,15 +83,6 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         "permissions": sorted(set((emp.extra_permissions if emp else None) or [])),
         "default_permissions": sorted(EMPLOYEE_ROLE_PERMISSIONS.get(SUB_ADMIN_ROLE, set())),
         "is_active": bool(emp.is_active) if emp else False,
-        # The tenant's white-label host. Carried on the list DTO so the operator
-        # can see who already holds a domain before assigning one — assign_domain
-        # MOVES a domain off its current holder, and doing that blind to a
-        # tenant whose brand is already live on it is not a mistake worth
-        # discovering afterwards.
-        "custom_domain": row.custom_domain,
-        "app_subdomain": row.app_subdomain,
-        "admin_subdomain": row.admin_subdomain,
-        "custom_domain_status": row.custom_domain_status,
         "user_count": await _counts(row.id, db),
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }

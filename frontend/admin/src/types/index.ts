@@ -318,12 +318,6 @@ export interface SubAdmin {
   /** The role's built-in permissions — always granted, not editable here. */
   default_permissions: string[];
   is_active: boolean;
-  /** White-label host, if this tenant holds one. Assigning a domain MOVES it
-   *  off whoever has it, so the picker shows this before you overwrite. */
-  custom_domain: string | null;
-  app_subdomain: string | null;
-  admin_subdomain: string | null;
-  custom_domain_status: CustomDomainStatus | null;
   user_count: number;
   created_at: string | null;
 }
@@ -403,9 +397,6 @@ export interface DomainState {
   dns_records: DnsRecord[];
   app_url: string | null;
   admin_url: string | null;
-  /** False on the platform owner's own row — the form asks which tenant the
-   *  domain is for instead of connecting it to the caller. */
-  connectable: boolean;
   /** Present on connect/verify responses only. */
   dns_check?: { platform_ip: string; all_matched: boolean; records: DnsLookup[] };
 }
