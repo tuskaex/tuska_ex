@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -150,38 +149,6 @@ export default function DomainSection({
         The platform has not published an IP address for custom domains yet. Ask
         the platform owner to set <code className="text-accent">PLATFORM_PUBLIC_IP</code>.
       </p>
-    );
-  }
-
-  // The platform owner cannot hold a custom domain — connect_domain refuses it,
-  // because a signup on a domain owned by a super_admin resolves to the platform
-  // pool and the tenant's Users page silently stays empty. Say so here rather
-  // than letting them fill the form and meet a 400. `connected` still wins, so
-  // a legacy super-admin domain keeps its disconnect button.
-  if (!domain.connectable && !connected) {
-    return (
-      <div className="rounded-md border border-border-primary bg-bg-tertiary/40 p-3 space-y-2">
-        <p className="flex items-center gap-2 text-xs font-medium text-text-primary">
-          <Globe size={13} className="text-text-tertiary" />
-          Custom domains belong to sub-admins
-        </p>
-        <p className="text-xxs text-text-tertiary leading-relaxed">
-          The platform’s own hostnames come from the server configuration, not
-          from here. A custom domain identifies a <em>tenant</em>: it decides
-          which broker a visitor who signs up on it belongs to. Held by the
-          platform owner it would point at nobody, and those signups would land
-          in the platform’s own book while the tenant’s Users page stayed empty.
-        </p>
-        <p className="text-xxs text-text-tertiary leading-relaxed">
-          Assign it from{' '}
-          <Link href="/sub-admins" className="text-accent hover:underline">
-            Sub-admins
-          </Link>{' '}
-          → open the tenant → <span className="text-text-secondary">White-label domain</span>.
-          The tenant can also connect their own from this same page once they
-          sign in.
-        </p>
-      </div>
     );
   }
 

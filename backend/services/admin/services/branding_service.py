@@ -413,11 +413,6 @@ def domain_payload(owner: User) -> dict:
         "custom_domain": owner.custom_domain,
         "app_subdomain": owner.app_subdomain,
         "admin_subdomain": owner.admin_subdomain,
-        # Mirrors the super_admin refusal in connect_domain, so the UI can
-        # explain the rule up front instead of rendering a form that is
-        # guaranteed to 400 on submit. Derived from the same condition rather
-        # than re-deriving the role client-side: one place to change.
-        "connectable": owner.role != "super_admin",
         "mode": "subdomain" if owner.app_subdomain else ("apex" if owner.custom_domain else None),
         "status": owner.custom_domain_status,
         "last_error": owner.custom_domain_last_error,

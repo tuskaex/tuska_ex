@@ -397,9 +397,6 @@ export interface DomainState {
   dns_records: DnsRecord[];
   app_url: string | null;
   admin_url: string | null;
-  /** False for the platform owner — a custom domain belongs to a tenant, so the
-   *  form is replaced by the instruction to assign it from Sub-admins. */
-  connectable: boolean;
   /** Present on connect/verify responses only. */
   dns_check?: { platform_ip: string; all_matched: boolean; records: DnsLookup[] };
 }
