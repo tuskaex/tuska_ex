@@ -44,6 +44,7 @@ import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
 import { useTradingStore } from '@/stores/tradingStore';
 import { createDatafeed, type DatafeedInstrument } from '@/lib/chart/datafeed';
+import { useChartBrand } from '@/hooks/useTenantBrand';
 import { loadChartLibrary } from '@/lib/chart/loadChartLibrary';
 import { api } from '@/lib/api/client';
 import { openPnl } from '@/lib/pnl';
@@ -119,6 +120,14 @@ function TradingViewChartInner({
   // (mobile + desktop layouts); a shared DOM id would make two widgets fight
   // over the same container. Stable across renders via useRef.
   const CONTAINER_ID = useRef('sc_tv_terminal_' + Math.random().toString(36).slice(2, 10)).current;
+
+  // Whose name and mark the chart wears. Mirrored into a ref because the
+  // datafeed is built once inside the mount effect and must not re-run (that
+  // would tear the widget down); the getter it holds reads the ref instead.
+  const chartBrand = useChartBrand();
+  const chartBrandRef = useRef(chartBrand);
+  chartBrandRef.current = chartBrand;
+
   const pathname = usePathname();
   const selectedSymbol = useTradingStore((s) => s.selectedSymbol);
   const onTradingTerminal = Boolean(pathname?.startsWith('/trading/terminal'));
@@ -172,6 +181,9 @@ function TradingViewChartInner({
           const hs = (Number(p.ask) - Number(p.bid)) / 2;
           return Number.isFinite(hs) && hs > 0 ? hs : 0;
         },
+        // The legend's `XAUUSD · 5 · SpeedTrade`, and the exchange column in
+        // symbol search.
+        getExchangeName: () => chartBrandRef.current.name,
       });
       try {
         const r = await fetch('/api/v1/instruments/', { credentials: 'include' });
@@ -1196,6 +1208,48 @@ function TradingViewChartInner({
   return (
     <div className={clsx('relative w-full h-full min-h-[200px] min-w-0 bg-bg-base')} data-tv-chart-root>
       <div id={CONTAINER_ID} ref={containerRef} className="h-full w-full min-h-[200px]" />
+
+      {/* Brand watermark, centred behind the candles.
+        *
+        * Drawn here rather than through the library's own watermark: that one
+        * renders the SYMBOL, takes no image, and its overrides differ between
+        * Charting Library versions — this stays put across upgrades.
+        *
+        * z-10 keeps it under the trade overlay (z-20) so entry chips, SL/TP
+        * handles and the close button stay legible on top of it, and
+        * `pointer-events-none` means it never eats a click, a drag on the
+        * price scale, or a crosshair move.
+        *
+        * `aria-hidden`: it is decoration. The symbol and venue are already in
+        * the chart legend, so announcing the mark again is noise.
+        *
+        * Hidden entirely until the brand is known — on a white-label domain
+        * that is a beat of nothing rather than a flash of the wrong company. */}
+      {chartReady && chartBrand.name ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-10 flex select-none flex-col items-center justify-center gap-2 opacity-[0.07]"
+        >
+          {/* Logo OR name, never both: these lockups already carry the
+            * wordmark, so printing the name underneath it read as the brand
+            * stuttering ("SPEED TRADER" over "SPEEDTRADE"). The text branch is
+            * for a white-label tenant who has set a name but not uploaded a
+            * logo yet. */}
+          {chartBrand.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={chartBrand.logoUrl}
+              alt=""
+              className="h-auto w-[min(38%,320px)] max-w-[320px]"
+              draggable={false}
+            />
+          ) : (
+            <span className="text-[clamp(1rem,3vw,2rem)] font-bold uppercase tracking-[0.2em] text-text-primary">
+              {chartBrand.name}
+            </span>
+          )}
+        </div>
+      ) : null}
 
       {/* Loader until the chart is ready (covers the library load), or a
           readable message if the library could not be loaded at all. */}

@@ -1,7 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BRAND_NAME } from '@/config/brand';
+import {
+  BRAND_NAME,
+  TERMINAL_BRAND_LOGO,
+  TERMINAL_BRAND_NAME,
+} from '@/config/brand';
 import {
   PLATFORM_BRAND,
   fetchTenantBranding,
@@ -72,4 +76,32 @@ export function useBrandName(fallbackWhileLoading = ''): string {
   if (!brand.isTenant) return BRAND_NAME;
   if (brand.loading) return fallbackWhileLoading;
   return brand.brandName || fallbackWhileLoading;
+}
+
+/**
+ * The brand the CHART wears — its exchange label and its watermark.
+ *
+ * Three answers, and they are all different:
+ *
+ *   white-label domain  → the tenant's own name and logo
+ *   anywhere else       → SpeedTrade, because that is the terminal's product
+ *
+ * Note this deliberately does NOT return TuskaEx. `useTenantBrand` answers
+ * "whose site is this?", which for the CRM is TuskaEx and stays that way. The
+ * chart only ever renders inside the terminal, and the terminal is SpeedTrade
+ * (see TERMINAL_BRAND_NAME). Reusing `useBrandName` here would have put the
+ * parent platform's name on a SpeedTrade chart.
+ *
+ * A tenant whose brand has not resolved yet returns an empty name and a null
+ * logo, so the watermark renders nothing for a beat rather than flashing a
+ * different company's mark at the broker's own client — the same rule the rest
+ * of the branding code follows.
+ */
+export function useChartBrand(): { name: string; logoUrl: string | null } {
+  const brand = useTenantBrand();
+  if (!brand.isTenant) {
+    return { name: TERMINAL_BRAND_NAME, logoUrl: TERMINAL_BRAND_LOGO };
+  }
+  if (brand.loading) return { name: '', logoUrl: null };
+  return { name: brand.brandName, logoUrl: brand.logoUrl };
 }

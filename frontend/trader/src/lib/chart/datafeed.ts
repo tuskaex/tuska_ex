@@ -55,8 +55,22 @@ export function createDatafeed(opts: {
   // spread (constant per symbol), so the whole series shifts uniformly with no
   // seam between history and the live candle.
   getHalfSpread?: (symbol: string) => number;
+  /**
+   * What the chart calls the venue — the "TuskaEx" in the legend's
+   * `XAUUSD · 5 · TuskaEx`, and the exchange in symbol search.
+   *
+   * A getter, not a string, because the datafeed is built once when the widget
+   * mounts while a white-label tenant's brand arrives a moment later over the
+   * network. A string would have frozen whatever was known at mount; a getter
+   * is read again on every resolveSymbol, so the next symbol change picks the
+   * real name up without tearing down the chart.
+   *
+   * Defaults to the platform name so existing callers are unchanged.
+   */
+  getExchangeName?: () => string;
 }) {
   const apiBase = (opts.apiBase || '/api/v1').replace(/\/$/, '');
+  const exchangeName = () => (opts.getExchangeName?.() || 'TuskaEx');
   let instruments = opts.instruments || [];
   const getHalfSpread = opts.getHalfSpread;
 
@@ -162,7 +176,7 @@ export function createDatafeed(opts: {
         supports_time: true,
         supports_marks: false,
         supports_timescale_marks: false,
-        exchanges: [{ value: 'TuskaEx', name: 'TuskaEx', desc: 'TuskaEx' }],
+        exchanges: [{ value: exchangeName(), name: exchangeName(), desc: exchangeName() }],
         symbols_types: [{ name: 'All', value: '' }],
       }), 0);
     },
@@ -176,7 +190,7 @@ export function createDatafeed(opts: {
           symbol: i.symbol,
           full_name: i.symbol,
           description: i.symbol,
-          exchange: 'TuskaEx',
+          exchange: exchangeName(),
           ticker: i.symbol,
           type: i.segment || 'forex',
         }));
@@ -195,8 +209,8 @@ export function createDatafeed(opts: {
         type: inst?.segment || 'forex',
         session: '24x7',
         timezone: 'Etc/UTC',
-        exchange: 'TuskaEx',
-        listed_exchange: 'TuskaEx',
+        exchange: exchangeName(),
+        listed_exchange: exchangeName(),
         format: 'price',
         minmov: 1,
         pricescale,
