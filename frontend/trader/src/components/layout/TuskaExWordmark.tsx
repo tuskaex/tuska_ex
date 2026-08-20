@@ -45,6 +45,43 @@ function isPlatformBrandHost() {
   return !isTenantHost();
 }
 
+/**
+ * Just the ~28px brand mark, with no link or button around it.
+ *
+ * Exported so the terminal's rail menu can show the identical mark without
+ * re-deriving which host it is on — that logic (platform vs white-label, and
+ * which of the two platform brands) lives in exactly one place and both
+ * callers read the same answer.
+ */
+export function BrandMark({ hideFlag = false }: { hideFlag?: boolean }) {
+  if (!isPlatformBrandHost()) {
+    return <span className="w-7 h-7" aria-hidden />;
+  }
+  if (hideFlag) {
+    return (
+      <span className="inline-flex items-baseline font-bold tracking-tight text-base select-none">
+        <span className="text-text-primary">T</span>
+        <span className="text-[#D60101]">E</span>
+      </span>
+    );
+  }
+  return (
+    <Image
+      src={brand().mark}
+      alt={brand().name}
+      width={28}
+      height={28}
+      priority
+      className="w-7 h-7 object-contain rounded-md"
+    />
+  );
+}
+
+/** The brand's display name for this host, or null on a white-label domain. */
+export function platformBrandName(): string | null {
+  return isPlatformBrandHost() ? brand().name : null;
+}
+
 type Props = {
   href?: string;
   className?: string;
@@ -91,23 +128,7 @@ export function TuskaExWordmark({
           className,
         )}
       >
-        {!isPlatformBrandHost() ? (
-          <span className="w-7 h-7" aria-hidden />
-        ) : hideFlag ? (
-          <span className="inline-flex items-baseline font-bold tracking-tight text-base select-none">
-            <span className="text-text-primary">T</span>
-            <span className="text-[#D60101]">E</span>
-          </span>
-        ) : (
-          <Image
-            src={brand().mark}
-            alt={brand().name}
-            width={28}
-            height={28}
-            priority
-            className="w-7 h-7 object-contain rounded-md"
-          />
-        )}
+        <BrandMark hideFlag={hideFlag} />
       </Link>
     );
   }

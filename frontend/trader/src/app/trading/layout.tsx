@@ -10,6 +10,7 @@ import { extractTicksFromPayload } from '@/lib/ws/normalizePricePayload';
 import api from '@/lib/api/client';
 import { sounds, unlockAudio } from '@/lib/sounds';
 import DashboardShell from '@/components/layout/DashboardShell';
+import { useUIStore } from '@/stores/uiStore';
 
 function mapApiAccount(a: Record<string, unknown>): TradingAccount {
   const g = a.account_group as Record<string, unknown> | null | undefined;
@@ -377,6 +378,7 @@ function TradingSession({ children }: { children: React.ReactNode }) {
 export default function TradingLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const terminalOnly = pathname?.startsWith('/trading/terminal');
+  const theme = useUIStore((s) => s.theme);
 
   const fallback = (
     <div className="flex-1 flex items-center justify-center text-text-tertiary text-sm bg-bg-primary">
@@ -385,13 +387,22 @@ export default function TradingLayout({ children }: { children: React.ReactNode 
   );
 
   if (terminalOnly) {
-    // Light-only application — dark theme has been retired (no toggle, no
-    // uiStore.theme read here) so a stale persisted value can never flip the
-    // terminal back to dark.
+    // The terminal follows the user's theme, like the rest of the signed-in
+    // app. It was pinned to light for a while, which left the switch in the
+    // rail's brand menu changing `data-theme` on <html> while the terminal
+    // itself stayed white — the toggle looked broken rather than absent.
+    //
+    // Setting BOTH the class and the attribute is deliberate: globals.css
+    // defines the palette under `[data-theme="dark"], .theme-dark`, and other
+    // rules in that file key off `.theme-light` alone.
+    //
+    // Reading the persisted store during render is safe here and nowhere else
+    // in this file: the terminal sits under AuthProvider, which renders null
+    // until the session resolves, so there is no server pass to disagree with.
     return (
       <div
-        className="trading-page theme-light flex flex-col h-[100dvh] bg-bg-base min-h-0"
-        data-theme="light"
+        className={`trading-page ${theme === 'dark' ? 'theme-dark' : 'theme-light'} flex flex-col h-[100dvh] bg-bg-base min-h-0`}
+        data-theme={theme}
       >
         <div className="flex-1 flex overflow-hidden min-h-0">
           <Suspense fallback={fallback}>

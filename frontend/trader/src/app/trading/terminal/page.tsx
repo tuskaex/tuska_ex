@@ -272,6 +272,10 @@ export default function TradingTerminalPage() {
   // Narrow selectors: only re-render on the slices this page actually reads
   // (action references are stable in zustand, so selecting them is free).
   const selectedSymbol = useTradingStore((s) => s.selectedSymbol);
+  // Passed to the chart so the library's own canvas follows the app theme;
+  // without it the widget stays on its 'light' default while everything
+  // around it goes dark.
+  const chartTheme = useUIStore((s) => s.theme);
   const prices = useTradingStore((s) => s.prices);
   const instruments = useTradingStore((s) => s.instruments);
   const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
@@ -589,7 +593,7 @@ export default function TradingTerminalPage() {
                 ) : null}
                 <div className="flex-1 min-h-0 min-w-0 overflow-hidden relative">
                   <ChartErrorBoundary>
-                    <TradingViewChart />
+                    <TradingViewChart theme={chartTheme} />
                   </ChartErrorBoundary>
                 </div>
               </div>
@@ -828,7 +832,7 @@ export default function TradingTerminalPage() {
                   chart's own buttons. Collapse is via the header's "Normal view"
                   button / Esc when expanded. */}
               <ChartErrorBoundary>
-                <TradingViewChart onRequestFullscreen={enterFullscreen} />
+                <TradingViewChart onRequestFullscreen={enterFullscreen} theme={chartTheme} />
               </ChartErrorBoundary>
             </div>
           </div>
