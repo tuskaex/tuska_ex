@@ -59,6 +59,8 @@ set(SOURCES
     src/ui/AccountPanel.cpp
     src/ui/PositionsPanel.cpp
     src/ui/NewsPanel.cpp
+    src/ui/CalendarPanel.cpp
+    src/ui/EmbedProfile.cpp
     src/ui/ClosePositionDialog.cpp
     src/ui/ModifyBracketsDialog.cpp
     src/ui/OrderDialog.cpp
@@ -84,6 +86,8 @@ set(HEADERS
     src/ui/AccountPanel.h
     src/ui/PositionsPanel.h
     src/ui/NewsPanel.h
+    src/ui/CalendarPanel.h
+    src/ui/EmbedProfile.h
     src/ui/ClosePositionDialog.h
     src/ui/ModifyBracketsDialog.h
     src/ui/OrderDialog.h
@@ -95,7 +99,13 @@ set(HEADERS
 # The one version string for this release. Keep it in step with app.rc's
 # VERSIONINFO, installer.iss's AppVersion, and the version in the download
 # filename the website links to — they all describe the same build.
-set(TX_VERSION "1.0.1")
+#
+# This is NOT cosmetic on macOS. It is the only place the .app's
+# CFBundleShortVersionString comes from (resources/Info.plist.in), and
+# package-macos.sh reads that back to name the .dmg. It had drifted to 1.0.1
+# while Windows shipped 1.0.6, so the Mac build carried the same code under a
+# five-releases-old version number — the exact bug this comment warns about.
+set(TX_VERSION "1.0.7")
 
 # App icon + version info. The .rc gives the EXE its icon (Explorer, desktop
 # shortcut, taskbar); the .qrc carries the same artwork for setWindowIcon();

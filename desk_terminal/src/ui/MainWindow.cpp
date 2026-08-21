@@ -712,6 +712,7 @@ void MainWindow::onSymbolActivated(const QString& symbol) {
         m_ticket->updateQuote(m_lastQuotes.value(symbol));
     m_charts->showSymbol(symbol);   // active pane only
     m_positions->setNewsSymbol(symbol);
+    m_positions->setCalendarSymbol(symbol);
     persistChartLayout();
 }
 
@@ -733,6 +734,7 @@ void MainWindow::onActiveChartChanged(int) {
     // what stops the two from bouncing off each other.
     m_watch->selectSymbol(sym);
     m_positions->setNewsSymbol(sym);
+    m_positions->setCalendarSymbol(sym);
     persistChartLayout();
 }
 

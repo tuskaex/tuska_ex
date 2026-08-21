@@ -11,6 +11,7 @@ class QDateEdit;
 class QPushButton;
 class QLabel;
 class NewsPanel;
+class CalendarPanel;
 
 // MT5's bottom blotter. Three tabs — Trade (open positions with live P/L),
 // Pending orders, and closed-trade History — using MT5's column set:
@@ -41,6 +42,10 @@ public slots:
 
     // Live headlines for the instrument in focus — see NewsPanel.
     void setNewsSymbol(const QString& symbol);
+    // Macro releases for the economies behind that instrument — see
+    // CalendarPanel. Separate setter because the calendar only reacts when its
+    // country filter is following the symbol.
+    void setCalendarSymbol(const QString& symbol);
 
     // Price precision per instrument, fed from the symbol table. The blotter
     // has no other way to know it: OpenPosition / PendingOrder carry prices
@@ -90,12 +95,21 @@ private:
 
     QTabWidget*   m_tabs;
     NewsPanel*    m_news = nullptr;
+    CalendarPanel* m_calendar = nullptr;
+    // Tab positions, captured from addTab() instead of written as literals.
+    // The counts in the captions used to be set with hardcoded indices, so
+    // inserting the Calendar tab silently retitled it "Transactions (0)" and
+    // left the real Transactions tab with a stale caption. Storing what
+    // addTab() returns makes the order a detail of one place again.
+    int m_tabTrade = 0, m_tabPending = 1, m_tabHistory = 2, m_tabTxn = 4;
     QTableWidget* m_posTable;
     QTableWidget* m_orderTable;
     QTableWidget* m_histTable;
     QTableWidget* m_txnTable;
     // One slot per FILTERED tab: 0 Trade, 1 Pending, 2 History,
-    // 3 Transactions. News has no filter and no slot.
+    // 3 Transactions. News and Calendar have no slot — News has no filter at
+    // all, and the Calendar owns its own (impact + countries), which filter a
+    // third-party embed rather than one of these tables.
     QComboBox*    m_range[4] = {nullptr, nullptr, nullptr, nullptr};
     QDateEdit*    m_date[4]  = {nullptr, nullptr, nullptr, nullptr};
     // True while a table is being filled. itemChanged() cannot tell a repaint

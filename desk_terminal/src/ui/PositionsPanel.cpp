@@ -1,5 +1,6 @@
 #include "ui/PositionsPanel.h"
 #include "ui/NewsPanel.h"
+#include "ui/CalendarPanel.h"
 #include "ui/Theme.h"
 #include "ui/Icons.h"
 #include <QTabWidget>
@@ -431,17 +432,22 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
 
     // Each tab is table + its own filter bar, so a range chosen on History does
     // not silently reach into the open-positions tab.
-    m_tabs->addTab(wrapTable(0, m_posTable),   tr("Trade"));
-    m_tabs->addTab(wrapTable(1, m_orderTable), tr("Pending"));
-    m_tabs->addTab(wrapTable(2, m_histTable),  tr("History"));
+    m_tabTrade   = m_tabs->addTab(wrapTable(0, m_posTable),   tr("Trade"));
+    m_tabPending = m_tabs->addTab(wrapTable(1, m_orderTable), tr("Pending"));
+    m_tabHistory = m_tabs->addTab(wrapTable(2, m_histTable),  tr("History"));
     // No filter bar on News — the feed is the provider's, not a table we page
     // through, so a Period selector would have nothing to filter.
     m_news = new NewsPanel;
     m_tabs->addTab(m_news, tr("News"));
+    // Economic calendar, next to News for the same reason: both answer "why is
+    // it moving?" rather than "what do I hold?". It carries its own impact and
+    // country filters, so it is added directly too.
+    m_calendar = new CalendarPanel;
+    m_tabs->addTab(m_calendar, tr("Economic"));
     // Ledger for THIS account: deposits, withdrawals, transfers, commission,
     // swap, admin adjustments. Separate from History, which lists closed
     // POSITIONS — a trade writes ledger rows but is not one itself.
-    m_tabs->addTab(wrapTable(3, m_txnTable), tr("Transactions"));
+    m_tabTxn = m_tabs->addTab(wrapTable(3, m_txnTable), tr("Transactions"));
 
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(0, 0, 0, 0);
@@ -537,7 +543,7 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         if (passes(0, p.openedAt)) shown.append(p);
 
     const auto& c = Theme::p();
-    m_tabs->setTabText(0, tabCaption(tr("Trade"), shown.size(), positions.size()));
+    m_tabs->setTabText(m_tabTrade, tabCaption(tr("Trade"), shown.size(), positions.size()));
     m_posTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;
@@ -631,7 +637,7 @@ void PositionsPanel::setOrders(const QVector<PendingOrder>& orders) {
         if (passes(1, o.createdAt)) shown.append(o);
 
     const auto& c = Theme::p();
-    m_tabs->setTabText(1, tabCaption(tr("Pending"), shown.size(), orders.size()));
+    m_tabs->setTabText(m_tabPending, tabCaption(tr("Pending"), shown.size(), orders.size()));
     m_orderTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;
@@ -709,7 +715,7 @@ void PositionsPanel::setTransactions(const QVector<Transaction>& txns) {
     }
 
     const auto& c = Theme::p();
-    m_tabs->setTabText(4, tabCaption(tr("Transactions"), shown.size(), txns.size()));
+    m_tabs->setTabText(m_tabTxn, tabCaption(tr("Transactions"), shown.size(), txns.size()));
 
     // Clamp before slicing: the Period filter (or a shorter refresh) can leave
     // the user on a page that no longer exists, and an out-of-range offset
@@ -768,6 +774,10 @@ void PositionsPanel::setNewsSymbol(const QString& symbol) {
     if (m_news) m_news->setSymbol(symbol);
 }
 
+void PositionsPanel::setCalendarSymbol(const QString& symbol) {
+    if (m_calendar) m_calendar->setSymbol(symbol);
+}
+
 void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
     m_lastHistory = history;
     QVector<HistoryTrade> shown;
@@ -775,7 +785,7 @@ void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
         if (passes(2, h.closedAt)) shown.append(h);   // closed time, not open
 
     const auto& c = Theme::p();
-    m_tabs->setTabText(2, tabCaption(tr("History"), shown.size(), history.size()));
+    m_tabs->setTabText(m_tabHistory, tabCaption(tr("History"), shown.size(), history.size()));
     m_histTable->setRowCount(shown.size());
     int r = 0;
     const auto R = Qt::AlignRight | Qt::AlignVCenter;

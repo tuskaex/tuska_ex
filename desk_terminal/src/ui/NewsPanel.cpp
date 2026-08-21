@@ -1,6 +1,8 @@
 #include "ui/NewsPanel.h"
 #include "ui/Theme.h"
+#include "ui/EmbedProfile.h"
 #include <QWebEngineView>
+#include <QWebEnginePage>
 #include <QWebEngineSettings>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -64,6 +66,11 @@ NewsPanel::NewsPanel(QWidget* parent) : QWidget(parent) {
     lay->addWidget(m_status);
 
     m_view = new QWebEngineView(this);
+    // Built on the shared, disk-cached embed profile rather than the default
+    // one, which is off-the-record and therefore re-downloads the widget's
+    // whole JS bundle on every launch. See EmbedProfile.h.
+    m_view->setPage(new QWebEnginePage(embedProfile(), m_view));
+
     m_view->setVisible(false);
     lay->addWidget(m_view, 1);
 
@@ -137,6 +144,14 @@ void NewsPanel::reload() {
     QUrlQuery q;
     q.addQueryItem(QStringLiteral("locale"), QStringLiteral("en"));
     q.addQueryItem(QStringLiteral("symbol"), tv);
+    // The theme goes in the QUERY too, so a light/dark switch produces a
+    // different document. A URL that differs only after the '#' is a
+    // same-document navigation — the browser fires hashchange and nothing more,
+    // loadFinished never arrives, and this panel would sit on "Loading news…"
+    // with the view hidden until the symbol happened to change. The symbol was
+    // already in the query, which is why only the theme path was affected.
+    q.addQueryItem(QStringLiteral("tx_theme"),
+                   settings.value("colorTheme").toString());
     u.setQuery(q);
     u.setFragment(QString::fromUtf8(QJsonDocument(settings).toJson(QJsonDocument::Compact)),
                   QUrl::DecodedMode);

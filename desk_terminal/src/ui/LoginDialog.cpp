@@ -279,6 +279,13 @@ QWidget* LoginDialog::buildFormPanel() {
     closeBtn->setToolTip(tr("Close (Esc)"));
     closeBtn->setIcon(Icons::close(QColor(Theme::p().muted), 16));
     closeBtn->setIconSize(QSize(16, 16));
+    // Every QPushButton in a QDialog is autoDefault, and QDialog promotes the
+    // FIRST one it finds to "default" — which is this ✕, because the top bar is
+    // built before the form. Return in the email or password field then reached
+    // reject() and the card vanished mid-login: doLogin() did fire, but the
+    // dialog closed underneath it, so only a mouse click on Sign in ever
+    // worked. Every secondary button below opts out for the same reason.
+    closeBtn->setAutoDefault(false);
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::reject);
     bar->addWidget(closeBtn);
     v->addLayout(bar);
@@ -373,6 +380,7 @@ QWidget* LoginDialog::buildFormPanel() {
     m_modeBtn = new QPushButton(tr("🔑  Use an API key instead"));
     m_modeBtn->setObjectName("link");
     m_modeBtn->setCursor(Qt::PointingHandCursor);
+    m_modeBtn->setAutoDefault(false);
     connect(m_modeBtn, &QPushButton::clicked, this, &LoginDialog::toggleAuthMode);
     // Hidden: Connect mints the algo key automatically, so nobody has to paste
     // one. The mode still works if this is shown again.
@@ -407,6 +415,7 @@ QWidget* LoginDialog::buildFormPanel() {
         m_advancedBtn->setText(show ? tr("⚙  Hide server endpoints")
                                     : tr("⚙  Advanced — server endpoints"));
     });
+    m_advancedBtn->setAutoDefault(false);
     m_advancedBtn->hide();   // endpoints come from config; not user-editable here
     v->addWidget(m_advancedBtn, 0, Qt::AlignLeft);
     v->addWidget(m_advanced);
@@ -417,6 +426,11 @@ QWidget* LoginDialog::buildFormPanel() {
     m_loginBtn->setObjectName("primary");
     m_loginBtn->setMinimumHeight(44);
     m_loginBtn->setCursor(Qt::PointingHandCursor);
+    // Enter anywhere in step 1 signs in. The returnPressed connections below
+    // are kept as well: they fire even while focus is in a field that is not in
+    // the default-button chain, and one of the two paths always applies.
+    m_loginBtn->setDefault(true);
+    m_loginBtn->setAutoDefault(true);
     connect(m_loginBtn, &QPushButton::clicked, this, &LoginDialog::doLogin);
     connect(m_password, &QLineEdit::returnPressed, this, &LoginDialog::doLogin);
     connect(m_email,    &QLineEdit::returnPressed, this, &LoginDialog::doLogin);
@@ -425,6 +439,7 @@ QWidget* LoginDialog::buildFormPanel() {
     // Explicit way out, next to the ✕ and Escape.
     v->addSpacing(9);
     auto* cancelBtn = new QPushButton(tr("Cancel"));
+    cancelBtn->setAutoDefault(false);
     cancelBtn->setObjectName("ghost");
     cancelBtn->setMinimumHeight(36);
     cancelBtn->setCursor(Qt::PointingHandCursor);
@@ -440,6 +455,8 @@ QWidget* LoginDialog::buildFormPanel() {
     m_connectBtn = new QPushButton(tr("Connect"));
     m_connectBtn->setObjectName("success");
     m_connectBtn->setMinimumHeight(44);
+    // Not default yet — step 1 owns Return until the account picker appears.
+    m_connectBtn->setAutoDefault(false);
     m_connectBtn->setCursor(Qt::PointingHandCursor);
     connect(m_connectBtn, &QPushButton::clicked, this, &LoginDialog::onConnect);
     m_accountLabel->hide();
@@ -507,6 +524,13 @@ void LoginDialog::showAccountStep() {
     m_accountLabel->show();
     m_account->show();
     m_connectBtn->show();
+    // Hand Return over with the step. A hidden default button still answers
+    // Return, so without this Enter on the account picker would re-run a
+    // sign-in that has already happened.
+    m_loginBtn->setDefault(false);
+    m_connectBtn->setAutoDefault(true);
+    m_connectBtn->setDefault(true);
+    m_account->setFocus();
 }
 
 void LoginDialog::toggleAuthMode() {
