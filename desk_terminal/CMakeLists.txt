@@ -51,6 +51,7 @@ set(SOURCES
     src/core/PriceStream.cpp
     src/core/ChartBridge.cpp
     src/ui/Theme.cpp
+    src/ui/Toast.cpp
     src/ui/LoginDialog.cpp
     src/ui/WatchlistWidget.cpp
     src/ui/WebChartWidget.cpp
@@ -77,6 +78,7 @@ set(HEADERS
     src/core/PriceStream.h
     src/core/ChartBridge.h
     src/ui/Theme.h
+    src/ui/Toast.h
     src/ui/Icons.h
     src/ui/LoginDialog.h
     src/ui/WatchlistWidget.h

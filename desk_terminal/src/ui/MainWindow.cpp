@@ -32,6 +32,7 @@
 #include <QJsonObject>
 #include <QFile>
 #include "ui/Theme.h"
+#include "ui/Toast.h"
 
 static const char* MASK = "••••••";
 
@@ -300,8 +301,24 @@ void MainWindow::rebuildAccountsMenu() {
     m_accountsMenu->addSeparator();
     connect(m_accountsMenu->addAction(tr("&Wallet…")), &QAction::triggered, this, [this]() {
         WalletDialog dlg(m_cfg, this);
-        connect(&dlg, &WalletDialog::transferred, this, [this]() { m_api->fetchAccount(); });
+        // The dialog raises its own toast while it is open. Repeat the result
+        // here once it closes: the balances on screen have just jumped and the
+        // trader needs to see why, with the line left in the status bar as the
+        // record after the toast fades.
+        QString done;
+        connect(&dlg, &WalletDialog::transferred, this,
+                [this, &done](bool toWallet, double amount, const QString& account) {
+            const QString money = QString("$%L1").arg(amount, 0, 'f', 2);
+            done = toWallet
+                ? tr("%1 moved from %2 to your main wallet").arg(money, account)
+                : tr("%1 moved from your main wallet to %2").arg(money, account);
+            m_api->fetchAccount();
+        });
         dlg.exec();
+        if (!done.isEmpty()) {
+            setStatus(tr("✓ %1").arg(done), false);
+            Toast::success(this, tr("Transfer complete"), done);
+        }
     });
 }
 
