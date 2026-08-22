@@ -484,12 +484,12 @@ export default function MarketingNavbar({
               )}
             </button>
           )}
-          {/* RESTORED by request.
-              Caveat that has not gone away: /downloads/TuskaExTerminal-Setup-1.0.6.exe
-              is not on the server. There is no /opt/tuskaex/downloads directory, so
-              this link returns HTTP 404 until an installer is uploaded there. That is
-              why it was removed; it is back because the control is wanted. Drop the
-              build into that directory and it works with no code change. */}
+          {/* RESTORED by request. The old caveat here — "there is no
+              /opt/tuskaex/downloads directory, so this 404s" — is no longer
+              true: the directory exists and 1.0.6 has been served from it
+              since 10 Aug. What remains true is that the version in the href
+              is hand-written, so bumping it lands a 404 until that exact
+              filename is uploaded. Upload first, then bump. */}
           {/* Desktop-terminal download: icon button opens a Windows / macOS
               picker on click. Windows ships the .exe installer built by
               installer.iss; macOS ships the .dmg built by package-macos.sh.
@@ -529,7 +529,7 @@ export default function MarketingNavbar({
                   </div>
                   {/* Windows */}
                   <a
-                    href="/downloads/TuskaExTerminal-Setup-1.0.6.exe"
+                    href="/downloads/TuskaExTerminal-Setup-1.0.7.exe"
                     download="TuskaExTerminal-Setup.exe"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
@@ -735,14 +735,16 @@ export default function MarketingNavbar({
                 downloads depending on window width. "Download APK" stays
                 removed: there is genuinely no Android build.
 
-                Same caveat as the desktop links: these 404 until the builds
-                are placed in /opt/tuskaex/downloads. */}
+                Same caveat as the desktop links: a version bumped here 404s
+                until that exact filename sits in /opt/tuskaex/downloads. The
+                macOS href is still 1.0.1 — the last dmg actually uploaded —
+                and is deliberately not moved in step with Windows. */}
             {/* flex-col, not space-y: the two pills are inline-flex, so in
                 normal flow they would sit on a text baseline and pick up the
                 whitespace between the tags as an extra gap. */}
             <li className={`flex flex-col gap-2 pt-3 border-t ${c.dividerStrong}`}>
               <a
-                href="/downloads/TuskaExTerminal-Setup-1.0.6.exe"
+                href="/downloads/TuskaExTerminal-Setup-1.0.7.exe"
                 download="TuskaExTerminal-Setup.exe"
                 onClick={() => setOpen(false)}
                 className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
