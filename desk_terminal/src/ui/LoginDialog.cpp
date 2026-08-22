@@ -253,11 +253,9 @@ QWidget* LoginDialog::buildBrandPanel() {
     v->addSpacing(13);
     v->addWidget(bullet(tr("Positions, pending orders and full trade history")));
 
+    // The stretch stays with nothing under it: it is what holds the bullets up
+    // against the headline instead of letting them centre in the panel.
     v->addStretch();
-    auto* foot = new QLabel(tr("Secure sign-in · api.tuskaex.com"));
-    foot->setStyleSheet(QString("background:transparent; color:%1; font-size:10px;"
-                                "font-weight:600;").arg(dark ? "#664d51" : "#e2adb0"));
-    v->addWidget(foot);
     return p;
 }
 
