@@ -135,14 +135,50 @@ async def smtp_for_user(user, db) -> Optional[SmtpAccount]:
     return tenant_smtp(owner)
 
 
-async def brand_for_user(user, db) -> Brand:
+async def brand_for_user(user, db) -> Optional[Brand]:
+    """What the recipient should see this mail as coming from.
+
+    Mirrors smtp_for_user's rule, which it previously contradicted. That
+    function refuses to fall back to the platform account for a tenant's
+    client — better no mail than mail from another broker's address — but this
+    one fell back to the platform NAME whenever a tenant had not set
+    `brand_name`. A tenant with SMTP configured and no brand name therefore
+    sent their own clients mail from their own address signed by the parent
+    platform, which is the one combination worse than either extreme.
+
+    So a tenant's client never sees the platform's name. Their brand name, else
+    their domain, else the domain their own mail is sent from — all three are
+    the tenant's own. The platform name is reached only by a platform-pool
+    client or the platform's own staff.
+    """
     if not get_settings().BRANDING_ENABLED:
         return Brand(name=PLATFORM_BRAND_NAME)
     owner = await _branding_owner(user, db)
-    if owner is None or not getattr(owner, "brand_name", None):
+    # No owner ⇒ platform pool; a super_admin owner ⇒ the platform itself.
+    if owner is None or getattr(owner, "role", None) == "super_admin":
         return Brand(name=PLATFORM_BRAND_NAME)
+
+    name = (getattr(owner, "brand_name", None) or "").strip()
+    if not name:
+        name = (getattr(owner, "custom_domain", None) or "").strip()
+    if not name:
+        # A tenant reaching this line has SMTP configured (smtp_for_user would
+        # have skipped the mail otherwise), so smtp_from exists and its domain
+        # is theirs.
+        sender = (getattr(owner, "smtp_from", None) or "").strip()
+        name = sender.split("@")[-1].strip() if "@" in sender else ""
+    if not name:
+        # Nothing of the tenant's to put on it. None means SKIP, exactly as a
+        # None from smtp_for_user does — returning the platform brand here is
+        # the bug this function was rewritten to remove.
+        logger.warning(
+            "tenant %s has no brand name, domain or sender domain — skipping "
+            "mail rather than branding it as the platform",
+            getattr(owner, "id", "?"),
+        )
+        return None
     # A tenant-branded mail must not carry the platform lockup.
-    return Brand(name=owner.brand_name, inline_logo=False)
+    return Brand(name=name, inline_logo=False)
 
 
 async def _branding_owner(user, db):
