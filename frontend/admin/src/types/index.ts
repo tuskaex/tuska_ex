@@ -320,6 +320,26 @@ export interface SubAdmin {
   is_active: boolean;
   user_count: number;
   created_at: string | null;
+  /** White-label domain state for THIS tenant, including the A records to add.
+   *  Present because connect_domain refuses a super-admin and sends them to
+   *  this screen — so this is the only place those records can be shown. */
+  domain: SubAdminDomain;
+}
+
+/** Mirrors branding_service.domain_payload(). */
+export interface SubAdminDomain {
+  custom_domain: string | null;
+  app_subdomain: string | null;
+  admin_subdomain: string | null;
+  mode: 'apex' | 'subdomain' | null;
+  status: string | null;
+  last_error: string | null;
+  provisioned_at: string | null;
+  served_hostnames: string[];
+  platform_ip: string;
+  dns_records: { type: string; host: string; value: string }[];
+  app_url: string | null;
+  admin_url: string | null;
 }
 
 export interface SubAdminClient {

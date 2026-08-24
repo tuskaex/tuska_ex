@@ -68,6 +68,11 @@ async def _counts(user_id: uuid.UUID, db: AsyncSession) -> int:
 
 
 async def _to_dto(row: User, db: AsyncSession) -> dict:
+    # Local import mirrors assign_domain below — branding_service has no
+    # dependency on this module, but the file's convention is to reach for it
+    # inside the function rather than at import time.
+    from services import branding_service as _b
+
     emp = await _employee_row(row.id, db)
     return {
         "id": str(row.id),
@@ -85,6 +90,13 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         "is_active": bool(emp.is_active) if emp else False,
         "user_count": await _counts(row.id, db),
         "created_at": row.created_at.isoformat() if row.created_at else None,
+        # The same payload the tenant's own White-label page renders, computed
+        # for THIS row rather than the caller's. Without it the super-admin had
+        # no way to see the A records for a domain they had just assigned: the
+        # guard in connect_domain sends them here, and assign_domain returned
+        # only the DTO, so the records existed on the tenant's row and nothing
+        # displayed them. Pure computation — no extra query per row.
+        "domain": _b.domain_payload(row),
     }
 
 

@@ -48,6 +48,12 @@ export default function SubAdminDetailPage() {
       setReport(rep);
       setClients(cl.items || []);
       setChecked(s.permissions || []);
+      // Show what this tenant already holds instead of a blank form — an empty
+      // field next to a live domain reads as "not assigned". Runs on mount and
+      // after each completed action, never while the operator is typing.
+      setDomain(s.domain?.custom_domain || '');
+      setAppSub(s.domain?.app_subdomain || '');
+      setAdminSub(s.domain?.admin_subdomain ?? 'admin');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to load sub-admin');
     } finally {
@@ -318,6 +324,74 @@ export default function SubAdminDetailPage() {
                 connect-tenant-domain.sh. &quot;Verify DNS&quot; cannot confirm a
                 Cloudflare-proxied record, which is why this marks live directly.
               </p>
+
+              {/* The A records. connect_domain returns these to a tenant
+                  connecting their own domain, but it refuses a super-admin and
+                  points them here — where assign_domain returned only the DTO
+                  and nothing rendered them. So assigning a domain as the
+                  platform owner silently lost the one output the operator
+                  actually needs to hand the tenant. */}
+              {sub.domain?.custom_domain && (
+                <div className="pt-2 mt-1 border-t border-border-primary space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xxs text-text-secondary">
+                      DNS records for{' '}
+                      <span className="text-text-primary">{sub.domain.custom_domain}</span>
+                    </span>
+                    <span className="text-xxs text-text-tertiary">
+                      {sub.domain.mode} · {sub.domain.status}
+                    </span>
+                  </div>
+
+                  {sub.domain.platform_ip ? (
+                    <table className="w-full text-xxs">
+                      <thead className="text-text-tertiary">
+                        <tr>
+                          <th className="text-left font-normal pb-1">Type</th>
+                          <th className="text-left font-normal pb-1">Host</th>
+                          <th className="text-left font-normal pb-1">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-text-primary font-mono">
+                        {sub.domain.dns_records.map((r) => (
+                          <tr key={`${r.type}-${r.host}`}>
+                            <td className="py-0.5 pr-2">{r.type}</td>
+                            <td className="py-0.5 pr-2">{r.host}</td>
+                            <td className="py-0.5">{r.value}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-xxs text-danger">
+                      PLATFORM_PUBLIC_IP is not set, so no A records can be
+                      produced. Set it in .env and restart admin-api.
+                    </p>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(
+                        sub.domain.dns_records
+                          .map((r) => `${r.type}\t${r.host}\t${r.value}`)
+                          .join('\n'),
+                      );
+                      toast.success('DNS records copied');
+                    }}
+                    className="px-2.5 py-1 text-xxs rounded-md border border-border-primary text-text-secondary"
+                  >
+                    Copy records
+                  </button>
+
+                  <p className="text-xxs text-text-tertiary">
+                    Serving:{' '}
+                    <span className="font-mono text-text-secondary">
+                      {sub.domain.served_hostnames.join(', ')}
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
           </Panel>
 
