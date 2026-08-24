@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
@@ -69,8 +69,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const [assigned, setAssigned] = useState<SubAdminDomain | null>(null);
 
-  useEffect(() => {
-    void (async () => {
+  const loadTenants = useCallback(async (preselect = true) => {
       try {
         const res = await adminApi.get<PaginatedResponse<SubAdmin>>('/sub-admins', {
           page: '1',
@@ -78,6 +77,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         });
         const items = res.items || [];
         setTenants(items);
+        if (!preselect) return;
         // With exactly one tenant there is nothing to choose, and making the
         // operator choose it anyway is the whole friction. Two or more stays
         // unselected on purpose: which broker a domain belongs to is not
@@ -88,8 +88,9 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         // A failed list leaves the picker empty and the button disabled, which
         // is a readable state on its own — no toast on page load.
       }
-    })();
   }, []);
+
+  useEffect(() => { void loadTenants(); }, [loadTenants]);
 
   const selected = tenants.find((t) => t.id === tenantId) || null;
 
@@ -118,7 +119,14 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
       });
       setAssigned(res.domain);
       toast.success('Domain assigned to the tenant');
-      onChanged();
+      // Deliberately NOT onChanged(). The parent's fetchData() sets loading and
+      // renders a spinner in place of this whole section, which unmounts this
+      // component and destroys `assigned` — the DNS records appeared for one
+      // frame and vanished, which is exactly how this was reported. Nothing
+      // about the parent needs refreshing anyway: /branding/me describes the
+      // SUPER-ADMIN's own brand, and assigning a domain to a tenant does not
+      // touch it. Only the picker's labels go stale, so just reload those.
+      void loadTenants(false);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Could not assign the domain');
     } finally {
