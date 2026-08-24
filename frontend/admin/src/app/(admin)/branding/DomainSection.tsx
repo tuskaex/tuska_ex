@@ -85,11 +85,18 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
   }, []);
 
   const selected = tenants.find((t) => t.id === tenantId) || null;
-  // assign_domain MOVES a domain rather than copying it, so name the tenant who
-  // would lose it before the operator finds out by their site going blank.
-  const stealingFrom = tenants.find(
-    (t) => t.id !== tenantId && t.domain?.custom_domain === host.trim().toLowerCase(),
-  );
+
+  // Who holds the typed domain right now, if anyone. Computed independently of
+  // the picker so the three cases below can be told apart — an earlier version
+  // folded this into one `t.id !== tenantId` test, which matched EVERY tenant
+  // while the picker was still empty and warned that the current, rightful
+  // holder was about to lose a domain the operator had not yet moved.
+  const typed = host.trim().toLowerCase();
+  const holder = typed ? tenants.find((t) => t.domain?.custom_domain === typed) : undefined;
+  // assign_domain MOVES rather than copies, so name the tenant who would lose
+  // it — but only once a DIFFERENT tenant is actually selected.
+  const stealingFrom = holder && tenantId && holder.id !== tenantId ? holder : undefined;
+  const alreadyHere = Boolean(holder && tenantId && holder.id === tenantId);
 
   const assign = async () => {
     setBusy(true);
@@ -216,11 +223,24 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         />
       )}
 
+      {/* Three distinct situations, and only one of them is a warning. */}
       {stealingFrom && (
         <p className="flex items-start gap-1.5 text-xxs text-warning">
           <AlertTriangle size={12} className="shrink-0 mt-0.5" />
           {stealingFrom.full_name || stealingFrom.email} holds this domain now and
           will lose it.
+        </p>
+      )}
+      {alreadyHere && (
+        <p className="flex items-start gap-1.5 text-xxs text-text-tertiary">
+          <CheckCircle2 size={12} className="shrink-0 mt-0.5 text-success" />
+          Already assigned to this tenant — assigning again just re-reads the
+          records below.
+        </p>
+      )}
+      {holder && !tenantId && (
+        <p className="text-xxs text-text-tertiary">
+          {typed} is currently on {holder.full_name || holder.email}.
         </p>
       )}
 
@@ -233,6 +253,15 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         {busy ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
         Assign domain to tenant
       </button>
+      {/* A disabled button with no stated reason reads as a broken page — which
+          is how this screen got reported the first time. */}
+      {!busy && (!tenantId || host.trim().length < 3) && (
+        <p className="text-xxs text-text-tertiary">
+          {!tenantId
+            ? 'Pick a tenant above to enable this.'
+            : 'Enter the tenant’s domain to enable this.'}
+        </p>
+      )}
 
       {assigned?.custom_domain && (
         <div className="pt-3 border-t border-border-primary space-y-2">
