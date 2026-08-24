@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
+import { monogram } from '@/lib/tenantBrand';
 import { adminApi } from '@/lib/api';
 import {
   LayoutDashboard, Users, CandlestickChart, Wallet, Landmark,
@@ -212,6 +213,12 @@ export default function AdminSidebar({
               />
             ) : showLabels && brand.brandName ? (
               <span className="text-sm font-semibold text-text-primary truncate">{brand.brandName}</span>
+            ) : brand.brandName ? (
+              /* Collapsed rail, no uploaded logo: their initial rather than a
+                 hole. Same rule as above — theirs, never TuskaEx's. */
+              <span className="w-7 h-7 mx-auto shrink-0 rounded-md bg-accent/15 text-accent text-xs font-semibold flex items-center justify-center">
+                {monogram(brand.brandName)}
+              </span>
             ) : null}
           </Link>
         ) : !showLabels ? (

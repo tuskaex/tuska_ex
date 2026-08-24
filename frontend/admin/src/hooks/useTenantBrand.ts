@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   fetchTenantBrand,
   isTenantAdminHost,
+  tenantHostLabel,
   type TenantBrand,
 } from '@/lib/tenantBrand';
 
@@ -40,7 +41,11 @@ export function useTenantBrand(serverHost?: string | null): TenantBrand {
       setBrand({
         loading: false,
         isTenant: true,
-        brandName: data?.brand_name?.trim() || '',
+        // Falls back to their own hostname so the mark slot is never empty. A
+        // tenant who has set neither a logo nor a name still gets something
+        // that is theirs — an empty corner reads as broken, not as
+        // unconfigured. Still never the parent platform's mark.
+        brandName: data?.brand_name?.trim() || tenantHostLabel(),
         logoUrl: data?.logo_url || null,
       });
     })();

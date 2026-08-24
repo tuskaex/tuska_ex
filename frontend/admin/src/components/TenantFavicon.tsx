@@ -2,6 +2,20 @@
 
 import { useEffect } from 'react';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
+import { monogram } from '@/lib/tenantBrand';
+
+/** A single-letter tab icon as an inline SVG data URI. Returns '' for an empty
+ *  letter so the caller keeps the placeholder rather than setting a blank one. */
+function monogramIcon(letter: string): string {
+  if (!letter) return '';
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
+    `<rect width="64" height="64" rx="14" fill="#E11D2E"/>` +
+    `<text x="32" y="33" fill="#fff" font-family="system-ui,-apple-system,Segoe UI,sans-serif"` +
+    ` font-size="38" font-weight="600" text-anchor="middle"` +
+    ` dominant-baseline="central">${letter}</text></svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
 
 /**
  * Puts the tenant's own logo in the browser tab of their admin panel.
@@ -26,7 +40,11 @@ export default function TenantFavicon() {
 
   useEffect(() => {
     if (!brand.isTenant || brand.loading) return;
-    const href = brand.logoUrl;
+    // No uploaded logo ⇒ draw their initial rather than leave the transparent
+    // placeholder, which renders as an empty square and looks like a failed
+    // load. Inline SVG so there is no request to fail. Still never TuskaEx's
+    // mark, which is the whole point of this component.
+    const href = brand.logoUrl || monogramIcon(monogram(brand.brandName));
     if (!href) return;
 
     const links = Array.from(
@@ -48,7 +66,7 @@ export default function TenantFavicon() {
         el.remove();
       }
     });
-  }, [brand.isTenant, brand.loading, brand.logoUrl]);
+  }, [brand.isTenant, brand.loading, brand.logoUrl, brand.brandName]);
 
   return null;
 }

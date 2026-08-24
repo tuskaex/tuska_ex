@@ -43,6 +43,31 @@ export function isTenantAdminHost(host?: string | null): boolean {
   return here !== platform;
 }
 
+/**
+ * A tenant's own hostname, as a last-resort wordmark.
+ *
+ * A tenant who has not uploaded a logo AND not set a brand name used to get an
+ * empty corner where every other install has a mark — which reads as a broken
+ * panel rather than as an unconfigured one. Their own domain is the one thing
+ * we always know about them, it is factually theirs, and it is not the parent
+ * platform's mark, so it satisfies the rule this whole module exists for.
+ *
+ * `admin.` is stripped because the label stands for the brand, not the host it
+ * happens to be served on.
+ */
+export function tenantHostLabel(host?: string | null): string {
+  const here = (host ?? (typeof window !== 'undefined' ? window.location.host : ''))
+    .toLowerCase()
+    .trim();
+  if (!here) return '';
+  return here.split(':')[0].replace(/^admin\./, '');
+}
+
+/** First letter of a label, for the collapsed rail and the tab icon. */
+export function monogram(label: string): string {
+  return (label.trim()[0] || '').toUpperCase();
+}
+
 type PublicBranding = { brand_name: string | null; logo_url: string | null };
 
 /**
