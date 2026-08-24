@@ -145,6 +145,15 @@ async def get_my_branding(*, admin: User, db: AsyncSession) -> dict:
     out["public_code"] = code
     out["referral_link"] = referral_link(code)
     out["domain"] = domain_payload(admin)
+    # Whether THIS caller may connect a domain to their own row. Derived from
+    # the same condition connect_domain enforces rather than re-deriving the
+    # role in the browser, so the form and the guard can never disagree.
+    #
+    # A super-admin cannot: the domain would sit on the platform pool's row and
+    # silently swallow the tenant's signups. The page uses this to offer the
+    # assign-to-a-tenant flow instead of a form whose only possible outcome is
+    # a 400.
+    out["domain"]["connectable"] = admin.role != "super_admin"
     return out
 
 

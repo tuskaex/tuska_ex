@@ -419,6 +419,11 @@ export interface DomainState {
   admin_url: string | null;
   /** Present on connect/verify responses only. */
   dns_check?: { platform_ip: string; all_matched: boolean; records: DnsLookup[] };
+  /** Whether the caller may connect a domain to their OWN row. False for a
+   *  super-admin — a domain there sends every signup to the platform pool.
+   *  Comes from the same condition connect_domain enforces, so the form and
+   *  the guard cannot disagree. Absent on older responses ⇒ treat as true. */
+  connectable?: boolean;
 }
 
 // ─── Pagination ───────────────────────────────────────────────

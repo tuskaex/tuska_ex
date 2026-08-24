@@ -7,7 +7,9 @@ import {
   Globe, Loader2, RefreshCw, Unplug, CheckCircle2, AlertTriangle, ExternalLink,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import type { DomainState } from '@/types';
+import type {
+  DomainState, SubAdmin, SubAdminDomain, PaginatedResponse,
+} from '@/types';
 import { CopyField } from './ReferralLink';
 
 const inputCls =
@@ -42,6 +44,241 @@ const STATUS_COPY: Record<string, { label: string; tone: 'wait' | 'ok' | 'bad'; 
     hint: 'Something went wrong. Check the message, fix it, then verify again.',
   },
 };
+
+/** The platform owner's branch of section 3.
+ *
+ *  connect_domain acts on the CALLER's row and refuses a super-admin, because a
+ *  domain there resolves through tenant_resolver._pool_id to the PLATFORM pool:
+ *  the tenant's brand renders perfectly while every signup lands in the
+ *  platform's own book and their Users page stays empty. Nothing errors and
+ *  nothing logs, which is why the guard exists.
+ *
+ *  The guard was right and this page was wrong — it rendered the self-connect
+ *  form anyway, so the only way to learn the rule was to fill the form in and
+ *  meet a red toast. This asks the question the self-connect form cannot (which
+ *  tenant) and posts to /sub-admins/{id}/domain, which puts the domain where
+ *  the pool lookup will find it, then shows the A records that come back. */
+function AssignToTenant({ onChanged }: { onChanged: () => void }) {
+  const [tenants, setTenants] = useState<SubAdmin[]>([]);
+  const [tenantId, setTenantId] = useState('');
+  const [host, setHost] = useState('');
+  const [mode, setMode] = useState<'apex' | 'subdomain'>('apex');
+  const [appSub, setAppSub] = useState('app');
+  const [wantAdmin, setWantAdmin] = useState(true);
+  const [adminSub, setAdminSub] = useState('admin');
+  const [busy, setBusy] = useState(false);
+  const [assigned, setAssigned] = useState<SubAdminDomain | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await adminApi.get<PaginatedResponse<SubAdmin>>('/sub-admins', {
+          page: '1',
+          per_page: '100',
+        });
+        setTenants(res.items || []);
+      } catch {
+        // A failed list leaves the picker empty and the button disabled, which
+        // is a readable state on its own — no toast on page load.
+      }
+    })();
+  }, []);
+
+  const selected = tenants.find((t) => t.id === tenantId) || null;
+  // assign_domain MOVES a domain rather than copying it, so name the tenant who
+  // would lose it before the operator finds out by their site going blank.
+  const stealingFrom = tenants.find(
+    (t) => t.id !== tenantId && t.domain?.custom_domain === host.trim().toLowerCase(),
+  );
+
+  const assign = async () => {
+    setBusy(true);
+    try {
+      const res = await adminApi.post<SubAdmin>(`/sub-admins/${tenantId}/domain`, {
+        domain: host.trim(),
+        app_subdomain: mode === 'subdomain' ? appSub.trim() || null : null,
+        admin_subdomain: wantAdmin ? adminSub.trim() || null : null,
+      });
+      setAssigned(res.domain);
+      toast.success('Domain assigned to the tenant');
+      onChanged();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Could not assign the domain');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 p-3 rounded-md border border-border-primary bg-bg-tertiary/40">
+        <Globe size={14} className="text-accent shrink-0 mt-0.5" />
+        <p className="text-xxs text-text-secondary leading-relaxed">
+          A custom domain identifies a <strong className="text-text-primary">tenant</strong>,
+          not the platform. On your own account it would render their brand while
+          every signup landed in your pool — so pick who it belongs to and it
+          goes on their row instead.
+        </p>
+      </div>
+
+      <div>
+        <span className="block text-xxs uppercase tracking-wide text-text-tertiary mb-1.5">
+          Which tenant
+        </span>
+        <select
+          value={tenantId}
+          onChange={(e) => setTenantId(e.target.value)}
+          className={inputCls}
+        >
+          <option value="">Select a sub-admin…</option>
+          {tenants.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.full_name || t.email} ({t.code})
+              {t.domain?.custom_domain ? ` — holds ${t.domain.custom_domain}` : ''}
+            </option>
+          ))}
+        </select>
+        {tenants.length === 0 && (
+          <p className="text-xxs text-text-tertiary mt-1">
+            No sub-admins yet. Create one first — a domain needs an owner.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <span className="block text-xxs uppercase tracking-wide text-text-tertiary mb-1.5">
+          Hosting mode
+        </span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {(['apex', 'subdomain'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={cn(
+                'text-left p-3 rounded-md border transition-fast',
+                mode === m
+                  ? 'border-accent bg-accent/5'
+                  : 'border-border-primary hover:border-border-secondary',
+              )}
+            >
+              <span className="block text-xs text-text-primary mb-0.5">
+                {m === 'apex' ? 'Apex mode' : 'Subdomain mode'}
+              </span>
+              <span className="block text-xxs text-text-tertiary">
+                {m === 'apex'
+                  ? 'The portal is served on broker.com and www.broker.com.'
+                  : 'Only app.broker.com is served; the apex stays theirs.'}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <span className="block text-xxs uppercase tracking-wide text-text-tertiary mb-1.5">
+          Their domain
+        </span>
+        <input
+          value={host}
+          onChange={(e) => setHost(e.target.value)}
+          placeholder="broker.com"
+          className={inputCls}
+        />
+        <p className="text-xxs text-text-tertiary mt-1">
+          Apex only — no https://, no www, no path.
+        </p>
+      </div>
+
+      {mode === 'subdomain' && (
+        <input
+          value={appSub}
+          onChange={(e) => setAppSub(e.target.value)}
+          placeholder="app"
+          className={inputCls}
+        />
+      )}
+
+      <label className="flex items-center gap-2 text-xs text-text-secondary">
+        <input
+          type="checkbox"
+          checked={wantAdmin}
+          onChange={(e) => setWantAdmin(e.target.checked)}
+        />
+        Also host the admin panel on this domain
+      </label>
+      {wantAdmin && (
+        <input
+          value={adminSub}
+          onChange={(e) => setAdminSub(e.target.value)}
+          placeholder="admin"
+          className={inputCls}
+        />
+      )}
+
+      {stealingFrom && (
+        <p className="flex items-start gap-1.5 text-xxs text-warning">
+          <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+          {stealingFrom.full_name || stealingFrom.email} holds this domain now and
+          will lose it.
+        </p>
+      )}
+
+      <button
+        type="button"
+        disabled={busy || !tenantId || host.trim().length < 3}
+        onClick={() => void assign()}
+        className="flex items-center gap-1.5 px-3 py-2 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+      >
+        {busy ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
+        Assign domain to tenant
+      </button>
+
+      {assigned?.custom_domain && (
+        <div className="pt-3 border-t border-border-primary space-y-2">
+          <div className="flex items-center gap-1.5 text-xs text-success">
+            <CheckCircle2 size={13} />
+            {assigned.custom_domain} is on{' '}
+            {selected?.full_name || selected?.email || 'the tenant'}
+          </div>
+          <p className="text-xxs text-text-tertiary">
+            Add these at the registrar for {assigned.custom_domain}:
+          </p>
+          <table className="w-full text-xxs">
+            <thead className="text-text-tertiary">
+              <tr>
+                <th className="text-left font-normal pb-1">Type</th>
+                <th className="text-left font-normal pb-1">Host</th>
+                <th className="text-left font-normal pb-1">Value</th>
+              </tr>
+            </thead>
+            <tbody className="text-text-primary font-mono">
+              {assigned.dns_records.map((r) => (
+                <tr key={`${r.type}-${r.host}`}>
+                  <td className="py-0.5 pr-2">{r.type}</td>
+                  <td className="py-0.5 pr-2">{r.host}</td>
+                  <td className="py-0.5">{r.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <CopyField
+            value={assigned.dns_records
+              .map((r) => `${r.type}\t${r.host}\t${r.value}`)
+              .join('\n')}
+          />
+          <p className="text-xxs text-text-tertiary">
+            The server also has to serve these hostnames —{' '}
+            <code className="text-accent">
+              connect-tenant-domain.sh {assigned.custom_domain}
+              {assigned.admin_subdomain ? ` --admin ${assigned.admin_subdomain}` : ''}
+            </code>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DomainSection({
   domain,
@@ -150,6 +387,13 @@ export default function DomainSection({
         the platform owner to set <code className="text-accent">PLATFORM_PUBLIC_IP</code>.
       </p>
     );
+  }
+
+  // `connected` wins: a super-admin who connected a domain before the guard
+  // existed still needs the disconnect button, so don't strand that row behind
+  // a picker. Absent flag ⇒ true, so a stale response keeps the old form.
+  if (domain.connectable === false && !connected) {
+    return <AssignToTenant onChanged={onChanged} />;
   }
 
   return (
