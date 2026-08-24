@@ -109,7 +109,7 @@ async def send_test_email(
     """Send a message to the tenant's own address through their own SMTP, so a
     misconfiguration surfaces here instead of on a client's password reset."""
     branding_service.assert_enabled()
-    branding_service.assert_brand_owner(admin)
+    branding_service.assert_may_manage_branding(admin)
 
     from packages.common.src.smtp_mail import (
         Brand, send_email, tenant_smtp,

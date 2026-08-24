@@ -108,11 +108,32 @@ def assert_enabled() -> None:
         )
 
 
-def assert_brand_owner(admin: User) -> None:
-    if admin.role not in BRAND_OWNER_ROLES:
+def assert_may_manage_branding(admin: User) -> None:
+    """Who may CONFIGURE branding — deliberately narrower than who OWNS one.
+
+    A sub_admin still owns a brand: their row carries it and every client in
+    their pool renders it, which is what BRAND_OWNER_ROLES above and
+    resolve_branding_owner still mean. What changed is that they no longer
+    configure it themselves — the platform owner sets a tenant's brand up for
+    them, through /sub-admins/{id}/branding.
+
+    Do not fold these two ideas back into one check. Widening this to
+    BRAND_OWNER_ROLES hands self-serve back to tenants; narrowing
+    BRAND_OWNER_ROLES instead would stop their clients resolving a brand at
+    all, which looks like the branding silently switching off.
+    """
+    if admin.role != "super_admin":
         raise HTTPException(
-            status_code=403, detail="Only tenants and super admins own a brand"
+            status_code=403,
+            detail="Only the platform owner configures branding.",
         )
+
+
+def load_brand_owner_sync(row: User | None) -> User:
+    """The tenant row a super-admin is acting on, validated as a brand owner."""
+    if row is None or row.role not in BRAND_OWNER_ROLES:
+        raise HTTPException(status_code=404, detail="Sub-admin not found")
+    return row
 
 
 # ─── Read ────────────────────────────────────────────────────────────────
@@ -139,7 +160,7 @@ def to_profile(row: User) -> dict:
 
 async def get_my_branding(*, admin: User, db: AsyncSession) -> dict:
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
     out = to_profile(admin)
     code = await ensure_public_code(admin, db)
     out["public_code"] = code
@@ -189,26 +210,38 @@ def to_public_payload(owner: User | None) -> dict:
 
 async def update_branding(
     *, admin: User, brand_name: str | None, support_email: str | None,
-    support_whatsapp: str | None, db: AsyncSession,
+    support_whatsapp: str | None, db: AsyncSession, owner: User | None = None,
 ) -> dict:
+    """`admin` is who is asking; `owner` is whose row is written.
+
+    They are the same for the platform's own brand and differ when the owner
+    sets a tenant's up. Splitting them is what lets one implementation serve
+    both — the alternative was a super-admin impersonating the tenant, which is
+    how a tenant's logo ended up on the platform's row.
+    """
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
+    target = owner if owner is not None else admin
 
     # Empty string clears; None (field absent) leaves the value alone.
     if brand_name is not None:
-        admin.brand_name = brand_name.strip() or None
+        target.brand_name = brand_name.strip() or None
     if support_email is not None:
-        admin.support_email = support_email.strip() or None
+        target.support_email = support_email.strip() or None
     if support_whatsapp is not None:
-        admin.support_whatsapp = support_whatsapp.strip() or None
+        target.support_whatsapp = support_whatsapp.strip() or None
 
     await db.commit()
-    return to_profile(admin)
+    return to_profile(target)
 
 
-async def upload_logo(*, admin: User, file: UploadFile, db: AsyncSession) -> dict:
+async def upload_logo(
+    *, admin: User, file: UploadFile, db: AsyncSession, owner: User | None = None,
+) -> dict:
+    """See update_branding for the admin/owner split."""
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
+    target = owner if owner is not None else admin
 
     raw = await file.read()
     if len(raw) > MAX_LOGO_BYTES:
@@ -228,8 +261,8 @@ async def upload_logo(*, admin: User, file: UploadFile, db: AsyncSession) -> dic
     out_name = f"{uuid.uuid4().hex}{ext}"
     (_ensure_writable() / out_name).write_bytes(raw)
 
-    previous = admin.logo_url
-    admin.logo_url = f"{MEDIA_PATH_PREFIX}/{out_name}"
+    previous = target.logo_url
+    target.logo_url = f"{MEDIA_PATH_PREFIX}/{out_name}"
     await db.commit()
 
     # Drop the superseded file. Best-effort: a stale logo on disk is harmless,
@@ -242,42 +275,47 @@ async def upload_logo(*, admin: User, file: UploadFile, db: AsyncSession) -> dic
         except OSError as e:
             logger.warning("Could not remove superseded logo %s: %s", previous, e)
 
-    return to_profile(admin)
+    return to_profile(target)
 
 
 async def update_smtp(
     *, admin: User, host: str | None, port: int | None, user: str | None,
     password: str | None, sender: str | None, tls: bool | None, db: AsyncSession,
+    owner: User | None = None,
 ) -> dict:
-    """Write the tenant's own SMTP account.
+    """Write a tenant's SMTP account. See update_branding for the admin/owner split.
 
-    Refused for super_admin: the platform's own SMTP belongs in the environment,
-    not in a database row an admin screen can edit.
+    The refusal below is on the OWNER's role, not the caller's. It has to be: the
+    caller is now always a super_admin, so testing the caller would refuse every
+    request including the tenant ones this exists to serve. What is actually
+    being refused is storing the PLATFORM's own SMTP in a database row — that
+    belongs in the environment, where no admin screen can edit it.
     """
     assert_enabled()
-    assert_brand_owner(admin)
-    if admin.role == "super_admin":
+    assert_may_manage_branding(admin)
+    target = owner if owner is not None else admin
+    if target.role == "super_admin":
         raise HTTPException(
             status_code=400,
             detail="Platform SMTP is configured through the environment, not here.",
         )
 
     if host is not None:
-        admin.smtp_host = host.strip() or None
+        target.smtp_host = host.strip() or None
     if port is not None:
-        admin.smtp_port = port or None
+        target.smtp_port = port or None
     if user is not None:
-        admin.smtp_user = user.strip() or None
+        target.smtp_user = user.strip() or None
     if sender is not None:
-        admin.smtp_from = sender.strip() or None
+        target.smtp_from = sender.strip() or None
     if tls is not None:
-        admin.smtp_tls = bool(tls)
+        target.smtp_tls = bool(tls)
     # An absent password keeps the stored one; an empty string clears it.
     if password is not None:
-        admin.smtp_password = password or None
+        target.smtp_password = password or None
 
     await db.commit()
-    return to_profile(admin)
+    return to_profile(target)
 
 
 # ─── Referral code ───────────────────────────────────────────────────────
@@ -443,7 +481,7 @@ async def connect_domain(
     admin_subdomain: str | None, db: AsyncSession,
 ) -> dict:
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
 
     # A super-admin holding a custom domain is always a misconfiguration, and a
     # silent one. tenant_resolver._pool_id maps a super_admin owner to the
@@ -517,7 +555,7 @@ async def verify_domain(*, admin: User, db: AsyncSession) -> dict:
     status only advances to READY once that has run.
     """
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
     if not admin.custom_domain:
         raise HTTPException(status_code=400, detail="No domain connected.")
 
@@ -589,7 +627,7 @@ async def mark_provisioned(*, admin: User, db: AsyncSession, ok: bool,
 
 async def disconnect_domain(*, admin: User, db: AsyncSession) -> dict:
     assert_enabled()
-    assert_brand_owner(admin)
+    assert_may_manage_branding(admin)
     admin.custom_domain = None
     admin.app_subdomain = None
     admin.admin_subdomain = None

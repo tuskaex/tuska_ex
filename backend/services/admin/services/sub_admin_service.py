@@ -417,6 +417,101 @@ async def delete_sub_admin(
     return {"message": "Sub-admin deactivated", "clients_released": len(released)}
 
 
+# ─── Tenant branding, set by the platform owner ──────────────────────────
+#
+# branding_service's own routes act on the caller's row. These act on a
+# tenant's, which is the only way a brand gets configured now that tenants no
+# longer self-serve. The write functions take the actor for authorisation and
+# the owner for the mutation; see branding_service.update_branding.
+
+
+async def _brand_target(sub_admin_id: uuid.UUID, admin: User, db: AsyncSession) -> User:
+    """The tenant row to write, after checking the caller may write it."""
+    from services import branding_service as _b
+
+    _only_super_admin(admin)
+    _b.assert_enabled()
+    return _b.load_brand_owner_sync(await _load_sub_admin(sub_admin_id, db))
+
+
+async def get_branding(*, sub_admin_id: uuid.UUID, admin: User, db: AsyncSession) -> dict:
+    from services import branding_service as _b
+
+    sub = await _brand_target(sub_admin_id, admin, db)
+    out = _b.to_profile(sub)
+    code = await _b.ensure_public_code(sub, db)
+    out["public_code"] = code
+    out["referral_link"] = _b.referral_link(code)
+    out["domain"] = _b.domain_payload(sub)
+    return out
+
+
+async def update_branding(
+    *, sub_admin_id: uuid.UUID, brand_name: str | None, support_email: str | None,
+    support_whatsapp: str | None, admin: User, ip_address: str | None,
+    db: AsyncSession,
+) -> dict:
+    from services import branding_service as _b
+
+    sub = await _brand_target(sub_admin_id, admin, db)
+    old = {"brand_name": sub.brand_name, "support_email": sub.support_email,
+           "support_whatsapp": sub.support_whatsapp}
+    out = await _b.update_branding(
+        admin=admin, owner=sub, brand_name=brand_name,
+        support_email=support_email, support_whatsapp=support_whatsapp, db=db,
+    )
+    await write_audit_log(
+        db, admin.id, "update_sub_admin_branding", "sub_admin", sub.id,
+        old_values=old,
+        new_values={"brand_name": out["brand_name"],
+                    "support_email": out["support_email"],
+                    "support_whatsapp": out["support_whatsapp"]},
+        ip_address=ip_address,
+    )
+    await db.commit()
+    return out
+
+
+async def upload_logo(
+    *, sub_admin_id: uuid.UUID, file, admin: User, ip_address: str | None,
+    db: AsyncSession,
+) -> dict:
+    from services import branding_service as _b
+
+    sub = await _brand_target(sub_admin_id, admin, db)
+    out = await _b.upload_logo(admin=admin, owner=sub, file=file, db=db)
+    await write_audit_log(
+        db, admin.id, "update_sub_admin_branding_logo", "sub_admin", sub.id,
+        new_values={"logo_url": out["logo_url"]}, ip_address=ip_address,
+    )
+    await db.commit()
+    return out
+
+
+async def update_smtp(
+    *, sub_admin_id: uuid.UUID, host: str | None, port: int | None,
+    user: str | None, password: str | None, sender: str | None, tls: bool | None,
+    admin: User, ip_address: str | None, db: AsyncSession,
+) -> dict:
+    from services import branding_service as _b
+
+    sub = await _brand_target(sub_admin_id, admin, db)
+    out = await _b.update_smtp(
+        admin=admin, owner=sub, host=host, port=port, user=user,
+        password=password, sender=sender, tls=tls, db=db,
+    )
+    # The password is deliberately absent from both sides of the log — it is a
+    # credential the tenant supplied, and an audit row is not the place for it.
+    await write_audit_log(
+        db, admin.id, "update_sub_admin_smtp", "sub_admin", sub.id,
+        new_values={"smtp_host": out["smtp_host"], "smtp_from": out["smtp_from"],
+                    "smtp_user": out["smtp_user"], "smtp_port": out["smtp_port"]},
+        ip_address=ip_address,
+    )
+    await db.commit()
+    return out
+
+
 # ─── Pool assignment ─────────────────────────────────────────────────────
 
 async def assign_users(

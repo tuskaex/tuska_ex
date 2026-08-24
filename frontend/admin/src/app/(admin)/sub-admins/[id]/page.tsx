@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
-  PaginatedResponse, SubAdmin, SubAdminClient, SubAdminReport,
+  PaginatedResponse, SubAdmin, SubAdminClient, SubAdminReport, TenantBranding,
 } from '@/types';
 import { PERMISSION_GROUPS, groupChecked, toggleGroup, isGrantable } from '../permissions';
 
@@ -31,6 +31,13 @@ export default function SubAdminDetailPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // null until loaded, and stays null when BRANDING_ENABLED is off — the
+  // endpoint 503s then, which is a configuration state, not an error worth a
+  // toast on every page load.
+  const [branding, setBranding] = useState<TenantBranding | null>(null);
+  const [brandName, setBrandName] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportWa, setSupportWa] = useState('');
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -54,6 +61,19 @@ export default function SubAdminDetailPage() {
       setDomain(s.domain?.custom_domain || '');
       setAppSub(s.domain?.app_subdomain || '');
       setAdminSub(s.domain?.admin_subdomain ?? 'admin');
+
+      // Separate request, and deliberately not in the Promise.all above: a 503
+      // from BRANDING_ENABLED=false would reject the whole batch and blank the
+      // page. Branding being off must not stop the rest of the screen loading.
+      try {
+        const b = await adminApi.get<TenantBranding>(`/sub-admins/${id}/branding`);
+        setBranding(b);
+        setBrandName(b.brand_name || '');
+        setSupportEmail(b.support_email || '');
+        setSupportWa(b.support_whatsapp || '');
+      } catch {
+        setBranding(null);
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to load sub-admin');
     } finally {
@@ -393,6 +413,104 @@ export default function SubAdminDetailPage() {
                 </div>
               )}
             </div>
+          </Panel>
+
+          {/* The tenant cannot reach /branding any more — assert_may_manage_branding
+              is super_admin-only — so this is where their brand gets set. Before
+              it existed the only logo control a super-admin could see was their
+              own, and a tenant's logo went onto the platform row, where it
+              renders for the platform and not for them. */}
+          <Panel title="Branding">
+            {branding ? (
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5">
+                  {branding.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={branding.logo_url}
+                      alt=""
+                      className="h-10 w-auto max-w-[120px] object-contain rounded bg-bg-tertiary p-1"
+                    />
+                  ) : (
+                    <span className="h-10 w-10 rounded bg-bg-tertiary flex items-center justify-center text-xxs text-text-tertiary">
+                      none
+                    </span>
+                  )}
+                  <label className="px-2.5 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary cursor-pointer hover:border-border-secondary">
+                    {branding.logo_url ? 'Replace logo' : 'Upload logo'}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!f) return;
+                        void run(async () => {
+                          const fd = new FormData();
+                          fd.append('file', f);
+                          await adminApi.postForm(`/sub-admins/${id}/branding/logo`, fd);
+                        }, 'Logo updated');
+                      }}
+                    />
+                  </label>
+                </div>
+                <p className="text-xxs text-text-tertiary">PNG, JPG or WebP. Up to 2 MB.</p>
+
+                <input
+                  value={brandName}
+                  onChange={(e) => setBrandName(e.target.value)}
+                  placeholder="Brand name — shown to their clients"
+                  className="w-full px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    value={supportEmail}
+                    onChange={(e) => setSupportEmail(e.target.value)}
+                    placeholder="Support email"
+                    className="flex-1 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+                  />
+                  <input
+                    value={supportWa}
+                    onChange={(e) => setSupportWa(e.target.value)}
+                    placeholder="+91…"
+                    className="w-28 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      await adminApi.put(`/sub-admins/${id}/branding`, {
+                        brand_name: brandName,
+                        support_email: supportEmail,
+                        support_whatsapp: supportWa,
+                      });
+                    }, 'Branding saved')
+                  }
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+                >
+                  <Save size={13} />
+                  Save branding
+                </button>
+
+                <p
+                  className={cn(
+                    'text-xxs pt-1',
+                    branding.smtp_configured ? 'text-text-tertiary' : 'text-warning',
+                  )}
+                >
+                  {branding.smtp_configured
+                    ? `Outbound email: ${branding.smtp_from}`
+                    : 'No SMTP set — their clients currently receive no email at all.'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xxs text-text-tertiary">
+                Branding is switched off on this platform (BRANDING_ENABLED).
+              </p>
+            )}
           </Panel>
 
           <Panel title="Reset password">

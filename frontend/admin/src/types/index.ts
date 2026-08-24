@@ -326,6 +326,29 @@ export interface SubAdmin {
   domain: SubAdminDomain;
 }
 
+/** Mirrors branding_service.to_profile() — the tenant's brand as the platform
+ *  owner edits it from Sub-admins → (the tenant) → Branding. Tenants no longer
+ *  set this themselves. Never carries the SMTP password, only whether one is
+ *  stored. */
+export interface TenantBranding {
+  id: string;
+  email: string;
+  brand_name: string | null;
+  logo_url: string | null;
+  support_email: string | null;
+  support_whatsapp: string | null;
+  smtp_host: string | null;
+  smtp_port: number | null;
+  smtp_user: string | null;
+  smtp_from: string | null;
+  smtp_tls: boolean;
+  smtp_password_set: boolean;
+  smtp_configured: boolean;
+  public_code?: string | null;
+  referral_link?: string;
+  domain?: SubAdminDomain;
+}
+
 /** Mirrors branding_service.domain_payload(). */
 export interface SubAdminDomain {
   custom_domain: string | null;

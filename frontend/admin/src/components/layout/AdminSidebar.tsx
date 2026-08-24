@@ -85,7 +85,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
   { label: 'Sub-admins', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
   // No perm: a sub-admin edits its own brand, a super-admin the platform's.
-  { tenantSafe: true, label: 'White-label', href: '/branding', icon: Palette },
+  // NOT tenantSafe any more. A tenant still OWNS a brand — their row carries it
+  // and their clients render it — but the platform owner configures it, from
+  // Sub-admins → (the tenant) → Branding. The backend agrees:
+  // assert_may_manage_branding is super_admin-only, so leaving this entry
+  // visible would offer a tenant a section that 403s on open.
+  { label: 'White-label', href: '/branding', icon: Palette, perm: '_super_admin' },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 

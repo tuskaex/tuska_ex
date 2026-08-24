@@ -5,7 +5,7 @@ super_admin, matching how routes/employees.py is written.
 """
 import uuid
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +14,9 @@ from packages.common.src.models import User
 from packages.common.src.admin_schemas import (
     CreateSubAdminRequest, UpdateSubAdminRequest,
     UpdateSubAdminPermissionsRequest,     ResetSubAdminPasswordRequest, AssignUserRequest, BulkAssignRequest,
+    UpdateBrandingRequest, UpdateSmtpRequest,
 )
-from dependencies import get_current_admin
+from dependencies import get_current_admin, write_audit_log
 from services import sub_admin_service
 
 router = APIRouter(prefix="/sub-admins", tags=["Sub Admins"])
@@ -155,6 +156,70 @@ async def assign_domain(
     )
 
 
+
+
+# ── Tenant branding, set by the platform owner ───────────────────────────
+# /admin/branding/* acts on the CALLER's own row, so before these existed a
+# super-admin had no way to configure a tenant's brand: the only logo control
+# they could see was their own, and a tenant's logo duly ended up on the
+# platform row, where it renders for the platform and not for them. Tenants no
+# longer self-serve branding (assert_may_manage_branding is super_admin-only),
+# so this is the one way it gets set.
+
+
+@router.get("/{sub_admin_id}/branding")
+async def get_tenant_branding(
+    sub_admin_id: uuid.UUID,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.get_branding(
+        sub_admin_id=sub_admin_id, admin=admin, db=db,
+    )
+
+
+@router.put("/{sub_admin_id}/branding")
+async def update_tenant_branding(
+    sub_admin_id: uuid.UUID,
+    body: UpdateBrandingRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.update_branding(
+        sub_admin_id=sub_admin_id, brand_name=body.brand_name,
+        support_email=body.support_email, support_whatsapp=body.support_whatsapp,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.post("/{sub_admin_id}/branding/logo")
+async def upload_tenant_logo(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    file: UploadFile = File(...),
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.upload_logo(
+        sub_admin_id=sub_admin_id, file=file,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.put("/{sub_admin_id}/branding/smtp")
+async def update_tenant_smtp(
+    sub_admin_id: uuid.UUID,
+    body: UpdateSmtpRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.update_smtp(
+        sub_admin_id=sub_admin_id, host=body.smtp_host, port=body.smtp_port,
+        user=body.smtp_user, password=body.smtp_password, sender=body.smtp_from,
+        tls=body.smtp_tls, admin=admin, ip_address=_ip(request), db=db,
+    )
 
 
 @router.post("/{sub_admin_id}/block")
