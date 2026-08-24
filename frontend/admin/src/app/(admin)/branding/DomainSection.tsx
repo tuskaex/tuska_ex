@@ -76,7 +76,14 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
           page: '1',
           per_page: '100',
         });
-        setTenants(res.items || []);
+        const items = res.items || [];
+        setTenants(items);
+        // With exactly one tenant there is nothing to choose, and making the
+        // operator choose it anyway is the whole friction. Two or more stays
+        // unselected on purpose: which broker a domain belongs to is not
+        // something to guess, and guessing wrong is the silent
+        // misattribution this screen exists to prevent.
+        if (items.length === 1) setTenantId(items[0]!.id);
       } catch {
         // A failed list leaves the picker empty and the button disabled, which
         // is a readable state on its own — no toast on page load.
@@ -97,6 +104,9 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
   // it — but only once a DIFFERENT tenant is actually selected.
   const stealingFrom = holder && tenantId && holder.id !== tenantId ? holder : undefined;
   const alreadyHere = Boolean(holder && tenantId && holder.id === tenantId);
+  // Everything else is ready and only the owner is missing — the state that
+  // reads as a broken button rather than an unfinished form.
+  const needsTenant = !tenantId && typed.length >= 3;
 
   const assign = async () => {
     setBusy(true);
@@ -132,10 +142,13 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         <span className="block text-xxs uppercase tracking-wide text-text-tertiary mb-1.5">
           Which tenant
         </span>
+        {/* Outlined once a domain has been typed and this is still empty. It is
+            the only field the operator cannot skip and the easiest to miss —
+            everything else was filled in and the button just sat there dead. */}
         <select
           value={tenantId}
           onChange={(e) => setTenantId(e.target.value)}
-          className={inputCls}
+          className={cn(inputCls, needsTenant && 'border-warning')}
         >
           <option value="">Select a sub-admin…</option>
           {tenants.map((t) => (
@@ -258,7 +271,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
       {!busy && (!tenantId || host.trim().length < 3) && (
         <p className="text-xxs text-text-tertiary">
           {!tenantId
-            ? 'Pick a tenant above to enable this.'
+            ? 'Pick a tenant above to enable this — the highlighted field.'
             : 'Enter the tenant’s domain to enable this.'}
         </p>
       )}
