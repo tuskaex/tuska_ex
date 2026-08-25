@@ -71,6 +71,46 @@ export function shouldHandOffToTerminal(): boolean {
   return isExternalTerminalEnabled() && isTuskaExCrmHost() && !isOnTerminalHost();
 }
 
+/**
+ * Where a CRM page lives, as seen from wherever this build is running.
+ *
+ * The terminal domain serves ONLY the terminal. nginx routes `/trading/`,
+ * `/terminal`, `/api/`, `/ws/` and the chart asset trees to the trader app and
+ * sends everything else to the SpeedTrade landing site, so `/accounts`,
+ * `/support`, `/profile` and `/wallet` all 404 there and `/dashboard` bounces
+ * to the landing home page. A `router.push('/accounts')` from the terminal is
+ * therefore a dead link — which is exactly what shipped in the menu bar.
+ *
+ * Everywhere else the same app owns those routes and a relative path is right:
+ * on trade.tuskaex.com it is the CRM itself, and on a white-label tenant's
+ * custom domain the terminal renders in place (see `shouldHandOffToTerminal`)
+ * so the CRM is the same origin. Sending a tenant's client to
+ * trade.tuskaex.com would take them off their broker's domain and onto the
+ * parent platform's — the precise failure `isTuskaExCrmHost` exists to avoid.
+ *
+ * Returns null only when we ARE on the terminal host and no CRM host is
+ * configured to point at. Callers hide the affected item rather than render a
+ * link that is known to 404.
+ */
+export function crmUrl(path: string): string | null {
+  if (!isOnTerminalHost()) return path;
+  const host = process.env.NEXT_PUBLIC_TRADE_HOST?.trim();
+  if (!host) return null;
+  const origin = host.includes('://') ? host.replace(/\/$/, '') : `https://${host}`;
+  return `${origin}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+/** True when `crmUrl` returned a link to a DIFFERENT origin than this one. */
+export function isCrossOrigin(url: string): boolean {
+  if (typeof window === 'undefined') return false;
+  if (!url.includes('://')) return false;
+  try {
+    return new URL(url).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
 export const HANDOFF_QUERY_PARAM = 'handoff';
 
 type HandoffResponse = { code: string; expires_in: number; terminal_url: string };

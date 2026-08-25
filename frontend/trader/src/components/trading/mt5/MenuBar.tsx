@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation';
 import { useUIStore } from '@/stores/uiStore';
 import { useTradingStore } from '@/stores/tradingStore';
 import { useChartBrand } from '@/hooks/useTenantBrand';
+import { crmUrl, isCrossOrigin } from '@/lib/terminalHandoff';
 import type { ChartApi } from '@/components/charts/TradingViewChart';
 
 interface MenuBarProps {
@@ -153,16 +154,48 @@ export default function MenuBar({
     };
   }, [open, close]);
 
+  /**
+   * Navigate to a CRM page from wherever the terminal is running.
+   *
+   * On the terminal domain these routes live on another origin, so this is a
+   * real cross-site navigation and it opens in a new tab: the trader may have
+   * an open position on screen, and replacing the terminal with the CRM to
+   * check an account balance is not a trade they asked to make. Same-origin
+   * (tenant domain, CRM host, local dev) stays a normal SPA push.
+   */
+  const go = (path: string) => {
+    const url = crmUrl(path);
+    if (!url) return;
+    if (isCrossOrigin(url)) window.open(url, '_blank', 'noopener,noreferrer');
+    else router.push(url);
+  };
+
+  /* Null means "on the terminal host with no CRM host configured" — there is
+   * nowhere for these to point, so they are left out of the menu rather than
+   * rendered as links that are known to 404. */
+  const accountsUrl = crmUrl('/accounts');
+  const dashboardUrl = crmUrl('/dashboard');
+  const supportUrl = crmUrl('/support');
+
   const menus: { label: string; items: Item[] }[] = [
     {
       label: 'File',
       items: [
         { kind: 'item', label: 'New Order…', accel: 'F9', onSelect: onNewOrder },
         { kind: 'separator' },
-        { kind: 'item', label: 'Accounts', onSelect: () => router.push('/accounts') },
+        ...(accountsUrl
+          ? [{ kind: 'item' as const, label: 'Accounts', onSelect: () => go('/accounts') }]
+          : []),
+        /* Stays a plain push: nginx routes /trading/ to the trader app on the
+         * terminal domain too, so this one route genuinely is same-origin
+         * everywhere (verified 200 on speedtrade.tech). */
         { kind: 'item', label: 'Open an Account…', onSelect: () => router.push('/trading/open-account') },
-        { kind: 'separator' },
-        { kind: 'item', label: 'Back to Dashboard', onSelect: () => router.push('/dashboard') },
+        ...(dashboardUrl
+          ? [
+              { kind: 'separator' as const },
+              { kind: 'item' as const, label: 'Back to Dashboard', onSelect: () => go('/dashboard') },
+            ]
+          : []),
       ],
     },
     {
@@ -234,7 +267,9 @@ export default function MenuBar({
     },
     {
       label: 'Help',
-      items: [{ kind: 'item', label: 'Support', onSelect: () => router.push('/support') }],
+      items: supportUrl
+        ? [{ kind: 'item', label: 'Support', onSelect: () => go('/support') }]
+        : [],
     },
   ];
 
@@ -250,7 +285,12 @@ export default function MenuBar({
 
   return (
     <div ref={barRef} className="mt5-menubar">
-      {menus.map((m) => (
+      {/* A menu whose every item was filtered out (no CRM host configured, so
+          Help has nothing to point at) would render a label that opens an
+          empty box. Drop the label too. */}
+      {menus
+        .filter((m) => m.items.some((i) => i.kind === 'item'))
+        .map((m) => (
         <Dropdown
           key={m.label}
           label={m.label}

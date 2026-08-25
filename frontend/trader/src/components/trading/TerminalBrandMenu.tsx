@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import { crmUrl, isCrossOrigin } from '@/lib/terminalHandoff';
 import { LayoutGrid, LogOut, Moon, Sun } from 'lucide-react';
 import { BrandMark, platformBrandName } from '@/components/layout/TuskaExWordmark';
 import { useAuthStore } from '@/stores/authStore';
@@ -103,10 +104,30 @@ export default function TerminalBrandMenu({ href = '/accounts' }: { href?: strin
   const isDark = theme === 'dark';
   const brandName = platformBrandName();
 
+  /**
+   * Leave for a CRM page, correct from whichever host the terminal is on.
+   *
+   * On the terminal domain nginx serves only the terminal — /accounts and
+   * /auth/login both 404 there — so these have to cross to the CRM origin.
+   * Everywhere else the same app owns them and this is a normal push.
+   */
+  const goCrm = (path: string) => {
+    const url = crmUrl(path);
+    if (!url) return;
+    if (isCrossOrigin(url)) window.location.assign(url);
+    else router.push(url);
+  };
+
   const onSignOut = () => {
     setOpen(false);
     logout();
-    router.push('/auth/login');
+    /* Same tab, unlike the menu bar's CRM links: the session this button just
+     * ended is the one the terminal behind it was using, so leaving the dead
+     * terminal open in this tab is worse than replacing it. Falls back to the
+     * terminal's own root when there is no CRM host to send them to. */
+    const url = crmUrl('/auth/login');
+    if (url && isCrossOrigin(url)) window.location.assign(url);
+    else router.push(url ?? '/');
   };
 
   const rowCls =
@@ -163,7 +184,7 @@ export default function TerminalBrandMenu({ href = '/accounts' }: { href?: strin
                 role="menuitem"
                 onClick={() => {
                   setOpen(false);
-                  router.push(href);
+                  goCrm(href);
                 }}
                 className={rowCls}
               >
