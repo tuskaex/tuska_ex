@@ -80,6 +80,7 @@ function ModifyDialog({
   initialTp,
   digits,
   saving,
+  canClear,
   onCancel,
   onSave,
 }: {
@@ -88,6 +89,17 @@ function ModifyDialog({
   initialTp: string;
   digits: number;
   saving: boolean;
+  /**
+   * Whether emptying a box removes the level.
+   *
+   * True for positions: `modify_position` reads `model_fields_set`, so an
+   * explicit null is JSON-Merge-Patch "clear this". False for pending orders:
+   * `modify_order` still applies each field with `if req.stop_loss is not
+   * None`, so a null there is indistinguishable from "not sent" and the old
+   * level survives. Saying which one applies beats a trader clearing a box,
+   * saving, and watching the level come straight back.
+   */
+  canClear: boolean;
   onCancel: () => void;
   onSave: (sl: string, tp: string) => void;
 }) {
@@ -127,13 +139,10 @@ function ModifyDialog({
               className="flex-1 mt5-num"
             />
           </label>
-          {/* The endpoint applies each field only `if not None`, so an empty
-              box means "leave it alone" — a level can be moved here but not
-              cleared. Saying so beats a trader clearing the field, saving, and
-              watching the old level come straight back. */}
           <p className="text-text-tertiary leading-snug">
-            Leave a box empty to keep its current level. Clearing a level is not supported here —
-            close the position instead.
+            {canClear
+              ? 'Empty a box to remove that level.'
+              : 'Leave a box empty to keep its current level — a pending order’s level can be moved here, not removed.'}
           </p>
           <div className="flex justify-end gap-1 pt-1">
             <button type="button" onClick={onCancel} className="mt5-tbtn border-[color:var(--border-primary)]">
@@ -250,14 +259,52 @@ function TradeTab() {
     }
   };
 
+  /**
+   * Clear one bracket level on a position — the ✕ MetaTrader puts inside the
+   * S/L and T/P cells.
+   *
+   * Sends an explicit null for that field only. `modify_position` keys off
+   * `model_fields_set`, so the field NOT sent is untouched and the field sent
+   * as null is removed; sending both would wipe the level the trader did not
+   * click. Positions only — see ModifyDialog's `canClear`.
+   */
+  const clearLevel = async (positionId: string, field: 'stop_loss' | 'take_profit') => {
+    setBusyId(positionId);
+    try {
+      await api.put(`/positions/${positionId}`, { [field]: null });
+      const what = field === 'stop_loss' ? 'Stop loss' : 'Take profit';
+      toast.success(`${what} removed`);
+      journal.log('Trade', `#${positionId.slice(0, 8)} ${field} removed`);
+      await refreshPositions();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not remove the level';
+      toast.error(msg);
+      journal.log('Trade', `clear ${field} on #${positionId.slice(0, 8)} failed: ${msg}`, 'error');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const saveModify = async (sl: string, tp: string) => {
     if (!modify) return;
     const body: Record<string, unknown> = {};
-    if (sl.trim() !== '') body.stop_loss = parseFloat(sl);
-    if (tp.trim() !== '') body.take_profit = parseFloat(tp);
-    if (Object.keys(body).length === 0) {
-      toast.error('Enter a stop loss or take profit first');
-      return;
+    if (modify.kind === 'position') {
+      /* Both fields always sent, empty meaning null. That is what makes the
+       * dialog able to remove a level at all, and it is safe because the
+       * dialog opens pre-filled with the CURRENT levels — an untouched box
+       * sends back the value it already had. */
+      body.stop_loss = sl.trim() === '' ? null : parseFloat(sl);
+      body.take_profit = tp.trim() === '' ? null : parseFloat(tp);
+    } else {
+      /* Pending orders cannot clear, so an empty box must be omitted rather
+       * than sent as null — a null would be silently ignored by the handler
+       * and read as a successful clear that did nothing. */
+      if (sl.trim() !== '') body.stop_loss = parseFloat(sl);
+      if (tp.trim() !== '') body.take_profit = parseFloat(tp);
+      if (Object.keys(body).length === 0) {
+        toast.error('Enter a stop loss or take profit first');
+        return;
+      }
     }
     setSaving(true);
     try {
@@ -333,11 +380,52 @@ function TradeTab() {
                 </td>
                 <td className="mt5-num px-1.5">{p.lots.toFixed(2)}</td>
                 <td className="mt5-num px-1.5">{p.open_price.toFixed(d)}</td>
-                <td className="mt5-num px-1.5 text-text-secondary">
-                  {p.stop_loss ? p.stop_loss.toFixed(d) : '—'}
+                {/* MetaTrader draws a ✕ inside the S/L and T/P cells to drop
+                    that level without opening a dialog. Rendered only when a
+                    level exists — a ✕ on an empty cell has nothing to do. */}
+                <td className="mt5-num px-1.5 text-text-secondary whitespace-nowrap">
+                  {p.stop_loss ? (
+                    <>
+                      {p.stop_loss.toFixed(d)}
+                      <button
+                        type="button"
+                        className="mt5-x"
+                        disabled={busyId === p.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void clearLevel(p.id, 'stop_loss');
+                        }}
+                        title={`Remove stop loss on ${p.symbol}`}
+                        aria-label={`Remove stop loss on ${p.symbol}`}
+                      >
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    '—'
+                  )}
                 </td>
-                <td className="mt5-num px-1.5 text-text-secondary">
-                  {p.take_profit ? p.take_profit.toFixed(d) : '—'}
+                <td className="mt5-num px-1.5 text-text-secondary whitespace-nowrap">
+                  {p.take_profit ? (
+                    <>
+                      {p.take_profit.toFixed(d)}
+                      <button
+                        type="button"
+                        className="mt5-x"
+                        disabled={busyId === p.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void clearLevel(p.id, 'take_profit');
+                        }}
+                        title={`Remove take profit on ${p.symbol}`}
+                        aria-label={`Remove take profit on ${p.symbol}`}
+                      >
+                        ✕
+                      </button>
+                    </>
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td className="mt5-num px-1.5">{cur != null ? cur.toFixed(d) : '—'}</td>
                 <td className="mt5-num px-1.5 text-text-secondary">{money(p.swap || 0)}</td>
@@ -375,6 +463,12 @@ function TradeTab() {
           <tr className="bg-bg-secondary border-y border-border-primary">
             <td colSpan={12} className="px-1.5 py-1">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+                {/* MetaTrader prefixes the line with a small expander glyph.
+                    Decorative here — there is nothing to expand — so it is
+                    hidden from assistive tech rather than made a button. */}
+                <span className="text-text-tertiary" aria-hidden>
+                  ⊕
+                </span>
                 <Metric label="Balance" value={`${money(balance)} ${currency}`} />
                 {credit !== 0 && <Metric label="Credit" value={money(credit)} />}
                 <Metric label="Equity" value={money(equity)} />
@@ -382,7 +476,7 @@ function TradeTab() {
                 <Metric label="Free margin" value={money(freeMargin)} />
                 <Metric
                   label="Margin level"
-                  value={marginLevel != null ? `${marginLevel.toFixed(2)}%` : '—'}
+                  value={marginLevel != null ? `${marginLevel.toFixed(2)} %` : '—'}
                   /* MetaTrader turns the level red as it approaches stop-out.
                    * 50% is this platform's STOP_OUT_LEVEL default and 80% its
                    * MARGIN_CALL_LEVEL — see .env.example. */
@@ -396,7 +490,16 @@ function TradeTab() {
                           : undefined
                   }
                 />
-                <Metric label="Floating P/L" value={money(floating)} className={pnlClass(floating)} />
+                {/* Total floating profit, pushed to the row's right edge so it
+                    lands under the Profit column — MetaTrader prints it bare
+                    there, with no label, because the column above already
+                    names it. */}
+                <span
+                  className={clsx('ml-auto mt5-num font-semibold', pnlClass(floating))}
+                  title="Total floating profit"
+                >
+                  {money(floating)}
+                </span>
               </div>
             </td>
           </tr>
@@ -471,6 +574,7 @@ function TradeTab() {
           initialTp={modify.tp}
           digits={modify.digits}
           saving={saving}
+          canClear={modify.kind === 'position'}
           onCancel={() => setModify(null)}
           onSave={(sl, tp) => void saveModify(sl, tp)}
         />
@@ -727,7 +831,17 @@ export default function Toolbox({
 
   return (
     <div className="mt5-dock h-full min-h-0 flex flex-col bg-bg-primary border-t border-border-primary">
-      <div className="mt5-tabs mt5-tabs--top" role="tablist" aria-label="Toolbox">
+      {/* Panel first, tabs last. MetaTrader anchors the Toolbox's tabs to the
+          BOTTOM edge of the window — they sit under the blotter, not above
+          it — which is the opposite of every web tab strip and one of the
+          details that makes a screenshot read as MetaTrader at a glance. */}
+      <div className="flex-1 min-h-0">
+        {tab === 'trade' && <TradeTab />}
+        {tab === 'history' && <HistoryTab />}
+        {tab === 'news' && <TradingViewNewsTimeline />}
+        {tab === 'journal' && <JournalTab />}
+      </div>
+      <div className="mt5-tabs mt5-tabs--bottom" role="tablist" aria-label="Toolbox">
         {tabs.map((t) => (
           <button
             key={t.id}
@@ -741,12 +855,6 @@ export default function Toolbox({
             {t.badge ? <span className="text-text-tertiary">({t.badge})</span> : null}
           </button>
         ))}
-      </div>
-      <div className="flex-1 min-h-0">
-        {tab === 'trade' && <TradeTab />}
-        {tab === 'history' && <HistoryTab />}
-        {tab === 'news' && <TradingViewNewsTimeline />}
-        {tab === 'journal' && <JournalTab />}
       </div>
     </div>
   );

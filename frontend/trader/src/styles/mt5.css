@@ -160,7 +160,13 @@
   flex: none;
 }
 
-/* Toolbar strips (chart timeframes, dock actions). */
+/* Toolbar strips (chart timeframes, dock actions).
+
+   Scrolls horizontally rather than shrinking. A flex row of ~30 controls on a
+   1280px window would otherwise compress the timeframe buttons until M15 and
+   M30 are the same three pixels wide — MetaTrader clips its toolbars for the
+   same reason. The scrollbar itself is hidden: a visible one inside a 26px
+   chrome strip is louder than the overflow it reports. */
 .mt5-toolbar {
   display: flex;
   align-items: center;
@@ -170,6 +176,17 @@
   background: linear-gradient(180deg, var(--mt5-toolbar-top), var(--mt5-toolbar-bottom));
   border-bottom: 1px solid var(--border-primary);
   user-select: none;
+  flex: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.mt5-toolbar::-webkit-scrollbar {
+  display: none;
+}
+/* Buttons must keep their natural width for the scroll to mean anything —
+   without this the flex row shrinks them and never overflows. */
+.mt5-toolbar > * {
   flex: none;
 }
 
@@ -383,4 +400,150 @@
 .mt5-panel select:focus {
   border-color: var(--mt5-select);
   box-shadow: none !important;
+}
+
+/* ── Menu bar ────────────────────────────────────────────────────────────
+   MetaTrader's `File View Insert Charts Options Help` row. Shorter than the
+   toolbar below it (20px vs 26px) because it holds text and no icons — the
+   two rows reading as one tall band is what makes a web app's "toolbar area"
+   look bolted on. */
+.mt5-menubar {
+  display: flex;
+  align-items: stretch;
+  height: 20px;
+  padding: 0 2px;
+  background: linear-gradient(180deg, var(--mt5-toolbar-top), var(--mt5-toolbar-bottom));
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 11px;
+  user-select: none;
+  flex: none;
+  position: relative;
+  z-index: 60;
+}
+
+.mt5-menu-btn {
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mt5-menu-btn:hover,
+.mt5-menu-btn.is-open {
+  background: var(--bg-active);
+}
+
+/* The dropped panel. Absolutely positioned against its own button so the row
+   never grows, and given a real drop shadow — the one place in this file that
+   wants one, because a flat panel over a flat toolbar has no edge. */
+.mt5-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 190px;
+  padding: 2px 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.22) !important;
+  z-index: 61;
+}
+
+.mt5-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 20px;
+  padding: 0 8px 0 2px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.mt5-menu-item:hover {
+  background: var(--bg-active);
+}
+/* Fixed-width gutter so labels line up whether or not a row is ticked —
+   MetaTrader reserves the same column for its checkmarks. */
+.mt5-menu-check {
+  width: 14px;
+  text-align: center;
+  color: var(--text-primary);
+  flex: none;
+}
+.mt5-menu-accel {
+  color: var(--text-tertiary);
+  padding-left: 16px;
+}
+.mt5-menu-sep {
+  height: 1px;
+  margin: 3px 0;
+  background: var(--border-secondary);
+}
+
+/* ── Toolbox tabs, bottom-anchored ───────────────────────────────────────
+   MetaTrader puts the Toolbox's Trade / History / Journal tabs along the
+   BOTTOM edge of the dock, not the top. Same element as `.mt5-tabs`, with the
+   border flipped to the other side. */
+.mt5-tabs--bottom {
+  border-top: 1px solid var(--border-primary);
+  border-bottom: 0;
+}
+.mt5-tabs--bottom .mt5-tab[aria-selected="true"] {
+  /* The active tab's edge points at the panel it belongs to, which is above
+     it here — an inset shadow on the bottom would underline nothing. */
+  box-shadow: inset 0 2px 0 var(--accent) !important;
+}
+
+/* ── Market Watch quote arrows ───────────────────────────────────────────
+   MetaTrader marks each symbol with the direction of its last change: a green
+   triangle up, a red triangle down, and a hollow grey circle for a symbol
+   that has not moved since the panel opened. Drawn in CSS rather than as an
+   icon component because there is one per row per tick. */
+.mt5-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  flex: none;
+}
+.mt5-arrow--up {
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 5px solid #16a34a;
+}
+.mt5-arrow--down {
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 5px solid #dc2626;
+}
+.mt5-arrow--flat {
+  width: 5px;
+  height: 5px;
+  border: 1px solid #9a9a9a;
+  border-radius: 50% !important;
+}
+
+/* Inline clear button on an S/L or T/P cell, and the close button on a
+   position row. MetaTrader draws these as a bare ✕ that only gains a colour
+   on hover — a permanently red ✕ on every row of a full blotter reads as a
+   column of errors. */
+.mt5-x {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1;
+}
+.mt5-x:hover {
+  color: var(--mt5-bid);
+}
+.mt5-x:disabled {
+  color: var(--border-secondary);
+  cursor: default;
 }

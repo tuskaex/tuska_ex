@@ -24,11 +24,16 @@ import { clsx } from 'clsx';
 import {
   BarChart3,
   CandlestickChart,
+  Crosshair,
   LineChart,
   Maximize2,
+  Minus,
+  MousePointer2,
   Plus,
   Settings2,
   Sigma,
+  TrendingUp,
+  Type,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -149,6 +154,73 @@ export default function ChartToolbar({
         aria-label="Zoom out"
       >
         <ZoomOut className="w-3.5 h-3.5" aria-hidden />
+      </button>
+
+      <span className="mt5-sep" />
+
+      {/* MetaTrader's cursor / drawing group. These map onto the charting
+          library's own linetool actions rather than being re-implemented —
+          the library already owns hit-testing, dragging and persistence for
+          every object drawn on the chart, and a hand-rolled overlay would
+          have none of it.
+
+          `ChartApi.executeActionById` is fail-soft, so if a library upgrade
+          renames one of these ids the button becomes inert rather than
+          throwing. That is why the group carries no active state: it would
+          be a lie the moment an id drifted. */}
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('cursorDefault')}
+        className="mt5-tbtn"
+        title="Cursor"
+        aria-label="Cursor"
+      >
+        <MousePointer2 className="w-3.5 h-3.5" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('cursorCross')}
+        className="mt5-tbtn"
+        title="Crosshair"
+        aria-label="Crosshair"
+      >
+        <Crosshair className="w-3.5 h-3.5" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('linetoolverticalline')}
+        className="mt5-tbtn"
+        title="Vertical line"
+        aria-label="Vertical line"
+      >
+        <Minus className="w-3.5 h-3.5 rotate-90" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('linetoolhorzline')}
+        className="mt5-tbtn"
+        title="Horizontal line"
+        aria-label="Horizontal line"
+      >
+        <Minus className="w-3.5 h-3.5" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('linetooltrendline')}
+        className="mt5-tbtn"
+        title="Trend line"
+        aria-label="Trend line"
+      >
+        <TrendingUp className="w-3.5 h-3.5" aria-hidden />
+      </button>
+      <button
+        type="button"
+        onClick={() => api?.executeActionById('linetooltext')}
+        className="mt5-tbtn"
+        title="Text"
+        aria-label="Text"
+      >
+        <Type className="w-3.5 h-3.5" aria-hidden />
       </button>
 
       <span className="mt5-sep" />

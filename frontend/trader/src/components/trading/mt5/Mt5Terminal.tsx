@@ -52,10 +52,10 @@ import journal from '@/lib/terminalJournal';
 import PanelResizeHandle from '@/components/trading/PanelResizeHandle';
 import DraggableOrderModal from '@/components/trading/DraggableOrderModal';
 import TerminalBrandMenu from '@/components/trading/TerminalBrandMenu';
-import { ActiveAccountBadge } from '@/components/trading/ActiveAccountBadge';
 import { ChartErrorBoundary } from '@/components/charts/ChartErrorBoundary';
 import type { ChartApi } from '@/components/charts/TradingViewChart';
 import MarketWatch from './MarketWatch';
+import MenuBar from './MenuBar';
 import Toolbox, { type ToolboxTab } from './Toolbox';
 import ChartToolbar from './ChartToolbar';
 import StatusBar from './StatusBar';
@@ -81,7 +81,6 @@ const TF_LABEL: Record<string, string> = {
 export default function Mt5Terminal() {
   const selectedSymbol = useTradingStore((s) => s.selectedSymbol);
   const setSelectedSymbol = useTradingStore((s) => s.setSelectedSymbol);
-  const activeAccount = useTradingStore((s) => s.activeAccount);
 
   const orderPanelWidth = useUIStore((s) => s.orderPanelWidth);
   const bottomPanelHeight = useUIStore((s) => s.bottomPanelHeight);
@@ -232,19 +231,27 @@ export default function Mt5Terminal() {
       className="mt5 theme-light flex h-full min-h-0 w-full flex-col overflow-hidden"
       data-theme="light"
     >
-      {/* Menu strip — MetaTrader's File/Edit/View row. Here it carries the
-          thing that row cannot: whose platform this is. On a white-label
-          tenant that mark and name are theirs, and the terminal is where
-          their client spends the session. */}
-      <div className="mt5-caption !h-7 gap-3">
+      {/* Brand strip, then MetaTrader's menu row.
+          Two rows rather than one: the menu bar's right end is where
+          MetaTrader prints the account identity, and that line is the reason
+          the row exists — crowding a logo and an account badge in beside it
+          is what turned the first attempt into a web app's header. The brand
+          keeps its own thin strip above, which is also where a white-label
+          tenant's mark belongs. */}
+      <div className="mt5-caption !h-6 gap-2">
         <TerminalBrandMenu />
-        <span className="mt5-sep" />
-        {activeAccount ? (
-          <ActiveAccountBadge account={activeAccount} variant="compact" />
-        ) : (
-          <span className="text-text-tertiary">No account</span>
-        )}
       </div>
+
+      <MenuBar
+        api={chartApi}
+        onNewOrder={() => openOrder()}
+        marketWatchOpen={mwOpen}
+        onToggleMarketWatch={() => setMwOpen((v) => !v)}
+        toolboxOpen={tbOpen}
+        onToggleToolbox={() => setTbOpen((v) => !v)}
+        fullscreen={fullscreen}
+        onToggleFullscreen={() => setFullscreen((v) => !v)}
+      />
 
       <ChartToolbar
         api={chartApi}

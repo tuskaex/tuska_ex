@@ -79,6 +79,14 @@ const QuoteRow = memo(function QuoteRow({
     if (bid != null) prevBidRef.current = bid;
   }, [bid]);
 
+  /* MetaTrader colours Bid and Ask TOGETHER, by the direction the quote last
+   * moved: blue when it ticked up, red when it ticked down. It does not paint
+   * bid-is-always-red / ask-is-always-blue — that would carry no information,
+   * since which of the two is higher never changes. A symbol that has not
+   * moved since the panel opened stays plain, so a still row is visibly still
+   * rather than arbitrarily coloured. */
+  const quoteClass = dir === 'up' ? 'mt5-ask' : dir === 'down' ? 'mt5-bid' : '';
+
   /* Re-triggering a CSS animation needs the class removed and re-added. Keying
    * the cell on the price does that for free: a new key is a new element, so
    * the animation restarts on every tick without an explicit reflow poke. */
@@ -108,39 +116,45 @@ const QuoteRow = memo(function QuoteRow({
       tabIndex={0}
       aria-selected={selected}
       aria-label={`${inst.symbol}${stale ? ', quote is not live' : ''}`}
-      title={stale ? `${inst.display_name} — quote is not live` : inst.display_name}
+      /* Spread lost its own column when Last took the slot, matching the
+         reference layout — but it is the number a broker's client checks most
+         often, so it moves into the row's tooltip rather than disappearing. */
+      title={[
+        inst.display_name,
+        bid != null && ask != null
+          ? `spread ${Math.max(0, Math.round(((ask - bid) / (inst.pip_size || 0.0001)) * 10) / 10)} pts`
+          : null,
+        stale ? 'quote is not live' : null,
+      ]
+        .filter(Boolean)
+        .join(' — ')}
     >
       <td className="px-1.5 truncate">
-        <span className="inline-flex items-center gap-1">
+        <span className="inline-flex items-center gap-1.5">
           <span
             className={clsx(
-              'inline-block w-0 h-0 border-x-[3px] border-x-transparent',
-              dir === 'up' && 'border-b-[5px] border-b-[color:var(--mt5-ask)]',
-              dir === 'down' && 'border-t-[5px] border-t-[color:var(--mt5-bid)]',
-              dir == null && 'opacity-0 border-b-[5px]',
+              'mt5-arrow',
+              dir === 'up' ? 'mt5-arrow--up' : dir === 'down' ? 'mt5-arrow--down' : 'mt5-arrow--flat',
             )}
             aria-hidden
           />
           <span className={clsx('font-semibold', stale && 'text-text-tertiary')}>{inst.symbol}</span>
         </span>
       </td>
-      <td
-        key={`b${flashKey}`}
-        className={clsx('mt5-num mt5-bid px-1.5', dir && `mt5-flash-${dir}`)}
-      >
+      <td key={`b${flashKey}`} className={clsx('mt5-num px-1.5', quoteClass, dir && `mt5-flash-${dir}`)}>
         {fmt(bid, digits)}
       </td>
-      <td
-        key={`a${flashKey}`}
-        className={clsx('mt5-num mt5-ask px-1.5', dir && `mt5-flash-${dir}`)}
-      >
+      <td key={`a${flashKey}`} className={clsx('mt5-num px-1.5', quoteClass, dir && `mt5-flash-${dir}`)}>
         {fmt(ask, digits)}
       </td>
-      <td className="mt5-num px-1.5 text-text-secondary">
-        {bid != null && ask != null
-          ? Math.max(0, Math.round((ask - bid) / (inst.pip_size || 0.0001) * 10) / 10)
-          : '—'}
-      </td>
+      {/* MetaTrader's Last column is the last DEAL price. There is no deal
+          tape on this feed — the gateway publishes bid/ask only — and for the
+          FX and metals that dominate this list MetaTrader's own Last tracks
+          the bid anyway, which is why the two columns read identically in a
+          real Market Watch. Printing the bid is therefore the honest value,
+          not a placeholder; it is left uncoloured so the eye reads direction
+          from the two quote columns rather than three. */}
+      <td className="mt5-num px-1.5">{fmt(bid, digits)}</td>
     </tr>
   );
 });
@@ -411,12 +425,10 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
             <table className="w-full table-fixed">
               <thead className="sticky top-0 z-[1]">
                 <tr>
-                  <th className="text-left px-1.5 w-[38%]">Symbol</th>
-                  <th className="!text-right px-1.5 w-[24%]">Bid</th>
-                  <th className="!text-right px-1.5 w-[24%]">Ask</th>
-                  <th className="!text-right px-1.5 w-[14%]" title="Spread in points">
-                    !
-                  </th>
+                  <th className="text-left px-1.5 w-[31%]">Symbol</th>
+                  <th className="!text-right px-1.5 w-[23%]">Bid</th>
+                  <th className="!text-right px-1.5 w-[23%]">Ask</th>
+                  <th className="!text-right px-1.5 w-[23%]">Last</th>
                 </tr>
               </thead>
               <tbody>
