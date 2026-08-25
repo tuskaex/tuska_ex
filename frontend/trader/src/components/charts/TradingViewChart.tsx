@@ -413,6 +413,30 @@ function TradingViewChartInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-theme in place when the app's theme changes.
+  //
+  // The widget is constructed once (the mount effect above has [] deps), so
+  // the `theme` option passed there is only ever read at construction. Without
+  // this, toggling the terminal to dark repaints every panel around the chart
+  // and leaves the chart itself on its original scheme — a white rectangle in
+  // the middle of a dark window.
+  //
+  // changeTheme() is the library's supported in-place switch and keeps
+  // drawings, indicators and zoom. A remount would guarantee the theme but
+  // discard all three, and this build disables the library's own settings
+  // persistence (`use_localstorage_for_settings`), so nothing would restore
+  // them. Guarded like every other library call here: an older bundle without
+  // changeTheme leaves the chart on its old scheme rather than throwing.
+  useEffect(() => {
+    const w = widgetRef.current;
+    if (!w || !readyRef.current) return;
+    try {
+      w.changeTheme?.(theme);
+    } catch {
+      /* ignore */
+    }
+  }, [theme, chartReady]);
+
   // Switch symbol without reloading the library. Position/order lines are
   // symbol-specific overlays — remove the shapes and drop our refs so the
   // reconcile effect re-creates them for the new symbol.

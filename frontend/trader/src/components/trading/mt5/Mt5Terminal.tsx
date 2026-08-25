@@ -86,6 +86,9 @@ export default function Mt5Terminal() {
   const bottomPanelHeight = useUIStore((s) => s.bottomPanelHeight);
   const setOrderPanelWidth = useUIStore((s) => s.setOrderPanelWidth);
   const setBottomPanelHeight = useUIStore((s) => s.setBottomPanelHeight);
+  /* The terminal's own theme, persisted in uiStore and scoped to this
+   * surface — trading/layout.tsx reads the same value for its wrapper. */
+  const theme = useUIStore((s) => s.theme);
 
   /* Local mirrors of the persisted sizes. A drag writes both: local for the
    * frame being painted, the store so the size outlives the session. Reading
@@ -223,13 +226,22 @@ export default function Mt5Terminal() {
   const tfLabel = TF_LABEL[resolution] ?? resolution;
 
   return (
-    /* `mt5` turns on the MetaTrader chrome (styles/mt5.css); the light theme
-     * is pinned alongside it because that palette is defined in light values
-     * only — a dark wrapper would otherwise leave half-themed descendants
-     * that the `.mt5` block does not name. */
+    /* `mt5` turns on the MetaTrader chrome (styles/mt5.css), and the theme
+     * comes from the user's own setting rather than being pinned — mt5.css
+     * now carries both schemes.
+     *
+     * BOTH the class and the attribute are set, and that is not belt-and-
+     * braces: globals.css defines the app's dark palette under
+     * `[data-theme="dark"], .theme-dark`, and different rules across the app
+     * key off one form or the other. Setting only one leaves any descendant
+     * styled by the other form on the light palette, which renders as a
+     * half-dark window. */
     <div
-      className="mt5 theme-light flex h-full min-h-0 w-full flex-col overflow-hidden"
-      data-theme="light"
+      className={clsx(
+        'mt5 flex h-full min-h-0 w-full flex-col overflow-hidden',
+        theme === 'dark' ? 'theme-dark' : 'theme-light',
+      )}
+      data-theme={theme}
     >
       {/* Brand strip, then MetaTrader's menu row.
           Two rows rather than one: the menu bar's right end is where
@@ -307,7 +319,7 @@ export default function Mt5Terminal() {
             <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
               <ChartErrorBoundary>
                 <TradingViewChart
-                  theme="light"
+                  theme={theme}
                   hideNativeHeader
                   onChartApi={setChartApi}
                   onRequestFullscreen={() => setFullscreen(true)}

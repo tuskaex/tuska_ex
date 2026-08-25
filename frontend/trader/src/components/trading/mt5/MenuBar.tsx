@@ -126,6 +126,8 @@ export default function MenuBar({
   const activeAccount = useTradingStore((s) => s.activeAccount);
   const oneClick = useUIStore((s) => s.oneClickTrading);
   const setOneClick = useUIStore((s) => s.setOneClickTrading);
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
 
   const [open, setOpen] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement>(null);
@@ -216,6 +218,17 @@ export default function MenuBar({
           label: 'One Click Trading',
           checked: oneClick,
           onSelect: () => setOneClick(!oneClick),
+        },
+        { kind: 'separator' },
+        /* MetaTrader keeps its colour scheme under Charts → Properties, which
+         * only re-themes the chart. Here it belongs in Options because it
+         * re-themes the whole window, chart included — a "Dark Mode" buried in
+         * a chart dialog would read as chart-only. */
+        {
+          kind: 'item',
+          label: 'Dark Mode',
+          checked: theme === 'dark',
+          onSelect: toggleTheme,
         },
       ],
     },

@@ -547,3 +547,144 @@
   color: var(--border-secondary);
   cursor: default;
 }
+
+/* ==========================================================================
+   MT5 DARK SCHEME
+   ==========================================================================
+
+   MetaTrader ships a dark colour scheme alongside its default light one, and
+   this is that scheme applied to the same chrome. Only tokens are redefined —
+   every rule above is written against the tokens, so nothing here repeats a
+   layout, a border width or a gradient stop.
+
+   Both selectors are needed and they are not redundant. `globals.css` defines
+   the app's dark palette under `[data-theme="dark"], .theme-dark`, and the
+   terminal shell sets BOTH on its root so a descendant styled by either form
+   agrees with the terminal. If this block matched only one of them, the other
+   would fall through to the light values defined above and the window would
+   render half-dark.
+
+   Specificity: `.mt5[data-theme="dark"]` is (0,2,0) against the `.mt5` block's
+   (0,1,0), so these win regardless of source order.
+
+   The greys are MetaTrader's, not the app's Vantablack: #0a0a0a chrome behind
+   a #1E1E1E panel has almost no edge, and this window is nothing but edges
+   between docked panels. */
+
+.mt5[data-theme="dark"],
+.mt5.theme-dark {
+  /* Window chrome — the grey behind every dock. */
+  --bg-page: #1B1B1B;
+  --bg-base: #1B1B1B;
+  /* Panel interiors: one step lighter than the chrome, so a dock reads as
+     sitting ON the window rather than being a hole in it. */
+  --bg-primary: #232323;
+  /* Tab strips, table headers, toolbars. */
+  --bg-secondary: #2B2B2B;
+  --bg-tertiary: #333333;
+  /* Windows list semantics, dark: a muted blue hover and a saturated blue
+     selection. Both keep white text legible, which is why the selection is
+     not simply the light theme's #CDE1F8 darkened. */
+  --bg-hover: #2E3B4A;
+  --bg-active: #0F4A82;
+  --bg-input: #1A1A1A;
+  --bg-card: #232323;
+  --bg-card-nested: #2A2A2A;
+  --bg-glass: #2B2B2B;
+  --bg-glass-light: #262626;
+  --bg-glass-heavy: #232323;
+
+  /* Hairlines. Lighter than the panel they separate — in a dark window a
+     border darker than its surroundings disappears entirely. */
+  --border-primary: #3C3C3C;
+  --border-secondary: #313131;
+  --border-glass: #313131;
+  --border-glass-bright: #4A4A4A;
+
+  --text-primary: #DCDCDC;
+  --text-secondary: #A8A8A8;
+  --text-tertiary: #767676;
+
+  --mt5-select: #4D9EFF;
+  --mt5-grid: #2E2E2E;
+  /* Quote colours lifted for dark. #DC2626 and #1E66F5 are tuned against
+     white; on #232323 both drop below a readable contrast, and the blue in
+     particular reads as near-black. */
+  --mt5-bid: #FF5C5C;
+  --mt5-ask: #4D9EFF;
+  --mt5-toolbar-top: #333333;
+  --mt5-toolbar-bottom: #2A2A2A;
+
+  color-scheme: dark;
+}
+
+/* The tick flashes are tinted washes over the row background, so they need
+   dark-appropriate alphas — the light theme's values vanish against #232323. */
+.mt5[data-theme="dark"] .mt5-flash-up,
+.mt5.theme-dark .mt5-flash-up {
+  animation-name: mt5-flash-up-dark;
+}
+.mt5[data-theme="dark"] .mt5-flash-down,
+.mt5.theme-dark .mt5-flash-down {
+  animation-name: mt5-flash-down-dark;
+}
+@keyframes mt5-flash-up-dark {
+  from {
+    background: rgba(77, 158, 255, 0.28);
+  }
+  to {
+    background: transparent;
+  }
+}
+@keyframes mt5-flash-down-dark {
+  from {
+    background: rgba(255, 92, 92, 0.28);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* Direction marks. The light theme's #16A34A is too dark on #232323. */
+.mt5[data-theme="dark"] .mt5-arrow--up,
+.mt5.theme-dark .mt5-arrow--up {
+  border-bottom-color: #3FD07A;
+}
+.mt5[data-theme="dark"] .mt5-arrow--down,
+.mt5.theme-dark .mt5-arrow--down {
+  border-top-color: #FF5C5C;
+}
+.mt5[data-theme="dark"] .mt5-arrow--flat,
+.mt5.theme-dark .mt5-arrow--flat {
+  border-color: #6E6E6E;
+}
+
+/* Toolbar and menu hover borders. #A8C7EE / #7FA9DF are light-theme picks and
+   glow against dark chrome. */
+.mt5[data-theme="dark"] .mt5-tbtn:hover,
+.mt5.theme-dark .mt5-tbtn:hover {
+  border-color: #4A6A8F;
+}
+
+/* A dropped menu needs a heavier shadow in dark — the light theme's 22% black
+   is invisible against #1B1B1B, leaving the panel with no edge at all. */
+.mt5[data-theme="dark"] .mt5-menu,
+.mt5.theme-dark .mt5-menu {
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Scrollbars follow the chrome rather than staying light-grey tracks in a
+   dark window. */
+.mt5[data-theme="dark"] ::-webkit-scrollbar-track,
+.mt5.theme-dark ::-webkit-scrollbar-track {
+  background: #262626;
+}
+.mt5[data-theme="dark"] ::-webkit-scrollbar-thumb,
+.mt5.theme-dark ::-webkit-scrollbar-thumb {
+  background: #4A4A4A;
+  border-color: #262626;
+}
+.mt5[data-theme="dark"] ::-webkit-scrollbar-thumb:hover,
+.mt5.theme-dark ::-webkit-scrollbar-thumb:hover {
+  background: #5E5E5E;
+}
