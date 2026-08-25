@@ -1,0 +1,386 @@
+/* ==========================================================================
+   MT5 TERMINAL CHROME — `.mt5`
+   ==========================================================================
+
+   The trading terminal wears MetaTrader 5's visual language: flat grey window
+   chrome, hairline borders, square corners, 11px tabular type and ~18px table
+   rows. This file is what makes that true for the ~9,000 lines of terminal
+   components that already exist, without rewriting their classNames one by
+   one.
+
+   It works in two layers:
+
+     1. TOKEN RE-POINT. Every component in the terminal already draws itself
+        from the semantic tokens (--bg-primary, --border-primary, …). Giving
+        those tokens MT5 values inside `.mt5` re-skins PositionsPanel,
+        OrderPanel and InstrumentsTable at once. A component that hard-codes a
+        hex is the only thing this cannot reach.
+
+     2. SHAPE RESET. Tailwind utilities beat variables, so `rounded-xl` and
+        `shadow-lg` survive a token change. The reset below strips radius,
+        drop shadows and glass blur inside the scope — the three things that
+        read most loudly as "not MT5".
+
+   --accent is deliberately NOT re-pointed to MetaTrader's Windows blue. It
+   carries the tenant's brand colour (white-label), and the terminal is the
+   surface a tenant's client spends the most time on. MT5's blue lives in
+   --mt5-select and is used only for row selection, where it is Windows chrome
+   rather than brand.
+
+   Scope is opt-in: only `.mt5` on the terminal shell turns any of this on, so
+   the CRM, the marketing pages and the account picker are untouched.
+
+   Imported from app/globals.css so it lands after the Tailwind layers. */
+
+.mt5 {
+  /* Window chrome — the grey behind every dock. */
+  --bg-page: #ECECEC;
+  --bg-base: #ECECEC;
+  /* Panel interiors: white, like a MetaTrader list or chart pane. */
+  --bg-primary: #FFFFFF;
+  /* Tab strips, table headers, toolbars. */
+  --bg-secondary: #F3F3F3;
+  --bg-tertiary: #E6E6E6;
+  /* Windows list semantics: pale blue hover, stronger blue selection. */
+  --bg-hover: #EAF2FC;
+  --bg-active: #CDE1F8;
+  --bg-input: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-nested: #F7F7F7;
+  /* Glass has no place in a native-window look — flatten to opaque. */
+  --bg-glass: #F3F3F3;
+  --bg-glass-light: #F7F7F7;
+  --bg-glass-heavy: #FFFFFF;
+
+  /* Hairlines. MT5 separates every dock with a single hard 1px line; the
+     app's default translucent borders disappear against grey chrome. */
+  --border-primary: #C6C6C6;
+  --border-secondary: #DCDCDC;
+  --border-glass: #DCDCDC;
+  --border-glass-bright: #C6C6C6;
+
+  --text-primary: #1A1A1A;
+  --text-secondary: #4D4D4D;
+  --text-tertiary: #7A7A7A;
+
+  /* MetaTrader's own selection blue. Chrome only — never brand. */
+  --mt5-select: #1E66F5;
+  --mt5-grid: #E9E9E9;
+  /* Quote colours. MT5 prints Bid red and Ask blue in Market Watch, and the
+     same pair for Sell and Buy everywhere else — matching the app's existing
+     sell/buy tokens, so open positions and quotes agree. */
+  --mt5-bid: #DC2626;
+  --mt5-ask: #1E66F5;
+  /* Toolbar buttons are a two-stop vertical gradient in MetaTrader; a flat
+     fill next to a gradient chart header reads as a rendering bug. */
+  --mt5-toolbar-top: #FDFDFD;
+  --mt5-toolbar-bottom: #EFEFEF;
+
+  color-scheme: light;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  /* Segoe UI first: this is a Windows-native look, and Inter's wider
+     letterforms make the 11px rows read as a web table again. */
+  font-family: "Segoe UI", Tahoma, Inter, system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* Shape reset — see layer 2 above.
+
+   `rounded-full` is excluded by attribute match rather than by an opt-out
+   class because the elements that need it are spinners and avatars scattered
+   through components this file never otherwise touches; squaring a spinner
+   makes it visibly wobble as it rotates.
+
+   Radius and shadow only. `ring-*` is left alone: Tailwind draws focus rings
+   with box-shadow too, and blanket-removing them would take keyboard focus
+   indication with it. */
+.mt5 *:not([class*="rounded-full"]) {
+  border-radius: 0 !important;
+}
+.mt5 [class*="shadow-"] {
+  box-shadow: none !important;
+}
+.mt5 [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Density. The app's tables are built for touch (py-2.5 ≈ 36px rows); MT5
+   fits roughly twice as many rows in the same Toolbox. Overriding the padding
+   here rather than in each table keeps one number to tune. */
+.mt5 table th,
+.mt5 table td {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  font-size: 11px !important;
+  line-height: 16px !important;
+}
+.mt5 table th {
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  color: var(--text-secondary) !important;
+  background: var(--bg-secondary);
+}
+
+/* Numbers are the content of this screen; they must align down the column and
+   never reflow as digits change. */
+.mt5 .mt5-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  text-align: right;
+}
+
+/* ── MT5 primitives ─────────────────────────────────────────────────────
+   Used by the docks in components/trading/mt5/. Kept as CSS classes rather
+   than Tailwind strings because each is repeated in every dock and the
+   gradients and inset highlights have no utility equivalent. */
+
+/* A dock: Market Watch, the Toolbox, the chart pane. */
+.mt5-panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+}
+
+/* The caption bar at the top of a dock ("Market Watch: 12:34:56"). */
+.mt5-caption {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px;
+  background: linear-gradient(180deg, var(--mt5-toolbar-top), var(--mt5-toolbar-bottom));
+  border-bottom: 1px solid var(--border-primary);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  user-select: none;
+  flex: none;
+}
+
+/* Toolbar strips (chart timeframes, dock actions). */
+.mt5-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px;
+  background: linear-gradient(180deg, var(--mt5-toolbar-top), var(--mt5-toolbar-bottom));
+  border-bottom: 1px solid var(--border-primary);
+  user-select: none;
+  flex: none;
+}
+
+.mt5-tbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mt5-tbtn:hover {
+  background: var(--bg-hover);
+  border-color: #A8C7EE;
+}
+.mt5-tbtn[aria-pressed="true"],
+.mt5-tbtn.is-active {
+  background: var(--bg-active);
+  border-color: #7FA9DF;
+  font-weight: 600;
+}
+.mt5-tbtn:disabled {
+  color: var(--text-tertiary);
+  cursor: default;
+  background: transparent;
+  border-color: transparent;
+}
+
+.mt5-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 3px;
+  background: var(--border-primary);
+  flex: none;
+}
+
+/* Dock tab strip, bottom-anchored (Market Watch) or top (Toolbox). MT5 tabs
+   are flat labels; the active one gets the panel's background and a coloured
+   edge — the tenant's accent, since this is the terminal's one branded
+   surface a client actually looks at. */
+.mt5-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  height: 22px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+  user-select: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+}
+.mt5-tabs::-webkit-scrollbar {
+  display: none;
+}
+.mt5-tabs--top {
+  border-top: 0;
+  border-bottom: 1px solid var(--border-primary);
+}
+.mt5-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 10px;
+  border: 0;
+  border-right: 1px solid var(--border-secondary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mt5-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.mt5-tab[aria-selected="true"] {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent) !important;
+}
+
+/* Table rows. Windows list behaviour: hairline grid, pale hover, solid
+   selection that keeps its text legible. */
+.mt5-row {
+  border-bottom: 1px solid var(--mt5-grid);
+  cursor: default;
+}
+.mt5-row:hover {
+  background: var(--bg-hover);
+}
+.mt5-row.is-selected {
+  background: var(--bg-active);
+}
+
+/* Quote colouring. Applied by class so a row can flash without a re-render
+   fighting an inline style. */
+.mt5-bid {
+  color: var(--mt5-bid);
+}
+.mt5-ask {
+  color: var(--mt5-ask);
+}
+
+/* Tick direction flash — MetaTrader repaints the changed cell for a beat
+   rather than animating it, so the eye catches movement without the row
+   sliding. Reduced-motion users get the colour and no transition. */
+.mt5-flash-up {
+  animation: mt5-flash-up 320ms ease-out;
+}
+.mt5-flash-down {
+  animation: mt5-flash-down 320ms ease-out;
+}
+@keyframes mt5-flash-up {
+  from {
+    background: rgba(30, 102, 245, 0.2);
+  }
+  to {
+    background: transparent;
+  }
+}
+@keyframes mt5-flash-down {
+  from {
+    background: rgba(220, 38, 38, 0.2);
+  }
+  to {
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mt5-flash-up,
+  .mt5-flash-down {
+    animation: none;
+  }
+}
+
+/* The status strip along the very bottom of the window. */
+.mt5-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 20px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, var(--mt5-toolbar-top), var(--mt5-toolbar-bottom));
+  border-top: 1px solid var(--border-primary);
+  font-size: 10px;
+  color: var(--text-secondary);
+  user-select: none;
+  flex: none;
+}
+
+/* A splitter between two docks. MT5 gives it no visible handle — the cursor
+   is the affordance — but a 4px hit area is unusable with a mouse, so the
+   grab zone is padded and only the 1px line paints. */
+.mt5-split-v {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border-primary);
+  flex: none;
+}
+.mt5-split-h {
+  height: 4px;
+  cursor: row-resize;
+  background: var(--border-primary);
+  flex: none;
+}
+.mt5-split-v:hover,
+.mt5-split-h:hover {
+  background: var(--mt5-select);
+}
+
+/* Inputs inside the MT5 docks: square, hairline, no focus glow — a MetaTrader
+   field is a Windows edit control. The app's default focus ring is a 3px
+   coloured halo that looks like a web form.
+
+   Scoped to `.mt5-dock` and `.mt5-panel` rather than to `.mt5` as a whole, and
+   that boundary is load-bearing. OrderPanel is inside the terminal but is also
+   the mobile order sheet and the /portfolio ticket; an element selector here
+   outranks its `h-10` utility, so a blanket `.mt5 input` rule would shrink its
+   fields to 20px while the buttons beside them stayed touch-sized. The docks
+   in components/trading/mt5/ are the only inputs this file authored, and they
+   are the only ones it should size. */
+.mt5-dock input[type="text"],
+.mt5-dock input[type="number"],
+.mt5-dock input[type="search"],
+.mt5-dock select,
+.mt5-panel input[type="text"],
+.mt5-panel input[type="number"],
+.mt5-panel input[type="search"],
+.mt5-panel select {
+  height: 20px;
+  padding: 0 4px;
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 11px;
+  outline: none;
+}
+.mt5-dock input:focus,
+.mt5-dock select:focus,
+.mt5-panel input:focus,
+.mt5-panel select:focus {
+  border-color: var(--mt5-select);
+  box-shadow: none !important;
+}

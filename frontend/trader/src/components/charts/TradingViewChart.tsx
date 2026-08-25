@@ -105,16 +105,94 @@ type ChartDialog = {
   onConfirm: (value?: string) => void;
 } | null;
 
+/**
+ * The slice of the charting library the MT5 toolbar drives.
+ *
+ * Exposed as a narrow, already-guarded surface rather than handing the raw
+ * widget out: every method here swallows its own failures, because the
+ * library's API shape shifts between releases (`activeChart()` vs `chart()`
+ * is already handled in three places in this file) and a toolbar button that
+ * throws would take the whole terminal down with it. A dead button is a
+ * survivable bug; a white screen is not.
+ */
+export interface ChartApi {
+  setResolution: (resolution: string) => void;
+  getResolution: () => string | null;
+  setChartType: (type: number) => void;
+  getChartType: () => number | null;
+  /** Library action ids, e.g. `insertIndicator`, `chartProperties`. */
+  executeActionById: (id: string) => void;
+  zoom: (direction: 'in' | 'out') => void;
+  resetScale: () => void;
+}
+
+/**
+ * Builds the ChartApi over a live widget ref.
+ *
+ * Reads the widget through the ref on every call rather than capturing it, so
+ * a symbol switch or a remount cannot leave the toolbar holding a stale
+ * handle. `activeChart()` and `chart()` are both tried because which one
+ * exists varies by library release — the same fallback three other effects in
+ * this file already do.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function makeChartApi(widgetRef: { current: any }): ChartApi {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chart = (): any => {
+    const w = widgetRef.current;
+    if (!w) return null;
+    try {
+      return typeof w.activeChart === 'function' ? w.activeChart() : w.chart();
+    } catch {
+      return null;
+    }
+  };
+  const call = <T,>(fn: () => T, fallback: T): T => {
+    try {
+      return fn();
+    } catch {
+      return fallback;
+    }
+  };
+  return {
+    setResolution: (resolution) => call(() => chart()?.setResolution(resolution), undefined),
+    getResolution: () => call(() => (chart()?.resolution() as string) ?? null, null),
+    setChartType: (type) => call(() => chart()?.setChartType(type), undefined),
+    getChartType: () => call(() => (chart()?.chartType() as number) ?? null, null),
+    executeActionById: (id) => call(() => chart()?.executeActionById(id), undefined),
+    zoom: (direction) =>
+      call(() => {
+        // No zoom() on the public API — the library exposes zoom as toolbar
+        // actions, which is also what the keyboard shortcuts trigger.
+        chart()?.executeActionById(direction === 'in' ? 'chartZoomIn' : 'chartZoomOut');
+      }, undefined),
+    resetScale: () => call(() => chart()?.executeActionById('chartReset'), undefined),
+  };
+}
+
 function TradingViewChartInner({
   onRequestFullscreen,
   theme = 'light',
   intervalOverride,
   showTradeWidget = true,
+  hideNativeHeader = false,
+  onChartApi,
 }: {
   onRequestFullscreen?: () => void;
   theme?: 'light' | 'dark';
   intervalOverride?: string;
   showTradeWidget?: boolean;
+  /**
+   * Drop the library's own top toolbar. The MT5 shell replaces it with a
+   * MetaTrader toolbar of its own; showing both stacks two symbol pickers and
+   * two timeframe rows above the same chart.
+   */
+  hideNativeHeader?: boolean;
+  /**
+   * Handed the control surface once the chart is ready, and `null` on unmount
+   * so a toolbar cannot call into a torn-down widget.
+   */
+  onChartApi?: (api: ChartApi | null) => void;
 }) {
   // Unique per instance — the terminal mounts this chart in more than one place
   // (mobile + desktop layouts); a shared DOM id would make two widgets fight
@@ -144,6 +222,14 @@ function TradingViewChartInner({
   // wires the toolbar button always calls the current one (no stale closure).
   const fsCbRef = useRef(onRequestFullscreen);
   fsCbRef.current = onRequestFullscreen;
+  // Same reason as fsCbRef: the mount effect below has [] deps and must always
+  // reach the caller's *current* handler, not the one from first render.
+  const chartApiCbRef = useRef(onChartApi);
+  chartApiCbRef.current = onChartApi;
+  // Read inside the []-deps mount effect. The MT5 shell never toggles this at
+  // runtime — the library's toolbar can only be dropped at construction — so a
+  // ref is enough and avoids re-mounting the 26 MB widget if it ever changed.
+  const hideNativeHeaderRef = useRef(hideNativeHeader);
 
   const positions = useTradingStore((s) => s.positions);
   const pendingOrders = useTradingStore((s) => s.pendingOrders);
@@ -244,7 +330,14 @@ function TradingViewChartInner({
         fullscreen: false,
         toolbar_bg: theme === 'dark' ? '#0b0e11' : '#ffffff',
         loading_screen: { backgroundColor: theme === 'dark' ? '#0b0e11' : '#ffffff' },
-        disabled_features: ['use_localstorage_for_settings', 'symbol_search_hot_key'],
+        disabled_features: [
+          'use_localstorage_for_settings',
+          'symbol_search_hot_key',
+          // MT5 shell only: its own toolbar owns symbol, timeframe, chart type
+          // and indicators, so the library's header would be a second copy of
+          // every control sitting directly beneath the first.
+          ...(hideNativeHeaderRef.current ? ['header_widget'] : []),
+        ],
         enabled_features: ['hide_left_toolbar_by_default'],
         overrides: theme === 'dark'
           ? { 'paneProperties.background': '#0b0e11', 'paneProperties.backgroundType': 'solid', 'scalesProperties.textColor': '#b7bdc6' }
@@ -265,6 +358,11 @@ function TradingViewChartInner({
             ts?.defaultRightOffset?.().setValue(3);
             ts?.setRightOffset?.(3);
           } catch { /* ignore */ }
+
+          // Hand the MT5 toolbar its control surface. Published only after
+          // onChartReady: calling setResolution before the chart exists is the
+          // library's documented way to get an unhandled rejection.
+          chartApiCbRef.current?.(makeChartApi(widgetRef));
         });
       } catch {
         /* ignore */
@@ -274,7 +372,11 @@ function TradingViewChartInner({
       // library's createButton API) rather than overlaying an absolutely
       // positioned button on top of the toolbar — the overlay was covering the
       // chart's own top-right buttons. Only when a handler is supplied.
-      if (fsCbRef.current && typeof widgetRef.current.headerReady === 'function') {
+      // Skipped entirely when the header is disabled: with `header_widget`
+      // off there is no toolbar to add a button to, and headerReady() then
+      // never settles — the .then() below would sit pending for the life of
+      // the page. The MT5 toolbar carries its own full-screen button.
+      if (!hideNativeHeaderRef.current && fsCbRef.current && typeof widgetRef.current.headerReady === 'function') {
         widgetRef.current
           .headerReady()
           .then(() => {
@@ -294,6 +396,10 @@ function TradingViewChartInner({
 
     return () => {
       disposed = true;
+      // Revoke before remove(): the toolbar holds this object, and a click
+      // landing between remove() and the parent unmounting would otherwise
+      // call into a destroyed widget.
+      chartApiCbRef.current?.(null);
       try {
         widgetRef.current?.remove?.();
       } catch {
