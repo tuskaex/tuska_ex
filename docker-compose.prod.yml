@@ -57,7 +57,28 @@ services:
       # tuskaex.com to trade.tuskaex.com so the apex no longer
       # needs gateway access). Until that's done we keep parity with
       # the pre-audit allow-list.
-      CORS_ORIGINS: https://tuskaex.com,https://trade.tuskaex.com,https://admin.tuskaex.com
+      #
+      # speedtrade.tech is here because the terminal runs ON it, and every
+      # WebSocket the terminal opens carries `Origin: https://speedtrade.tech`.
+      # `_check_ws_origin` closes the handshake before accept() when the origin
+      # is not on this list, which uvicorn renders as a bare HTTP 403 — so the
+      # price and trade sockets were refused from the day the terminal moved to
+      # that host. Nothing looked broken: the trader polls prices over REST
+      # every 1.5s (trading/layout.tsx), so quotes kept updating and only the
+      # terminal's own status strip reported "No connection".
+      #
+      # This value is set HERE rather than left to .env on purpose, and that is
+      # the trap that hid the bug: an `environment:` entry overrides `env_file`,
+      # so the correct list sitting in .env — which already names both hosts —
+      # never reached the container, and editing .env changed nothing. The
+      # explicit block stays because `env_file` is `required: false`: with a
+      # missing .env an empty allow-list makes `_check_ws_origin` accept every
+      # origin, so this line is also the floor that keeps that from happening.
+      #
+      # The www.* hosts are deliberately absent. Both 301 to their apex before
+      # any script runs, so no browser is ever executing on them and no request
+      # can carry them as an Origin.
+      CORS_ORIGINS: https://tuskaex.com,https://trade.tuskaex.com,https://admin.tuskaex.com,https://speedtrade.tech
       COOKIE_DOMAIN: .tuskaex.com
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     command: ["uvicorn", "services.gateway.src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
