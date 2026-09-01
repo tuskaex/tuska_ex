@@ -90,7 +90,12 @@ const NAV_ITEMS: NavItem[] = [
   // Sub-admins → (the tenant) → Branding. The backend agrees:
   // assert_may_manage_branding is super_admin-only, so leaving this entry
   // visible would offer a tenant a section that 403s on open.
-  { label: 'White-label', href: '/branding', icon: Palette, perm: '_super_admin' },
+  // "White-label" read as "brand my tenants", which is what a super-admin comes
+  // here to do — but this screen edits the PLATFORM's own row. Three tenants in
+  // a row were branded onto TuskaEx's row from here and stayed unbranded on
+  // their own domains. The label now says whose brand it is; the tenants' live
+  // under Sub-admins → [tenant] → Branding.
+  { label: 'Platform brand', href: '/branding', icon: Palette, perm: '_super_admin' },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 

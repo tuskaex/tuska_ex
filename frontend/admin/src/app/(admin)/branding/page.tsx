@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe } from 'lucide-react';
@@ -165,10 +166,32 @@ export default function BrandingPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-3xl">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">White-label branding</h1>
+        <h1 className="text-lg font-semibold text-text-primary">Platform brand</h1>
         <p className="text-xxs text-text-tertiary mt-0.5">
           Your brand, your link, and optionally your own domain. Everyone in your
           pool sees this instead of the platform&apos;s branding.
+        </p>
+      </div>
+
+      {/* This screen writes the CALLER's row. For a super-admin that is the
+          platform's own brand — not a tenant's, which is what "white-label"
+          sounds like it should mean. Branding set here has repeatedly ended up
+          on TuskaEx's row while the tenant's domain stayed unbranded, and
+          nothing in the UI said so. */}
+      <div className="bg-bg-secondary border border-border-primary rounded-md p-3 text-xxs text-text-secondary">
+        <p>
+          <span className="text-text-primary font-medium">
+            This is TuskaEx&apos;s own brand.
+          </span>{' '}
+          What you set here is shown to clients in the platform&apos;s own pool.
+        </p>
+        <p className="mt-1">
+          To brand a sub-admin&apos;s white-label, open{' '}
+          <Link href="/sub-admins" className="text-accent hover:underline">
+            Sub-admins
+          </Link>{' '}
+          → the tenant → <span className="text-text-primary">Branding</span>.
+          Setting it here will not appear on their domain.
         </p>
       </div>
 

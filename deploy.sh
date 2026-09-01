@@ -118,6 +118,13 @@ if [ $NEEDS_NGINX -eq 1 ]; then
   # old `if [ -f ]` guard skipped it without a word. Unconditional now.
   sudo cp deploy/nginx/speedtrade.conf /etc/nginx/sites-available/speedtrade.conf
   sudo ln -sf /etc/nginx/sites-available/speedtrade.conf /etc/nginx/sites-enabled/speedtrade.conf
+  # Every white-label tenant domain, without a per-domain vhost. Connecting a
+  # tenant used to mean running connect-tenant-domain.sh over SSH for each one;
+  # until someone did, the domain fell through to whichever block loaded first
+  # and 301'd to speedtrade.tech while the database already said READY.
+  # Unconditional, for the same reason speedtrade.conf is.
+  sudo cp deploy/nginx/tenant-catchall.conf /etc/nginx/sites-available/tenant-catchall.conf
+  sudo ln -sf /etc/nginx/sites-available/tenant-catchall.conf /etc/nginx/sites-enabled/tenant-catchall.conf
   # An earlier iteration put the terminal on trade.speedtrade.tech. That
   # hostname was never given a DNS record and the apex is used instead, so drop
   # a stale vhost rather than leave one nobody can reach.
