@@ -129,7 +129,7 @@ def assert_may_manage_branding(admin: User) -> None:
         )
 
 
-def _refuse_platform_row(target: User) -> None:
+def _refuse_platform_row(target: User, *, setting: bool = True) -> None:
     """A brand written to a super-admin's row is data nothing can ever read.
 
     Two independent paths decide whose brand a page wears, and neither can
@@ -148,15 +148,20 @@ def _refuse_platform_row(target: User) -> None:
 
     `update_smtp` has refused this row from the start, for the same shape of
     reason. This is the identity half of that guard, arriving late.
+
+    Clearing is deliberately still allowed — hence `setting`. Rows branded
+    before this guard existed still carry a tenant's name and logo, and
+    refusing every write would strand that data with no way to remove it from
+    any screen.
     """
-    if target.role == "super_admin":
+    if setting and target.role == "super_admin":
         raise HTTPException(
             status_code=400,
             detail=(
                 "This is the platform's own row and nothing reads a brand from "
                 "it — the TuskaEx brand is compiled into the apps. To brand a "
                 "white-label, set it on the tenant: Sub-admins → the tenant → "
-                "Branding."
+                "Branding. (Clearing this row is allowed.)"
             ),
         )
 
@@ -258,7 +263,13 @@ async def update_branding(
     assert_enabled()
     assert_may_manage_branding(admin)
     target = owner if owner is not None else admin
-    _refuse_platform_row(target)
+    _refuse_platform_row(
+        target,
+        setting=any(
+            v is not None and v.strip()
+            for v in (brand_name, support_email, support_whatsapp)
+        ),
+    )
 
     # Empty string clears; None (field absent) leaves the value alone.
     if brand_name is not None:

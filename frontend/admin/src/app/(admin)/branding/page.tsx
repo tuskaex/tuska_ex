@@ -282,9 +282,12 @@ export default function BrandingPage() {
             </label>
           </div>
 
+          {/* Stays enabled when the row is unbrandable: the API refuses a value
+              but still accepts a clear, and rows branded before that guard
+              existed have to be emptiable from somewhere. */}
           <button
             type="button"
-            disabled={saving || profile?.brandable === false}
+            disabled={saving}
             onClick={() => void saveBrand()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
           >
