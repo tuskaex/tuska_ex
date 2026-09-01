@@ -44,6 +44,28 @@ const nextConfig = {
 
   async rewrites() {
     return [
+      /* Branding logos are stored trader-facing — `logo_url` is
+       * `/api/v1/admin/branding/media/<file>` — and that same string is what
+       * every admin screen drops into an <img src>. On this origin the rule
+       * below would send it to the gateway, which serves no admin routes, so
+       * the image 404s and renders broken with nothing in any log. Each screen
+       * was expected to remember to rewrite the path itself; one of them always
+       * forgets, and the bug comes back looking brand new.
+       *
+       * Sending it to our own /admin-api proxy instead makes the stored path
+       * work as written, so there is nothing left to remember. The destination
+       * is same-origin ON PURPOSE: rewrites are serialised into
+       * required-server-files.json at `next build`, so an upstream URL built
+       * from ADMIN_API_PROXY_TARGET would bake in whatever that variable was at
+       * BUILD time — unset in the image build, hence 127.0.0.1:8001 in
+       * production. The route handler reads that variable at request time,
+       * where it is actually set.
+       *
+       * Must precede the /api/:path* rule: rewrites match in order. */
+      {
+        source: '/api/v1/admin/branding/media/:file',
+        destination: '/admin-api/branding/media/:file',
+      },
       {
         source: '/api/:path*',
         destination: `${gatewayTarget.replace(/\/$/, '')}/api/:path*`,

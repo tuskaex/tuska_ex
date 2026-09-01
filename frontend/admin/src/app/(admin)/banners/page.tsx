@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { adminApi } from '@/lib/api';
+import { adminMediaSrc } from '@/lib/mediaSrc';
 import { cn } from '@/lib/utils';
 import { Loader2, Plus, Pencil, Trash2, RefreshCw, Image as ImageIcon, ExternalLink, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,14 +20,6 @@ interface Banner {
   created_at?: string;
 }
 
-/** Trader-facing URL in DB; admin UI loads via /admin-api proxy to the same files. */
-function adminBannerImgSrc(stored: string): string {
-  if (!stored) return '';
-  if (stored.startsWith('http://') || stored.startsWith('https://')) return stored;
-  const m = stored.match(/\/api\/v1\/banners\/media\/([^/?#]+)/);
-  if (m) return `/admin-api/banners/media/${encodeURIComponent(m[1])}`;
-  return stored;
-}
 
 const EMPTY_FORM = {
   title: '',
@@ -242,7 +235,7 @@ export default function BannersPage() {
                 <div className="aspect-[16/7] bg-bg-tertiary relative overflow-hidden">
                   {b.image_url ? (
                     <img
-                      src={adminBannerImgSrc(b.image_url)}
+                      src={adminMediaSrc(b.image_url)}
                       alt={b.title}
                       className="w-full h-full object-cover"
                     />
@@ -367,7 +360,7 @@ export default function BannersPage() {
                 />
                 {form.image_url ? (
                   <div className="mt-2 rounded-md border border-border-primary overflow-hidden bg-bg-tertiary max-h-32">
-                    <img src={adminBannerImgSrc(form.image_url)} alt="Preview" className="w-full h-full object-contain max-h-32" />
+                    <img src={adminMediaSrc(form.image_url)} alt="Preview" className="w-full h-full object-contain max-h-32" />
                   </div>
                 ) : null}
               </div>

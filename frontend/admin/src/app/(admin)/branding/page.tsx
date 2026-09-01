@@ -2,21 +2,12 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { adminApi } from '@/lib/api';
+import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
 import toast from 'react-hot-toast';
 import type { BrandingProfile } from '@/types';
-
-/** Logo URLs are stored trader-facing; the admin UI loads them through its own
- *  proxy. Same rewrite the banners screen does. */
-function adminLogoSrc(stored: string | null): string {
-  if (!stored) return '';
-  if (stored.startsWith('http://') || stored.startsWith('https://')) return stored;
-  const m = stored.match(/\/api\/v1\/admin\/branding\/media\/([^/?#]+)/);
-  if (m) return `/admin-api/branding/media/${encodeURIComponent(m[1])}`;
-  return stored;
-}
 
 export default function BrandingPage() {
   const [profile, setProfile] = useState<BrandingProfile | null>(null);
@@ -195,7 +186,7 @@ export default function BrandingPage() {
             <div className="w-28 h-14 rounded-md border border-border-primary bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
               {profile?.logo_url ? (
                 <img
-                  src={adminLogoSrc(profile.logo_url)}
+                  src={adminMediaSrc(profile.logo_url)}
                   alt="Logo"
                   className="max-w-full max-h-full object-contain"
                 />

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { adminMediaSrc } from '@/lib/mediaSrc';
 import {
   Loader2, ArrowLeft, Save, Ban, CheckCircle2, KeyRound, Trash2, LogIn,
 } from 'lucide-react';
@@ -427,7 +428,7 @@ export default function SubAdminDetailPage() {
                   {branding.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={branding.logo_url}
+                      src={adminMediaSrc(branding.logo_url)}
                       alt=""
                       className="h-10 w-auto max-w-[120px] object-contain rounded bg-bg-tertiary p-1"
                     />
