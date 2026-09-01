@@ -129,6 +129,38 @@ def assert_may_manage_branding(admin: User) -> None:
         )
 
 
+def _refuse_platform_row(target: User) -> None:
+    """A brand written to a super-admin's row is data nothing can ever read.
+
+    Two independent paths decide whose brand a page wears, and neither can
+    reach this row:
+
+      - `find_by_domain` matches on `custom_domain`, and `connect_domain`
+        refuses to give a super-admin one — the domain would sit on the
+        platform pool's row and swallow the tenant's signups.
+      - `resolve_branding_owner` returns None for a platform-pool client
+        (`assigned_admin_id IS NULL`), which means "no branding", and the
+        frontend falls back to its compiled-in TuskaEx assets.
+
+    So the write silently succeeded, the screen showed the new logo back, and
+    the tenant's own domain stayed unbranded. That happened three times before
+    anyone connected the two facts, because nothing anywhere reported it.
+
+    `update_smtp` has refused this row from the start, for the same shape of
+    reason. This is the identity half of that guard, arriving late.
+    """
+    if target.role == "super_admin":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This is the platform's own row and nothing reads a brand from "
+                "it — the TuskaEx brand is compiled into the apps. To brand a "
+                "white-label, set it on the tenant: Sub-admins → the tenant → "
+                "Branding."
+            ),
+        )
+
+
 def load_brand_owner_sync(row: User | None) -> User:
     """The tenant row a super-admin is acting on, validated as a brand owner."""
     if row is None or row.role not in BRAND_OWNER_ROLES:
@@ -162,6 +194,10 @@ async def get_my_branding(*, admin: User, db: AsyncSession) -> dict:
     assert_enabled()
     assert_may_manage_branding(admin)
     out = to_profile(admin)
+    # Whether a brand written here would ever be rendered. False for a
+    # super-admin — see _refuse_platform_row. Sent so the form can point at the
+    # tenant flow instead of accepting input the write path will now reject.
+    out["brandable"] = admin.role != "super_admin"
     code = await ensure_public_code(admin, db)
     out["public_code"] = code
     out["referral_link"] = referral_link(code)
@@ -222,6 +258,7 @@ async def update_branding(
     assert_enabled()
     assert_may_manage_branding(admin)
     target = owner if owner is not None else admin
+    _refuse_platform_row(target)
 
     # Empty string clears; None (field absent) leaves the value alone.
     if brand_name is not None:
@@ -242,6 +279,7 @@ async def upload_logo(
     assert_enabled()
     assert_may_manage_branding(admin)
     target = owner if owner is not None else admin
+    _refuse_platform_row(target)
 
     raw = await file.read()
     if len(raw) > MAX_LOGO_BYTES:

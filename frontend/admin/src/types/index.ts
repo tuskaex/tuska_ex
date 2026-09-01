@@ -409,6 +409,11 @@ export interface BrandingProfile {
   public_code: string | null;
   referral_link: string | null;
   domain: DomainState;
+  /** Whether a brand written to THIS row would ever be rendered. False for a
+   *  super-admin: no domain can point at the platform row and platform-pool
+   *  clients resolve to no branding at all, so the value is unreadable. The
+   *  write path rejects it; this lets the form say so before they type. */
+  brandable?: boolean;
 }
 
 export type CustomDomainStatus =

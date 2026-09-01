@@ -173,27 +173,31 @@ export default function BrandingPage() {
         </p>
       </div>
 
-      {/* This screen writes the CALLER's row. For a super-admin that is the
-          platform's own brand — not a tenant's, which is what "white-label"
-          sounds like it should mean. Branding set here has repeatedly ended up
-          on TuskaEx's row while the tenant's domain stayed unbranded, and
-          nothing in the UI said so. */}
-      <div className="bg-bg-secondary border border-border-primary rounded-md p-3 text-xxs text-text-secondary">
-        <p>
-          <span className="text-text-primary font-medium">
-            This is TuskaEx&apos;s own brand.
-          </span>{' '}
-          What you set here is shown to clients in the platform&apos;s own pool.
-        </p>
-        <p className="mt-1">
-          To brand a sub-admin&apos;s white-label, open{' '}
-          <Link href="/sub-admins" className="text-accent hover:underline">
-            Sub-admins
-          </Link>{' '}
-          → the tenant → <span className="text-text-primary">Branding</span>.
-          Setting it here will not appear on their domain.
-        </p>
-      </div>
+      {/* This screen writes the CALLER's row. For a super-admin nothing can
+          read that row's brand — no domain may point at it and platform-pool
+          clients resolve to no branding — so the form used to accept a logo,
+          show it back, and change nothing anywhere. The domain section below
+          already refused a super-admin for the same reason; the identity form
+          did not, which is how three tenants' logos ended up here. */}
+      {profile?.brandable === false && (
+        <div className="bg-bg-secondary border border-accent/40 rounded-md p-3 text-xxs text-text-secondary">
+          <p className="text-text-primary font-medium">
+            A brand set here would not appear anywhere.
+          </p>
+          <p className="mt-1">
+            This is the platform&apos;s own row. TuskaEx&apos;s brand is
+            compiled into the apps, and no white-label domain can point here.
+          </p>
+          <p className="mt-1.5">
+            To brand a white-label, open{' '}
+            <Link href="/sub-admins" className="text-accent hover:underline">
+              Sub-admins
+            </Link>{' '}
+            → the tenant → <span className="text-text-primary">Branding</span>.
+            That is the row their domain resolves to.
+          </p>
+        </div>
+      )}
 
       <section className="bg-bg-secondary border border-border-primary rounded-md">
         <div className="px-3 py-2 border-b border-border-primary">
@@ -227,7 +231,7 @@ export default function BrandingPage() {
               />
               <button
                 type="button"
-                disabled={uploading}
+                disabled={uploading || profile?.brandable === false}
                 onClick={() => fileRef.current?.click()}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
               >
@@ -280,7 +284,7 @@ export default function BrandingPage() {
 
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || profile?.brandable === false}
             onClick={() => void saveBrand()}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
           >
@@ -410,7 +414,7 @@ export default function BrandingPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || profile?.brandable === false}
               onClick={() => void saveSmtp()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
             >
@@ -419,7 +423,7 @@ export default function BrandingPage() {
             </button>
             <button
               type="button"
-              disabled={testing || !profile?.smtp_configured}
+              disabled={testing || !profile?.smtp_configured || profile?.brandable === false}
               onClick={() => void sendTest()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary disabled:opacity-50"
             >
