@@ -22,6 +22,7 @@ from packages.common.src.models import (
     AlgoApiKey, TradingAccount, Instrument, Position, PositionStatus,
     Order, TradeHistory,
 )
+from packages.common.src.market_hours import is_market_open
 from packages.common.src.redis_client import redis_client, PriceChannel
 
 logger = logging.getLogger("algo_connector")
@@ -31,6 +32,26 @@ router = APIRouter()
 def _hash_secret(raw: str) -> str:
     """SHA-256 hash for fast lookup (bcrypt is overkill for API secrets)."""
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _require_market_open(instrument: Instrument, verb: str) -> None:
+    """Reject a fill when the instrument's session is shut.
+
+    The desktop terminal opens AND closes through /api/algo/trade, so this
+    endpoint — not just the JWT /api/v1/orders path — has to enforce the
+    session. Without it a trader could round-trip a position all weekend
+    against the last Friday tick, which is still sitting in Redis.
+    """
+    segment_name = instrument.segment.name if instrument.segment else ""
+    market_open, closed_reason = is_market_open(
+        instrument.symbol, segment_name, instrument.trading_hours
+    )
+    if not market_open:
+        raise HTTPException(
+            status_code=400,
+            detail=closed_reason or f"Market is closed for {instrument.symbol}. "
+                                    f"You cannot {verb} while the session is shut.",
+        )
 
 
 class AlgoTradeRequest(BaseModel):
@@ -150,6 +171,8 @@ async def _open_trade(body: AlgoTradeRequest, symbol: str, account: TradingAccou
     if not instrument:
         raise HTTPException(status_code=404, detail=f"Instrument {symbol} not found")
 
+    _require_market_open(instrument, "open a position")
+
     lots = Decimal(str(body.volume))
     if lots < Decimal("0.01"):
         raise HTTPException(status_code=400, detail="Minimum lot size is 0.01")
@@ -241,6 +264,10 @@ async def _close_trades(symbol: str, account: TradingAccount, key_row: AlgoApiKe
             "account": account.account_number,
             "message": f"No open {symbol} positions to close",
         }
+
+    first_inst = next((p.instrument for p in positions if p.instrument), None)
+    if first_inst is not None:
+        _require_market_open(first_inst, "close a position")
 
     tick_data = await redis_client.get(PriceChannel.tick_key(symbol))
     if not tick_data:

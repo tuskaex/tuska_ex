@@ -987,6 +987,23 @@ async def close_position(position_id: UUID, req, user_id: UUID, db: AsyncSession
     # this position up, finds it already closed, and skips it — no divergence
     # error. (Previously this raised 403 and only the master could close.)
 
+    # Session gate — a manual close is a market fill like any other, so it is
+    # blocked exactly like the open in place_order(). Redis still holds Friday's
+    # last tick all weekend, so without this the trader can book a close at a
+    # price nobody is quoting. The SL/TP, margin-call and admin engines call
+    # their own close paths and are deliberately NOT gated here.
+    if pos.instrument is not None:
+        segment_name = pos.instrument.segment.name if pos.instrument.segment else ""
+        market_open, closed_reason = is_market_open(
+            pos.instrument.symbol, segment_name, pos.instrument.trading_hours
+        )
+        if not market_open:
+            raise HTTPException(
+                status_code=400,
+                detail=closed_reason or f"Market is closed for {pos.instrument.symbol}. "
+                                        "You cannot close a position while the session is shut.",
+            )
+
     tick_data = await price_cache.get(pos.instrument.symbol)
     if not tick_data:
         raise HTTPException(status_code=400, detail="No price available")
