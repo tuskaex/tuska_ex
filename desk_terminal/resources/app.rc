@@ -19,11 +19,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "TuskaEx"
             VALUE "FileDescription",  "TuskaEx Terminal"
-            VALUE "FileVersion",      "1.0.7.0"
+            VALUE "FileVersion",      "1.0.8.0"
             VALUE "InternalName",     "terminal"
             VALUE "OriginalFilename", "terminal.exe"
             VALUE "ProductName",      "TuskaEx Terminal"
-            VALUE "ProductVersion",   "1.0.7.0"
+            VALUE "ProductVersion",   "1.0.8.0"
         END
     END
     BLOCK "VarFileInfo"

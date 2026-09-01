@@ -107,7 +107,7 @@ set(HEADERS
 # package-macos.sh reads that back to name the .dmg. It had drifted to 1.0.1
 # while Windows shipped 1.0.6, so the Mac build carried the same code under a
 # five-releases-old version number — the exact bug this comment warns about.
-set(TX_VERSION "1.0.7")
+set(TX_VERSION "1.0.8")
 
 # App icon + version info. The .rc gives the EXE its icon (Explorer, desktop
 # shortcut, taskbar); the .qrc carries the same artwork for setWindowIcon();

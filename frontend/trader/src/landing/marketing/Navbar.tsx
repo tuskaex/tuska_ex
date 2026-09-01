@@ -529,7 +529,7 @@ export default function MarketingNavbar({
                   </div>
                   {/* Windows */}
                   <a
-                    href="/downloads/TuskaExTerminal-Setup-1.0.7.exe"
+                    href="/downloads/TuskaExTerminal-Setup-1.0.8.exe"
                     download="TuskaExTerminal-Setup.exe"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
@@ -744,7 +744,7 @@ export default function MarketingNavbar({
                 whitespace between the tags as an extra gap. */}
             <li className={`flex flex-col gap-2 pt-3 border-t ${c.dividerStrong}`}>
               <a
-                href="/downloads/TuskaExTerminal-Setup-1.0.7.exe"
+                href="/downloads/TuskaExTerminal-Setup-1.0.8.exe"
                 download="TuskaExTerminal-Setup.exe"
                 onClick={() => setOpen(false)}
                 className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
