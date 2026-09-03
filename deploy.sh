@@ -94,6 +94,34 @@ if [ $NEEDS_TRADER -eq 1 ]; then
   fi
 fi
 
+# ── Installer links must point at installers that exist ──────────────────
+# The download hrefs carry a version (…-Setup-1.0.8.exe) but the binary is a
+# build artifact git cannot move, so bumping the link is one commit and
+# uploading the file is a separate manual step. Miss the second and the site
+# ships a link to nothing: the browser says "File wasn't available on site",
+# the origin logs a plain 404, and Cloudflare then caches that 404 — so it
+# keeps failing for minutes after the file finally lands. 1.0.8 shipped that
+# way. Same reasoning as the charting-library guard above: refuse loudly at
+# deploy time rather than fail quietly in a visitor's browser.
+if [ $NEEDS_TRADER -eq 1 ] && [ -d "$REPO_DIR/downloads" ]; then
+  MISSING_DL=""
+  for f in $(grep -rhoE '/downloads/[A-Za-z0-9._-]+' frontend/trader/src \
+               | sed 's|^/downloads/||' | sort -u); do
+    [ -f "$REPO_DIR/downloads/$f" ] || MISSING_DL="$MISSING_DL $f"
+  done
+  if [ -n "$MISSING_DL" ]; then
+    echo "✖ The site links to installers that are not on this server:"
+    for f in $MISSING_DL; do echo "    $REPO_DIR/downloads/$f"; done
+    echo "  Upload each one, then re-run. Copy to a .part name and rename after"
+    echo "  checking the hash, so a half-finished upload is never served:"
+    echo "    scp <file> <this-server>:$REPO_DIR/downloads/<file>.part"
+    echo "    ssh <this-server> 'cd $REPO_DIR/downloads && sha256sum <file>.part'"
+    echo "    # matches the local sha256sum? then:"
+    echo "    ssh <this-server> 'cd $REPO_DIR/downloads && chmod 644 <file>.part && mv <file>.part <file>'"
+    exit 1
+  fi
+fi
+
 if [ ${#TO_BUILD[@]} -gt 0 ]; then
   echo "▶ Building: ${TO_BUILD[*]}"
   $COMPOSE build "${TO_BUILD[@]}"
