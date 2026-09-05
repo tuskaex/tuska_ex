@@ -1442,12 +1442,42 @@ async def release_bonuses_after_trade(
 
 # ─── Withdrawals ──────────────────────────────────────────────────────────
 
+async def require_kyc_for_withdrawal(user_id: UUID, db: AsyncSession) -> None:
+    """Refuse a withdrawal unless the user's KYC is approved.
+
+    Deposits and trading are deliberately open without verification — that is
+    the documented product rule and the mobile app's `kycGate.js` states it.
+    Withdrawals are the one place identity has to be proven, because that is
+    where value leaves the platform.
+
+    This lived nowhere. Two inline copies of the check existed, but in
+    `create_local_banking_request` and `create_razorpay_deposit` — a deposit
+    path — while all three real withdrawal entry points
+    (`/wallet/withdraw`, `/wallet/withdraw/manual`, `/wallet/withdraw/onchain`)
+    had none. Every client already handles the 403: the mobile app matches on
+    detail == "KYC_REQUIRED" and opens its gate dialog, so the clients looked
+    correct while nothing ever rejected them.
+
+    It is a shared function rather than three inline copies so a fourth
+    withdrawal route cannot quietly ship without it.
+    """
+    user_row = (
+        await db.execute(select(User).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if user_row is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if (user_row.kyc_status or "").lower() not in ("approved", "verified"):
+        raise HTTPException(status_code=403, detail="KYC_REQUIRED")
+
+
 async def create_withdrawal(req, user_id: UUID, db: AsyncSession) -> dict:
     from packages.common.src.settings_store import get_bool_setting
     if await get_bool_setting("maintenance_mode", False):
         raise HTTPException(status_code=503, detail="Platform is under maintenance. Withdrawals are temporarily disabled.")
     if not await get_bool_setting("allow_withdrawals", True):
         raise HTTPException(status_code=403, detail="Withdrawals are currently disabled")
+
+    await require_kyc_for_withdrawal(user_id, db)
 
     user_q = await db.execute(select(User).where(User.id == user_id))
     user_row = user_q.scalar_one_or_none()
@@ -1553,6 +1583,8 @@ async def create_manual_withdrawal(
     from packages.common.src.settings_store import get_bool_setting
     if not await get_bool_setting("allow_withdrawals", True):
         raise HTTPException(status_code=403, detail="Withdrawals are currently disabled")
+
+    await require_kyc_for_withdrawal(user_id, db)
 
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Invalid amount")

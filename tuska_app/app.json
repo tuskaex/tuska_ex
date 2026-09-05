@@ -1,0 +1,103 @@
+{
+  "expo": {
+    "name": "SpeedTrade",
+    "slug": "speedtrade",
+    "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/brand/speedtrade-icon.png",
+    "backgroundColor": "#0A0E17",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/brand/speedtrade-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0E17",
+      "dark": {
+        "image": "./assets/brand/speedtrade-logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0A0E17"
+      }
+    },
+    "updates": {
+      "enabled": false,
+      "fallbackToCacheTimeout": 3000
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "tuskaex.com": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": true,
+              "NSExceptionMinimumTLSVersion": "TLSv1.2"
+            },
+            "speedtrade.tech": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSExceptionRequiresForwardSecrecy": true,
+              "NSExceptionMinimumTLSVersion": "TLSv1.2"
+            }
+          }
+        }
+      },
+      "bundleIdentifier": "tech.speedtrade.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/speedtrade-adaptive-icon.png",
+        "backgroundColor": "#0A0E17"
+      },
+      "edgeToEdgeEnabled": true,
+      "backgroundColor": "#0A0E17",
+      "package": "tech.speedtrade.app",
+      "splash": {
+        "image": "./assets/brand/speedtrade-logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0A0E17",
+        "dark": {
+          "image": "./assets/brand/speedtrade-logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#0A0E17"
+        }
+      },
+      "permissions": [
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/brand/speedtrade-favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-updates",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow SpeedTrade to use Face ID to unlock the app."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1B4DFF"
+        }
+      ],
+      "expo-sharing",
+      "expo-status-bar"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "744a08f7-edea-4417-89b4-0f6198703532"
+      }
+    },
+    "owner": "shivam92388"
+  }
+}
