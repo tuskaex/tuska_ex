@@ -22,11 +22,20 @@ import {
   clamp,
   formatBarTime,
   formatPrice,
+  indexForTime,
   makeScales,
   priceBounds,
   resolutionSeconds,
+  timeForIndex,
   visibleRange,
 } from './chartGeometry';
+import {
+  TOOLS,
+  distanceToSegment,
+  getDrawings,
+  newDrawing,
+  saveDrawings,
+} from './drawingStore';
 
 /**
  * The instrument chart, drawn natively.
@@ -89,6 +98,16 @@ export default function NativeChart({
   // under the user's finger mid-drag.
   const [dragging, setDragging] = useState(null); // { id, kind, price }
 
+  // ── Drawing tools ────────────────────────────────────────────────────
+  // `tool` is the active tool; 'cursor' means gestures pan/zoom as normal.
+  // `pending` holds a shape whose first anchor is placed and whose second is
+  // following the finger.
+  const [tool, setTool] = useState('cursor');
+  const [drawings, setDrawings] = useState([]);
+  const [pending, setPending] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [toolbarOpen, setToolbarOpen] = useState(false);
+
   const tokenRef = useRef('');
   const barsRef = useRef([]);
   const viewRef = useRef(view);
@@ -102,6 +121,7 @@ export default function NativeChart({
   const chipPriceRef = useRef({});
   const dragStartYRef = useRef(0);
   const bracketGestures = useRef(new Map());
+  const drawCtx = useRef({});
   const oldestLoaded = useRef(null);
   const loadingMore = useRef(false);
 
@@ -134,6 +154,24 @@ export default function NativeChart({
       .catch(() => {});
     return () => { alive = false; };
   }, [sym]);
+
+  // Load this symbol's saved drawings; clear the transient bits so a
+  // half-drawn shape never survives a symbol change.
+  useEffect(() => {
+    let alive = true;
+    setPending(null);
+    setSelectedId(null);
+    setTool('cursor');
+    getDrawings(sym).then((list) => { if (alive) setDrawings(list || []); });
+    return () => { alive = false; };
+  }, [sym]);
+
+  const persist = useCallback((next) => {
+    setDrawings(next);
+    saveDrawings(sym, next);
+  }, [sym]);
+  const persistRef = useRef(persist);
+  persistRef.current = persist;
 
   const authHeaders = useCallback(() => {
     const h = { Accept: 'application/json' };
@@ -378,6 +416,10 @@ export default function NativeChart({
   );
   scalesRef.current = scales;
   plotHeightRef.current = plotHeight;
+  drawCtx.current = {
+    tool, pending, drawings, bars, start: range.start, barSeconds, scales,
+    plotWidth, plotHeight, selectedId,
+  };
   if (!dragging) frozenBounds.current = { min, max };
 
   /** Current price of a level, preferring an in-flight drag over the server. */
@@ -469,12 +511,106 @@ export default function NativeChart({
     .onFinalize(() => { setCrosshair(null); onDrag?.(false); }),
   [onDrag, plotWidth, plotHeight]);
 
+  /**
+   * Taps and drags while a drawing tool is active.
+   *
+   * Anchors are converted to { time, price } immediately — see drawingStore.js
+   * for why they are never kept as pixels. A one-anchor tool (horizontal line)
+   * commits on the first tap; two-anchor tools place the first, preview the
+   * second under the finger, and commit on release.
+   *
+   * With the cursor tool this gesture instead hit-tests existing drawings so a
+   * tap can select one for deletion.
+   */
+  const toPoint = useCallback((px, py) => {
+    const c = drawCtx.current;
+    if (!c.scales || !c.bars?.length) return null;
+    const idx = c.start + c.scales.indexAt(px);
+    return {
+      time: Math.round(timeForIndex(c.bars, idx, c.barSeconds)),
+      price: c.scales.priceAt(clamp(py, 0, c.plotHeight)),
+    };
+  }, []);
+
+  const hitTest = useCallback((px, py) => {
+    const c = drawCtx.current;
+    if (!c.scales || !c.bars?.length) return null;
+    const toXY = (pt) => ({
+      x: c.scales.x(indexForTime(c.bars, pt.time, c.barSeconds) - c.start),
+      y: c.scales.y(pt.price),
+    });
+    const TOLERANCE = 16; // a fingertip, not a pixel
+    for (let i = c.drawings.length - 1; i >= 0; i--) {
+      const d = c.drawings[i];
+      const pts = d.points || [];
+      if (!pts.length) continue;
+      if (d.type === 'horizontal') {
+        if (Math.abs(py - c.scales.y(pts[0].price)) <= TOLERANCE) return d.id;
+        continue;
+      }
+      if (pts.length < 2) continue;
+      const a = toXY(pts[0]); const b = toXY(pts[1]);
+      if (d.type === 'rect' || d.type === 'fib') {
+        const x1 = Math.min(a.x, b.x); const x2 = Math.max(a.x, b.x);
+        const y1 = Math.min(a.y, b.y); const y2 = Math.max(a.y, b.y);
+        if (px >= x1 - TOLERANCE && px <= x2 + TOLERANCE
+            && py >= y1 - TOLERANCE && py <= y2 + TOLERANCE) return d.id;
+        continue;
+      }
+      if (distanceToSegment(px, py, a.x, a.y, b.x, b.y) <= TOLERANCE) return d.id;
+    }
+    return null;
+  }, []);
+
+  const drawGesture = useMemo(() => Gesture.Pan()
+    .runOnJS(true)
+    .minDistance(0)
+    .onBegin((e) => {
+      const c = drawCtx.current;
+      if (c.tool === 'cursor') { setSelectedId(hitTest(e.x, e.y)); return; }
+      const pt = toPoint(e.x, e.y);
+      if (!pt) return;
+      const spec = TOOLS.find((t) => t.key === c.tool);
+      if (spec?.points === 1) {
+        persistRef.current([...c.drawings, newDrawing(c.tool, [pt])]);
+        setTool('cursor');
+        return;
+      }
+      setPending(newDrawing(c.tool, [pt, pt]));
+    })
+    .onUpdate((e) => {
+      const c = drawCtx.current;
+      if (c.tool === 'cursor' || !c.pending) return;
+      const pt = toPoint(clamp(e.x, 0, c.plotWidth), e.y);
+      if (!pt) return;
+      setPending((prev) => (prev ? { ...prev, points: [prev.points[0], pt] } : prev));
+    })
+    .onEnd(() => {
+      const c = drawCtx.current;
+      if (c.tool === 'cursor' || !c.pending) return;
+      const [a, b] = c.pending.points;
+      // A tap with no drag is not a shape — discard it rather than saving a
+      // zero-length line the user then has to hunt down and delete.
+      const moved = Math.abs(a.time - b.time) > 0 || Math.abs(a.price - b.price) > 0;
+      if (moved) persistRef.current([...c.drawings, c.pending]);
+      setPending(null);
+      setTool('cursor');
+    })
+    .onFinalize(() => { setPending((p) => (drawCtx.current.tool === 'cursor' ? null : p)); }),
+  [hitTest, toPoint]);
+
+  // While a tool is armed the drawing gesture owns the surface — panning the
+  // chart mid-stroke would move the candles out from under the anchor the user
+  // is placing. With the cursor tool the normal pan/pinch/crosshair set is
+  // active and the drawing gesture only handles selection taps.
   const composed = useMemo(
-    () => Gesture.Simultaneous(
-      pinchGesture,
-      Gesture.Exclusive(crosshairGesture, panGesture),
-    ),
-    [pinchGesture, crosshairGesture, panGesture],
+    () => (tool === 'cursor'
+      ? Gesture.Simultaneous(
+        pinchGesture,
+        Gesture.Exclusive(crosshairGesture, panGesture, drawGesture),
+      )
+      : drawGesture),
+    [tool, pinchGesture, crosshairGesture, panGesture, drawGesture],
   );
 
   /**
@@ -569,6 +705,56 @@ export default function NativeChart({
               </Pressable>
             );
           })}
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => setToolbarOpen((v) => !v)}
+            style={[styles.tfChip, (toolbarOpen || tool !== 'cursor') && styles.tfChipActive]}
+            accessibilityRole="button"
+            accessibilityLabel="Drawing tools"
+          >
+            <Ionicons
+              name="brush-outline"
+              size={13}
+              color={(toolbarOpen || tool !== 'cursor') ? vantage.accent : vantage.textSecondary}
+            />
+          </Pressable>
+        </View>
+      ) : null}
+
+      {toolbarOpen ? (
+        <View style={styles.toolRow}>
+          {TOOLS.map((t) => {
+            const active = t.key === tool;
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => { setTool(t.key); setPending(null); }}
+                style={[styles.toolBtn, active && styles.toolBtnActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={t.label}
+              >
+                <Ionicons name={t.icon} size={16} color={active ? vantage.accent : vantage.textSecondary} />
+              </Pressable>
+            );
+          })}
+          <View style={{ flex: 1 }} />
+          <Pressable
+            onPress={() => {
+              if (selectedId) {
+                persist(drawings.filter((d) => d.id !== selectedId));
+                setSelectedId(null);
+              } else {
+                persist([]);
+              }
+            }}
+            disabled={!drawings.length}
+            style={[styles.toolBtn, !drawings.length && { opacity: 0.35 }]}
+            accessibilityRole="button"
+            accessibilityLabel={selectedId ? 'Delete selected drawing' : 'Clear all drawings'}
+          >
+            <Ionicons name="trash-outline" size={16} color={vantage.down} />
+          </Pressable>
         </View>
       ) : null}
 
@@ -589,6 +775,9 @@ export default function NativeChart({
                 levels={levels}
                 crosshair={crosshair}
                 chartType={chartType}
+                drawings={drawings}
+                selectedDrawingId={selectedId}
+                pendingDrawing={pending}
               />
             </View>
           </GestureDetector>
@@ -599,52 +788,79 @@ export default function NativeChart({
             thing a thumb can do. */}
         {ready ? positions.map((p) => {
           const id = String(p.id || p._id);
-          const rows = [
-            { kind: 'entry', price: levelPrice(p, 'entry'), color: vantage.accent },
-            { kind: 'sl', price: levelPrice(p, 'sl'), color: vantage.downFill },
-            { kind: 'tp', price: levelPrice(p, 'tp'), color: vantage.upFill },
-          ];
-          return rows.map((row) => {
-            if (!Number.isFinite(row.price) || row.price < min || row.price > max) return null;
-            chipPriceRef.current[`${id}:${row.kind}`] = row.price;
-            const top = scales.y(row.price) - 11;
-            const pnl = Number(p.profit);
-            const chip = (
-              <View style={[styles.chip, { borderColor: row.color }]}>
-                <Text style={[styles.chipLabel, { color: row.color }]}>
-                  {row.kind === 'entry'
-                    ? `${String(p.side || '').toUpperCase()} ${p.lots}`
-                    : row.kind.toUpperCase()}
-                </Text>
-                {row.kind === 'entry' && Number.isFinite(pnl) ? (
-                  <Text style={[styles.chipPnl, { color: pnl >= 0 ? vantage.up : vantage.down }]}>
-                    {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+          const entry = levelPrice(p, 'entry');
+          const sl = levelPrice(p, 'sl');
+          const tp = levelPrice(p, 'tp');
+          const pnl = Number(p.profit);
+          const out = [];
+
+          // Where a bracket handle starts its drag from: its own level if the
+          // position already has one, otherwise the entry. This is what makes
+          // an UNSET bracket settable by dragging — the web's [SL]/[TP]
+          // buttons behave the same way, which is the whole point of putting
+          // them on the entry line rather than only on existing lines.
+          chipPriceRef.current[`${id}:sl`] = Number.isFinite(sl) ? sl : entry;
+          chipPriceRef.current[`${id}:tp`] = Number.isFinite(tp) ? tp : entry;
+
+          // ── Entry chip: side/lots, live P&L, [SL] [TP] handles, close ──
+          if (Number.isFinite(entry) && entry >= min && entry <= max) {
+            out.push(
+              <View key={`${id}entry`} style={[styles.chipWrap, { top: scales.y(entry) - 13 }]} pointerEvents="box-none">
+                <View style={[styles.chip, { borderColor: vantage.accent }]}>
+                  <Text style={[styles.chipLabel, { color: vantage.accent }]}>
+                    {String(p.side || '').toUpperCase()} {p.lots}
                   </Text>
-                ) : null}
-                {row.kind === 'entry' ? (
+                  {Number.isFinite(pnl) ? (
+                    <Text style={[styles.chipPnl, { color: pnl >= 0 ? vantage.up : vantage.down }]}>
+                      {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+                    </Text>
+                  ) : null}
+
+                  {/* Drag these up/down to set or move the bracket. They are
+                      always present, so a position with no SL/TP yet can get
+                      one without leaving the chart. */}
+                  <GestureDetector gesture={bracketGesture(id, 'sl')}>
+                    <View style={[styles.handle, { borderColor: vantage.downFill }]}>
+                      <Text style={[styles.handleTxt, { color: vantage.downFill }]}>SL</Text>
+                    </View>
+                  </GestureDetector>
+                  <GestureDetector gesture={bracketGesture(id, 'tp')}>
+                    <View style={[styles.handle, { borderColor: vantage.upFill }]}>
+                      <Text style={[styles.handleTxt, { color: vantage.upFill }]}>TP</Text>
+                    </View>
+                  </GestureDetector>
+
                   <Pressable
                     onPress={() => onClosePosition?.(id)}
-                    hitSlop={8}
+                    hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel={`Close ${p.side} position on ${sym}`}
                   >
-                    <Ionicons name="close" size={12} color={vantage.textSecondary} />
+                    <Ionicons name="close" size={13} color={vantage.textSecondary} />
                   </Pressable>
-                ) : null}
-              </View>
+                </View>
+              </View>,
             );
-            // The entry line is where the trade opened — it is history, not a
-            // setting, so it is shown but not draggable. Only SL and TP are.
-            return (
-              <View key={`${id}${row.kind}`} style={[styles.chipWrap, { top }]} pointerEvents="box-none">
-                {row.kind === 'entry' ? chip : (
-                  <GestureDetector gesture={bracketGesture(id, row.kind)}>
-                    {chip}
-                  </GestureDetector>
-                )}
-              </View>
+          }
+
+          // ── Existing SL / TP lines, each draggable from its own chip ──
+          for (const row of [
+            { kind: 'sl', price: sl, color: vantage.downFill },
+            { kind: 'tp', price: tp, color: vantage.upFill },
+          ]) {
+            if (!Number.isFinite(row.price) || row.price < min || row.price > max) continue;
+            out.push(
+              <View key={`${id}${row.kind}`} style={[styles.chipWrap, { top: scales.y(row.price) - 11 }]} pointerEvents="box-none">
+                <GestureDetector gesture={bracketGesture(id, row.kind)}>
+                  <View style={[styles.chip, { borderColor: row.color }]}>
+                    <Text style={[styles.chipLabel, { color: row.color }]}>{row.kind.toUpperCase()}</Text>
+                    <Text style={styles.chipPrice}>{formatPrice(row.price, digits)}</Text>
+                  </View>
+                </GestureDetector>
+              </View>,
             );
-          });
+          }
+          return out;
         }) : null}
 
         {/* Crosshair readout. Top-left, where it never sits under the thumb. */}
@@ -721,6 +937,23 @@ const styles = StyleSheet.create({
   },
   tfTextActive: { color: vantage.accent, fontWeight: weights.bold },
 
+  toolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingHorizontal: space.sm,
+    paddingBottom: space.xs,
+  },
+  toolBtn: {
+    width: 30,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    backgroundColor: vantage.bgElevated,
+  },
+  toolBtnActive: { backgroundColor: vantage.accentMuted },
+
   chipWrap: { position: 'absolute', left: space.sm },
   chip: {
     flexDirection: 'row',
@@ -736,6 +969,23 @@ const styles = StyleSheet.create({
     fontFamily,
     fontSize: sizes.micro,
     fontWeight: weights.bold,
+  },
+  handle: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+  },
+  handleTxt: {
+    fontFamily,
+    fontSize: sizes.micro,
+    fontWeight: weights.bold,
+  },
+  chipPrice: {
+    fontFamily,
+    fontSize: sizes.micro,
+    color: vantage.textSecondary,
+    fontVariant: ['tabular-nums'],
   },
   chipPnl: {
     fontFamily,

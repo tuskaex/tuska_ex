@@ -240,3 +240,49 @@ export function applyTick(bars, { price, time, barSeconds }) {
     time: slot, open: p, high: p, low: p, close: p, volume: 0,
   }]);
 }
+
+/**
+ * Fractional bar index for a timestamp — how drawings anchored in TIME find
+ * their x position.
+ *
+ * Returns a FRACTIONAL index on purpose. A drawing anchor rarely lands exactly
+ * on a bar open, and snapping it to the nearest bar would make a trend line
+ * visibly jump between candles as the user zooms. Interpolating between the
+ * two neighbouring bars keeps the line where it was drawn.
+ *
+ * Outside the loaded range it extrapolates using the bar spacing, so a line
+ * drawn on old candles still points the right way after scrolling past them.
+ */
+export function indexForTime(bars, time, barSeconds) {
+  if (!bars.length) return 0;
+  const t = Number(time);
+  if (t <= bars[0].time) {
+    return (t - bars[0].time) / barSeconds;
+  }
+  const lastIdx = bars.length - 1;
+  if (t >= bars[lastIdx].time) {
+    return lastIdx + (t - bars[lastIdx].time) / barSeconds;
+  }
+  // Binary search for the bar immediately at or before `t`.
+  let lo = 0;
+  let hi = lastIdx;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (bars[mid].time <= t) lo = mid; else hi = mid - 1;
+  }
+  const span = (bars[lo + 1]?.time ?? bars[lo].time + barSeconds) - bars[lo].time;
+  return lo + (span > 0 ? (t - bars[lo].time) / span : 0);
+}
+
+/** Inverse of indexForTime — a fractional bar index back to a timestamp. */
+export function timeForIndex(bars, index, barSeconds) {
+  if (!bars.length) return 0;
+  const i = Math.floor(index);
+  const frac = index - i;
+  if (i < 0) return bars[0].time + index * barSeconds;
+  if (i >= bars.length - 1) {
+    return bars[bars.length - 1].time + (index - (bars.length - 1)) * barSeconds;
+  }
+  const span = bars[i + 1].time - bars[i].time;
+  return bars[i].time + frac * span;
+}
