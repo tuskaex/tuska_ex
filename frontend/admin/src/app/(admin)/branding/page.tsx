@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { adminMediaSrc } from '@/lib/mediaSrc';
-import { Loader2, Upload, Save, Mail, Send, Link2, Globe } from 'lucide-react';
+import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
 import toast from 'react-hot-toast';
@@ -17,6 +17,7 @@ export default function BrandingPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [brand, setBrand] = useState({
@@ -76,6 +77,22 @@ export default function BrandingPage() {
       toast.error(e instanceof Error ? e.message : 'Could not save');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Only reachable on a row where uploading is refused, which is the only
+  // place a logo can be stranded: everywhere else, uploading a new one
+  // replaces it.
+  const clearLogo = async () => {
+    setClearing(true);
+    try {
+      await adminApi.delete('/branding/logo');
+      toast.success('Logo removed');
+      void fetchData();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Could not remove the logo');
+    } finally {
+      setClearing(false);
     }
   };
 
@@ -205,7 +222,9 @@ export default function BrandingPage() {
             <span className="text-accent">1.</span> Brand identity
           </h2>
           <p className="text-xxs text-text-tertiary mt-0.5">
-            Logo and display name. Shown on every page your clients see.
+            {profile?.brandable === false
+              ? 'Not used on this row — see above. Kept only so an old logo can be removed.'
+              : 'Logo and display name. Shown on every page your clients see.'}
           </p>
         </div>
         <div className="p-3 space-y-3">
@@ -229,22 +248,58 @@ export default function BrandingPage() {
                 className="hidden"
                 onChange={onPickFile}
               />
-              <button
-                type="button"
-                disabled={uploading || profile?.brandable === false}
-                onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
-              >
-                {uploading ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <Upload size={13} />
-                )}
-                Upload logo
-              </button>
-              <p className="text-xxs text-text-tertiary mt-1">
-                PNG, JPG or WebP. Up to 2 MB.
-              </p>
+              {/* On the platform's own row this button used to be plain
+                  `disabled`: clicking it did nothing and explained nothing,
+                  which is indistinguishable from an upload that is broken.
+                  Say why, and offer the one action that IS allowed here. */}
+              {profile?.brandable === false ? (
+                <>
+                  <p className="text-xxs text-text-secondary max-w-sm">
+                    Uploading is off here — a logo on this row is read by
+                    nothing. Set it on the tenant instead.
+                  </p>
+                  {profile?.logo_url && (
+                    <>
+                      <p className="text-xxs text-text-tertiary mt-1 max-w-sm">
+                        The mark shown is left over from before this row was
+                        closed to branding. It appears on no client-facing page.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={clearing}
+                        onClick={() => void clearLogo()}
+                        className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
+                      >
+                        {clearing ? (
+                          <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={13} />
+                        )}
+                        Remove logo
+                      </button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    onClick={() => fileRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Upload size={13} />
+                    )}
+                    Upload logo
+                  </button>
+                  <p className="text-xxs text-text-tertiary mt-1">
+                    PNG, JPG or WebP. Up to 2 MB.
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

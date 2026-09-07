@@ -75,6 +75,27 @@ async def upload_logo(
     return out
 
 
+@router.delete("/logo")
+async def delete_logo(
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Empty this row's logo.
+
+    Exists so the platform's own row can be emptied. Setting a brand there is
+    refused — nothing reads it — but rows carry logos uploaded before that
+    guard, and until now no screen could remove one.
+    """
+    out = await branding_service.clear_logo(admin=admin, db=db)
+    await write_audit_log(
+        db, admin.id, "clear_branding_logo", "branding", admin.id,
+        new_values={"logo_url": None}, ip_address=_ip(request),
+    )
+    await db.commit()
+    return out
+
+
 @router.put("/smtp")
 async def update_smtp(
     body: UpdateSmtpRequest,

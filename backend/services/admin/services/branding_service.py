@@ -327,6 +327,46 @@ async def upload_logo(
     return to_profile(target)
 
 
+async def clear_logo(
+    *, admin: User, db: AsyncSession, owner: User | None = None,
+) -> dict:
+    """Remove a row's logo. Allowed exactly where SETTING one is refused.
+
+    `_refuse_platform_row` blocks writing a brand to the platform's own row
+    because nothing can read it back — but it takes `setting=False` for this
+    case on purpose, and its docstring says why: rows branded before that guard
+    existed still carry a tenant's logo, and refusing every write would strand
+    that data with no way to remove it from any screen.
+
+    Nothing implemented the clear, so the stranding was real. A super-admin
+    looking at the platform brand page saw some earlier tenant's mark sitting
+    in the preview with an upload button that did nothing, and no way to empty
+    it. `update_branding` could already clear the name and the support fields;
+    this is the logo half, arriving late for the same reason the guard did.
+    """
+    assert_enabled()
+    assert_may_manage_branding(admin)
+    target = owner if owner is not None else admin
+    # setting=False: a clear is permitted on every row, the platform's included.
+    _refuse_platform_row(target, setting=False)
+
+    previous = target.logo_url
+    target.logo_url = None
+    await db.commit()
+
+    # Best-effort, same as the superseded-file cleanup in upload_logo: a stale
+    # file on disk is harmless, a request that 500s because unlink threw is not.
+    if previous:
+        try:
+            name = Path(previous).name
+            if name:
+                (UPLOAD_DIR / name).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning("Could not remove cleared logo %s: %s", previous, e)
+
+    return to_profile(target)
+
+
 async def update_smtp(
     *, admin: User, host: str | None, port: int | None, user: str | None,
     password: str | None, sender: str | None, tls: bool | None, db: AsyncSession,
