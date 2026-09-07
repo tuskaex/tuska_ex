@@ -124,6 +124,10 @@ services:
     environment:
       INTERNAL_API_URL: http://gateway:8000/api/v1
       TRADER_API_PROXY_TARGET: http://gateway:8000
+      # Tenant favicon (src/app/brand/icon/route.ts) resolves the brand for the
+      # Host it was served as. Branding lives on the ADMIN service, which the
+      # gateway proxy above does not reach, so it needs its own address.
+      ADMIN_API_INTERNAL_URL: http://admin-api:8001
       # Browser WebSocket connects directly to api subdomain
       NEXT_PUBLIC_WS_URL: wss://api.tuskaex.com
       # Host pair for the marketing/app domain split (read by src/middleware.ts)

@@ -209,8 +209,13 @@ services:
       # App route src/app/api/v1/[...path]/route.ts proxies using INTERNAL_API_URL or TRADER_API_PROXY_TARGET.
       INTERNAL_API_URL: http://gateway:8000/api/v1
       TRADER_API_PROXY_TARGET: http://gateway:8000
+      # Tenant favicon (src/app/brand/icon/route.ts) resolves the brand for the
+      # Host it was served as. Branding lives on the ADMIN service, which the
+      # gateway proxy above does not reach, so it needs its own address.
+      ADMIN_API_INTERNAL_URL: http://admin-api:8001
     depends_on:
       - gateway
+      - admin-api
 
   # Admin frontend — host 3011 if 3001 is already taken
   admin-frontend:

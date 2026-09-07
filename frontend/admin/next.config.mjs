@@ -94,7 +94,11 @@ const nextConfig = {
      * `/_next/static/*` chunks and `/_next/image` caching intact. */
     return [
       {
-        source: '/((?!_next/static/|_next/image).*)',
+        /* `brand/icon` is exempt for the same reason `_next/static` is: it is an
+         * image, not an HTML document, so none of the stale-chunk reasoning above
+         * applies to it. Without the exemption this rule overrides the route's own
+         * Cache-Control and the tab icon is re-fetched on every navigation. */
+        source: '/((?!_next/static/|_next/image|brand/icon).*)',
         headers: [
           { key: 'Cache-Control', value: 'no-store, must-revalidate' },
         ],
