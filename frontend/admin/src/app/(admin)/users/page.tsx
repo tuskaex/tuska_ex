@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { adminApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { usePermission } from '@/hooks/usePermission';
 import {
   ArrowDown,
   ArrowUp,
@@ -147,6 +148,7 @@ const COLUMNS: { key: SortKey; label: string; align?: 'right' }[] = [
 ];
 
 export default function UsersPage() {
+  const { can } = usePermission();
   const router = useRouter();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -673,20 +675,41 @@ export default function UsersPage() {
         const u = sorted.find(x => x.id === openActionsId);
         if (!u) return null;
         const closeMenu = () => { setOpenActionsId(null); setMenuPos(null); };
-        const menuItems = [
+        // Only offer what this admin may actually do. The backend refuses the
+        // rest anyway (`require_permission`), but offering an action it will
+        // refuse is how a sub-admin ended up typing an amount into Add Fund
+        // and learning on Confirm that they were never allowed to.
+        //
+        // `permission: undefined` means always shown — View Profile reads a
+        // page the admin already reached, so it needs no extra grant.
+        const menuItems = ([
           { label: 'View Profile', icon: Eye, action: () => { closeMenu(); router.push(`/users/${u.id}`); } },
-          { label: 'Add Fund', icon: Plus, action: () => openModal('add-fund', u) },
-          { label: 'Deduct Fund', icon: Minus, action: () => openModal('deduct-fund', u) },
-          { label: 'Give Credit', icon: CreditCard, action: () => openModal('give-credit', u) },
-          { label: 'Take Credit', icon: DollarSign, action: () => openModal('take-credit', u) },
-          { divider: true } as any,
-          { label: u.status?.toLowerCase() === 'banned' ? 'Unban User' : 'Ban User', icon: Ban, action: () => openModal(u.status?.toLowerCase() === 'banned' ? 'unban' : 'ban', u), danger: true },
-          { label: 'Kill Switch', icon: Power, action: () => openModal('kill-switch', u), danger: true },
-          { divider: true } as any,
-          { label: 'Login As User', icon: LogIn, action: () => handleLoginAs(u) },
-          { divider: true } as any,
-          { label: 'Delete User', icon: Trash2, action: () => openModal('delete', u), danger: true },
-        ];
+          { label: 'Add Fund', icon: Plus, permission: 'users.add_fund', action: () => openModal('add-fund', u) },
+          { label: 'Deduct Fund', icon: Minus, permission: 'users.deduct_fund', action: () => openModal('deduct-fund', u) },
+          { label: 'Give Credit', icon: CreditCard, permission: 'users.add_fund', action: () => openModal('give-credit', u) },
+          { label: 'Take Credit', icon: DollarSign, permission: 'users.deduct_fund', action: () => openModal('take-credit', u) },
+          { divider: true },
+          { label: u.status?.toLowerCase() === 'banned' ? 'Unban User' : 'Ban User', icon: Ban, permission: 'users.ban', action: () => openModal(u.status?.toLowerCase() === 'banned' ? 'unban' : 'ban', u), danger: true },
+          { label: 'Kill Switch', icon: Power, permission: 'users.kill_switch', action: () => openModal('kill-switch', u), danger: true },
+          { divider: true },
+          { label: 'Login As User', icon: LogIn, permission: 'users.impersonate', action: () => handleLoginAs(u) },
+          { divider: true },
+          { label: 'Delete User', icon: Trash2, permission: 'users.delete', action: () => openModal('delete', u), danger: true },
+        ] as any[])
+          .filter((it) => it.divider || !it.permission || can(it.permission))
+          // Dropping actions leaves dividers stranded — leading, trailing, or
+          // doubled where a whole group went. Built with a reduce rather than
+          // a positional filter: a filter tests the neighbours it had BEFORE
+          // the pass, so two dividers that become adjacent during it both
+          // survive. Appending only after a real item cannot get that wrong.
+          .reduce((acc: any[], it: any) => {
+            if (!it.divider) { acc.push(it); return acc; }
+            if (acc.length > 0 && !acc[acc.length - 1].divider) acc.push(it);
+            return acc;
+          }, [])
+          // The reduce cannot know an item never came, so a trailing divider
+          // is still possible.
+          .filter((it: any, i: number, arr: any[]) => !it.divider || i < arr.length - 1);
         // Portal the dropdown to document.body so `position: fixed` stays
         // viewport-relative even when an ancestor has a CSS `transform`
         // (e.g. the `animate-page-in` wrapper) which would otherwise become
