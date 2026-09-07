@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
 from packages.common.src.models import User
-from dependencies import require_permission
+from dependencies import require_permission, get_platform_admin
 from services import book_service
 
 router = APIRouter(prefix="/book", tags=["Book Management"])
@@ -30,10 +30,11 @@ class LPSettingsBody(BaseModel):
 
 @router.get("/stats")
 async def get_stats(
-    admin: User = Depends(require_permission("trades.view")),
+    # tenant_safe: get_book_stats counts the caller's pool only.
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await book_service.get_book_stats(db)
+    return await book_service.get_book_stats(db, scope_admin=admin)
 
 
 # ── Users ──
@@ -44,21 +45,25 @@ async def list_users(
     per_page: int = Query(20, ge=1, le=100),
     search: str | None = Query(None),
     book_type: str | None = Query(None),
-    admin: User = Depends(require_permission("trades.view")),
+    # tenant_safe: list_book_users applies the pool filter.
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await book_service.list_book_users(page, per_page, search, book_type, db)
+    return await book_service.list_book_users(page, per_page, search, book_type, db, scope_admin=admin)
 
 
 @router.put("/users/bulk-book-type")
 async def bulk_change(
     body: BulkChangeBookTypeBody,
     request: Request,
-    admin: User = Depends(require_permission("trades.manage")),
+    # tenant_safe: the UPDATE carries the pool criterion.
+    admin: User = Depends(require_permission("trades.manage", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     ip = request.headers.get("x-forwarded-for") or request.client.host if request.client else None
-    return await book_service.bulk_change_book_type(body.user_ids, body.book_type, admin.id, ip, db)
+    return await book_service.bulk_change_book_type(
+        body.user_ids, body.book_type, admin.id, ip, db, scope_admin=admin
+    )
 
 
 @router.put("/users/{user_id}/book-type")
@@ -66,18 +71,21 @@ async def change_book_type(
     user_id: str,
     body: ChangeBookTypeBody,
     request: Request,
-    admin: User = Depends(require_permission("trades.manage")),
+    # tenant_safe: change_user_book_type calls assert_user_in_scope.
+    admin: User = Depends(require_permission("trades.manage", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     ip = request.headers.get("x-forwarded-for") or request.client.host if request.client else None
-    return await book_service.change_user_book_type(user_id, body.book_type, admin.id, ip, db)
+    return await book_service.change_user_book_type(
+        user_id, body.book_type, admin.id, ip, db, scope_admin=admin
+    )
 
 
 # ── LP Settings ──
 
 @router.get("/lp-status")
 async def lp_status(
-    admin: User = Depends(require_permission("trades.view")),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await book_service.get_lp_status(db)
@@ -85,7 +93,7 @@ async def lp_status(
 
 @router.get("/lp-settings")
 async def lp_settings(
-    admin: User = Depends(require_permission("trades.manage")),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await book_service.get_lp_settings(db)
@@ -95,7 +103,7 @@ async def lp_settings(
 async def save_lp_settings(
     body: LPSettingsBody,
     request: Request,
-    admin: User = Depends(require_permission("trades.manage")),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     ip = request.headers.get("x-forwarded-for") or request.client.host if request.client else None
@@ -104,7 +112,7 @@ async def save_lp_settings(
 
 @router.post("/test-lp")
 async def test_lp(
-    admin: User = Depends(require_permission("trades.manage")),
+    admin: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await book_service.test_lp_connection(db)
@@ -116,17 +124,19 @@ async def test_lp(
 async def abook_positions(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    admin: User = Depends(require_permission("trades.view")),
+    # tenant_safe: get_abook_positions applies the pool filter.
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await book_service.get_abook_positions(page, per_page, db)
+    return await book_service.get_abook_positions(page, per_page, db, scope_admin=admin)
 
 
 @router.get("/a-book/history")
 async def abook_history(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    admin: User = Depends(require_permission("trades.view")),
+    # tenant_safe: get_abook_history applies the pool filter.
+    admin: User = Depends(require_permission("trades.view", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
-    return await book_service.get_abook_history(page, per_page, db)
+    return await book_service.get_abook_history(page, per_page, db, scope_admin=admin)
