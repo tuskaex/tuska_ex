@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
 import toast from 'react-hot-toast';
-import type { BrandingProfile } from '@/types';
+import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
 
 export default function BrandingPage() {
   const [profile, setProfile] = useState<BrandingProfile | null>(null);
@@ -19,6 +20,24 @@ export default function BrandingPage() {
   const [testing, setTesting] = useState(false);
   const [clearing, setClearing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+
+  // Every tenant, for the picker at the top of the page. A 403 means the
+  // caller is not the platform owner and has no tenants to choose between —
+  // the picker simply does not render.
+  const [tenants, setTenants] = useState<SubAdmin[]>([]);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await adminApi.get<PaginatedResponse<SubAdmin>>('/sub-admins', {
+          per_page: '100',
+        });
+        setTenants(res.items || []);
+      } catch {
+        setTenants([]);
+      }
+    })();
+  }, []);
 
   const [brand, setBrand] = useState({
     brand_name: '',
@@ -184,10 +203,48 @@ export default function BrandingPage() {
       <div>
         <h1 className="text-lg font-semibold text-text-primary">Platform brand</h1>
         <p className="text-xxs text-text-tertiary mt-0.5">
-          Your brand, your link, and optionally your own domain. Everyone in your
-          pool sees this instead of the platform&apos;s branding.
+          TuskaEx&apos;s own logo, link and support details — used on
+          tuskaex.com, admin.tuskaex.com and trade.tuskaex.com.
         </p>
       </div>
+
+      {/* THE point of this control: this page and a tenant's Branding panel are
+          two different rows that look identical, and the only thing naming which
+          one you are on used to be the heading. A brand meant for a tenant went
+          in here instead, so the platform's own panel wore their logo while the
+          tenant's live domain showed a letter tile — the exact confusion this
+          row was once closed to writes to prevent.
+
+          Choosing a tenant navigates to their page rather than retargeting this
+          form. One row per screen: the form can never be pointed somewhere the
+          heading does not say. */}
+      {tenants.length > 0 && (
+        <div className="bg-bg-secondary border border-border-primary rounded-md p-3">
+          <span className="block text-xxs uppercase tracking-wide text-text-tertiary mb-1.5">
+            Whose brand are you setting?
+          </span>
+          <select
+            value=""
+            onChange={(e) => {
+              if (e.target.value) router.push(`/sub-admins/${e.target.value}`);
+            }}
+            className={inputCls}
+          >
+            <option value="">TuskaEx — the platform itself (you are here)</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.full_name || t.email}
+                {t.domain?.custom_domain ? ` — ${t.domain.custom_domain}` : ''}
+                {t.has_brand === false ? ' · no brand set' : ''}
+              </option>
+            ))}
+          </select>
+          <p className="text-xxs text-text-tertiary mt-1">
+            Pick a tenant to open their own Branding panel. A logo set on this
+            page belongs to TuskaEx and is never used on a tenant&apos;s domain.
+          </p>
+        </div>
+      )}
 
       {/* This screen writes the CALLER's row. On a super-admin that is the
           PLATFORM's brand: `find_platform_brand` resolves it and
@@ -222,7 +279,8 @@ export default function BrandingPage() {
             <span className="text-accent">1.</span> Brand identity
           </h2>
           <p className="text-xxs text-text-tertiary mt-0.5">
-            Logo and display name. Shown on every page your clients see.
+            TuskaEx&apos;s own logo and display name — browser tab and sidebar on
+            the platform&apos;s hostnames. NOT used on any tenant domain.
           </p>
         </div>
         <div className="p-3 space-y-3">
