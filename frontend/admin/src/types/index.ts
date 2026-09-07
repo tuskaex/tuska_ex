@@ -324,6 +324,9 @@ export interface SubAdmin {
    *  Present because connect_domain refuses a super-admin and sends them to
    *  this screen — so this is the only place those records can be shown. */
   domain: SubAdminDomain;
+  /** False when neither a logo nor a brand name is set, so their site would
+   *  render a letter tile. Assigning a domain does not move a brand. */
+  has_brand?: boolean;
 }
 
 /** Mirrors branding_service.to_profile() — the tenant's brand as the platform

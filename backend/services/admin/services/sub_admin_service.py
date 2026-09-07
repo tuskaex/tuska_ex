@@ -97,6 +97,14 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         # only the DTO, so the records existed on the tenant's row and nothing
         # displayed them. Pure computation — no extra query per row.
         "domain": _b.domain_payload(row),
+        # Whether anything would render as this tenant's brand. A domain and a
+        # brand are separate rows of work and it is easy to finish the first
+        # and think you are done: the domain goes live, resolves correctly, and
+        # the site shows a letter tile because nobody uploaded a logo. Assigning
+        # a domain moves ONLY the domain — the previous holder's logo stays
+        # with the previous holder — which makes this especially easy to miss on
+        # a reassignment. The domain form reads this to say so up front.
+        "has_brand": bool(row.logo_url or row.brand_name),
     }
 
 

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import {
   Globe, Loader2, RefreshCw, Unplug, CheckCircle2, AlertTriangle, ExternalLink,
 } from 'lucide-react';
@@ -169,6 +170,28 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         {tenants.length === 0 && (
           <p className="text-xxs text-text-tertiary mt-1">
             No sub-admins yet. Create one first — a domain needs an owner.
+          </p>
+        )}
+        {/* A domain and a brand are two separate pieces of work, and finishing
+            the first looks like finishing the job: the domain resolves, the
+            site loads, and the tab shows a letter tile because nobody uploaded
+            a logo. Reassigning makes it worse — the domain moves, the previous
+            holder's logo does not — so the new owner can inherit a live domain
+            with no brand at all. Said here, before the button is pressed. */}
+        {selected && selected.has_brand === false && (
+          <p className="flex items-start gap-1.5 text-xxs text-warning mt-1.5">
+            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+            <span>
+              {selected.full_name || selected.email} has no logo or brand name,
+              so this domain would show a letter tile. Set one at{' '}
+              <Link
+                href={`/sub-admins/${selected.id}`}
+                className="text-accent hover:underline"
+              >
+                Sub-admins → {selected.full_name || selected.email} → Branding
+              </Link>
+              . Assigning a domain does not move a brand.
+            </span>
           </p>
         )}
       </div>
