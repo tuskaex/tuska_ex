@@ -31,9 +31,15 @@ function monogramIcon(letter: string): string {
  * a transparent placeholder — never TuskaEx's mark — and this fills in the real
  * logo once `useTenantBrand` has answered.
  *
- * Renders nothing. It mutates the existing <link rel="icon"> rather than adding
- * another, because browsers pick among multiple icon links unpredictably and a
- * leftover placeholder could win.
+ * Renders nothing. It REPLACES the <link rel="icon"> node rather than editing
+ * the existing one's href.
+ *
+ * That distinction is the whole fix. Chrome frequently ignores an in-place
+ * `href` change on a live icon link — the DOM updates, the tab does not — so
+ * the tenant's mark only appeared once the page was reloaded and the head was
+ * built fresh. Removing the node and appending a new one is what makes the
+ * browser re-read it. Every existing icon link is cleared first, because
+ * browsers pick among multiple unpredictably and the placeholder could win.
  */
 export default function TenantFavicon() {
   const brand = useTenantBrand();
@@ -47,25 +53,17 @@ export default function TenantFavicon() {
     const href = brand.logoUrl || monogramIcon(monogram(brand.brandName));
     if (!href) return;
 
-    const links = Array.from(
-      document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]'),
-    );
-    if (links.length === 0) {
-      const el = document.createElement('link');
-      el.rel = 'icon';
-      el.href = href;
-      document.head.appendChild(el);
-      return;
-    }
-    links.forEach((el, i) => {
-      if (i === 0) {
-        el.href = href;
-        el.removeAttribute('sizes');
-        el.removeAttribute('type');
-      } else {
-        el.remove();
-      }
-    });
+    // Drop every existing icon link — the server-rendered placeholder and any
+    // leftovers — then add one fresh node. Appending to an emptied head is
+    // what actually triggers the repaint.
+    document
+      .querySelectorAll<HTMLLinkElement>('link[rel~="icon"], link[rel="shortcut icon"]')
+      .forEach((el) => el.remove());
+
+    const el = document.createElement('link');
+    el.rel = 'icon';
+    el.href = href;
+    document.head.appendChild(el);
   }, [brand.isTenant, brand.loading, brand.logoUrl, brand.brandName]);
 
   return null;
