@@ -648,6 +648,23 @@ async def assign_domain(
         row.custom_domain_last_error = None
         row.custom_domain_provisioned_at = None
 
+    # Land the clears BEFORE the row below claims the domain.
+    #
+    # `custom_domain` carries a plain unique index, checked per row and not
+    # deferred to commit. Both writes sat in one unit of work, and SQLAlchemy
+    # orders a flush by mapper and primary key rather than by dependency — it
+    # even folds same-table updates into a single executemany. So whenever the
+    # new holder happened to be written first, Postgres saw two rows claiming
+    # the domain and raised ux_users_custom_domain, which surfaced as a bare
+    # "Internal server error" on the Assign button.
+    #
+    # Reassigning a domain is the normal case here — the form says outright
+    # that the current holder will lose it — so this is the path that has to
+    # work, not an edge case. One extra round trip inside the same transaction;
+    # nothing is committed yet, and a later failure still rolls the clears back.
+    if previous:
+        await db.flush()
+
     old = {
         "custom_domain": sub.custom_domain,
         "custom_domain_status": sub.custom_domain_status,
