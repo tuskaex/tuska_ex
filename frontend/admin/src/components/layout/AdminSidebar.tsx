@@ -206,26 +206,29 @@ export default function AdminSidebar({
             flash and no hydration mismatch — a JS swap would have both.
             The wordmark's type is near-black and was all but invisible against
             the dark sidebar. */}
-        {brand.isTenant ? (
-          /* A tenant's own back office. Their uploaded logo, or their name as
-             text if they have not uploaded one — and while the lookup is in
-             flight, nothing at all. Never TuskaEx's mark: this panel is sold
-             to them as theirs. The single <img> is deliberate; the two-file
-             light/dark swap below only exists because the BUNDLED wordmark is
-             near-black, and a tenant's logo is whatever they uploaded. */
+        {brand.logoUrl ? (
+          /* SOMEBODY uploaded a logo — a tenant on their own panel, or the
+             operator on Platform brand. Same rendering either way: one <img>,
+             no light/dark swap, because the two-file swap below exists only
+             because the BUNDLED wordmark is near-black and an uploaded logo is
+             whatever it is. */
           <Link href="/" className="flex items-center min-w-0 h-7">
-            {brand.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={brand.logoUrl}
-                alt={brand.brandName || ''}
-                className={cn('object-contain shrink-0', showLabels ? 'h-7 w-auto' : 'w-7 h-7 mx-auto')}
-              />
-            ) : showLabels && brand.brandName ? (
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={brand.logoUrl}
+              alt={brand.brandName || ''}
+              className={cn('object-contain shrink-0', showLabels ? 'h-7 w-auto' : 'w-7 h-7 mx-auto')}
+            />
+          </Link>
+        ) : brand.isTenant ? (
+          /* A tenant's own back office with no logo uploaded: their name as
+             text — and while the lookup is in flight, nothing at all. Never
+             TuskaEx's mark; this panel is sold to them as theirs. */
+          <Link href="/" className="flex items-center min-w-0 h-7">
+            {showLabels && brand.brandName ? (
               <span className="text-sm font-semibold text-text-primary truncate">{brand.brandName}</span>
             ) : brand.brandName ? (
-              /* Collapsed rail, no uploaded logo: their initial rather than a
-                 hole. Same rule as above — theirs, never TuskaEx's. */
+              /* Collapsed rail: their initial rather than a hole. */
               <span className="w-7 h-7 mx-auto shrink-0 rounded-md bg-accent/15 text-accent text-xs font-semibold flex items-center justify-center">
                 {monogram(brand.brandName)}
               </span>

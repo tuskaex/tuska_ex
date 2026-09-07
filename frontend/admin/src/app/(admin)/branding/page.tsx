@@ -80,9 +80,8 @@ export default function BrandingPage() {
     }
   };
 
-  // Only reachable on a row where uploading is refused, which is the only
-  // place a logo can be stranded: everywhere else, uploading a new one
-  // replaces it.
+  // Uploading replaces, so this exists to go back to no logo at all — on the
+  // platform row that means the mark compiled into the apps.
   const clearLogo = async () => {
     setClearing(true);
     try {
@@ -190,31 +189,32 @@ export default function BrandingPage() {
         </p>
       </div>
 
-      {/* This screen writes the CALLER's row. For a super-admin nothing can
-          read that row's brand — no domain may point at it and platform-pool
-          clients resolve to no branding — so the form used to accept a logo,
-          show it back, and change nothing anywhere. The domain section below
-          already refused a super-admin for the same reason; the identity form
-          did not, which is how three tenants' logos ended up here. */}
-      {profile?.brandable === false && (
-        <div className="bg-bg-secondary border border-accent/40 rounded-md p-3 text-xxs text-text-secondary">
-          <p className="text-text-primary font-medium">
-            A brand set here would not appear anywhere.
-          </p>
-          <p className="mt-1">
-            This is the platform&apos;s own row. TuskaEx&apos;s brand is
-            compiled into the apps, and no white-label domain can point here.
-          </p>
-          <p className="mt-1.5">
-            To brand a white-label, open{' '}
-            <Link href="/sub-admins" className="text-accent hover:underline">
-              Sub-admins
-            </Link>{' '}
-            → the tenant → <span className="text-text-primary">Branding</span>.
-            That is the row their domain resolves to.
-          </p>
-        </div>
-      )}
+      {/* This screen writes the CALLER's row. On a super-admin that is the
+          PLATFORM's brand: `find_platform_brand` resolves it and
+          /api/v1/public/branding/platform serves it, so a logo set here is what
+          tuskaex.com, admin.tuskaex.com and trade.tuskaex.com put in the
+          browser tab and in the sidebar.
+
+          It used to appear nowhere, which is why this page refused writes and
+          said so in a banner. A tenant's brand is still a different row —
+          theirs is resolved by domain — so the pointer below stays. */}
+      <div className="bg-bg-secondary border border-border-primary rounded-md p-3 text-xxs text-text-secondary">
+        <p className="text-text-primary font-medium">
+          This is TuskaEx&apos;s own brand.
+        </p>
+        <p className="mt-1">
+          A logo set here is used on the platform&apos;s own hostnames. Leave it
+          empty to keep the mark compiled into the apps.
+        </p>
+        <p className="mt-1.5">
+          To brand a white-label, open{' '}
+          <Link href="/sub-admins" className="text-accent hover:underline">
+            Sub-admins
+          </Link>{' '}
+          → the tenant → <span className="text-text-primary">Branding</span>.
+          That is the row their domain resolves to.
+        </p>
+      </div>
 
       <section className="bg-bg-secondary border border-border-primary rounded-md">
         <div className="px-3 py-2 border-b border-border-primary">
@@ -222,9 +222,7 @@ export default function BrandingPage() {
             <span className="text-accent">1.</span> Brand identity
           </h2>
           <p className="text-xxs text-text-tertiary mt-0.5">
-            {profile?.brandable === false
-              ? 'Not used on this row — see above. Kept only so an old logo can be removed.'
-              : 'Logo and display name. Shown on every page your clients see.'}
+            Logo and display name. Shown on every page your clients see.
           </p>
         </div>
         <div className="p-3 space-y-3">
@@ -248,58 +246,42 @@ export default function BrandingPage() {
                 className="hidden"
                 onChange={onPickFile}
               />
-              {/* On the platform's own row this button used to be plain
-                  `disabled`: clicking it did nothing and explained nothing,
-                  which is indistinguishable from an upload that is broken.
-                  Say why, and offer the one action that IS allowed here. */}
-              {profile?.brandable === false ? (
-                <>
-                  <p className="text-xxs text-text-secondary max-w-sm">
-                    Uploading is off here — a logo on this row is read by
-                    nothing. Set it on the tenant instead.
-                  </p>
-                  {profile?.logo_url && (
-                    <>
-                      <p className="text-xxs text-text-tertiary mt-1 max-w-sm">
-                        The mark shown is left over from before this row was
-                        closed to branding. It appears on no client-facing page.
-                      </p>
-                      <button
-                        type="button"
-                        disabled={clearing}
-                        onClick={() => void clearLogo()}
-                        className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
-                      >
-                        {clearing ? (
-                          <Loader2 size={13} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={13} />
-                        )}
-                        Remove logo
-                      </button>
-                    </>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
+                >
+                  {uploading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Upload size={13} />
                   )}
-                </>
-              ) : (
-                <>
+                  {profile?.logo_url ? 'Replace logo' : 'Upload logo'}
+                </button>
+                {/* Uploading replaces, so Remove exists only to go BACK to the
+                    mark compiled into the apps. Hidden when there is nothing
+                    to remove. */}
+                {profile?.logo_url && (
                   <button
                     type="button"
-                    disabled={uploading}
-                    onClick={() => fileRef.current?.click()}
+                    disabled={clearing}
+                    onClick={() => void clearLogo()}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
                   >
-                    {uploading ? (
+                    {clearing ? (
                       <Loader2 size={13} className="animate-spin" />
                     ) : (
-                      <Upload size={13} />
+                      <Trash2 size={13} />
                     )}
-                    Upload logo
+                    Remove
                   </button>
-                  <p className="text-xxs text-text-tertiary mt-1">
-                    PNG, JPG or WebP. Up to 2 MB.
-                  </p>
-                </>
-              )}
+                )}
+              </div>
+              <p className="text-xxs text-text-tertiary mt-1">
+                PNG, JPG or WebP. Up to 2 MB.
+              </p>
             </div>
           </div>
 
@@ -469,10 +451,17 @@ export default function BrandingPage() {
             Use STARTTLS (leave on unless the port is 465)
           </label>
 
+          {profile?.smtp_editable === false && (
+            <p className="text-xxs text-text-secondary">
+              Platform mail is configured through the environment, not here —
+              these fields apply to a tenant&apos;s row.
+            </p>
+          )}
+
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={saving || profile?.brandable === false}
+              disabled={saving || profile?.smtp_editable === false}
               onClick={() => void saveSmtp()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
             >
@@ -481,7 +470,9 @@ export default function BrandingPage() {
             </button>
             <button
               type="button"
-              disabled={testing || !profile?.smtp_configured || profile?.brandable === false}
+              disabled={
+                testing || !profile?.smtp_configured || profile?.smtp_editable === false
+              }
               onClick={() => void sendTest()}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary disabled:opacity-50"
             >

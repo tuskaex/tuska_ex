@@ -100,13 +100,50 @@ function monogramResponse(letter: string): NextResponse {
   });
 }
 
+/** The bytes behind a `logo_url`, or null to fall back.
+ *
+ * `logo_url` is a site-relative path (/api/v1/admin/branding/media/…) that a
+ * browser resolves against its own origin. Server side there is no origin to
+ * resolve against, so it is joined to the admin service directly — the same
+ * bytes, one hop fewer, and it works before nginx has a vhost for a domain
+ * still being connected.
+ */
+async function serveLogo(logoPath: string | null | undefined): Promise<NextResponse | null> {
+  const path = logoPath?.trim();
+  if (!path) return null;
+  try {
+    const res = await fetch(`${adminApiBase()}${path}`, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength === 0 || buf.byteLength > MAX_BYTES) return null;
+    return new NextResponse(buf, {
+      headers: {
+        'Content-Type': res.headers.get('content-type') || 'image/png',
+        'Cache-Control': CACHE,
+      },
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(): Promise<NextResponse> {
   const host = await servedHost();
+  const isTenant = isTenantHost(host);
 
-  // TuskaEx's own hosts: `src/app/icon.png` is already right. A relative
-  // Location keeps this correct behind the proxy, where the request URL this
-  // handler sees is the internal one, not the address the browser used.
-  if (!isTenantHost(host)) {
+  // TuskaEx's own host. The platform now has a settable brand of its own —
+  // Platform brand → Upload logo writes `find_platform_brand`'s row — so ask
+  // for it before falling back to the bundled `src/app/icon.png`.
+  if (!isTenant) {
+    const platform = await getJson(`${adminApiBase()}/api/v1/public/branding/platform`);
+    const served = await serveLogo(platform?.logo_url);
+    if (served) return served;
+    // A relative Location keeps this correct behind the proxy, where the
+    // request URL this handler sees is the internal one, not the address the
+    // browser used.
     return new NextResponse(null, {
       status: 307,
       headers: { Location: '/icon.png', 'Cache-Control': CACHE },
@@ -118,32 +155,8 @@ export async function GET(): Promise<NextResponse> {
     `${adminApiBase()}/api/v1/public/branding/by-domain?domain=${encodeURIComponent(domain)}`,
   );
 
-  const logoPath = brand?.logo_url?.trim();
-  if (logoPath) {
-    try {
-      // `logo_url` is a site-relative path (/api/v1/admin/branding/media/…)
-      // that a browser resolves against the tenant's own origin. Server side
-      // there is no origin to resolve against, so it is joined to the admin
-      // service directly — the same bytes, one hop fewer.
-      const res = await fetch(`${adminApiBase()}${logoPath}`, {
-        cache: 'no-store',
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-      });
-      if (res.ok) {
-        const buf = await res.arrayBuffer();
-        if (buf.byteLength > 0 && buf.byteLength <= MAX_BYTES) {
-          return new NextResponse(buf, {
-            headers: {
-              'Content-Type': res.headers.get('content-type') || 'image/png',
-              'Cache-Control': CACHE,
-            },
-          });
-        }
-      }
-    } catch {
-      // fall through to the monogram
-    }
-  }
+  const served = await serveLogo(brand?.logo_url);
+  if (served) return served;
 
   return monogramResponse(initial(brand?.brand_name, host));
 }

@@ -71,6 +71,27 @@ export function monogram(label: string): string {
 type PublicBranding = { brand_name: string | null; logo_url: string | null };
 
 /**
+ * TuskaEx's OWN brand, for TuskaEx's own hostnames.
+ *
+ * The platform used to have no settable brand at all — its mark was compiled
+ * in, and Platform brand → Upload logo refused the write. It no longer does,
+ * so the panel asks for it.
+ *
+ * Null means "nothing set", which is the normal case and tells the caller to
+ * use the bundled wordmark. It is never an error worth showing.
+ */
+export async function fetchPlatformBrand(): Promise<PublicBranding | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch('/api/v1/public/branding/platform', { credentials: 'omit' });
+    if (!res.ok) return null;
+    return (await res.json()) as PublicBranding;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Returns null on any failure. Callers fall back to a neutral shell, never to
  * TuskaEx's: "could not load the brand" must not be shown as "this is TuskaEx".
  */

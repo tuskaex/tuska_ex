@@ -414,6 +414,9 @@ export interface BrandingProfile {
    *  clients resolve to no branding at all, so the value is unreadable. The
    *  write path rejects it; this lets the form say so before they type. */
   brandable?: boolean;
+  /** False on the platform's own row — platform SMTP comes from the
+   *  environment. Separate from `brandable`, which is now always true. */
+  smtp_editable?: boolean;
 }
 
 export type CustomDomainStatus =

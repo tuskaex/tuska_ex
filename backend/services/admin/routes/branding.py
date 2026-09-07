@@ -269,6 +269,19 @@ async def branding_by_code(code: str, db: AsyncSession = Depends(get_db)):
     return branding_service.to_public_payload(owner)
 
 
+@public_router.get("/platform")
+async def branding_platform(db: AsyncSession = Depends(get_db)):
+    """TuskaEx's own brand, for its own hostnames.
+
+    Unauthenticated for the same reason as the two lookups below: the favicon
+    and the login screen are fetched before anyone has a session. Returns nulls
+    when nobody has set a platform brand, which the callers read as "use the
+    compiled-in assets".
+    """
+    owner = await branding_service.find_platform_brand(db)
+    return branding_service.to_public_payload(owner)
+
+
 @public_router.get("/by-domain")
 async def branding_by_domain(domain: str, db: AsyncSession = Depends(get_db)):
     owner = await branding_service.find_by_domain(domain, db)
