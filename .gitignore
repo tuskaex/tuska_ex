@@ -107,3 +107,17 @@ backend/services/market_data/
 # white-label work across. A separate product, ~72 MB, and this repo is
 # public — one `git add .` away from being published by accident.
 Stock4x_new/
+
+# The mobile app, split out into its own repo at tuskaex/tuskaex_app. It still
+# lives inside this working tree for convenience, but its own .git is what
+# tracks it — committing it here would leave a broken gitlink behind.
+/tuskaex_app/
+
+# Scratch backups kept from the Expo SDK 54 -> 57 upgrade, and one-off SQL run
+# by hand against the database. Local working notes, not part of the source.
+/app.before-easinit.bak.json
+/app.sdk54.bak.json
+/pkg.sdk54.bak.json
+/pkg-lock.sdk54.bak.json
+/delete.sql
+/preflight.sql
