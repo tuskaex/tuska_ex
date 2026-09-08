@@ -555,7 +555,7 @@ export default function MarketingNavbar({
                       which is the intent — a wrong-arch download that refuses to
                       launch on the trader's Mac is worse than a missing file. */}
                   <a
-                    href="/downloads/TuskaExTerminal-1.0.1-universal.dmg"
+                    href="/downloads/TuskaExTerminal-1.0.8-universal.dmg"
                     download="TuskaExTerminal.dmg"
                     role="menuitem"
                     onClick={() => setTerminalMenuOpen(false)}
@@ -753,7 +753,7 @@ export default function MarketingNavbar({
                 Terminal for Windows
               </a>
               <a
-                href="/downloads/TuskaExTerminal-1.0.1-universal.dmg"
+                href="/downloads/TuskaExTerminal-1.0.8-universal.dmg"
                 download="TuskaExTerminal.dmg"
                 onClick={() => setOpen(false)}
                 className={`inline-flex w-full items-center justify-center gap-1.5 px-5 py-2.5 rounded-full border text-sm font-semibold transition-colors ${c.outlineBtn}`}
