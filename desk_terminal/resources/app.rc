@@ -8,8 +8,8 @@
 1 VERSIONINFO
 // Keep in step with AppVersion in installer.iss and the version in the
 // download filename the website links to.
-FILEVERSION     1,0,7,0
-PRODUCTVERSION  1,0,7,0
+FILEVERSION     1,0,8,0
+PRODUCTVERSION  1,0,8,0
 FILEOS          0x4L
 FILETYPE        0x1L
 BEGIN
