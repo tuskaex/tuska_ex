@@ -67,6 +67,8 @@ set(SOURCES
     src/ui/OrderDialog.cpp
     src/ui/EditOrderDialog.cpp
     src/ui/WalletDialog.cpp
+    src/ui/SymbolSpecDialog.cpp
+    src/ui/ShareTradeDialog.cpp
     src/ui/MainWindow.cpp
 )
 
@@ -95,6 +97,8 @@ set(HEADERS
     src/ui/OrderDialog.h
     src/ui/EditOrderDialog.h
     src/ui/WalletDialog.h
+    src/ui/SymbolSpecDialog.h
+    src/ui/ShareTradeDialog.h
     src/ui/MainWindow.h
 )
 
@@ -107,7 +111,7 @@ set(HEADERS
 # package-macos.sh reads that back to name the .dmg. It had drifted to 1.0.1
 # while Windows shipped 1.0.6, so the Mac build carried the same code under a
 # five-releases-old version number — the exact bug this comment warns about.
-set(TX_VERSION "1.0.8")
+set(TX_VERSION "1.0.9")
 
 # App icon + version info. The .rc gives the EXE its icon (Explorer, desktop
 # shortcut, taskbar); the .qrc carries the same artwork for setWindowIcon();

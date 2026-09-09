@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Suspense } from 'react';
-import TenantFavicon from '@/components/TenantFavicon';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/components/providers/AuthProvider';
@@ -25,9 +24,11 @@ import { fontVariableClass } from '@/styles/fonts';
  * 2. Only the authenticated app needs the host-aware title, and those routes
  * are dynamic anyway, so the decision belongs in their layouts.
  *
- * Favicon comes from `src/app/icon.png` (App Router file convention). On a
- * tenant host <TenantFavicon /> swaps it for that tenant's own logo once the
- * brand resolves.
+ * Favicon comes from `/brand/icon`, which resolves the tenant from the Host
+ * header on the server and hands back `src/app/icon.png` on TuskaEx's own
+ * hosts. The URL is a constant, so this block stays STATIC and the per-host
+ * decision happens inside the route — which is the point, given the paragraph
+ * above about what `headers()` here costs.
  */
 export const metadata: Metadata = {
   title: {
@@ -35,6 +36,10 @@ export const metadata: Metadata = {
     default: 'TuskaEx',
   },
   description: 'TuskaEx — professional forex and CFD trading platform',
+  // Beats the `src/app/icon.png` file convention, which is one file served to
+  // every host and so put TuskaEx's mark in the browser tab of a broker's own
+  // client. See src/app/brand/icon/route.ts.
+  icons: { icon: '/brand/icon' },
 };
 
 export const viewport: Viewport = {
@@ -88,7 +93,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-full notranslate" translate="no" suppressHydrationWarning>
-        <TenantFavicon />
         <Suspense fallback={null}>
           <TopLoader />
         </Suspense>

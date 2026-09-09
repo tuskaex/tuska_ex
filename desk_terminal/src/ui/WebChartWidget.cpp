@@ -160,16 +160,44 @@ void WebChartWidget::positionOverlay() {
     // corrects that — the strip stretched its BUY/SELL tiles right across the
     // chart. Size it to its own sizeHint on every reposition instead.
     m_overlay->adjustSize();
-    // Parked in the chart's top toolbar band, in the empty run between the
-    // Indicators/undo controls and the icon cluster on the right. The inset has
-    // to clear BOTH that cluster and the price axis beyond it, which together
-    // occupy a little over 200px. Clamped so a narrow chart pushes the strip
-    // back toward the left toolbar rather than under the icons or off screen.
-    const int rightInset = 145;
-    const int x = qMax(56, width() - m_overlay->width() - rightInset);
-    // Flush with the top of the chart area — no inset, so the strip sits level
-    // with the toolbar row rather than hanging below it.
-    m_overlay->move(x, 0);
+    // Parked over the candles at the top right, BELOW the chart's own toolbar
+    // and below its legend.
+    //
+    // It used to sit in the toolbar band itself (y = 0), in the empty run
+    // between the Indicators controls and the icon cluster on the right. That
+    // run only exists on a wide chart. Narrow the pane — a 2x2 grid, or a
+    // window dragged in — and the placement clamped left until the strip
+    // covered the timeframe selector, which sits at roughly x=109 in that same
+    // row. The interval a chart is on is not something a trader can be asked
+    // to trade without, and no horizontal position is safe at every width.
+    //
+    // Dropping below the toolbar removes the width dependence, because the
+    // separation becomes vertical: the toolbar band is 38px tall and the
+    // legend's rows (OHLC, then Volume) end at 96px on a quarter pane, which
+    // is the tightest case. 104 clears both with a small gap.
+    //
+    // Measured against the running chart rather than guessed, at full width
+    // and in a 2x2 — at 104 every probe point under the strip is bare canvas,
+    // where the old placement sat squarely on the interval button.
+    // A strip the trader has dragged stays where they put it. The fraction is
+    // re-applied against the CURRENT pane size, so it holds its place through
+    // a resize or a grid change instead of drifting off the edge.
+    if (auto* t = qobject_cast<OrderTicket*>(m_overlay)) {
+        if (t->hasCustomPosition()) {
+            const int roomX = qMax(0, width()  - m_overlay->width());
+            const int roomY = qMax(0, height() - m_overlay->height());
+            m_overlay->move(int(t->positionRatio().x() * roomX),
+                            int(t->positionRatio().y() * roomY));
+            m_overlay->raise();
+            return;
+        }
+    }
+
+    const int toolbarAndLegend = 104;
+    // Only the price axis has to be cleared now, not the toolbar's icons too.
+    const int priceAxisW = 72;
+    const int x = qMax(58, width() - m_overlay->width() - priceAxisW);
+    m_overlay->move(x, toolbarAndLegend);
     m_overlay->raise();
 }
 

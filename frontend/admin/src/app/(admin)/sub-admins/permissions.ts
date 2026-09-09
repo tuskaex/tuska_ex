@@ -46,6 +46,8 @@ export interface PermissionGroup {
   /** Grantable, but the page still shows the PLATFORM's data, not this
    *  tenant's — the table behind it has no tenant column yet. */
   platformWide?: boolean;
+  /** Ticked when the create form opens. See DEFAULT_NEW_TENANT_PERMISSIONS. */
+  defaultForNewTenant?: boolean;
 }
 
 const NO_TENANT_COLUMN = 'Platform administration — not per-tenant yet';
@@ -54,24 +56,28 @@ const NO_TENANT_COLUMN = 'Platform administration — not per-tenant yet';
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'dashboard',
+    defaultForNewTenant: true,
     label: 'Dashboard',
     hint: 'Headline numbers for their own clients',
     perms: ['analytics.view'],
   },
   {
     key: 'users',
+    defaultForNewTenant: true,
     label: 'Users',
     hint: 'See and open client accounts in their pool',
     perms: ['users.view'],
   },
   {
     key: 'kyc',
+    defaultForNewTenant: true,
     label: 'Identity verification',
     hint: 'Approve or reject their clients’ documents',
     perms: ['kyc.view', 'kyc.manage'],
   },
   {
     key: 'trading',
+    defaultForNewTenant: true,
     label: 'Trades',
     hint: 'Their clients’ positions, orders and history',
     perms: ['trades.view', 'positions.view', 'orders.view'],
@@ -79,18 +85,23 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'book',
     label: 'Book Management',
-    hint: '⚠ Platform risk book — shows every tenant',
+    // `platformWide` dropped: book_service now applies the same scope_filter
+    // as the Users page, so A/B book stats, the user list and the A-book trade
+    // views all show the caller's own pool. Shares trades.view with the Trades
+    // row above, so the two tick together.
+    hint: 'A/B book for their own clients — granted with Trades',
     perms: ['trades.view'],
-    platformWide: true,
   },
   {
     key: 'deposits',
+    defaultForNewTenant: true,
     label: 'Deposits',
     hint: 'Review and approve their clients’ incoming funds',
     perms: ['deposits.view', 'deposits.approve', 'deposits.reject'],
   },
   {
     key: 'transactions',
+    defaultForNewTenant: true,
     label: 'Transactions',
     // Shares deposits.view with the Deposits page, so the two rows tick
     // together. Listed separately because the sidebar lists it separately and
@@ -100,6 +111,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     key: 'withdrawals',
+    defaultForNewTenant: true,
     label: 'Withdrawals',
     hint: 'Review and approve their clients’ payouts',
     perms: ['withdrawals.view', 'withdrawals.approve', 'withdrawals.reject'],
@@ -148,6 +160,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     key: 'ledger',
+    defaultForNewTenant: true,
     label: 'Audit logs',
     hint: 'Activity trail for their own clients',
     perms: ['audit_logs.view'],
@@ -155,9 +168,14 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: 'admin_audit',
     label: 'Admin audit logs',
-    hint: '⚠ Every admin’s actions, across all tenants',
-    perms: ['audit_logs.view'],
-    platformWide: true,
+    // Was ['audit_logs.view'] — the same string as the Audit logs row above,
+    // which is scoped to the tenant's own clients. Ticking one ticked both, so
+    // a tenant granted their own activity trail also got every admin's actions
+    // across every tenant. The route now refuses a sub_admin outright.
+    perms: [],
+    available: false,
+    unavailableReason:
+      'Platform administration — spans every admin, on every tenant',
   },
   {
     key: 'bonus',
@@ -175,6 +193,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     key: 'support',
+    defaultForNewTenant: true,
     label: 'Support',
     hint: 'Read and reply to their clients’ tickets',
     perms: ['tickets.view', 'tickets.reply', 'tickets.assign'],
@@ -196,6 +215,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
 
   {
     key: 'funds',
+    defaultForNewTenant: true,
     label: 'Adjust balances',
     hint: 'Add or deduct funds on their clients’ accounts',
     perms: ['users.add_fund', 'users.deduct_fund'],
@@ -203,6 +223,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
   },
   {
     key: 'risk',
+    defaultForNewTenant: true,
     label: 'Risk controls',
     hint: 'Ban, block trading, kill switch',
     perms: ['users.ban', 'users.block_trading', 'users.kill_switch'],
@@ -248,6 +269,44 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     sensitive: true,
   },
 ];
+
+/**
+ * What a new tenant starts with, before the operator changes anything.
+ *
+ * The create form used to open with NOTHING ticked, which sounds safe and was
+ * not. A white-label sub-admin exists to run their own brokerage; born with no
+ * permissions they cannot see a client, approve a deposit or credit an account,
+ * so every tenant needed roughly twenty boxes found and ticked by hand. Miss
+ * one and the failure surfaces days later as a button that opens a dialog and
+ * then answers "Permission 'users.add_fund' required" — which is exactly how
+ * one tenant spent a week unable to fund their own clients.
+ *
+ * So the default is "a broker who can run their own book", and the operator
+ * unticks rather than hunts. Fail-closed still holds where it earns its keep:
+ *
+ *   - Every `platformWide` row is OFF. Those pages show EVERY tenant's data,
+ *     and Config edits apply to every tenant including the platform's own
+ *     clients. That can only ever be a deliberate decision.
+ *   - `delete_users` is OFF. It is irreversible — the service wipes accounts,
+ *     deposits, withdrawals and history before the row.
+ *   - `place_orders`, `edit_trades`, `close_trades` are OFF. Dealing-desk
+ *     intervention in a client's positions is a separate kind of trust from
+ *     administering their account.
+ *   - `impersonate` is OFF. Signing in as a client is its own decision.
+ *
+ * `funds` and `risk` ARE on, and that is the deliberate part. Adjusting a
+ * balance and banning an account are what running a brokerage consists of, and
+ * `require_user_in_scope` already confines both to the tenant's own pool — a
+ * foreign client answers 404. Withholding them by default does not make the
+ * platform safer, it makes the tenant broken.
+ */
+export const DEFAULT_NEW_TENANT_PERMISSIONS: string[] = Array.from(
+  new Set(
+    PERMISSION_GROUPS.filter(
+      (g) => g.defaultForNewTenant && g.available !== false && !g.platformWide,
+    ).flatMap((g) => g.perms),
+  ),
+).sort();
 
 export function isGrantable(group: PermissionGroup): boolean {
   return group.available !== false && group.perms.length > 0;

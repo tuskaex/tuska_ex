@@ -17,6 +17,16 @@ interface Admin {
   email: string;
   full_name: string;
   role: string;
+  /**
+   * What this admin may do, straight from /auth/me. `['*']` for super_admin.
+   *
+   * `null` means NOT KNOWN YET — right after login, before /auth/me has
+   * answered. Callers must treat that as "don't hide anything": the backend is
+   * the authority and already refuses what it should, so a moment of showing a
+   * button that turns out to be refused is far better than hiding a button the
+   * admin is entitled to and leaving them stuck with no way to find it.
+   */
+  permissions: string[] | null;
 }
 
 interface MeResponse {
@@ -25,6 +35,8 @@ interface MeResponse {
   first_name: string | null;
   last_name: string | null;
   role: string;
+  employee_role: string | null;
+  permissions: string[];
 }
 
 interface AuthState {
@@ -57,6 +69,10 @@ export const useAuthStore = create<AuthState>()((set) => ({
       email,
       full_name: [res.first_name, res.last_name].filter(Boolean).join(' ') || email,
       role: res.role,
+      // /auth/login does not return permissions. Left unknown rather than
+      // guessed at; the layout's refreshAdminProfile() fills it in moments
+      // later, and until then nothing is hidden.
+      permissions: null,
     };
     set({ admin, isAuthenticated: true, isInitialized: true });
   },
@@ -79,6 +95,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
         email: me.email,
         full_name: [me.first_name, me.last_name].filter(Boolean).join(' ') || me.email,
         role: me.role,
+        permissions: Array.isArray(me.permissions) ? me.permissions : null,
       };
       set({ admin, isAuthenticated: true, isInitialized: true });
       return true;

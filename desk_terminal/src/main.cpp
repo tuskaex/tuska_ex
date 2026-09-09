@@ -74,6 +74,11 @@ int main(int argc, char* argv[]) {
     }
 
     MainWindow w(cfg);
-    w.show();
+    // Maximized, always. A watchlist, a chart and a trade blotter side by side
+    // have nothing to gain from a small window, and every trader was reaching
+    // for the maximize button on every launch. MainWindow has already restored
+    // the saved geometry, which stays as the size the window returns to when
+    // it is un-maximized.
+    w.showMaximized();
     return app.exec();
 }

@@ -1,6 +1,7 @@
 """Admin Book Management Service — A-Book / B-Book user assignment, LP settings, stats."""
 import json
 import os
+import uuid
 from datetime import datetime
 
 import redis.asyncio as aioredis
@@ -12,7 +13,7 @@ from packages.common.src.config import get_settings
 from packages.common.src.models import (
     User, TradingAccount, Position, TradeHistory, SystemSetting,
 )
-from dependencies import write_audit_log
+from dependencies import write_audit_log, assert_user_in_scope
 
 _redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
 _redis = aioredis.from_url(_redis_url, decode_responses=True)
@@ -25,30 +26,57 @@ LP_QUEUE_KEY = "lp:incoming_ticks"         # queue drained by market-data servic
 LP_FRESH_WINDOW_MS = 10_000                # consider LP "connected" for 10s after last push
 
 
-async def get_book_stats(db: AsyncSession) -> dict:
-    """Return A/B book user and trade counts."""
+def _user_scope(scope_admin):
+    """Criterion narrowing a `users` query to the caller's pool, or None.
+
+    Every read and write in this module is keyed by user, so each one needs the
+    same pool restriction the Users page has always applied: a sub_admin sees
+    their own clients, platform staff see the platform's own book.
+
+    None means "no scoping at all", which is what an internal caller with no
+    admin identity passes. It is not a role decision — a route must always pass
+    the calling admin.
+    """
+    if scope_admin is None:
+        return None
+    from dependencies import scope_filter
+    return scope_filter(scope_admin)
+
+
+def _scoped(query, scope_admin):
+    """`query` restricted to the caller's pool. Assumes `users` is in the FROM."""
+    crit = _user_scope(scope_admin)
+    return query if crit is None else query.where(crit)
+
+
+async def get_book_stats(db: AsyncSession, scope_admin=None) -> dict:
+    """Return A/B book user and trade counts for the caller's pool."""
     _admin_roles = ("admin", "super_admin")
     # User counts — include all non-admin roles, exclude demo
-    a_users = (await db.execute(
-        select(func.count(User.id)).where(User.book_type == "A", User.role.notin_(_admin_roles), User.is_demo == False)
-    )).scalar() or 0
-    b_users = (await db.execute(
-        select(func.count(User.id)).where(User.book_type == "B", User.role.notin_(_admin_roles), User.is_demo == False)
-    )).scalar() or 0
+    a_users = (await db.execute(_scoped(
+        select(func.count(User.id)).where(User.book_type == "A", User.role.notin_(_admin_roles), User.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
+    b_users = (await db.execute(_scoped(
+        select(func.count(User.id)).where(User.book_type == "B", User.role.notin_(_admin_roles), User.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
 
     # Trade counts (open positions)
-    a_trades = (await db.execute(
+    a_trades = (await db.execute(_scoped(
         select(func.count(Position.id))
         .join(TradingAccount, Position.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False)
-    )).scalar() or 0
-    b_trades = (await db.execute(
+        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
+    b_trades = (await db.execute(_scoped(
         select(func.count(Position.id))
         .join(TradingAccount, Position.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(Position.status == "open", User.book_type == "B", TradingAccount.is_demo == False)
-    )).scalar() or 0
+        .where(Position.status == "open", User.book_type == "B", TradingAccount.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
 
     return {
         "a_book_users": a_users,
@@ -60,11 +88,20 @@ async def get_book_stats(db: AsyncSession) -> dict:
 
 async def list_book_users(
     page: int, per_page: int, search: str | None, book_filter: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
-    """Paginated user list with book type, account count, trade count."""
+    """Paginated user list with book type, account count, trade count.
+
+    Scoped to the caller's pool. This list carries names and email addresses,
+    and without the restriction a tenant granted `trades.view` could read every
+    other broker's client book from the Book Management page.
+    """
     _admin_roles = ("admin", "super_admin")
-    base = select(User).where(User.role.notin_(_admin_roles), User.is_demo == False)
-    count_base = select(func.count(User.id)).where(User.role.notin_(_admin_roles), User.is_demo == False)
+    base = _scoped(select(User).where(User.role.notin_(_admin_roles), User.is_demo == False), scope_admin)
+    count_base = _scoped(
+        select(func.count(User.id)).where(User.role.notin_(_admin_roles), User.is_demo == False),
+        scope_admin,
+    )
 
     if book_filter and book_filter in ("A", "B"):
         base = base.where(User.book_type == book_filter)
@@ -117,12 +154,25 @@ async def list_book_users(
 
 async def change_user_book_type(
     user_id: str, book_type: str, admin_id, ip: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
-    """Change a single user's book type."""
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    """Change a single user's book type.
+
+    Which book a client sits on decides whether the house is counterparty to
+    their trades, so this is scoped like any other write against a client row:
+    a tenant may move their own clients and nobody else's.
+    """
+    if scope_admin is not None:
+        try:
+            uid = uuid.UUID(str(user_id))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=404, detail="User not found")
+        user = await assert_user_in_scope(scope_admin, uid, db)
+    else:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
 
     old = user.book_type or "B"
     user.book_type = book_type
@@ -144,24 +194,42 @@ async def change_user_book_type(
 
 async def bulk_change_book_type(
     user_ids: list[str], book_type: str, admin_id, ip: str | None, db: AsyncSession,
+    scope_admin=None,
 ) -> dict:
-    """Bulk change book type for multiple users."""
-    await db.execute(
-        update(User).where(User.id.in_(user_ids)).values(book_type=book_type)
-    )
+    """Bulk change book type for several users, skipping any outside the pool.
+
+    The ids arrive in the request body, so a tenant could name any user on the
+    platform. Rather than refusing the whole batch on one foreign id — which
+    would confirm that id exists — the UPDATE carries the pool criterion and
+    simply matches no row outside it.
+
+    `modified_count` is therefore the rowcount the database reports, not the
+    length of the request. A caller that named rows it does not own gets a
+    smaller number, which is the honest answer.
+    """
+    stmt = update(User).where(User.id.in_(user_ids))
+    crit = _user_scope(scope_admin)
+    if crit is not None:
+        stmt = stmt.where(crit)
+    if getattr(scope_admin, "role", None) == "sub_admin":
+        # Same rule as assert_user_in_scope: a tenant operator moves clients,
+        # never staff — including a staff row that happens to carry their id.
+        stmt = stmt.where(User.role == "user")
+    result = await db.execute(stmt.values(book_type=book_type))
+    modified = int(result.rowcount or 0)
     await db.commit()
 
     try:
         await write_audit_log(
             db, admin_id, "BULK_BOOK_TYPE_CHANGED", "user", None,
-            new_values={"user_count": len(user_ids), "book_type": book_type},
+            new_values={"user_count": modified, "book_type": book_type},
             ip_address=ip,
         )
         await db.commit()
     except Exception:
         await db.rollback()
 
-    return {"modified_count": len(user_ids), "book_type": book_type}
+    return {"modified_count": modified, "book_type": book_type}
 
 
 async def get_lp_status(db: AsyncSession) -> dict:
@@ -287,20 +355,22 @@ async def test_lp_connection(db: AsyncSession) -> dict:
     }
 
 
-async def get_abook_positions(page: int, per_page: int, db: AsyncSession) -> dict:
-    """Open positions for A-book users."""
-    base = (
+async def get_abook_positions(page: int, per_page: int, db: AsyncSession, scope_admin=None) -> dict:
+    """Open positions for A-book users in the caller's pool."""
+    base = _scoped(
         select(Position)
         .join(TradingAccount, Position.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False)
+        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False),
+        scope_admin,
     )
-    total = (await db.execute(
+    total = (await db.execute(_scoped(
         select(func.count(Position.id))
         .join(TradingAccount, Position.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False)
-    )).scalar() or 0
+        .where(Position.status == "open", User.book_type == "A", TradingAccount.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
 
     result = await db.execute(
         base.order_by(Position.created_at.desc())
@@ -330,20 +400,22 @@ async def get_abook_positions(page: int, per_page: int, db: AsyncSession) -> dic
     return {"positions": out, "total": total, "page": page, "pages": max(1, (total + per_page - 1) // per_page)}
 
 
-async def get_abook_history(page: int, per_page: int, db: AsyncSession) -> dict:
-    """Closed trades for A-book users."""
-    base = (
+async def get_abook_history(page: int, per_page: int, db: AsyncSession, scope_admin=None) -> dict:
+    """Closed trades for A-book users in the caller's pool."""
+    base = _scoped(
         select(TradeHistory)
         .join(TradingAccount, TradeHistory.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(User.book_type == "A", TradingAccount.is_demo == False)
+        .where(User.book_type == "A", TradingAccount.is_demo == False),
+        scope_admin,
     )
-    total = (await db.execute(
+    total = (await db.execute(_scoped(
         select(func.count(TradeHistory.id))
         .join(TradingAccount, TradeHistory.account_id == TradingAccount.id)
         .join(User, TradingAccount.user_id == User.id)
-        .where(User.book_type == "A", TradingAccount.is_demo == False)
-    )).scalar() or 0
+        .where(User.book_type == "A", TradingAccount.is_demo == False),
+        scope_admin,
+    ))).scalar() or 0
 
     result = await db.execute(
         base.order_by(TradeHistory.closed_at.desc())

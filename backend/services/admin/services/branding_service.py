@@ -21,7 +21,7 @@ from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src import tenant_hosts as _tenant_hosts
@@ -153,17 +153,23 @@ def _refuse_platform_row(target: User, *, setting: bool = True) -> None:
     before this guard existed still carry a tenant's name and logo, and
     refusing every write would strand that data with no way to remove it from
     any screen.
+    HISTORY, and why this no longer refuses anything: the reasoning above was
+    correct for as long as nothing read the platform row. `find_platform_brand`
+    now does, and `/api/v1/public/branding/platform` serves it, so a logo set
+    here appears in the browser tab on tuskaex.com, admin.tuskaex.com and
+    trade.tuskaex.com and in the admin sidebar. The row means something, so
+    writing to it is allowed.
+
+    What has NOT changed is the domain rule. `connect_domain` still refuses a
+    super-admin outright, and for the reason this guard was originally written:
+    a custom domain on the platform row sends every signup on it into the
+    platform pool while rendering perfectly, and the tenant's Users page stays
+    empty. That check lives in connect_domain and is untouched.
+
+    Kept as a no-op rather than deleted so the three call sites keep reading as
+    a deliberate decision, and so this note stays next to the thing it explains.
     """
-    if setting and target.role == "super_admin":
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "This is the platform's own row and nothing reads a brand from "
-                "it — the TuskaEx brand is compiled into the apps. To brand a "
-                "white-label, set it on the tenant: Sub-admins → the tenant → "
-                "Branding. (Clearing this row is allowed.)"
-            ),
-        )
+    return
 
 
 def load_brand_owner_sync(row: User | None) -> User:
@@ -199,10 +205,18 @@ async def get_my_branding(*, admin: User, db: AsyncSession) -> dict:
     assert_enabled()
     assert_may_manage_branding(admin)
     out = to_profile(admin)
-    # Whether a brand written here would ever be rendered. False for a
-    # super-admin — see _refuse_platform_row. Sent so the form can point at the
-    # tenant flow instead of accepting input the write path will now reject.
-    out["brandable"] = admin.role != "super_admin"
+    # Whether a brand written here would ever be rendered. True everywhere now:
+    # a tenant's row is resolved by domain, and the platform's own row by
+    # `find_platform_brand`, which the public /branding/platform endpoint and
+    # both apps' /brand/icon routes read. Kept in the payload because the form
+    # still branches on it and a future row type might not be brandable.
+    out["brandable"] = True
+    # SMTP is NOT covered by that. `update_smtp` still refuses a super_admin
+    # row, and for a reason that has not changed: the PLATFORM's own mail
+    # account belongs in the environment, where no admin screen can edit it.
+    # Its own flag, because the form used to disable those buttons on
+    # `brandable` and would otherwise have started offering a guaranteed 400.
+    out["smtp_editable"] = admin.role != "super_admin"
     code = await ensure_public_code(admin, db)
     out["public_code"] = code
     out["referral_link"] = referral_link(code)
@@ -217,6 +231,41 @@ async def get_my_branding(*, admin: User, db: AsyncSession) -> dict:
     # a 400.
     out["domain"]["connectable"] = admin.role != "super_admin"
     return out
+
+
+async def find_platform_brand(db: AsyncSession) -> User | None:
+    """The row carrying TuskaEx's own brand, or None to use the bundled assets.
+
+    There is more than one super_admin on a real installation, and nothing marks
+    one of them as "the platform". Rather than invent a flag, this picks the row
+    that actually carries a brand — a logo or a name — and, if several do, the
+    most recently updated one. Whoever set it last wins, which is what an
+    operator means by setting it.
+
+    None is a normal answer, not a failure: it means nobody has uploaded
+    anything and the apps should use their compiled-in TuskaEx assets.
+    """
+    rows = (await db.execute(
+        select(User).where(
+            User.role == "super_admin",
+            or_(User.logo_url.isnot(None), User.brand_name.isnot(None)),
+        )
+    )).scalars().all()
+    if not rows:
+        return None
+    def _touched(row: User) -> float:
+        # Coerced to a float rather than compared as datetimes: a naive value
+        # and an aware one raise TypeError when compared, and this must never
+        # be the thing that 500s a favicon request.
+        d = row.updated_at or row.created_at
+        try:
+            return d.timestamp() if d is not None else 0.0
+        except (AttributeError, OSError, ValueError):
+            return 0.0
+
+    # Prefer a row with an actual logo; then the most recently touched.
+    rows.sort(key=lambda r: (r.logo_url is not None, _touched(r)), reverse=True)
+    return rows[0]
 
 
 async def resolve_branding_owner(user: User, db: AsyncSession) -> User | None:
@@ -323,6 +372,46 @@ async def upload_logo(
                 (UPLOAD_DIR / old).unlink(missing_ok=True)
         except OSError as e:
             logger.warning("Could not remove superseded logo %s: %s", previous, e)
+
+    return to_profile(target)
+
+
+async def clear_logo(
+    *, admin: User, db: AsyncSession, owner: User | None = None,
+) -> dict:
+    """Remove a row's logo. Allowed exactly where SETTING one is refused.
+
+    `_refuse_platform_row` blocks writing a brand to the platform's own row
+    because nothing can read it back — but it takes `setting=False` for this
+    case on purpose, and its docstring says why: rows branded before that guard
+    existed still carry a tenant's logo, and refusing every write would strand
+    that data with no way to remove it from any screen.
+
+    Nothing implemented the clear, so the stranding was real. A super-admin
+    looking at the platform brand page saw some earlier tenant's mark sitting
+    in the preview with an upload button that did nothing, and no way to empty
+    it. `update_branding` could already clear the name and the support fields;
+    this is the logo half, arriving late for the same reason the guard did.
+    """
+    assert_enabled()
+    assert_may_manage_branding(admin)
+    target = owner if owner is not None else admin
+    # setting=False: a clear is permitted on every row, the platform's included.
+    _refuse_platform_row(target, setting=False)
+
+    previous = target.logo_url
+    target.logo_url = None
+    await db.commit()
+
+    # Best-effort, same as the superseded-file cleanup in upload_logo: a stale
+    # file on disk is harmless, a request that 500s because unlink threw is not.
+    if previous:
+        try:
+            name = Path(previous).name
+            if name:
+                (UPLOAD_DIR / name).unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning("Could not remove cleared logo %s: %s", previous, e)
 
     return to_profile(target)
 

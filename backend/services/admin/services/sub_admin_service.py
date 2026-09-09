@@ -97,6 +97,14 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         # only the DTO, so the records existed on the tenant's row and nothing
         # displayed them. Pure computation — no extra query per row.
         "domain": _b.domain_payload(row),
+        # Whether anything would render as this tenant's brand. A domain and a
+        # brand are separate rows of work and it is easy to finish the first
+        # and think you are done: the domain goes live, resolves correctly, and
+        # the site shows a letter tile because nobody uploaded a logo. Assigning
+        # a domain moves ONLY the domain — the previous holder's logo stays
+        # with the previous holder — which makes this especially easy to miss on
+        # a reassignment. The domain form reads this to say so up front.
+        "has_brand": bool(row.logo_url or row.brand_name),
     }
 
 
@@ -647,6 +655,23 @@ async def assign_domain(
         row.custom_domain_status = None
         row.custom_domain_last_error = None
         row.custom_domain_provisioned_at = None
+
+    # Land the clears BEFORE the row below claims the domain.
+    #
+    # `custom_domain` carries a plain unique index, checked per row and not
+    # deferred to commit. Both writes sat in one unit of work, and SQLAlchemy
+    # orders a flush by mapper and primary key rather than by dependency — it
+    # even folds same-table updates into a single executemany. So whenever the
+    # new holder happened to be written first, Postgres saw two rows claiming
+    # the domain and raised ux_users_custom_domain, which surfaced as a bare
+    # "Internal server error" on the Assign button.
+    #
+    # Reassigning a domain is the normal case here — the form says outright
+    # that the current holder will lose it — so this is the path that has to
+    # work, not an edge case. One extra round trip inside the same transaction;
+    # nothing is committed yet, and a later failure still rolls the clears back.
+    if previous:
+        await db.flush()
 
     old = {
         "custom_domain": sub.custom_domain,

@@ -10,7 +10,13 @@ import {
 import toast from 'react-hot-toast';
 import type { PaginatedResponse, SubAdmin } from '@/types';
 import RowMenu from './RowMenu';
-import { PERMISSION_GROUPS, groupChecked, toggleGroup, isGrantable } from './permissions';
+import {
+  PERMISSION_GROUPS,
+  DEFAULT_NEW_TENANT_PERMISSIONS,
+  groupChecked,
+  toggleGroup,
+  isGrantable,
+} from './permissions';
 
 const EMPTY_FORM = {
   email: '',
@@ -31,7 +37,10 @@ export default function SubAdminsPage() {
   const [forbidden, setForbidden] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
-  const [checked, setChecked] = useState<string[]>([]);
+  // Opens pre-ticked with what a broker needs to run their own clients. An
+  // empty form read as the safe default and was not — see
+  // DEFAULT_NEW_TENANT_PERMISSIONS for why.
+  const [checked, setChecked] = useState<string[]>([...DEFAULT_NEW_TENANT_PERMISSIONS]);
   const [submitting, setSubmitting] = useState(false);
 
   const perPage = 20;
@@ -66,7 +75,7 @@ export default function SubAdminsPage() {
 
   const openCreate = () => {
     setForm({ ...EMPTY_FORM });
-    setChecked([]);
+    setChecked([...DEFAULT_NEW_TENANT_PERMISSIONS]);
     setShowModal(true);
   };
 
@@ -312,9 +321,29 @@ export default function SubAdminsPage() {
               </div>
 
               <div>
-                <span className="block text-xxs text-text-tertiary mb-1.5">
-                  Permissions — a sub-admin gets exactly what is ticked here
-                </span>
+                <div className="flex items-start justify-between gap-3 mb-1.5">
+                  <span className="block text-xxs text-text-tertiary">
+                    Permissions — a sub-admin gets exactly what is ticked here.
+                    Pre-ticked is what a broker needs to run their own clients;
+                    platform-wide sections and irreversible actions are left off.
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setChecked([...DEFAULT_NEW_TENANT_PERMISSIONS])}
+                      className="text-xxs text-text-secondary hover:text-text-primary underline"
+                    >
+                      Restore defaults
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChecked([])}
+                      className="text-xxs text-text-secondary hover:text-text-primary underline"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                </div>
                 <div className="border border-border-primary rounded-md p-2.5 space-y-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
                     {PERMISSION_GROUPS.filter((g) => !g.sensitive).map((g) => (

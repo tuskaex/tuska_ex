@@ -1,11 +1,27 @@
-"""Paginated admin-action audit (bonus changes, fund grants, impersonations, …)."""
+"""Paginated admin-action audit (bonus changes, fund grants, impersonations, …).
+
+PLATFORM-ONLY. This log spans every admin on the installation — the platform
+owner's own fund grants and impersonations, and every other tenant's — and it
+has no tenant column to filter on.
+
+It is gated by `get_platform_admin` as well as the permission, which is the
+same pair Employees and Settings use. Without it, `audit_logs.view` was enough:
+that string is shared with `/user-audit-logs`, which IS scoped to the caller's
+own clients, so granting a tenant "Audit logs" for their own pool silently
+handed them the whole platform's admin history as well. Two different
+capabilities behind one permission string, and only one of them was scoped.
+
+The string itself is left alone rather than split, because `support` and
+`risk_manager` — internal staff, not tenants — hold `audit_logs.view` for this
+page and would have lost it.
+"""
 import uuid
 from datetime import date
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from dependencies import require_permission
+from dependencies import require_permission, get_platform_admin
 from packages.common.src.database import get_db
 from packages.common.src.models import User
 from services import admin_audit_log_service
@@ -23,6 +39,9 @@ async def list_admin_audit_logs(
     date_from: date | None = Query(None),
     date_to: date | None = Query(None),
     admin: User = Depends(require_permission("audit_logs.view")),
+    # Refuses a sub_admin outright. See the module docstring: the permission
+    # alone is not enough here, because it is shared with a scoped route.
+    _platform: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     return await admin_audit_log_service.list_admin_audit_logs(
@@ -34,6 +53,7 @@ async def list_admin_audit_logs(
 @router.get("/actions")
 async def list_distinct_actions(
     admin: User = Depends(require_permission("audit_logs.view")),
+    _platform: User = Depends(get_platform_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Returns the set of distinct `action` values present in the log so

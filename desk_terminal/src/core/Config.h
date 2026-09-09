@@ -35,6 +35,34 @@ public:
     int         chartCount = 1;   // 1..4
     QStringList chartSymbols;
 
+    // Market Watch columns the trader has switched OFF, by key: "spread",
+    // "high", "low", "time". Empty — the default — means every column is
+    // present. The panel simply opens narrow enough to show Symbol, Bid and
+    // Ask, and the rest are reached by scrolling it sideways rather than by
+    // being absent. Hiding one for good is still available from its right-click
+    // menu, which is what this list records.
+    QStringList watchHiddenColumns;
+
+    // Instruments starred in Market Watch. Kept per trader rather than derived
+    // from anything: a favourite is a statement about what someone watches, and
+    // the only place that can be recorded is here.
+    QStringList watchFavourites;
+
+    // Where the trader dragged the one-click strip on the chart, as a fraction
+    // of the chart area (0..1 of the room the strip can move in). A fraction
+    // rather than pixels so the strip keeps its place when the pane is resized
+    // or the grid changes; -1 means untouched, and the strip sits where the
+    // chart's own layout puts it.
+    double ticketPosX = -1.0;
+    double ticketPosY = -1.0;
+
+    // The main window's geometry AND its maximized state, from
+    // QWidget::saveGeometry(), base64'd so it survives a JSON round trip.
+    // Empty means first run, which opens maximized: a trading screen with a
+    // watchlist, a chart and a blotter has nothing to gain from a small window,
+    // and every trader was maximizing it by hand on every launch.
+    QString windowGeometry;
+
     // Legacy bot auth (still supported for a pasted API key).
     QString apiKey;
     QString apiSecret;

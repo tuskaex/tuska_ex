@@ -243,9 +243,21 @@ export default function SubAdminDetailPage() {
               </label>
             ))}
 
-            <p className="text-xxs text-text-tertiary pt-2 mt-1 border-t border-border-primary">
-              Moves money or changes a client account
-            </p>
+          </div>
+
+          {/* Out of the scroll box on purpose.
+              These rows used to sit at the BOTTOM of the 256px scrolling list
+              above, below ~20 other sections. An operator who never scrolled
+              that far had no way to know they existed: a tenant was granted
+              "Users", their menu opened, and Add Fund then answered
+              "Permission 'users.add_fund' required" — the grant they needed
+              was a scroll away with nothing pointing at it. A section that
+              hands over the ability to move client money should not be
+              discoverable only by accident. */}
+          <p className="text-xxs text-text-tertiary mt-3 mb-1">
+            Moves money or changes a client account
+          </p>
+          <div className="border border-border-primary rounded-md p-2 space-y-1">
             {PERMISSION_GROUPS.filter((g) => g.sensitive).map((g) => (
               <label
                 key={g.key}

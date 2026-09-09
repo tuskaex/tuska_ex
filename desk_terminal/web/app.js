@@ -83,6 +83,95 @@
 
   let widget = null;
   let datafeed = null;
+  let bridgeRef = null;
+
+  /*
+   * Save / load adapter for the charting library.
+   *
+   * This is what makes "Save chart", indicator templates and drawing templates
+   * real: without an adapter the library has nowhere to keep any of them, so
+   * the terminal disabled the header button rather than show one that could
+   * not work — and a trader's fibs and indicators died with the window.
+   *
+   * Storage is the C++ side (sc.*), which keeps one JSON file beside
+   * config.json. So a template saved on one pane is offered on all four, and
+   * everything survives a restart.
+   *
+   * Every method returns a Promise because the library awaits them, and every
+   * bridge call is wrapped in one because QWebChannel methods are ASYNCHRONOUS
+   * — a bridge call returns undefined and delivers its result to a callback.
+   * Returning `sc.listCharts()` directly would hand the library undefined and
+   * look exactly like an empty, broken store.
+   */
+  function call(fn, ...args) {
+    return new Promise((resolve) => {
+      try {
+        fn.call(bridgeRef, ...args, (result) => resolve(result));
+      } catch (e) {
+        console.warn("save/load bridge call failed", e);
+        resolve(undefined);
+      }
+    });
+  }
+
+  const parseJson = (text, fallback) => {
+    try { return text ? JSON.parse(text) : fallback; } catch (e) { return fallback; }
+  };
+
+  function makeSaveLoadAdapter(bridge) {
+    return {
+      getAllCharts: () =>
+        call(bridge.listCharts).then((t) => parseJson(t, [])),
+      removeChart: (id) => call(bridge.removeChart, String(id)),
+      saveChart: (chartData) =>
+        call(bridge.saveChart,
+             chartData.id === undefined || chartData.id === null ? "" : String(chartData.id),
+             chartData.name || "Untitled",
+             chartData.symbol || "",
+             String(chartData.resolution || ""),
+             chartData.content || ""),
+      getChartContent: (id) => call(bridge.chartContent, String(id)),
+
+      // Indicator templates — MT5 calls these chart templates, and they are
+      // what a trader means by "save my setup and put it on another chart".
+      getAllStudyTemplates: () =>
+        call(bridge.listStudyTemplates)
+          .then((t) => parseJson(t, []).map((name) => ({ name }))),
+      removeStudyTemplate: (info) => call(bridge.removeStudyTemplate, info.name),
+      saveStudyTemplate: (data) =>
+        call(bridge.saveStudyTemplate, data.name, data.content),
+      getStudyTemplateContent: (info) =>
+        call(bridge.studyTemplateContent, info.name),
+
+      // Chart templates carry the STYLE (candle colours, scales, background).
+      // Stored as text and parsed back here, because the library hands this
+      // one over as an object rather than a string.
+      getAllChartTemplates: () =>
+        call(bridge.listChartTemplates).then((t) => parseJson(t, [])),
+      saveChartTemplate: (name, theme) =>
+        call(bridge.saveChartTemplate, name, JSON.stringify(theme)),
+      removeChartTemplate: (name) => call(bridge.removeChartTemplate, name),
+      getChartTemplateContent: (name) =>
+        call(bridge.chartTemplateContent, name).then((t) => parseJson(t, {})),
+
+      getDrawingTemplates: (tool) =>
+        call(bridge.listDrawingTemplates, tool).then((t) => parseJson(t, [])),
+      loadDrawingTemplate: (tool, name) =>
+        call(bridge.drawingTemplateContent, tool, name),
+      saveDrawingTemplate: (tool, name, content) =>
+        call(bridge.saveDrawingTemplate, tool, name, content),
+      removeDrawingTemplate: (tool, name) =>
+        call(bridge.removeDrawingTemplate, tool, name),
+
+      // Only reached with saveload_separate_drawings_storage enabled, which
+      // this build does not turn on: drawings travel inside the layout content
+      // above. Present because the adapter interface is all-or-nothing, and a
+      // missing method throws rather than degrading.
+      saveLineToolsAndGroups: () => Promise.resolve(),
+      loadLineToolsAndGroups: () => Promise.resolve(null),
+    };
+  }
+
 
   /*
    * Builds the chart in `theme`, replacing any existing one.
@@ -146,6 +235,12 @@
       // lines are drawn by our own overlay instead — see tx_positions.js.
       // (tx_broker.js stays ready for the day a Trading Platform build lands
       // in vendor/.)
+      // Saved layouts and templates go through our own adapter, into a file
+      // beside config.json. No TradingView account and no server is involved.
+      save_load_adapter: makeSaveLoadAdapter(bridge),
+      // The library needs a layout name to show in the header before the first
+      // save; it renames itself as soon as one is saved.
+      saved_data_meta_info: { uid: 1, name: "TuskaEx", description: "" },
       // Quick-access timeframe buttons in the header (1m 3m 5m … D W M),
       // matching the web terminal's toolbar.
       favorites: {
@@ -153,7 +248,8 @@
       },
       disabled_features: [
         "use_localstorage_for_settings",
-        "header_saveload",
+        // header_saveload is NOT disabled any more — it is the Save / Load
+        // menu, and save_load_adapter above now gives it somewhere to write.
         "header_compare",
         // Split view (2 or 4 panes): drop the drawing toolbar down the left and
         // the date-range bar along the bottom. Both are worth their space on a
@@ -167,7 +263,9 @@
         ...(compact ? ["left_toolbar", "timeframes_toolbar"] : []),
       ],
       // Left drawing toolbar stays open on a single full-size chart.
-      enabled_features: [],
+      // study_templates is what puts "Save Indicator Template" in the
+      // Indicators dialog; it is off unless asked for.
+      enabled_features: ["study_templates"],
       overrides: overridesFor(t, compact),
     });
 
@@ -284,6 +382,7 @@
 
   function boot(bridge) {
     window.sc = bridge;
+    bridgeRef = bridge;
     datafeed = window.makeDatafeed(bridge);
     createChart(bridge, bridge.theme);
 

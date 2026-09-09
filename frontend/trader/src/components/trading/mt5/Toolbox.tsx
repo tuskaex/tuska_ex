@@ -33,6 +33,7 @@ import { sounds } from '@/lib/sounds';
 import journal, { type JournalEntry } from '@/lib/terminalJournal';
 import { useTradingStore, type PendingOrder, type Position } from '@/stores/tradingStore';
 import TradingViewNewsTimeline from '@/components/charts/TradingViewNewsTimeline';
+import { openPnl, sumOpenPnl } from '@/lib/pnl';
 
 export type ToolboxTab = 'trade' | 'history' | 'news' | 'journal';
 
@@ -189,10 +190,20 @@ function TradeTab() {
     [instruments],
   );
 
-  const floating = useMemo(
-    () => positions.reduce((sum, p) => sum + (p.profit || 0) + (p.swap || 0) + (p.commission || 0), 0),
-    [positions],
-  );
+  /* Floating P&L is GROSS — via the shared helper, not hand-rolled here.
+   *
+   * This used to read `profit + swap + commission`, which ADDS the charges.
+   * Commission is stored POSITIVE (trading_service does `account.balance -=
+   * commission`), so adding it credited the trader for a cost they had paid:
+   * a BTCUSD position sitting at -0.211 with 0.239 of commission printed as
+   * +0.03, green, on a losing trade. The mobile app read the server's gross
+   * value and showed -0.21, and the two terminals disagreed by exactly the
+   * commission on every open position.
+   *
+   * lib/pnl.ts is explicit that open positions are gross and that any UI
+   * showing a position's P&L must go through it — this file was the drift it
+   * warned about. */
+  const floating = useMemo(() => sumOpenPnl(positions), [positions]);
 
   /* Equity is derived here rather than read off the account row because the
    * account is refreshed on an interval while positions revalue on every
@@ -351,7 +362,9 @@ function TradeTab() {
             const d = digitsOf(p.symbol);
             const tick = prices[p.symbol];
             const cur = p.side === 'buy' ? tick?.bid : tick?.ask;
-            const net = (p.profit || 0) + (p.swap || 0) + (p.commission || 0);
+            /* Gross, matching the status bar above and the mobile app. The
+             * swap and commission have their own columns in this row. */
+            const net = openPnl(p);
             return (
               <tr
                 key={p.id}

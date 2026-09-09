@@ -89,6 +89,11 @@ async def create_onchain_withdrawal(
     if not await get_bool_setting("allow_withdrawals", True):
         raise HTTPException(status_code=403, detail="Withdrawals are currently disabled")
 
+    # Identity has to be proven before value leaves the platform. Imported
+    # locally to keep this module free of an import cycle with wallet_service.
+    from .wallet_service import require_kyc_for_withdrawal
+    await require_kyc_for_withdrawal(user_id, db)
+
     net = (network or "").lower().strip()
     if net not in ALLOWED_NETWORKS:
         raise HTTPException(

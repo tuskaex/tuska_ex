@@ -5,7 +5,6 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import ThemeInitScript from '@/components/ThemeInitScript';
 import AppToaster from '@/components/AppToaster';
-import TenantFavicon from '@/components/TenantFavicon';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,9 +23,6 @@ const inter = Inter({
  * them would mean a lookup on every render of a page that must not break when
  * the admin service blinks, and the sidebar already carries their logo.
  */
-const TRANSPARENT_ICON =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-
 export async function generateMetadata(): Promise<Metadata> {
   const host = (await headers()).get('host');
   const platform = (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_HOST ?? '').trim().toLowerCase();
@@ -37,11 +33,16 @@ export async function generateMetadata(): Promise<Metadata> {
         description: 'Broker administration panel',
         // `src/app/icon.png` is one file served to every host, so a tenant's
         // tab and address bar carried TuskaEx's logo. An explicit `icons`
-        // beats the file convention; the placeholder holds the slot until
-        // <TenantFavicon /> swaps in their real logo. Transparent rather
-        // than TuskaEx's: an empty tab icon for a moment is fine, another
-        // company's is not.
-        icons: { icon: TRANSPARENT_ICON },
+        // beats the file convention.
+        //
+        // This was a transparent placeholder that a client component replaced
+        // once the branding fetch answered in the browser — which left an empty
+        // tab for a second and, because the swap edited a live <link>'s href,
+        // frequently needed a reload before the real mark appeared at all.
+        // `/brand/icon` resolves the tenant from the Host header on the server,
+        // so the browser's very first favicon request already returns their
+        // logo. See src/app/brand/icon/route.ts.
+        icons: { icon: '/brand/icon' },
       }
     : { title: 'TuskaEx Admin', description: 'TuskaEx broker administration panel' };
 }
@@ -64,7 +65,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <ThemeInitScript />
-        <TenantFavicon />
         {children}
         <AppToaster />
       </body>

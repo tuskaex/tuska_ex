@@ -53,6 +53,19 @@ Config Config::load() {
         for (const QJsonValue& v : o.value("chartSymbols").toArray())
             c.chartSymbols << v.toString();
     }
+    if (o.contains("windowGeometry")) c.windowGeometry = o.value("windowGeometry").toString();
+    if (o.contains("ticketPosX")) c.ticketPosX = o.value("ticketPosX").toDouble(-1.0);
+    if (o.contains("ticketPosY")) c.ticketPosY = o.value("ticketPosY").toDouble(-1.0);
+    if (o.contains("watchFavourites")) {
+        c.watchFavourites.clear();
+        for (const QJsonValue& v : o.value("watchFavourites").toArray())
+            c.watchFavourites << v.toString();
+    }
+    if (o.contains("watchHiddenColumns")) {
+        c.watchHiddenColumns.clear();
+        for (const QJsonValue& v : o.value("watchHiddenColumns").toArray())
+            c.watchHiddenColumns << v.toString();
+    }
     if (o.contains("restBase") && !o.value("restBase").toString().isEmpty())
         c.restBase = o.value("restBase").toString();
     if (o.contains("wsUrl") && !o.value("wsUrl").toString().isEmpty())
@@ -76,6 +89,11 @@ bool Config::save() const {
     o["wsUrl"]        = wsUrl;
     o["chartCount"]   = chartCount;
     o["chartSymbols"] = QJsonArray::fromStringList(chartSymbols);
+    o["watchHiddenColumns"] = QJsonArray::fromStringList(watchHiddenColumns);
+    o["watchFavourites"]    = QJsonArray::fromStringList(watchFavourites);
+    o["ticketPosX"]         = ticketPosX;
+    o["ticketPosY"]         = ticketPosY;
+    o["windowGeometry"]    = windowGeometry;
 
     QFile f(filePath());
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))
