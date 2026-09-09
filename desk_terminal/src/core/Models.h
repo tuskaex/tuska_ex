@@ -17,6 +17,38 @@ struct SymbolSpec {
     double  contractSize = 100000.0;
 };
 
+// Full contract specification for one instrument, from
+// GET /api/v1/trading/instruments/{symbol}.
+//
+// Separate from SymbolSpec because the two come from different gateways and
+// carry different things. SymbolSpec is what /api/algo/symbols returns for
+// every instrument at startup — enough to size an order and scale a price.
+// This is the per-instrument detail a trader opens on demand: pip size, the
+// configured spread, commission per lot and the overnight swaps. Asking for
+// all of it up front would be a round trip per instrument for a panel that is
+// usually never opened.
+struct InstrumentSpec {
+    QString symbol, displayName, segment;
+    int     digits       = 5;
+    double  pipSize      = 0.0;
+    double  minLot       = 0.0;
+    double  maxLot       = 0.0;
+    double  contractSize = 0.0;
+    QString spreadType;              // "pips" | "percentage" | …
+    double  spreadValue  = 0.0;
+    double  priceImpact  = 0.0;
+    double  commissionPerLot = 0.0;
+    // swap_long / swap_short are null until an admin configures them, and a
+    // missing swap is not a zero swap — one is "not set", the other is a real
+    // rate of nothing. The panel has to be able to tell them apart.
+    bool    hasSwaps     = false;
+    double  swapLong     = 0.0;
+    double  swapShort    = 0.0;
+    bool    swapFree     = false;
+    bool    valid        = false;
+    QString error;                   // why the lookup failed, when !valid
+};
+
 struct Quote {
     QString   symbol;
     double    bid    = 0.0;

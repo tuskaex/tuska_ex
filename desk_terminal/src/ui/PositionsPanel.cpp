@@ -2,6 +2,14 @@
 #include "ui/NewsPanel.h"
 #include "ui/CalendarPanel.h"
 #include "ui/Theme.h"
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QDesktopServices>
+#include <QStandardPaths>
+#include <QTextStream>
+#include <QDateTime>
+#include <QDir>
+#include <QUrl>
 #include "ui/Icons.h"
 #include <QTabWidget>
 #include <QTableWidget>
@@ -19,6 +27,8 @@
 #include <QLocale>
 #include <QApplication>
 #include <QFont>
+#include <QStyledItemDelegate>
+#include <QLineEdit>
 #include <QColor>
 
 static const char* MASK = "••••";
@@ -57,6 +67,54 @@ private:
 
 } // namespace
 
+// Styles the editor that appears when a cell is typed into.
+//
+// Without this the editor is a plain QLineEdit, and a plain QLineEdit picks up
+// the application-wide input rule: a 1px border, a 3px radius and 3px of
+// vertical padding. The blotter's rows are 20px tall, so that left about 12px
+// for the text and the digits came out clipped and mis-set against the cells
+// either side of them — visibly a different size from the value the trader was
+// replacing.
+//
+// So the editor is given the CELL's font and alignment, no frame, no radius
+// and no vertical padding, and it is laid over exactly the cell rectangle. It
+// keeps the accent border, because an edit box that is invisible is its own
+// problem.
+class CellEditDelegate : public QStyledItemDelegate {
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& opt,
+                          const QModelIndex& idx) const override {
+        QWidget* w = QStyledItemDelegate::createEditor(parent, opt, idx);
+        auto* edit = qobject_cast<QLineEdit*>(w);
+        if (!edit) return w;
+
+        const auto& c = Theme::p();
+        // opt.font is the item's own font — the monospace one the price
+        // columns are drawn in, not the widget default.
+        edit->setFont(opt.font);
+        const QVariant align = idx.data(Qt::TextAlignmentRole);
+        edit->setAlignment(align.isValid()
+            ? Qt::Alignment(align.toInt())
+            : Qt::Alignment(Qt::AlignLeft | Qt::AlignVCenter));
+        edit->setFrame(false);
+        edit->setStyleSheet(QString(
+            "QLineEdit{background:%1; color:%2; border:1px solid %3;"
+            "border-radius:0; padding:0px 5px; margin:0;"
+            "selection-background-color:%3; selection-color:#ffffff;}")
+            .arg(c.inputBg, c.textStrong, c.accent));
+        return edit;
+    }
+
+    // Exactly the cell, so the text sits where it sat a moment ago instead of
+    // jumping by the editor's own margins.
+    void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& opt,
+                              const QModelIndex&) const override {
+        editor->setGeometry(opt.rect);
+    }
+};
+
 static QTableWidget* makeTable(const QStringList& headers) {
     auto* t = new QTableWidget;
     t->setColumnCount(headers.size());
@@ -81,6 +139,20 @@ static QTableWidgetItem* cell(const QString& text, Qt::Alignment a = Qt::AlignLe
     it->setTextAlignment(a);
     it->setFlags(it->flags() & ~Qt::ItemIsEditable);
     return it;
+}
+
+// The Comment cell, editable in place like the brackets beside it. Carries the
+// position id and the text it was rendered with, so a commit knows which
+// position it belongs to and whether anything actually changed — the table is
+// rebuilt every four seconds and a rebuild must not read as an edit.
+static QTableWidgetItem* commentCell(const QString& text, const QString& positionId) {
+    auto* it = new QTableWidgetItem(text);
+    it->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    it->setData(Qt::UserRole, positionId);
+    it->setData(Qt::UserRole + 1, text);
+    it->setToolTip(QObject::tr("Double-click to edit this position's comment. "
+                               "Clear the cell to remove it."));
+    return it;   // editable: the flag is left on, unlike cell()
 }
 
 // An S/L or T/P cell the trader can type into. Carries the position id and the
@@ -209,6 +281,24 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
     h->addWidget(box);
     h->addWidget(date);
     h->addStretch();
+
+    // History alone gets an export. It is the tab a trader is asked to produce
+    // for an accountant, a broker or a dispute, and until now the only way to
+    // hand that over was a screenshot of a scrolling table.
+    if (tab == 2) {
+        const auto& c = Theme::p();
+        auto* save = new QPushButton(tr("Save report"));
+        save->setCursor(Qt::PointingHandCursor);
+        save->setFocusPolicy(Qt::NoFocus);
+        save->setToolTip(tr("Save the trades shown here as an HTML statement"));
+        save->setStyleSheet(QString(
+            "QPushButton{background:%1; color:%2; border:1px solid %3;"
+            "border-radius:4px; padding:3px 10px; font-weight:600;}"
+            "QPushButton:hover{border-color:%4; color:%4;}")
+            .arg(c.btnBg, c.textStrong, c.btnBorder, c.accent));
+        connect(save, &QPushButton::clicked, this, &PositionsPanel::exportHistoryReport);
+        h->addWidget(save);
+    }
 
     // Pagination, Transactions only. The other three tabs hold a working set a
     // trader wants to see whole — open positions and live pending orders are
@@ -395,13 +485,177 @@ void PositionsPanel::setAccount(const AccountInfo& account) {
     refreshHistorySummary();
 }
 
+// ── HTML statement ─────────────────────────────────────────────────────────
+//
+// A standalone file: no stylesheet, no script, no images, nothing fetched from
+// anywhere. It has to open years from now on a machine that has never heard of
+// this terminal, which is the whole point of handing one to an accountant.
+//
+// It reports exactly what the tab is showing, period filter included. A report
+// that quietly covered a different range from the screen it was exported from
+// would be worse than no export at all.
+QString PositionsPanel::historyReportHtml() const {
+    const QString currency = m_lastAccount.currency.isEmpty()
+                                 ? QStringLiteral("USD") : m_lastAccount.currency;
+    const QString period = (m_range[2] ? m_range[2]->currentText() : tr("All"));
+
+    QVector<HistoryTrade> rows;
+    for (const HistoryTrade& t : m_lastHistory)
+        if (passes(2, t.closedAt)) rows.append(t);
+
+    double gross = 0, swap = 0, comm = 0;
+    for (const HistoryTrade& t : rows) { gross += t.profit; swap += t.swap; comm += t.commission; }
+    const double net = gross + swap + comm;
+
+    double deposit = 0, withdrawal = 0;
+    for (const Transaction& t : m_lastTxns) {
+        if (!passes(2, t.createdAt) || !isFunding(t.type)) continue;
+        (t.amount >= 0 ? deposit : withdrawal) += t.amount;
+    }
+
+    // Money is never masked here even when privacy mode is on. Privacy hides
+    // figures from whoever is looking at the screen; a statement the trader has
+    // just chosen a filename for is a document they asked to be given.
+    auto money = [&](double v) {
+        return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 2), currency);
+    };
+    auto num = [](double v, int dp) { return QString::number(v, 'f', dp); };
+    auto esc = [](const QString& t) { return t.toHtmlEscaped(); };
+    auto cls = [](double v) { return v >= 0 ? QStringLiteral("pos") : QStringLiteral("neg"); };
+
+    QString h;
+    h += QStringLiteral("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\n");
+    h += QStringLiteral("<title>") + esc(tr("TuskaEx statement")) + QStringLiteral("</title>\n<style>\n");
+    h += QStringLiteral(
+         "body{font:13px -apple-system,'Segoe UI',Roboto,sans-serif;color:#111827;"
+         "background:#fff;margin:28px;}\n"
+         "h1{font-size:19px;margin:0 0 2px;}\n"
+         ".sub{color:#6b7280;font-size:12px;margin-bottom:18px;}\n"
+         "table{border-collapse:collapse;width:100%;font-size:12px;}\n"
+         "th,td{border:1px solid #e5e7eb;padding:5px 8px;text-align:right;white-space:nowrap;}\n"
+         "th{background:#f3f4f6;font-weight:700;}\n"
+         "th:nth-child(-n+4),td:nth-child(-n+4){text-align:left;}\n"
+         "tbody tr:nth-child(even){background:#fafafa;}\n"
+         "tfoot td{font-weight:700;background:#f3f4f6;}\n"
+         ".pos{color:#15803d;}.neg{color:#b91c1c;}\n"
+         ".sum{margin-top:18px;width:auto;}\n"
+         ".sum td{border:none;padding:3px 22px 3px 0;text-align:left;}\n"
+         ".sum td.v{font-weight:700;}\n"
+         ".foot{margin-top:22px;color:#9ca3af;font-size:11px;}\n");
+    h += QStringLiteral("</style></head><body>\n");
+
+    h += QStringLiteral("<h1>") + esc(tr("Trade statement")) + QStringLiteral("</h1>\n<div class=\"sub\">");
+    QStringList head;
+    if (!m_lastAccount.account.isEmpty())
+        head << esc(tr("Account %1").arg(m_lastAccount.account));
+    head << esc(m_lastAccount.isDemo ? tr("Demo") : tr("Live"));
+    head << esc(tr("Period: %1").arg(period));
+    head << esc(tr("Generated %1").arg(
+        QDateTime::currentDateTime().toString(QStringLiteral("yyyy.MM.dd HH:mm"))));
+    h += head.join(QStringLiteral(" &nbsp;&middot;&nbsp; ")) + QStringLiteral("</div>\n");
+
+    h += QStringLiteral("<table><thead><tr>");
+    const QStringList cols = {tr("Symbol"), tr("Ticket"), tr("Type"), tr("Closed"),
+                              tr("Volume"), tr("Open price"), tr("Close price"),
+                              tr("Swap"), tr("Commission"), tr("Profit")};
+    for (const QString& c : cols)
+        h += QStringLiteral("<th>") + esc(c) + QStringLiteral("</th>");
+    h += QStringLiteral("</tr></thead><tbody>\n");
+
+    for (const HistoryTrade& t : rows) {
+        const int d = digitsFor(t.symbol);
+        h += QStringLiteral("<tr>");
+        h += QStringLiteral("<td>") + esc(t.symbol) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + esc(t.id) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + esc(t.side.toUpper()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + esc(shortTime(t.closedAt)) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(t.lots, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(t.openPrice, d) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(t.closePrice, d) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(t.swap, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(t.commission, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(t.profit), num(t.profit, 2));
+        h += QStringLiteral("</tr>\n");
+    }
+
+    h += QStringLiteral("</tbody><tfoot><tr><td colspan=\"7\">")
+       + esc(tr("Total — %1 trade(s)").arg(rows.size())) + QStringLiteral("</td>");
+    h += QStringLiteral("<td>") + num(swap, 2) + QStringLiteral("</td><td>")
+       + num(comm, 2) + QStringLiteral("</td>");
+    h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(gross), num(gross, 2));
+    h += QStringLiteral("</tr></tfoot></table>\n");
+
+    // Net is the figure that matters and the one the tab's own strip shows:
+    // gross profit with swap and commission already taken off it.
+    h += QStringLiteral("<table class=\"sum\">\n");
+    auto row = [&](const QString& k, const QString& v, const QString& klass = QString()) {
+        h += QStringLiteral("<tr><td>") + esc(k) + QStringLiteral("</td><td class=\"v ")
+           + klass + QStringLiteral("\">") + esc(v) + QStringLiteral("</td></tr>\n");
+    };
+    row(tr("Gross profit"),  money(gross), cls(gross));
+    row(tr("Swap"),          money(swap));
+    row(tr("Commission"),    money(comm));
+    row(tr("Profit / loss"), money(net), cls(net));
+    row(tr("Deposit"),       money(deposit));
+    row(tr("Withdrawal"),    money(withdrawal));
+    if (m_lastAccount.valid) {
+        row(tr("Balance"), money(m_lastAccount.balance));
+        row(tr("Equity"),  money(m_lastAccount.equity));
+    }
+    h += QStringLiteral("</table>\n");
+
+    h += QStringLiteral("<div class=\"foot\">") + esc(tr("TuskaEx Terminal"))
+       + QStringLiteral("</div>\n</body></html>\n");
+    return h;
+}
+
+void PositionsPanel::exportHistoryReport() {
+    const QString stamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmm"));
+    const QString acct  = m_lastAccount.account.isEmpty() ? QStringLiteral("account")
+                                                          : m_lastAccount.account;
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    if (dir.isEmpty()) dir = QDir::homePath();
+    const QString suggested = QStringLiteral("%1/TuskaEx-statement-%2-%3.html")
+                                  .arg(dir, acct, stamp);
+
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Save trade statement"), suggested, tr("HTML statement (*.html)"));
+    if (path.isEmpty()) return;                  // cancelled
+
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        QMessageBox::warning(this, tr("Save report"),
+                             tr("Could not write %1:\n%2").arg(path, f.errorString()));
+        return;
+    }
+    // UTF-8 explicitly: the statement carries the account currency and whatever
+    // symbol names the broker configured, and the file has to survive being
+    // opened on a machine with a different default encoding.
+    QTextStream out(&f);
+    out.setEncoding(QStringConverter::Utf8);
+    out << historyReportHtml();
+    f.close();
+
+    // Opened straight away, because "save a report" always ends with reading
+    // it, and a file the trader then has to go and find is half a feature.
+    QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+}
+
 PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_tabs = new QTabWidget;
     m_tabs->setDocumentMode(true);
 
+    // Commission sits beside Swap because the two are the same kind of figure —
+    // what the position costs to hold, as opposed to what it has made. History
+    // already carried it; the open positions did not, so a trader could only
+    // learn a trade's commission after closing it.
+    //
+    // Comment is what the order was tagged with when it was placed, which is
+    // the only thing distinguishing two otherwise identical positions on the
+    // same instrument.
     m_posTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
                             tr("Price"), tr("S/L"), tr("T/P"), tr("Price"), tr("Swap"),
-                            tr("Profit"), tr("Action")});
+                            tr("Commission"), tr("Profit"), tr("Comment"), tr("Action")});
     m_orderTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
                               tr("Price"), tr("S/L"), tr("T/P"), tr("Action")});
     m_histTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
@@ -415,9 +669,22 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     // 68px fits the two 22px icon buttons (edit + close) with their spacing and
     // the header word. It was 92 while the edit control was a wider "S/L" text
     // button; that has since become a pencil icon.
+    // The Trade tab carries fourteen columns, which is past what an equal
+    // share of the width can render: at that point every column truncates,
+    // headers included — "Commission" came out as "ommissio" and the prices
+    // as "1.162…". So this one table sizes each column to its content and
+    // lets Comment, which has no natural width, absorb whatever is left.
+    // Wider than the panel and it scrolls, which is the honest outcome for a
+    // table with this many columns; the other tabs keep the equal share.
+    auto* posHeader = m_posTable->horizontalHeader();
+    posHeader->setSectionResizeMode(QHeaderView::ResizeToContents);
+    const int commentCol = m_posTable->columnCount() - 2;
+    posHeader->setSectionResizeMode(commentCol, QHeaderView::Stretch);
+
     const int closeCol = m_posTable->columnCount() - 1;
-    m_posTable->horizontalHeader()->setSectionResizeMode(closeCol, QHeaderView::Fixed);
-    m_posTable->setColumnWidth(closeCol, 68);
+    posHeader->setSectionResizeMode(closeCol, QHeaderView::Fixed);
+    // 96px: three 24px icon buttons (share, edit, close) with their spacing.
+    m_posTable->setColumnWidth(closeCol, 96);
     // 68px, matching the Trade tab: this cell now holds the same edit + cancel
     // pair rather than a lone ✕.
     const int cancelCol = m_orderTable->columnCount() - 1;
@@ -429,6 +696,9 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     m_posTable->setEditTriggers(QAbstractItemView::DoubleClicked
                                 | QAbstractItemView::EditKeyPressed);
     connect(m_posTable, &QTableWidget::itemChanged, this, &PositionsPanel::onBracketEdited);
+    // Only this table takes edits, so only this one needs the editor styled to
+    // sit in a 20px row.
+    m_posTable->setItemDelegate(new CellEditDelegate(m_posTable));
 
     // Each tab is table + its own filter bar, so a range chosen on History does
     // not silently reach into the open-positions tab.
@@ -501,6 +771,17 @@ void PositionsPanel::onBracketEdited(QTableWidgetItem* item) {
     // edit from a repaint.
     if (m_populating || !item) return;
     const int col = item->column();
+    // 12 is Comment, 6 and 7 the two brackets — the only editable cells here.
+    if (col == 12) {
+        const QString id = item->data(Qt::UserRole).toString();
+        if (id.isEmpty()) return;
+        const QString was = item->data(Qt::UserRole + 1).toString();
+        const QString now = item->text().trimmed();
+        if (now == was) return;                 // a repaint, or the same text
+        item->setData(Qt::UserRole + 1, now);
+        emit commentEdited(id, now);
+        return;
+    }
     if (col != 6 && col != 7) return;
 
     const QString id = item->data(Qt::UserRole).toString();
@@ -569,10 +850,14 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         m_posTable->setItem(r, 7, bracketCell(p.tp, p.id, d));
         m_posTable->setItem(r, 8, cell(p.currentPrice > 0 ? fmt(p.currentPrice, d) : QString(), R));
         m_posTable->setItem(r, 9, cell(cash(p.swap), R));
+        m_posTable->setItem(r, 10, cell(cash(p.commission), R));
         auto* pnl = cell(cash(p.profit), R);
         pnl->setForeground(p.profit >= 0 ? QColor(c.up) : QColor(c.down));
         QFont bf = pnl->font(); bf.setBold(true); pnl->setFont(bf);
-        m_posTable->setItem(r, 10, pnl);
+        m_posTable->setItem(r, 11, pnl);
+        // Not masked in privacy mode: a comment is a label the trader wrote,
+        // not a balance.
+        m_posTable->setItem(r, 12, commentCell(p.comment, p.id));
 
         // A real ✕ icon rather than the glyph: several UI fonts render "✕" as a
         // hairline that all but disappears at this size.
@@ -614,6 +899,22 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         connect(editBtn, &QPushButton::clicked, this,
                 [this, row]() { emit modifyBrackets(row); });
 
+        // Share, beside edit and close. The web platform has had this on every
+        // row for a while; on the desktop the only way to show a trade to
+        // anyone was a screenshot of this table.
+        auto* shareBtn = new QPushButton;
+        shareBtn->setFixedSize(24, 20);
+        shareBtn->setCursor(Qt::PointingHandCursor);
+        shareBtn->setToolTip(tr("Share this trade"));
+        shareBtn->setIcon(Icons::share(QColor(c.accent), 14));
+        shareBtn->setIconSize(QSize(14, 14));
+        shareBtn->setStyleSheet(QString(
+            "QPushButton{background:transparent; border:1px solid %1; border-radius:3px;}"
+            "QPushButton:hover{border-color:%2;}")
+            .arg(c.btnBorder, c.accent));
+        connect(shareBtn, &QPushButton::clicked, this,
+                [this, row]() { emit sharePosition(row); });
+
         // Centred in the cell — a fixed-size widget handed straight to
         // setCellWidget() sticks to the left edge.
         auto* cellWrap = new QWidget;
@@ -621,10 +922,11 @@ void PositionsPanel::setPositions(const QVector<OpenPosition>& positions) {
         wrapLay->setContentsMargins(0, 0, 0, 0);
         wrapLay->setSpacing(3);
         wrapLay->addStretch();
+        wrapLay->addWidget(shareBtn);
         wrapLay->addWidget(editBtn);
         wrapLay->addWidget(closeBtn);
         wrapLay->addStretch();
-        m_posTable->setCellWidget(r, 11, cellWrap);
+        m_posTable->setCellWidget(r, 13, cellWrap);
         ++r;
     }
     m_populating = false;

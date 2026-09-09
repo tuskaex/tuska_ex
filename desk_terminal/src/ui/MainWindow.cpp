@@ -11,6 +11,8 @@
 #include "ui/EditOrderDialog.h"
 #include "ui/LoginDialog.h"
 #include "ui/WalletDialog.h"
+#include "ui/SymbolSpecDialog.h"
+#include "ui/ShareTradeDialog.h"
 #include "core/ApiClient.h"
 #include "core/PriceStream.h"
 
@@ -27,6 +29,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
+#include <QCloseEvent>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
@@ -96,7 +99,12 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     body->setStretchFactor(1, 1);
     body->setCollapsible(0, false);
     body->setCollapsible(1, false);
-    body->setSizes({330, 1000});   // fits the market watch's four columns
+    // Sized to show Symbol, Bid and Ask. The remaining columns are still
+    // there, one sideways scroll away, rather than spending the chart's width
+    // on figures most sessions only glance at.
+    // 276 = the three columns' own widths (104 + 84 + 84) plus the frame, so
+    // Spread begins exactly at the panel's edge rather than showing a sliver.
+    body->setSizes({276, 1000});
     setCentralWidget(body);
 
     // Give the blotter a sensible starting height once the window is really
@@ -106,6 +114,23 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
         const int h = m_centerSplit->height();
         if (h > 400) m_centerSplit->setSizes({h - 200, 200});
     });
+
+    // Window size and position as the trader last left them, maximized state
+    // included — restoreGeometry() carries that. First run has nothing stored
+    // and opens maximized: a watchlist, a chart and a blotter side by side have
+    // nothing to gain from a small window, and everyone was maximizing it by
+    // hand on every single launch.
+    if (!m_cfg.windowGeometry.isEmpty())
+        restoreGeometry(QByteArray::fromBase64(m_cfg.windowGeometry.toLatin1()));
+    // The window is MAXIMIZED by main(), not here. Setting the state on a
+    // window that has never been shown does not survive restoreGeometry's own
+    // state handling — a geometry blob recorded while maximized restores the
+    // size but comes back un-maximized, which is exactly the "I have to
+    // maximize it every time" the desk reported. showMaximized() after
+    // construction has no such ambiguity.
+    //
+    // The restored geometry is still worth reading: it is the size the window
+    // returns to when a trader un-maximizes it mid-session.
 
     buildMenuBar();
 
@@ -134,6 +159,26 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
         m_api->fetchOrders();
     });
     m_accountTimer->start();
+
+    // Day's high/low for the Market Watch columns. One request per instrument,
+    // so it is drained a few at a time in the background; the columns track the
+    // session's own ticks until each seed lands.
+    m_rangeTimer = new QTimer(this);
+    m_rangeTimer->setInterval(250);
+    connect(m_rangeTimer, &QTimer::timeout, this, [this]() {
+        if (m_rangeQueue.isEmpty()) { m_rangeTimer->stop(); return; }
+        for (int i = 0; i < 4 && !m_rangeQueue.isEmpty(); ++i)
+            m_api->fetchDailyRange(m_rangeQueue.takeFirst());
+    });
+
+    // Re-seeded periodically because "the day's range" changes underneath a
+    // running terminal: at the daily rollover the server's bar starts again
+    // and yesterday's high would otherwise sit in the column until restart.
+    // Ticks alone can only ever widen a range, never reset one.
+    m_rangeReseedTimer = new QTimer(this);
+    m_rangeReseedTimer->setInterval(15 * 60 * 1000);
+    connect(m_rangeReseedTimer, &QTimer::timeout, this, &MainWindow::seedDailyRanges);
+    m_rangeReseedTimer->start();
 
     // Keep the access token alive. It lasts ~45 minutes and every /api/v1 call
     // — per-position close, SL/TP, the whole wallet — dies with it, so this
@@ -438,6 +483,24 @@ void MainWindow::connectServices() {
     // row that was double-clicked by the time this fires.
     connect(m_watch, &WatchlistWidget::symbolDoubleClicked, this,
             [this](const QString& s) { onSymbolActivated(s); openOrderWindow(); });
+    connect(m_watch, &WatchlistWidget::specificationRequested,
+            this, &MainWindow::openSpecification);
+    m_watch->setHiddenColumns(m_cfg.watchHiddenColumns);
+    m_watch->setFavourites(m_cfg.watchFavourites);
+    connect(m_watch, &WatchlistWidget::favouritesChanged, this,
+            [this](const QStringList& symbols) {
+        m_cfg.watchFavourites = symbols;
+        m_cfg.save();
+    });
+    connect(m_watch, &WatchlistWidget::columnsChanged, this,
+            [this](const QStringList& keys) {
+        m_cfg.watchHiddenColumns = keys;
+        m_cfg.save();
+    });
+    connect(m_api, &ApiClient::dailyRangeReceived, this,
+            [this](const QString& sym, double high, double low) {
+        m_watch->setDailyRange(sym, high, low);
+    });
 
     // The chart (TradingView) pulls bars + ticks itself via the ChartBridge,
     // so no bars/tick wiring is needed here for it.
@@ -451,6 +514,19 @@ void MainWindow::connectServices() {
             [this](const QString& s, double v, double sl, double tp) {
         m_api->placeOrder("SELL", s, v, sl, tp, "terminal");
     });
+    // The strip refuses an order whose bracket sits on the wrong side of the
+    // market. Say why in the status bar, where every other trade outcome lands.
+    // The strip is draggable; remember where it was left. Saved on release
+    // rather than on every mouse move — this writes the whole config file.
+    m_ticket->setPositionRatio(QPointF(m_cfg.ticketPosX, m_cfg.ticketPosY));
+    connect(m_ticket, &OrderTicket::movedTo, this, [this](const QPointF& r) {
+        m_cfg.ticketPosX = r.x();
+        m_cfg.ticketPosY = r.y();
+        m_cfg.save();
+    });
+
+    connect(m_ticket, &OrderTicket::rejected, this,
+            [this](const QString& why) { setStatus(why, true); });
     connect(m_ticket, &OrderTicket::closeAll, this, [this](const QString& s) {
         if (QMessageBox::question(this, tr("Close positions"),
                 tr("Close ALL open %1 positions?").arg(s)) == QMessageBox::Yes)
@@ -548,6 +624,34 @@ void MainWindow::connectServices() {
         m_api->modifyBracket(id, kind, level);
     });
 
+    // Share one position as a public card. The link is minted by the platform,
+    // so it needs a real session — an API-key sign-in cannot reach /api/v1.
+    connect(m_positions, &PositionsPanel::sharePosition, this,
+            [this](const OpenPosition& pos) {
+        if (!requireSession(tr("Sharing a trade"))) return;
+        ShareTradeDialog dlg(pos, m_specs.value(pos.symbol), m_lastAccount.leverage,
+                             m_api, m_cfg.restBase, this);
+        dlg.exec();
+    });
+
+    // Typed straight into the Comment cell. Same shape as a bracket edit: the
+    // server's answer decides what the cell ends up showing.
+    connect(m_positions, &PositionsPanel::commentEdited, this,
+            [this](const QString& id, const QString& text) {
+        if (!requireSession(tr("Editing a position comment"))) {
+            m_api->fetchPositions();   // put the cell back to the server's value
+            return;
+        }
+        m_api->modifyComment(id, text);
+    });
+
+    connect(m_api, &ApiClient::positionOpResult, this,
+            [this](const QString&, const QString& op, bool ok, const QString& msg) {
+        if (op != "comment") return;
+        setStatus(ok ? tr("Comment updated") : msg, !ok);
+        m_api->fetchPositions();
+    });
+
     // The server's answer is what the cell should end up showing: a rejected
     // level must not be left sitting in the table as though it took.
     connect(m_api, &ApiClient::positionOpResult, this,
@@ -630,6 +734,15 @@ void MainWindow::connectServices() {
     });
 }
 
+void MainWindow::closeEvent(QCloseEvent* e) {
+    // Saved on the way out rather than on every move or resize: this writes the
+    // whole config file, and doing that on each drag of a window edge would be
+    // a file write per frame.
+    m_cfg.windowGeometry = QString::fromLatin1(saveGeometry().toBase64());
+    m_cfg.save();
+    QMainWindow::closeEvent(e);
+}
+
 void MainWindow::switchAccount(const QString& accountId) {
     if (accountId.isEmpty() || accountId == m_cfg.accountId) return;
     m_cfg.accountId = accountId;
@@ -695,6 +808,7 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
     }
 
     m_watch->setSymbols(symbols);
+    seedDailyRanges();
     // Snapshot prices immediately (before first ticks arrive).
     m_api->fetchPrices({});
     setStatus(tr("%1 instruments loaded").arg(symbols.size()));
@@ -716,6 +830,14 @@ void MainWindow::onSymbolsReceived(const QVector<SymbolSpec>& symbols) {
         m_watch->selectSymbol(pick);   // moves selection -> triggers onSymbolActivated
         onSymbolActivated(pick);
     }
+}
+
+void MainWindow::seedDailyRanges() {
+    if (m_specs.isEmpty() || !m_rangeTimer) return;
+    // Rebuilt rather than appended to: a re-seed while the previous pass is
+    // still draining would otherwise queue every instrument twice.
+    m_rangeQueue = m_specs.keys();
+    m_rangeTimer->start();
 }
 
 void MainWindow::onSymbolActivated(const QString& symbol) {
@@ -962,13 +1084,42 @@ void MainWindow::openOrderWindow() {
     // dlg.symbol(), not m_currentSymbol — the picker inside the window may have
     // moved to a different instrument since it opened.
     const QString sym = dlg.symbol();
+    // Whatever the trader typed, or "terminal" when they typed nothing — the
+    // tag is what tells a position placed here from one placed on the website.
+    const QString note = dlg.comment().isEmpty() ? QStringLiteral("terminal")
+                                                 : dlg.comment();
     if (dlg.mode() == "market") {
         m_api->placeOrder(dlg.side().toUpper(), sym, dlg.lots(),
-                          dlg.stopLoss(), dlg.takeProfit(), "terminal");
+                          dlg.stopLoss(), dlg.takeProfit(), note);
     } else {
         m_api->placePendingOrder(sym, dlg.side(), dlg.orderType(),
-                                 dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit());
+                                 dlg.lots(), dlg.price(), dlg.stopLoss(), dlg.takeProfit(),
+                                 note);
     }
+}
+
+// MT5's Specification panel. Opened from the Market Watch right-click on the
+// instrument the trader pointed at, NOT on m_currentSymbol — those are the
+// same row here only because the menu selects it first, and relying on that
+// would break the moment the menu gains a way to name another instrument.
+void MainWindow::openSpecification(const QString& symbol) {
+    if (symbol.isEmpty()) return;
+    // No requireSession(): the trading catalog is public, so an API-key
+    // session can read contract terms even though it cannot reach the blotter.
+    // A symbol the table has no spec for still opens: the panel's live prices
+    // and the fetched contract terms do not depend on it, and an unexplained
+    // dead menu entry is worse than a sheet with a few dashes in it.
+    SymbolSpec spec = m_specs.value(symbol);
+    if (spec.symbol.isEmpty()) spec.symbol = symbol;
+    SymbolSpecDialog dlg(spec, m_lastQuotes.value(symbol), this);
+    // Bid, ask and the spread keep moving while the panel is open — a spread
+    // frozen at the moment the menu was clicked is the one figure in here that
+    // would actively mislead.
+    connect(m_stream, &PriceStream::tickReceived, &dlg, &SymbolSpecDialog::updateQuote);
+    connect(m_api, &ApiClient::instrumentSpecReceived, &dlg,
+            &SymbolSpecDialog::setInstrumentSpec);
+    m_api->fetchInstrumentSpec(symbol);
+    dlg.exec();
 }
 
 void MainWindow::openSettings() {

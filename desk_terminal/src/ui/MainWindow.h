@@ -43,10 +43,16 @@ private slots:
     void onApiError(const QString& context, const QString& message, int httpStatus);
     void openSettings();
     void openOrderWindow();    // Market + Pending order ticket (F9)
+    // MT5's symbol Specification panel, from the Market Watch right-click.
+    void openSpecification(const QString& symbol);
     void onActiveChartChanged(int index);  // strip follows the active pane
     void persistChartLayout();             // grid + per-pane symbols -> Config
     void logout();              // clear the session and return to the sign-in card
     void applyTheme();          // restyle the bits that carry inline style sheets
+
+protected:
+    // Remembers where the window was and whether it was maximized.
+    void closeEvent(QCloseEvent* e) override;
 
 private:
     void connectServices();
@@ -56,6 +62,11 @@ private:
     void toggleTheme();
     void togglePrivacy();
     void refreshAll();
+    // Queues every instrument for a day's-high/low fetch, for Market Watch's
+    // High and Low columns. Drained a few at a time rather than fired at once:
+    // this is one request per instrument and there are a couple of hundred of
+    // them, and none is worth delaying a price or a position poll behind.
+    void seedDailyRanges();
     // Starts/stops the JWT renewal timer from whatever is in m_cfg. Every
     // sign-in path has to call this: the access token dies after ~45 minutes,
     // and a session that never renews takes the wallet and per-position close
@@ -84,6 +95,9 @@ private:
 
     QLabel*  m_message;
     QTimer*  m_accountTimer;
+    QTimer*  m_rangeTimer = nullptr;    // drains m_rangeQueue
+    QTimer*  m_rangeReseedTimer = nullptr;
+    QStringList m_rangeQueue;           // instruments still awaiting a day's range
     QTimer*  m_sessionTimer = nullptr;   // renews the JWT before it lapses
     // One recovery attempt per failure episode. Without it an expired token
     // would loop: the poll 401s, that triggers a refresh, the refresh answers

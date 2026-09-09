@@ -67,6 +67,8 @@ set(SOURCES
     src/ui/OrderDialog.cpp
     src/ui/EditOrderDialog.cpp
     src/ui/WalletDialog.cpp
+    src/ui/SymbolSpecDialog.cpp
+    src/ui/ShareTradeDialog.cpp
     src/ui/MainWindow.cpp
 )
 
@@ -95,6 +97,8 @@ set(HEADERS
     src/ui/OrderDialog.h
     src/ui/EditOrderDialog.h
     src/ui/WalletDialog.h
+    src/ui/SymbolSpecDialog.h
+    src/ui/ShareTradeDialog.h
     src/ui/MainWindow.h
 )
 

@@ -47,6 +47,45 @@ public:
     Q_INVOKABLE void modifyBracket(const QString& positionId, const QString& kind, double level);
     Q_INVOKABLE void closePosition(const QString& positionId);
 
+    // ── Saved chart layouts and templates ──────────────────────────────
+    //
+    // These back the charting library's save/load adapter, which is what puts
+    // "Save chart", indicator templates and drawing templates in the chart
+    // header. Without an adapter the library has nowhere to put any of it, so
+    // a trader's fibs and indicators died with the window — the terminal even
+    // disabled the header button rather than show one that could not work.
+    //
+    // Everything lives in ONE JSON file beside config.json, so a template
+    // saved on one chart pane is offered on all four, and survives a restart.
+    // Every call re-reads that file before writing: four panes share this
+    // store, and a cached copy would let one pane's save wipe another's.
+    //
+    // Content is passed as opaque strings in both directions. The shapes are
+    // the library's own and it is the only thing that reads them back.
+    Q_INVOKABLE QString listCharts() const;
+    Q_INVOKABLE QString chartContent(const QString& id) const;
+    // Returns the id the chart was stored under — a new one when `id` is empty.
+    Q_INVOKABLE QString saveChart(const QString& id, const QString& name,
+                                  const QString& symbol, const QString& resolution,
+                                  const QString& content);
+    Q_INVOKABLE void removeChart(const QString& id);
+
+    Q_INVOKABLE QString listStudyTemplates() const;
+    Q_INVOKABLE QString studyTemplateContent(const QString& name) const;
+    Q_INVOKABLE void saveStudyTemplate(const QString& name, const QString& content);
+    Q_INVOKABLE void removeStudyTemplate(const QString& name);
+
+    Q_INVOKABLE QString listChartTemplates() const;
+    Q_INVOKABLE QString chartTemplateContent(const QString& name) const;
+    Q_INVOKABLE void saveChartTemplate(const QString& name, const QString& content);
+    Q_INVOKABLE void removeChartTemplate(const QString& name);
+
+    Q_INVOKABLE QString listDrawingTemplates(const QString& tool) const;
+    Q_INVOKABLE QString drawingTemplateContent(const QString& tool, const QString& name) const;
+    Q_INVOKABLE void saveDrawingTemplate(const QString& tool, const QString& name,
+                                         const QString& content);
+    Q_INVOKABLE void removeDrawingTemplate(const QString& tool, const QString& name);
+
     // JS -> C++: a TradingView dialog (Indicators, settings, …) opened or
     // closed. Those render INSIDE the chart iframe, so the native one-click
     // strip floating over the web view would otherwise cover them permanently.
