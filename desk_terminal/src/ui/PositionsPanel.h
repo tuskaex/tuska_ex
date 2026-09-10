@@ -40,6 +40,10 @@ public slots:
     // panel's business.
     void setAccount(const AccountInfo& account);
 
+    // The trader's name, for the statement's header. It lives in the signed-in
+    // session rather than in any account payload, so the window hands it over.
+    void setTraderName(const QString& name);
+
     // Live headlines for the instrument in focus — see NewsPanel.
     void setNewsSymbol(const QString& symbol);
     // Macro releases for the economies behind that instrument — see
@@ -138,6 +142,7 @@ private:
     QVector<HistoryTrade> m_lastHistory;
     QVector<Transaction>  m_lastTxns;
     AccountInfo           m_lastAccount;
+    QString               m_traderName;
 
     // History summary — the closing figures MT5 puts under its History tab,
     // and the ones the desk asked for by name.

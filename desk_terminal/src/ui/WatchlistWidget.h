@@ -30,10 +30,30 @@ public:
     void setHiddenColumns(const QStringList& keys);
     QStringList hiddenColumns() const { return m_hidden; }
 
+    // Exactly the width the columns currently on show need, chrome included.
+    // The host sizes the splitter from this, so turning a column on or off
+    // moves the boundary with the chart instead of leaving the new column half
+    // cut off at the panel edge — which is what a fixed width did.
+    int preferredWidth() const;
+
     // Starred instruments. The list is the trader's, so the panel takes it in
     // and hands changes back rather than owning where it is stored.
     void setFavourites(const QStringList& symbols);
     QStringList favourites() const { return m_favourites; }
+
+    // Instruments the trader has hidden from the list — MT5's Hide, Hide All
+    // and Show All. Kept out of the panel's own storage for the same reason
+    // favourites are: it is a preference, and the window owns the Config.
+    void setHiddenSymbols(const QStringList& symbols);
+    QStringList hiddenSymbols() const { return m_hiddenSymbols; }
+    void setGridVisible(bool on);
+    bool gridVisible() const { return m_grid; }
+
+    // Row colours, as "SYMBOL=name" entries. Colours are stored by NAME rather
+    // than as a hex value so the same tag can be tinted differently for the
+    // light and dark themes without rewriting what the trader saved.
+    void setSymbolColours(const QStringList& pairs);
+    QStringList symbolColours() const;
     // The day's high/low from the server, seeding the High and Low columns.
     // Ticks widen them from there, so a seed that never arrives costs the
     // session's own range rather than an empty column.
@@ -59,6 +79,12 @@ signals:
     void columnsChanged(const QStringList& hiddenKeys);
     // A symbol was starred or unstarred, so the set can be persisted.
     void favouritesChanged(const QStringList& symbols);
+    // The hidden set changed, so it can be persisted.
+    void hiddenSymbolsChanged(const QStringList& symbols);
+    // Grid lines were switched on or off.
+    void gridChanged(bool on);
+    // A row colour was set or cleared.
+    void symbolColoursChanged(const QStringList& pairs);
 
 private:
     struct Row {
@@ -90,6 +116,17 @@ private:
     // every tick agree.
     QString symbolLabel(const QString& symbol, const char* arrow) const;
     void toggleFavourite(const QString& symbol);
+    void hideSymbol(const QString& symbol);
+    void hideAllSymbols();
+    void showAllSymbols();
+    // Sizes every column to the widest thing in it — MT5's "Auto Arrange".
+    void autoArrangeColumns();
+    void setSymbolColour(const QString& symbol, const QString& colourName);
+    // Paints one row from its colour tag, or clears it back to the table's own
+    // alternating background.
+    void paintRowColour(const QString& symbol);
+    // The tag's tint for the ACTIVE theme. An empty name means no tag.
+    static QColor tintFor(const QString& colourName);
     // Column index for an optional column's key, or -1.
     static int columnForKey(const QString& key);
     void applyFilter();
@@ -109,6 +146,9 @@ private:
     QStringList          m_hidden;        // columns switched off by the trader
     QStringList          m_favourites;    // starred instruments
     bool                 m_favOnly = false;   // the filter is showing only those
+    QStringList          m_hiddenSymbols;     // instruments switched off
+    bool                 m_grid = true;
+    QHash<QString, QString> m_colours;   // symbol -> colour name
     QHash<QString, Row>  m_rows;
     bool                 m_selecting = false;   // guards programmatic selection
 };

@@ -41,12 +41,37 @@ public:
     // Ask, and the rest are reached by scrolling it sideways rather than by
     // being absent. Hiding one for good is still available from its right-click
     // menu, which is what this list records.
-    QStringList watchHiddenColumns;
+    // Defaults to the four optional ones: Market Watch opens on Symbol, Bid
+    // and Ask, and the panel is sized to exactly those. Switching one on from
+    // the panel's Columns menu widens the panel to fit it, so a column is
+    // never left half cut off at the boundary with the chart.
+    QStringList watchHiddenColumns{QStringLiteral("spread"), QStringLiteral("high"),
+                                   QStringLiteral("low"),    QStringLiteral("time")};
 
     // Instruments starred in Market Watch. Kept per trader rather than derived
     // from anything: a favourite is a statement about what someone watches, and
     // the only place that can be recorded is here.
     QStringList watchFavourites;
+
+    // Instruments hidden from Market Watch, MT5's Hide / Hide All / Show All.
+    // A desk trades a dozen of the sixty the broker lists, and scrolling past
+    // the rest all day is the thing that menu exists to stop.
+    QStringList watchHiddenSymbols;
+    // Grid lines in the Market Watch table, also from that menu.
+    bool        watchGrid = true;
+
+    // Row colours a trader has put on instruments in Market Watch, as
+    // "SYMBOL=name" entries ("XAUUSD=amber"). A flat list rather than a nested
+    // object so it round-trips through the same JSON array handling as every
+    // other preference here.
+    QStringList watchSymbolColours;
+
+    // The face the data tables are drawn in — Market Watch, the blotter, the
+    // account strip — chosen from View > Font. Tahoma by default because that
+    // is what MetaTrader 5 uses and what the desk asked to match; the size is
+    // in pixels so it means the same thing on both platforms.
+    QString tableFontFamily = QStringLiteral("Tahoma");
+    int     tableFontSize   = 12;
 
     // Where the trader dragged the one-click strip on the chart, as a fraction
     // of the chart area (0..1 of the room the strip can move in). A fraction

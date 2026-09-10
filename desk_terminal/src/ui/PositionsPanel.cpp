@@ -10,6 +10,7 @@
 #include <QDateTime>
 #include <QDir>
 #include <QUrl>
+#include <algorithm>
 #include "ui/Icons.h"
 #include <QTabWidget>
 #include <QTableWidget>
@@ -117,6 +118,9 @@ public:
 
 static QTableWidget* makeTable(const QStringList& headers) {
     auto* t = new QTableWidget;
+    // One face across Market Watch, Trade, Pending, History and the ledger —
+    // the desk asked for the same compact look in all of them.
+    t->setFont(Theme::tableFont());
     t->setColumnCount(headers.size());
     t->setHorizontalHeaderLabels(headers);
     t->verticalHeader()->setVisible(false);
@@ -479,6 +483,8 @@ void PositionsPanel::refreshHistorySummary() {
     paint(m_sumBalance,    m_lastAccount.balance, false);
 }
 
+void PositionsPanel::setTraderName(const QString& name) { m_traderName = name; }
+
 void PositionsPanel::setAccount(const AccountInfo& account) {
     if (!account.valid) return;
     m_lastAccount = account;
@@ -487,121 +493,427 @@ void PositionsPanel::setAccount(const AccountInfo& account) {
 
 // ── HTML statement ─────────────────────────────────────────────────────────
 //
-// A standalone file: no stylesheet, no script, no images, nothing fetched from
-// anywhere. It has to open years from now on a machine that has never heard of
-// this terminal, which is the whole point of handing one to an accountant.
+// A MetaTrader-shaped account statement: the house over an account line, then
+// Closed Transactions, Open Trades, Working Orders, a Summary, and the details
+// block with a balance curve. That is the layout a broker, an accountant or a
+// prop desk already knows how to read, which is the whole reason to copy it
+// rather than invent one.
 //
-// It reports exactly what the tab is showing, period filter included. A report
-// that quietly covered a different range from the screen it was exported from
-// would be worse than no export at all.
+// Balance operations sit IN the closed table, the way MT writes them: a
+// deposit is a line in the account's history, not a separate document, and a
+// statement that omits them cannot be reconciled against a bank record.
+//
+// The file is standalone. No stylesheet, no script, no linked images — the
+// brand mark is inlined and the chart is hand-drawn SVG. It has to open years
+// from now on a machine that has never heard of this terminal.
+//
+// Everything obeys the tab's period filter, so the document always matches the
+// screen it was exported from.
+
+namespace {
+
+// One row of the account's history, whether it came from a trade or a balance
+// operation. Merged so the closed table can be ordered by time the way MT's is.
+struct StatementRow {
+    QDateTime when;
+    bool      isBalance = false;
+    // trade
+    HistoryTrade trade;
+    // balance operation
+    QString   note;
+    double    amount = 0.0;
+    QString   id;
+};
+
+QDateTime parseStamp(const QString& iso) {
+    QDateTime t = QDateTime::fromString(iso, Qt::ISODateWithMs);
+    if (!t.isValid()) t = QDateTime::fromString(iso, Qt::ISODate);
+    return t;
+}
+
+} // namespace
+
 QString PositionsPanel::historyReportHtml() const {
     const QString currency = m_lastAccount.currency.isEmpty()
                                  ? QStringLiteral("USD") : m_lastAccount.currency;
     const QString period = (m_range[2] ? m_range[2]->currentText() : tr("All"));
 
-    QVector<HistoryTrade> rows;
-    for (const HistoryTrade& t : m_lastHistory)
-        if (passes(2, t.closedAt)) rows.append(t);
+    auto num  = [](double v, int dp) { return QString::number(v, 'f', dp); };
+    auto esc  = [](const QString& t) { return t.toHtmlEscaped(); };
+    auto cls  = [](double v) { return v >= 0 ? QStringLiteral("pos") : QStringLiteral("neg"); };
+    auto money = [&](double v) {
+        return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 2), currency);
+    };
+    auto stamp = [](const QDateTime& t) {
+        return t.isValid() ? t.toLocalTime().toString(QStringLiteral("yyyy.MM.dd HH:mm"))
+                           : QStringLiteral("");
+    };
 
-    double gross = 0, swap = 0, comm = 0;
-    for (const HistoryTrade& t : rows) { gross += t.profit; swap += t.swap; comm += t.commission; }
-    const double net = gross + swap + comm;
-
+    // ── gather, filtered by the tab's period ──
+    QVector<StatementRow> closed;
+    for (const HistoryTrade& t : m_lastHistory) {
+        if (!passes(2, t.closedAt)) continue;
+        StatementRow r;
+        r.when = parseStamp(t.closedAt);
+        r.trade = t;
+        r.id = t.id;
+        closed.append(r);
+    }
     double deposit = 0, withdrawal = 0;
     for (const Transaction& t : m_lastTxns) {
         if (!passes(2, t.createdAt) || !isFunding(t.type)) continue;
         (t.amount >= 0 ? deposit : withdrawal) += t.amount;
+        StatementRow r;
+        r.when = parseStamp(t.createdAt);
+        r.isBalance = true;
+        r.amount = t.amount;
+        r.id = t.id;
+        r.note = t.description.isEmpty() ? t.type : t.description;
+        closed.append(r);
     }
+    // Oldest first, the way a ledger reads. Rows whose timestamp would not
+    // parse keep their relative order rather than being dropped.
+    std::stable_sort(closed.begin(), closed.end(),
+                     [](const StatementRow& a, const StatementRow& b) {
+        if (!a.when.isValid() || !b.when.isValid()) return false;
+        return a.when < b.when;
+    });
 
-    // Money is never masked here even when privacy mode is on. Privacy hides
-    // figures from whoever is looking at the screen; a statement the trader has
-    // just chosen a filename for is a document they asked to be given.
-    auto money = [&](double v) {
-        return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 2), currency);
-    };
-    auto num = [](double v, int dp) { return QString::number(v, 'f', dp); };
-    auto esc = [](const QString& t) { return t.toHtmlEscaped(); };
-    auto cls = [](double v) { return v >= 0 ? QStringLiteral("pos") : QStringLiteral("neg"); };
+    double gross = 0, swap = 0, comm = 0, grossProfit = 0, grossLoss = 0;
+    int wins = 0, losses = 0, longs = 0, longWins = 0, shorts = 0, shortWins = 0;
+    double largestWin = 0, largestLoss = 0;
+    for (const StatementRow& r : closed) {
+        if (r.isBalance) continue;
+        const HistoryTrade& t = r.trade;
+        const double net = t.profit + t.swap + t.commission;
+        gross += t.profit; swap += t.swap; comm += t.commission;
+        if (net >= 0) { grossProfit += net; ++wins;  largestWin  = qMax(largestWin, net); }
+        else          { grossLoss   += net; ++losses; largestLoss = qMin(largestLoss, net); }
+        const bool isLong = t.side.compare(QStringLiteral("buy"), Qt::CaseInsensitive) == 0;
+        if (isLong) { ++longs;  if (net >= 0) ++longWins; }
+        else        { ++shorts; if (net >= 0) ++shortWins; }
+    }
+    const double closedPl = gross + swap + comm;
+
+    double floating = 0;
+    for (const OpenPosition& p : m_lastPositions) floating += p.profit;
 
     QString h;
     h += QStringLiteral("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\n");
     h += QStringLiteral("<title>") + esc(tr("TuskaEx statement")) + QStringLiteral("</title>\n<style>\n");
     h += QStringLiteral(
-         "body{font:13px -apple-system,'Segoe UI',Roboto,sans-serif;color:#111827;"
-         "background:#fff;margin:28px;}\n"
-         "h1{font-size:19px;margin:0 0 2px;}\n"
-         ".sub{color:#6b7280;font-size:12px;margin-bottom:18px;}\n"
-         "table{border-collapse:collapse;width:100%;font-size:12px;}\n"
-         "th,td{border:1px solid #e5e7eb;padding:5px 8px;text-align:right;white-space:nowrap;}\n"
-         "th{background:#f3f4f6;font-weight:700;}\n"
-         "th:nth-child(-n+4),td:nth-child(-n+4){text-align:left;}\n"
-         "tbody tr:nth-child(even){background:#fafafa;}\n"
-         "tfoot td{font-weight:700;background:#f3f4f6;}\n"
-         ".pos{color:#15803d;}.neg{color:#b91c1c;}\n"
-         ".sum{margin-top:18px;width:auto;}\n"
-         ".sum td{border:none;padding:3px 22px 3px 0;text-align:left;}\n"
-         ".sum td.v{font-weight:700;}\n"
-         ".foot{margin-top:22px;color:#9ca3af;font-size:11px;}\n");
+         "body{font:12px Tahoma,Geneva,Verdana,sans-serif;color:#111827;background:#fff;"
+         "margin:24px;}\n"
+         ".house{display:flex;align-items:center;justify-content:center;gap:12px;"
+         "font:700 26px Georgia,'Times New Roman',serif;margin:0 0 14px;}\n"
+         ".house img{width:40px;height:40px;object-fit:contain;}\n"
+         ".meta{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:6px;}\n"
+         ".meta td{padding:2px 6px;white-space:nowrap;}\n"
+         ".meta .r{text-align:right;}\n"
+         ".section{font-weight:700;font-size:13px;margin:14px 0 4px;}\n"
+         "table.deals{border-collapse:collapse;width:100%;font-size:11px;}\n"
+         "table.deals th,table.deals td{border:1px solid #b8b8b8;padding:3px 6px;"
+         "white-space:nowrap;text-align:right;}\n"
+         "table.deals th{background:#e9e9e9;font-weight:700;text-align:center;}\n"
+         "table.deals td.l{text-align:left;}\n"
+         "table.deals td.c{text-align:center;}\n"
+         "table.deals tbody tr:nth-child(even){background:#fafafa;}\n"
+         "table.deals tr.bal td{background:#f4f6fb;font-style:italic;}\n"
+         "tfoot td,td.tot{font-weight:700;background:#e9e9e9;}\n"
+         ".none{border:1px solid #b8b8b8;border-top:none;padding:6px;text-align:center;"
+         "color:#6b7280;font-size:11px;}\n"
+         ".pos{color:#146c2e;}.neg{color:#a91b1b;}\n"
+         ".sum{border-collapse:collapse;font-size:11px;margin-top:4px;}\n"
+         ".sum td{border:1px solid #b8b8b8;padding:3px 10px;white-space:nowrap;}\n"
+         ".sum td.k{background:#e9e9e9;font-weight:700;}\n"
+         ".stats{border-collapse:collapse;font-size:11px;width:100%;margin-top:4px;}\n"
+         ".stats td{border:1px solid #b8b8b8;padding:3px 8px;white-space:nowrap;}\n"
+         ".stats td.k{background:#f3f4f6;}\n"
+         ".stats td.v{text-align:right;font-weight:700;}\n"
+         ".chart{border:1px solid #b8b8b8;margin-top:4px;background:#fff;}\n"
+         ".foot{margin-top:18px;color:#9ca3af;font-size:10px;}\n");
     h += QStringLiteral("</style></head><body>\n");
 
-    h += QStringLiteral("<h1>") + esc(tr("Trade statement")) + QStringLiteral("</h1>\n<div class=\"sub\">");
-    QStringList head;
-    if (!m_lastAccount.account.isEmpty())
-        head << esc(tr("Account %1").arg(m_lastAccount.account));
-    head << esc(m_lastAccount.isDemo ? tr("Demo") : tr("Live"));
-    head << esc(tr("Period: %1").arg(period));
-    head << esc(tr("Generated %1").arg(
-        QDateTime::currentDateTime().toString(QStringLiteral("yyyy.MM.dd HH:mm"))));
-    h += head.join(QStringLiteral(" &nbsp;&middot;&nbsp; ")) + QStringLiteral("</div>\n");
+    // ── the house: the mark, then the name ──
+    //
+    // The mark is inlined as a data: URI rather than linked. An <img src>
+    // pointing at a server, or at a path on this machine, renders as a broken
+    // box the moment the file leaves here. The artwork is already in the
+    // resource bundle for the window icon, so nothing new ships to carry it.
+    QString logo;
+    {
+        QFile mark(QStringLiteral(":/tuskaex-256.png"));
+        if (mark.open(QIODevice::ReadOnly))
+            logo = QStringLiteral("data:image/png;base64,")
+                 + QString::fromLatin1(mark.readAll().toBase64());
+    }
+    h += QStringLiteral("<div class=\"house\">");
+    if (!logo.isEmpty())
+        h += QStringLiteral("<img src=\"") + logo + QStringLiteral("\" alt=\"\">");
+    h += QStringLiteral("<span>") + esc(tr("TuskaEx")) + QStringLiteral("</span></div>\n");
 
-    h += QStringLiteral("<table><thead><tr>");
-    const QStringList cols = {tr("Symbol"), tr("Ticket"), tr("Type"), tr("Closed"),
-                              tr("Volume"), tr("Open price"), tr("Close price"),
-                              tr("Swap"), tr("Commission"), tr("Profit")};
-    for (const QString& c : cols)
-        h += QStringLiteral("<th>") + esc(c) + QStringLiteral("</th>");
-    h += QStringLiteral("</tr></thead><tbody>\n");
+    const QString leverage = m_lastAccount.leverage > 0
+        ? QStringLiteral("1:%1").arg(m_lastAccount.leverage) : QStringLiteral("—");
+    h += QStringLiteral("<table class=\"meta\"><tr>");
+    h += QStringLiteral("<td><b>") + esc(tr("Account:")) + QStringLiteral("</b> ")
+       + esc(m_lastAccount.account.isEmpty() ? tr("—") : m_lastAccount.account)
+       + QStringLiteral("</td>");
+    h += QStringLiteral("<td><b>") + esc(tr("Name:")) + QStringLiteral("</b> ")
+       + esc(m_traderName.isEmpty() ? tr("—") : m_traderName) + QStringLiteral("</td>");
+    h += QStringLiteral("<td><b>") + esc(tr("Currency:")) + QStringLiteral("</b> ")
+       + esc(currency) + QStringLiteral("</td>");
+    h += QStringLiteral("<td><b>") + esc(tr("Leverage:")) + QStringLiteral("</b> ")
+       + esc(leverage) + QStringLiteral("</td>");
+    h += QStringLiteral("<td class=\"r\">")
+       + esc(QDateTime::currentDateTime().toString(QStringLiteral("yyyy MMMM d, HH:mm")))
+       + QStringLiteral("</td></tr><tr><td colspan=\"5\"><b>") + esc(tr("Period:"))
+       + QStringLiteral("</b> ") + esc(period) + QStringLiteral("  &nbsp;·&nbsp;  ")
+       + esc(m_lastAccount.isDemo ? tr("Demo account") : tr("Live account"))
+       + QStringLiteral("</td></tr></table>\n");
 
-    for (const HistoryTrade& t : rows) {
+    // ── Closed Transactions ──
+    const QStringList dealCols = {tr("Ticket"), tr("Open Time"), tr("Type"), tr("Size"),
+                                  tr("Item"), tr("Price"), tr("S / L"), tr("T / P"),
+                                  tr("Close Time"), tr("Price"), tr("Commission"),
+                                  tr("Taxes"), tr("Swap"), tr("Profit")};
+    auto dealHead = [&]() {
+        QString t = QStringLiteral("<table class=\"deals\"><thead><tr>");
+        for (const QString& c : dealCols)
+            t += QStringLiteral("<th>") + esc(c) + QStringLiteral("</th>");
+        return t + QStringLiteral("</tr></thead><tbody>\n");
+    };
+
+    h += QStringLiteral("<div class=\"section\">") + esc(tr("Closed Transactions:"))
+       + QStringLiteral("</div>\n") + dealHead();
+
+    for (const StatementRow& r : closed) {
+        if (r.isBalance) {
+            // A balance operation: MT writes it with the type in the Type
+            // column, the note where an instrument would be, and the money in
+            // Profit. The price columns stay empty because there is no trade.
+            h += QStringLiteral("<tr class=\"bal\">");
+            h += QStringLiteral("<td class=\"l\">") + esc(r.id) + QStringLiteral("</td>");
+            h += QStringLiteral("<td class=\"c\">") + esc(stamp(r.when)) + QStringLiteral("</td>");
+            h += QStringLiteral("<td class=\"c\">") + esc(tr("balance")) + QStringLiteral("</td>");
+            h += QStringLiteral("<td></td>");
+            h += QStringLiteral("<td class=\"l\" colspan=\"9\">") + esc(r.note)
+               + QStringLiteral("</td>");
+            h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(r.amount), num(r.amount, 2));
+            h += QStringLiteral("</tr>\n");
+            continue;
+        }
+        const HistoryTrade& t = r.trade;
         const int d = digitsFor(t.symbol);
         h += QStringLiteral("<tr>");
-        h += QStringLiteral("<td>") + esc(t.symbol) + QStringLiteral("</td>");
-        h += QStringLiteral("<td>") + esc(t.id) + QStringLiteral("</td>");
-        h += QStringLiteral("<td>") + esc(t.side.toUpper()) + QStringLiteral("</td>");
-        h += QStringLiteral("<td>") + esc(shortTime(t.closedAt)) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"l\">") + esc(t.id) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(stamp(parseStamp(t.openedAt)))
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(t.side.toLower()) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.lots, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"l\">") + esc(t.symbol) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.openPrice, d) + QStringLiteral("</td>");
+        // Closed trades come back without their brackets — the platform keeps
+        // the levels on the open position, not on the history row — so these
+        // stay blank rather than being filled with a guess.
+        h += QStringLiteral("<td></td><td></td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(stamp(r.when)) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.closePrice, d) + QStringLiteral("</td>");
-        h += QStringLiteral("<td>") + num(t.swap, 2) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.commission, 2) + QStringLiteral("</td>");
+        // Taxes: the platform charges none and stores no such field. The column
+        // is here because MT's statement has it and readers look for it; the
+        // zero is the honest value, not a placeholder.
+        h += QStringLiteral("<td>0.00</td>");
+        h += QStringLiteral("<td>") + num(t.swap, 2) + QStringLiteral("</td>");
         h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(t.profit), num(t.profit, 2));
         h += QStringLiteral("</tr>\n");
     }
+    h += QStringLiteral("</tbody><tfoot><tr><td colspan=\"13\" class=\"l\">")
+       + esc(tr("Closed P/L:")) + QStringLiteral("</td><td class=\"%1\">%2</td>")
+             .arg(cls(closedPl), num(closedPl, 2))
+       + QStringLiteral("</tr></tfoot></table>\n");
+    if (closed.isEmpty())
+        h += QStringLiteral("<div class=\"none\">") + esc(tr("No transactions"))
+           + QStringLiteral("</div>\n");
 
-    h += QStringLiteral("</tbody><tfoot><tr><td colspan=\"7\">")
-       + esc(tr("Total — %1 trade(s)").arg(rows.size())) + QStringLiteral("</td>");
-    h += QStringLiteral("<td>") + num(swap, 2) + QStringLiteral("</td><td>")
-       + num(comm, 2) + QStringLiteral("</td>");
-    h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(gross), num(gross, 2));
-    h += QStringLiteral("</tr></tfoot></table>\n");
-
-    // Net is the figure that matters and the one the tab's own strip shows:
-    // gross profit with swap and commission already taken off it.
-    h += QStringLiteral("<table class=\"sum\">\n");
-    auto row = [&](const QString& k, const QString& v, const QString& klass = QString()) {
-        h += QStringLiteral("<tr><td>") + esc(k) + QStringLiteral("</td><td class=\"v ")
-           + klass + QStringLiteral("\">") + esc(v) + QStringLiteral("</td></tr>\n");
-    };
-    row(tr("Gross profit"),  money(gross), cls(gross));
-    row(tr("Swap"),          money(swap));
-    row(tr("Commission"),    money(comm));
-    row(tr("Profit / loss"), money(net), cls(net));
-    row(tr("Deposit"),       money(deposit));
-    row(tr("Withdrawal"),    money(withdrawal));
-    if (m_lastAccount.valid) {
-        row(tr("Balance"), money(m_lastAccount.balance));
-        row(tr("Equity"),  money(m_lastAccount.equity));
+    // ── Open Trades ──
+    h += QStringLiteral("<div class=\"section\">") + esc(tr("Open Trades:"))
+       + QStringLiteral("</div>\n") + dealHead();
+    for (const OpenPosition& p : m_lastPositions) {
+        const int d = digitsFor(p.symbol);
+        h += QStringLiteral("<tr>");
+        h += QStringLiteral("<td class=\"l\">") + esc(p.id) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(stamp(parseStamp(p.openedAt)))
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(p.side.toLower()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(p.lots, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"l\">") + esc(p.symbol) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(p.openPrice, d) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + (p.sl > 0 ? num(p.sl, d) : QString()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + (p.tp > 0 ? num(p.tp, d) : QString()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td></td>");     // still open: no close time
+        h += QStringLiteral("<td>") + (p.currentPrice > 0 ? num(p.currentPrice, d) : QString())
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(p.commission, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>0.00</td>");
+        h += QStringLiteral("<td>") + num(p.swap, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"%1\">%2</td>").arg(cls(p.profit), num(p.profit, 2));
+        h += QStringLiteral("</tr>\n");
     }
+    h += QStringLiteral("</tbody><tfoot><tr><td colspan=\"13\" class=\"l\">")
+       + esc(tr("Floating P/L:")) + QStringLiteral("</td><td class=\"%1\">%2</td>")
+             .arg(cls(floating), num(floating, 2))
+       + QStringLiteral("</tr></tfoot></table>\n");
+    if (m_lastPositions.isEmpty())
+        h += QStringLiteral("<div class=\"none\">") + esc(tr("No transactions"))
+           + QStringLiteral("</div>\n");
+
+    // ── Working Orders — pending, not yet filled ──
+    h += QStringLiteral("<div class=\"section\">") + esc(tr("Working Orders:"))
+       + QStringLiteral("</div>\n");
+    h += QStringLiteral("<table class=\"deals\"><thead><tr>");
+    for (const QString& c : {tr("Ticket"), tr("Open Time"), tr("Type"), tr("Size"),
+                             tr("Item"), tr("Price"), tr("S / L"), tr("T / P"),
+                             tr("Market Price")})
+        h += QStringLiteral("<th>") + esc(c) + QStringLiteral("</th>");
+    h += QStringLiteral("</tr></thead><tbody>\n");
+    for (const PendingOrder& o : m_lastOrders) {
+        const int d = digitsFor(o.symbol);
+        h += QStringLiteral("<tr>");
+        h += QStringLiteral("<td class=\"l\">") + esc(o.id) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">") + esc(stamp(parseStamp(o.createdAt)))
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"c\">")
+           + esc(QStringLiteral("%1 %2").arg(o.side.toLower(), o.type.toLower()).trimmed())
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(o.lots, 2) + QStringLiteral("</td>");
+        h += QStringLiteral("<td class=\"l\">") + esc(o.symbol) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + num(o.price, d) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + (o.sl > 0 ? num(o.sl, d) : QString()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + (o.tp > 0 ? num(o.tp, d) : QString()) + QStringLiteral("</td>");
+        h += QStringLiteral("<td></td>");
+        h += QStringLiteral("</tr>\n");
+    }
+    h += QStringLiteral("</tbody></table>\n");
+    if (m_lastOrders.isEmpty())
+        h += QStringLiteral("<div class=\"none\">") + esc(tr("No transactions"))
+           + QStringLiteral("</div>\n");
+
+    // ── Summary ──
+    h += QStringLiteral("<div class=\"section\">") + esc(tr("Summary:"))
+       + QStringLiteral("</div>\n<table class=\"sum\">\n");
+    auto sumRow = [&](const QString& k1, const QString& v1,
+                      const QString& k2, const QString& v2) {
+        h += QStringLiteral("<tr><td class=\"k\">") + esc(k1) + QStringLiteral("</td><td>")
+           + esc(v1) + QStringLiteral("</td><td class=\"k\">") + esc(k2)
+           + QStringLiteral("</td><td>") + esc(v2) + QStringLiteral("</td></tr>\n");
+    };
+    sumRow(tr("Deposit"),         money(deposit),
+           tr("Credit Facility"), money(m_lastAccount.credit));
+    sumRow(tr("Withdrawal"),      money(withdrawal),
+           tr("Closed Trade P/L"), money(closedPl));
+    sumRow(tr("Balance"),         money(m_lastAccount.balance),
+           tr("Floating P/L"),    money(floating));
+    sumRow(tr("Equity"),          money(m_lastAccount.equity),
+           tr("Free Margin"),     money(m_lastAccount.freeMargin));
+    h += QStringLiteral("</table>\n");
+
+    // ── Details: the balance curve, then the usual performance figures ──
+    //
+    // The curve is built by walking the closed rows in order from the balance
+    // this period STARTED at, which is today's balance with everything that
+    // happened since taken back off it. Trades and balance operations both
+    // move the line, because both moved the account.
+    h += QStringLiteral("<div class=\"section\">") + esc(tr("Details:"))
+       + QStringLiteral("</div>\n");
+
+    QVector<double> curve;
+    {
+        double moved = closedPl + deposit + withdrawal;
+        double running = m_lastAccount.balance - moved;
+        curve.append(running);
+        for (const StatementRow& r : closed) {
+            running += r.isBalance ? r.amount
+                                   : (r.trade.profit + r.trade.swap + r.trade.commission);
+            curve.append(running);
+        }
+    }
+
+    // Drawdown, MT's definitions: absolute is how far below the opening
+    // balance the account ever went; maximal is the deepest peak-to-trough
+    // drop in money; relative is that drop against the peak it fell from.
+    double peak = curve.isEmpty() ? 0 : curve.first();
+    double lowest = peak, maxDd = 0, maxDdPct = 0;
+    for (double v : curve) {
+        peak = qMax(peak, v);
+        lowest = qMin(lowest, v);
+        const double dd = peak - v;
+        if (dd > maxDd) {
+            maxDd = dd;
+            maxDdPct = peak > 0 ? (dd / peak) * 100.0 : 0.0;
+        }
+    }
+    const double absDd = curve.isEmpty() ? 0 : qMax(0.0, curve.first() - lowest);
+
+    if (curve.size() > 1) {
+        // Inline SVG: no chart library, nothing fetched, and it scales when the
+        // statement is printed.
+        const int W = 900, H = 220, padL = 6, padR = 6, padT = 10, padB = 10;
+        double lo = curve.first(), hi = curve.first();
+        for (double v : curve) { lo = qMin(lo, v); hi = qMax(hi, v); }
+        if (qFuzzyCompare(lo + 1.0, hi + 1.0)) { hi = lo + 1.0; }
+        const double spanX = double(W - padL - padR) / double(curve.size() - 1);
+        const double spanY = double(H - padT - padB) / (hi - lo);
+
+        QString pts;
+        for (int i = 0; i < curve.size(); ++i) {
+            const double x = padL + i * spanX;
+            const double y = H - padB - (curve[i] - lo) * spanY;
+            pts += QStringLiteral("%1,%2 ").arg(num(x, 1), num(y, 1));
+        }
+        h += QStringLiteral("<svg class=\"chart\" viewBox=\"0 0 %1 %2\" width=\"100%\" "
+                            "height=\"%2\" preserveAspectRatio=\"none\">")
+                 .arg(W).arg(H);
+        h += QStringLiteral("<polyline fill=\"none\" stroke=\"#2d6df6\" stroke-width=\"1.6\" "
+                            "points=\"") + pts.trimmed() + QStringLiteral("\"/>");
+        h += QStringLiteral("</svg>\n");
+        h += QStringLiteral("<div style=\"font-size:10px;color:#6b7280;margin:2px 0 8px;\">")
+           + esc(tr("Balance — %1 to %2").arg(money(curve.first()), money(curve.last())))
+           + QStringLiteral("</div>\n");
+    }
+
+    const double profitFactor = grossLoss < 0 ? grossProfit / qAbs(grossLoss) : 0.0;
+    const int totalTrades = wins + losses;
+    const double expected = totalTrades > 0 ? closedPl / totalTrades : 0.0;
+    auto pct = [&](int part, int whole) {
+        return whole > 0 ? QStringLiteral("%1 (%2%)").arg(part).arg(num(100.0 * part / whole, 2))
+                         : QStringLiteral("%1").arg(part);
+    };
+
+    h += QStringLiteral("<table class=\"stats\">\n");
+    auto st = [&](const QString& k1, const QString& v1,
+                  const QString& k2, const QString& v2) {
+        h += QStringLiteral("<tr><td class=\"k\">") + esc(k1)
+           + QStringLiteral("</td><td class=\"v\">") + esc(v1)
+           + QStringLiteral("</td><td class=\"k\">") + esc(k2)
+           + QStringLiteral("</td><td class=\"v\">") + esc(v2)
+           + QStringLiteral("</td></tr>\n");
+    };
+    st(tr("Gross Profit"),   money(grossProfit), tr("Gross Loss"), money(grossLoss));
+    st(tr("Total Net Profit"), money(closedPl),  tr("Profit Factor"),
+       profitFactor > 0 ? num(profitFactor, 2) : QStringLiteral("—"));
+    st(tr("Expected Payoff"), money(expected),   tr("Absolute Drawdown"), money(absDd));
+    st(tr("Maximal Drawdown"),
+       QStringLiteral("%1 (%2%)").arg(money(maxDd), num(maxDdPct, 2)),
+       tr("Total Trades"), QString::number(totalTrades));
+    st(tr("Short Positions (won %)"), pct(shortWins, shorts),
+       tr("Long Positions (won %)"),  pct(longWins, longs));
+    st(tr("Profit Trades (% of total)"), pct(wins, totalTrades),
+       tr("Loss Trades (% of total)"),   pct(losses, totalTrades));
+    st(tr("Largest profit trade"), money(largestWin),
+       tr("Largest loss trade"),   money(largestLoss));
+    st(tr("Average profit trade"), money(wins > 0 ? grossProfit / wins : 0.0),
+       tr("Average loss trade"),   money(losses > 0 ? grossLoss / losses : 0.0));
+    st(tr("Swap"), money(swap), tr("Commission"), money(comm));
     h += QStringLiteral("</table>\n");
 
     h += QStringLiteral("<div class=\"foot\">") + esc(tr("TuskaEx Terminal"))
@@ -678,8 +990,15 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     // table with this many columns; the other tabs keep the equal share.
     auto* posHeader = m_posTable->horizontalHeader();
     posHeader->setSectionResizeMode(QHeaderView::ResizeToContents);
+    // Comment is NOT stretched. A stretch section absorbs the leftover width,
+    // which only works when the row already fits; here the row is wider than
+    // the pane, so the stretch fought the scroll and the LAST column — Action,
+    // with the close button in it — stayed clipped at the right edge even at
+    // maximum scroll. A trader could not reach the ✕ at all. Content-sized
+    // like the rest, the row has a true width and scrolling reaches its end.
     const int commentCol = m_posTable->columnCount() - 2;
-    posHeader->setSectionResizeMode(commentCol, QHeaderView::Stretch);
+    posHeader->setSectionResizeMode(commentCol, QHeaderView::Interactive);
+    m_posTable->setColumnWidth(commentCol, 120);
 
     const int closeCol = m_posTable->columnCount() - 1;
     posHeader->setSectionResizeMode(closeCol, QHeaderView::Fixed);
@@ -727,6 +1046,10 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
 }
 
 void PositionsPanel::applyTheme() {
+    // The face can change under us too — View > Font runs through this same
+    // signal — so it is re-applied before the rows are drawn again.
+    for (QTableWidget* t : {m_posTable, m_orderTable, m_histTable, m_txnTable})
+        if (t) t->setFont(Theme::tableFont());
     // Colours live in the row items, so the tables are simply re-rendered.
     setPositions(m_lastPositions);
     setOrders(m_lastOrders);

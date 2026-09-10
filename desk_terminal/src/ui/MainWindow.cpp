@@ -56,6 +56,9 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     m_positions = new PositionsPanel;
 
     m_account->setPrivacy(m_cfg.privacy);
+    // Only the statement uses it, but it has to be in place before the first
+    // export, which can happen at any time after start-up.
+    m_positions->setTraderName(m_cfg.userName.isEmpty() ? m_cfg.email : m_cfg.userName);
     m_positions->setPrivacy(m_cfg.privacy);
 
     // The one-click strip floats in the chart's toolbar band, in the gap
@@ -93,18 +96,18 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     // ── main split: market watch | centre column ──
     m_watch->setMinimumWidth(210);
     auto* body = new QSplitter(Qt::Horizontal);
+    m_bodySplit = body;
     body->addWidget(m_watch);
     body->addWidget(m_centerSplit);
     body->setStretchFactor(0, 0);
     body->setStretchFactor(1, 1);
     body->setCollapsible(0, false);
     body->setCollapsible(1, false);
-    // Sized to show Symbol, Bid and Ask. The remaining columns are still
-    // there, one sideways scroll away, rather than spending the chart's width
-    // on figures most sessions only glance at.
-    // 276 = the three columns' own widths (104 + 84 + 84) plus the frame, so
-    // Spread begins exactly at the panel's edge rather than showing a sliver.
-    body->setSizes({276, 1000});
+    // Sized from the columns the watchlist is actually showing, not a literal.
+    // With the default three that is the same ~276px as before, but it now
+    // follows the column set: switch Spread on and the boundary moves with it
+    // instead of leaving the new column cut off at the panel edge.
+    body->setSizes({m_watch->preferredWidth(), 1000});
     setCentralWidget(body);
 
     // Give the blotter a sensible starting height once the window is really
@@ -287,6 +290,60 @@ void MainWindow::buildMenuBar() {
         m_layoutGroup->setExclusive(true);
     });
 
+    // ── the face the data tables are drawn in ──
+    //
+    // A submenu rather than a settings page: it is a preference a trader
+    // changes once, looks at, and maybe changes again, and every one of these
+    // takes effect on the spot. Only faces that ship with the platform are
+    // offered — a font picker listing everything installed would let someone
+    // pick a display face that renders a blotter unreadable.
+    view->addSeparator();
+    QMenu* fontMenu = view->addMenu(tr("&Font"));
+
+    auto* familyGroup = new QActionGroup(this);
+    familyGroup->setExclusive(true);
+    struct { const char* family; const char* label; } faces[] = {
+        {"Tahoma",    QT_TR_NOOP("Tahoma  (MT5)")},
+        {"Segoe UI",  QT_TR_NOOP("Segoe UI")},
+        {"Verdana",   QT_TR_NOOP("Verdana")},
+        {"Arial",     QT_TR_NOOP("Arial")},
+        {"Consolas",  QT_TR_NOOP("Consolas  (monospace)")},
+    };
+    for (const auto& f : faces) {
+        QAction* a = fontMenu->addAction(tr(f.label));
+        a->setCheckable(true);
+        a->setChecked(Theme::tableFontFamily() == QLatin1String(f.family));
+        familyGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, fam = QString(f.family)]() {
+            Theme::setTableFont(fam, Theme::tableFontSize());
+            m_cfg.tableFontFamily = fam;
+            m_cfg.save();
+            // The columns were sized for the old face; a wider one would clip.
+            fitWatchlistWidth();
+        });
+    }
+
+    fontMenu->addSeparator();
+    auto* sizeGroup = new QActionGroup(this);
+    sizeGroup->setExclusive(true);
+    struct { int px; const char* label; } sizes[] = {
+        {11, QT_TR_NOOP("Small")},
+        {12, QT_TR_NOOP("Normal")},
+        {14, QT_TR_NOOP("Large")},
+    };
+    for (const auto& z : sizes) {
+        QAction* a = fontMenu->addAction(tr(z.label));
+        a->setCheckable(true);
+        a->setChecked(Theme::tableFontSize() == z.px);
+        sizeGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, px = z.px]() {
+            Theme::setTableFont(Theme::tableFontFamily(), px);
+            m_cfg.tableFontSize = px;
+            m_cfg.save();
+            fitWatchlistWidth();
+        });
+    }
+
     view->addSeparator();
     m_bloterAction = view->addAction(tr("Show &trade panel"));
     m_bloterAction->setCheckable(true);
@@ -438,6 +495,22 @@ void MainWindow::updateIdentity() {
 
 // --- wiring -----------------------------------------------------------------
 
+// The chart gets whatever the watchlist does not need. Both panes are given
+// explicit sizes because QSplitter distributes by ratio: handing it only the
+// new left width would leave the right one wherever it happened to be.
+void MainWindow::fitWatchlistWidth() {
+    if (!m_bodySplit || !m_watch) return;
+    const int total = m_bodySplit->width();
+    if (total <= 0) return;                  // not laid out yet
+
+    int want = m_watch->preferredWidth();
+    // Half the window at most. A trader who turns on every column should not
+    // find the chart squeezed into a strip; past that point the panel scrolls,
+    // which is what it did before any of this.
+    want = qBound(m_watch->minimumWidth(), want, total / 2);
+    m_bodySplit->setSizes({want, total - want});
+}
+
 void MainWindow::refreshAll() {
     m_api->fetchAccount();
     m_api->fetchPositions();
@@ -486,7 +559,28 @@ void MainWindow::connectServices() {
     connect(m_watch, &WatchlistWidget::specificationRequested,
             this, &MainWindow::openSpecification);
     m_watch->setHiddenColumns(m_cfg.watchHiddenColumns);
+    // Deferred: the saved column set is applied here, AFTER the constructor
+    // sized the splitter, and the splitter has no real width until the window
+    // has been laid out. Running it on the event loop gets both.
+    QTimer::singleShot(0, this, &MainWindow::fitWatchlistWidth);
     m_watch->setFavourites(m_cfg.watchFavourites);
+    m_watch->setHiddenSymbols(m_cfg.watchHiddenSymbols);
+    m_watch->setSymbolColours(m_cfg.watchSymbolColours);
+    m_watch->setGridVisible(m_cfg.watchGrid);
+    connect(m_watch, &WatchlistWidget::hiddenSymbolsChanged, this,
+            [this](const QStringList& syms) {
+        m_cfg.watchHiddenSymbols = syms;
+        m_cfg.save();
+    });
+    connect(m_watch, &WatchlistWidget::symbolColoursChanged, this,
+            [this](const QStringList& pairs) {
+        m_cfg.watchSymbolColours = pairs;
+        m_cfg.save();
+    });
+    connect(m_watch, &WatchlistWidget::gridChanged, this, [this](bool on) {
+        m_cfg.watchGrid = on;
+        m_cfg.save();
+    });
     connect(m_watch, &WatchlistWidget::favouritesChanged, this,
             [this](const QStringList& symbols) {
         m_cfg.watchFavourites = symbols;
@@ -496,6 +590,7 @@ void MainWindow::connectServices() {
             [this](const QStringList& keys) {
         m_cfg.watchHiddenColumns = keys;
         m_cfg.save();
+        fitWatchlistWidth();
     });
     connect(m_api, &ApiClient::dailyRangeReceived, this,
             [this](const QString& sym, double high, double low) {
@@ -1050,6 +1145,7 @@ void MainWindow::logout() {
 
     m_cfg = dlg.config();
     m_api->setConfig(m_cfg);
+    m_positions->setTraderName(m_cfg.userName.isEmpty() ? m_cfg.email : m_cfg.userName);
     m_stream->setConfig(m_cfg);
     m_stream->start();
     m_accountTimer->start();
