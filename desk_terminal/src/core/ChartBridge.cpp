@@ -155,8 +155,28 @@ QString ChartBridge::listStudyTemplates() const     { return namedList("studyTem
 QString ChartBridge::studyTemplateContent(const QString& name) const {
     return namedGet("studyTemplates", name);
 }
+// An indicator template carries indicators and nothing else.
+//
+// The charting library writes whatever its save dialog was ticked for, which
+// includes the instrument and the timeframe. A template that remembers an
+// instrument is not a template: applying it to a second chart dragged that
+// chart onto the first one's symbol — reported from the desk as "once save in
+// template same symbol get in chart".
+//
+// Stripped HERE, in the store, rather than in the JS adapter that happens to
+// call it: this is the only place a template can be written, so the guarantee
+// holds however it was created.
 void ChartBridge::saveStudyTemplate(const QString& name, const QString& content) {
-    namedPut("studyTemplates", name, content);
+    QJsonObject o = QJsonDocument::fromJson(content.toUtf8()).object();
+    if (o.isEmpty()) {                 // not an object we understand; store as-is
+        namedPut("studyTemplates", name, content);
+        return;
+    }
+    o.remove("symbol");
+    o.remove("interval");
+    o.remove("resolution");
+    namedPut("studyTemplates", name,
+             QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
 }
 void ChartBridge::removeStudyTemplate(const QString& name) {
     namedRemove("studyTemplates", name);

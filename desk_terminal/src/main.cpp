@@ -58,6 +58,7 @@ int main(int argc, char* argv[]) {
 
     Config cfg = Config::load();
     Theme::setMode(Theme::fromName(cfg.theme));
+    Theme::setTableFont(cfg.tableFontFamily, cfg.tableFontSize);
     applyTheme(app);
 
     // Every mode switch re-applies the palette + global sheet; individual

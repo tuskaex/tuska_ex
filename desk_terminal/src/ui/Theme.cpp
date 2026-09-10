@@ -1,4 +1,5 @@
 #include "ui/Theme.h"
+#include <QGuiApplication>
 #include <QColor>
 
 namespace Theme {
@@ -148,6 +149,65 @@ QPalette qtPalette() {
     q.setColor(QPalette::Disabled, QPalette::Text,       QColor(c.dim));
     q.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(c.dim));
     return q;
+}
+
+namespace {
+// The chosen face, defaulted to what MT5 draws in. Held here rather than read
+// from the Config on every call: tableFont() runs for every table repaint.
+QString g_tableFamily = QStringLiteral("Tahoma");
+int     g_tableSize   = 12;
+}
+
+QString tableFontFamily() { return g_tableFamily; }
+int     tableFontSize()   { return g_tableSize; }
+
+void setTableFont(const QString& family, int px) {
+    const QString f = family.trimmed().isEmpty() ? QStringLiteral("Tahoma") : family;
+    const int s = qBound(9, px, 18);
+    if (f == g_tableFamily && s == g_tableSize) return;   // nothing to redraw
+    g_tableFamily = f;
+    g_tableSize   = s;
+    emit notifier()->changed();          // the panels restyle off this
+}
+
+QFont tableFont() {
+    // Tahoma, because that is the face MetaTrader 5 draws its Market Watch and
+    // blotter in, and matching it is what the desk asked for by name.
+    //
+    // Given as a LIST rather than a single family: Tahoma ships with Windows
+    // but not with macOS, and setFamily() with a missing name leaves Qt to
+    // substitute whatever it likes. The fallbacks are the closest faces that
+    // do ship there, so the mac build lands somewhere deliberate instead.
+    QFont f = QGuiApplication::font();
+    // The chosen family first, then faces that DO ship elsewhere. A single
+    // setFamily() with a name the system lacks leaves Qt to substitute
+    // whatever it likes; this way the mac build lands somewhere deliberate.
+    f.setFamilies({g_tableFamily,
+                   QStringLiteral("Geneva"),          // macOS, Tahoma's lineage
+                   QStringLiteral("DejaVu Sans"),
+                   QStringLiteral("Verdana")});
+    f.setStyleHint(QFont::SansSerif);
+    f.setPixelSize(g_tableSize);
+    return f;
+}
+
+QString spinStyle() {
+    const Palette& c = p();
+    return QString(
+        "QDoubleSpinBox{background:%1; color:%2; border:1px solid %3;"
+        "border-radius:6px; padding:4px 6px;}"
+        "QDoubleSpinBox:focus{border:1px solid %4;}"
+        "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button{"
+        "subcontrol-origin:border; width:17px; background:%5; border:none;"
+        "border-left:1px solid %3;}"
+        "QDoubleSpinBox::up-button{subcontrol-position:top right;"
+        "border-top-right-radius:6px;}"
+        "QDoubleSpinBox::down-button{subcontrol-position:bottom right;"
+        "border-bottom-right-radius:6px;}"
+        "QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover{background:%6;}"
+        "QDoubleSpinBox::up-arrow{image:url(:/spin-up.svg); width:9px; height:6px;}"
+        "QDoubleSpinBox::down-arrow{image:url(:/spin-down.svg); width:9px; height:6px;}")
+        .arg(c.inputBg, c.textStrong, c.inputBorder, c.accent, c.btnBg, c.btnHover);
 }
 
 QString styleSheet() {

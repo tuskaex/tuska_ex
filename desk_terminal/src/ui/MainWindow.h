@@ -61,6 +61,10 @@ private:
     void setStatus(const QString& text, bool error = false);
     void toggleTheme();
     void togglePrivacy();
+    // Moves the market-watch / chart boundary to exactly fit the columns the
+    // watchlist is showing. Called when that set changes, so switching a
+    // column on widens the panel rather than leaving the column half cut off.
+    void fitWatchlistWidth();
     void refreshAll();
     // Queues every instrument for a day's-high/low fetch, for Market Watch's
     // High and Low columns. Drained a few at a time rather than fired at once:
@@ -114,6 +118,7 @@ private:
     // can be re-fetched mid-session, hence the latch.
     bool m_chartLayoutRestored = false;
     QFrame*  m_identityDivider = nullptr;  // hairline before the first menu
+    QSplitter* m_bodySplit  = nullptr;   // market watch | centre column
     QSplitter* m_centerSplit = nullptr;
 
     QHash<QString, SymbolSpec> m_specs;

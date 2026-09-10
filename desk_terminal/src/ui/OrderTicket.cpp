@@ -283,24 +283,11 @@ void OrderTicket::applyTheme() {
         .arg(c.inputBg, c.textStrong, c.inputBorder, c.accent);
     m_volume->setStyleSheet(input);
 
-    // The two price boxes carry steppers, so their sub-controls have to be
-    // described here. A style sheet on a spin box replaces the native drawing
-    // of its arrows: leave them unmentioned and the button area comes out as a
-    // blank grey block, and hand-drawn CSS triangles looked like exactly that,
-    // hand-drawn. Real chevrons from the resource bundle instead — one image
-    // each, in a grey that reads on both themes.
-    const QString priceInput = input + QString(
-        "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button{"
-        "subcontrol-origin:border; width:15px; background:%1; border:none;"
-        "border-left:1px solid %2;}"
-        "QDoubleSpinBox::up-button{subcontrol-position:top right;}"
-        "QDoubleSpinBox::down-button{subcontrol-position:bottom right;}"
-        "QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover{background:%3;}"
-        "QDoubleSpinBox::up-arrow{image:url(:/spin-up.svg); width:9px; height:6px;}"
-        "QDoubleSpinBox::down-arrow{image:url(:/spin-down.svg); width:9px; height:6px;}")
-        .arg(c.btnBg, c.inputBorder, c.btnHover);
-    m_sl->setStyleSheet(priceInput);
-    m_tp->setStyleSheet(priceInput);
+    // The two price boxes carry steppers, and those come from the shared
+    // style — the same one the S/L / T/P dialog uses, so the arrows cannot
+    // drift apart between the two places a trader sets a level.
+    m_sl->setStyleSheet(Theme::spinStyle());
+    m_tp->setStyleSheet(Theme::spinStyle());
 
     // Destructive — stays a quiet ghost button and only tints on hover, so a
     // mis-click next to BUY/SELL never looks inviting.

@@ -138,6 +138,8 @@
         call(bridge.listStudyTemplates)
           .then((t) => parseJson(t, []).map((name) => ({ name }))),
       removeStudyTemplate: (info) => call(bridge.removeStudyTemplate, info.name),
+      // The instrument and timeframe are stripped on the C++ side, in the one
+      // place templates are written — see ChartBridge::saveStudyTemplate.
       saveStudyTemplate: (data) =>
         call(bridge.saveStudyTemplate, data.name, data.content),
       getStudyTemplateContent: (info) =>
@@ -248,8 +250,13 @@
       },
       disabled_features: [
         "use_localstorage_for_settings",
-        // header_saveload is NOT disabled any more — it is the Save / Load
-        // menu, and save_load_adapter above now gives it somewhere to write.
+        // The Save / Load LAYOUT menu stays off. A saved layout carries the
+        // instrument and the interval with it, so loading one on a second
+        // chart dragged that chart onto the first chart's symbol — reported
+        // from the desk as "once save in template same symbol get in chart".
+        // Indicator templates are the thing a trader actually wants to reuse
+        // across instruments, and those are enabled below.
+        "header_saveload",
         "header_compare",
         // Split view (2 or 4 panes): drop the drawing toolbar down the left and
         // the date-range bar along the bottom. Both are worth their space on a
