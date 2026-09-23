@@ -6,6 +6,7 @@
 class QLineEdit;
 class QComboBox;
 class QPushButton;
+class QCheckBox;
 class QLabel;
 class QNetworkAccessManager;
 class QJsonObject;
@@ -28,7 +29,15 @@ public:
     static constexpr const char* LOCAL_REST = "http://localhost:8000/api/algo";
     static constexpr const char* LOCAL_WS   = "ws://localhost:8000/ws/algo/prices";
 
-    explicit LoginDialog(const Config& cfg, QWidget* parent = nullptr);
+    // Which of the two the dialog opens on. File > Login to Trade Account is
+    // the email/password path; File > Login to Web Service is the API key and
+    // secret the dashboard issues for the algo/web service. Both write the same
+    // Config — a desk can hold one credential without the other, which is why
+    // they are separate entries rather than a toggle nobody finds.
+    enum class Mode { TradeAccount, WebService };
+
+    explicit LoginDialog(const Config& cfg, QWidget* parent = nullptr,
+                         Mode mode = Mode::TradeAccount);
     Config config() const { return m_cfg; }
 
 protected:
@@ -62,6 +71,12 @@ private:
     QComboBox*   m_profile;
     QLineEdit*   m_email;
     QLineEdit*   m_password;
+    // MT5's "Remember password". Ticked, the password is kept in config.json
+    // and prefills this field on the next launch; unticked, it is dropped and
+    // any previously saved one is erased. See Config::savedPassword for what
+    // that storage is and is not.
+    QCheckBox*   m_remember;
+    Mode         m_mode;
     QLineEdit*   m_rest;
     QLineEdit*   m_ws;
     QPushButton* m_loginBtn;

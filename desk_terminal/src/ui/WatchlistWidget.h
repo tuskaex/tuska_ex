@@ -57,7 +57,8 @@ public:
     // The day's high/low from the server, seeding the High and Low columns.
     // Ticks widen them from there, so a seed that never arrives costs the
     // session's own range rather than an empty column.
-    void setDailyRange(const QString& symbol, double high, double low);
+    // `open` drives the Change column; high/low drive High and Low.
+    void setDailyRange(const QString& symbol, double high, double low, double open = 0.0);
     QString currentSymbol() const { return m_selected; }
     void selectSymbol(const QString& symbol);
 
@@ -99,6 +100,12 @@ private:
         double  high     = 0.0;
         double  low      = 0.0;
         bool    hasRange = false;
+        // The day's OPEN, which the Change column is measured from. Unlike the
+        // range it cannot be reconstructed from ticks — a terminal opened at
+        // midday never saw the open — so it stays unset, and Change reads "—",
+        // until the daily bar arrives.
+        double  dayOpen  = 0.0;
+        bool    hasOpen  = false;
         QString group;
     };
 
@@ -129,6 +136,8 @@ private:
     static QColor tintFor(const QString& colourName);
     // Column index for an optional column's key, or -1.
     static int columnForKey(const QString& key);
+    // Redraws one row's Change cell from its day open and last bid.
+    void refreshChange(const Row& row);
     void applyFilter();
     void setMarket(const QString& group);
     void onSelectionChanged();

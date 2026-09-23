@@ -118,6 +118,10 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
 
     p.chart = new WebChartWidget(m_api, m_stream, p.frame);
     p.chart->setMinimumSize(220, 160);
+    // Panes are built on demand, so one opened after the trader switched the
+    // Data Window on has to be told about it here — setDataWindow() on the area
+    // only reaches the panes that existed when it was called.
+    p.chart->setDataWindow(m_dataWindow);
 
     // A symbol chosen inside the chart is as real a choice as one clicked in
     // the Market Watch, so record it the same way: the pane header follows it,
@@ -467,6 +471,45 @@ QStringList ChartArea::visibleSymbols() const {
     for (int i = 0; i < m_count && i < m_panes.size(); ++i)
         out << m_panes[i].symbol;
     return out;
+}
+
+QStringList ChartArea::chartStates() const {
+    QStringList out;
+    for (int i = 0; i < m_count && i < m_panes.size(); ++i)
+        out << (m_panes[i].chart ? m_panes[i].chart->chartState() : QString());
+    return out;
+}
+
+void ChartArea::setChartStates(const QStringList& states) {
+    // The caller sets the pane count first, so the panes this walks are the
+    // ones the profile asked for. A shorter list than the grid leaves the extra
+    // panes showing whatever they already had, which is better than blanking
+    // them: a profile saved on one chart should not wipe the other three.
+    for (int i = 0; i < states.size() && i < m_count && i < m_panes.size(); ++i) {
+        if (!m_panes[i].chart || states[i].isEmpty()) continue;
+        m_panes[i].chart->setChartState(states[i]);
+    }
+}
+
+QString ChartArea::studies() const {
+    // Every pane reports the same list — it is the vendor bundle's, not the
+    // chart's — so the active one answers for all of them. A pane still loading
+    // returns an empty array, and the navigator refills when studiesChanged
+    // arrives.
+    WebChartWidget* c = activeChart();
+    return c ? c->studies() : QStringLiteral("[]");
+}
+
+void ChartArea::addStudy(const QString& name) {
+    if (WebChartWidget* c = activeChart()) c->createStudy(name);
+}
+
+void ChartArea::setDataWindow(bool on) {
+    m_dataWindow = on;
+    // A no-op per pane when the value is unchanged, so this cannot rebuild
+    // charts needlessly — same contract as setCompact().
+    for (Pane& p : m_panes)
+        if (p.chart) p.chart->setDataWindow(on);
 }
 
 void ChartArea::setSymbols(const QVector<SymbolSpec>& symbols) {

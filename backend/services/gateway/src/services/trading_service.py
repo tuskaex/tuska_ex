@@ -797,6 +797,12 @@ async def list_positions(account_id: UUID, user_id: UUID, status: str, db: Async
             "take_profit": float(pos.take_profit) if pos.take_profit else None,
             "swap": float(pos.swap or 0),
             "commission": float(pos.commission or 0),
+            # The order's comment, which the algo trade endpoint writes onto the
+            # position. It was stored and never handed back, so a client had no
+            # way to tell two otherwise identical positions on the same
+            # instrument apart — the desktop terminal's Comment column had
+            # nothing to render.
+            "comment": pos.comment,
             "profit": profit,
             "status": pos_status_val,
             "contract_size": float(contract_size),
@@ -892,6 +898,12 @@ async def modify_position(position_id: UUID, req, user_id: UUID, db: AsyncSessio
         updated = True
     if "take_profit" in provided:
         pos.take_profit = req.take_profit
+        updated = True
+    if "comment" in provided:
+        # A label, not a trading instruction: it is not validated against the
+        # price and an empty string clears it. Trimmed so a comment of spaces
+        # does not read as set.
+        pos.comment = (req.comment or "").strip() or None
         updated = True
 
     if updated:

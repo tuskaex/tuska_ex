@@ -28,9 +28,13 @@ class QFrame;
 //   │              │ Balance: … Equity: … Margin: …               │
 //   └─ status bar ────────────────────────────────────────────────┘
 //
-// The menu carries only actions this terminal actually has (no File/Insert/
-// Charts stubs). Services stay off the UI: MainWindow owns ApiClient and
-// PriceStream and connects their signals to the widgets.
+// The menu follows the desk's specification: File (order, workspace profiles,
+// account and sign-in), Trade, Accounts, View (panels, then this terminal's own
+// appearance settings) and Insert. Entries that name something not yet built
+// say so when opened — see MainWindow::comingSoon — rather than being left off
+// the menu or, worse, opening something that is not what they claim.
+// Services stay off the UI: MainWindow owns ApiClient and PriceStream and
+// connects their signals to the widgets.
 class MainWindow : public QMainWindow {
     Q_OBJECT
 public:
@@ -45,10 +49,39 @@ private slots:
     void openOrderWindow();    // Market + Pending order ticket (F9)
     // MT5's symbol Specification panel, from the Market Watch right-click.
     void openSpecification(const QString& symbol);
+    // Same sheet, opened on top of another modal dialog. An application-modal
+    // dialog only lets its OWN children through, so the Symbols browser has to
+    // be the parent or the sheet it opens comes up blocked and unclickable.
+    void openSpecificationOn(const QString& symbol, QWidget* parent);
     void onActiveChartChanged(int index);  // strip follows the active pane
     void persistChartLayout();             // grid + per-pane symbols -> Config
     void logout();              // clear the session and return to the sign-in card
     void applyTheme();          // restyle the bits that carry inline style sheets
+    // ── File > Profile ──
+    void saveProfileAs();                       // asks for a name, then captures
+    void loadProfile(const QString& name);      // puts the workspace back
+    void rebuildProfileMenu();                  // Load/Delete lists, on open
+    // ── File > Open an Account ──
+    void openAccountSignup();
+    // ── View ──
+    void openSymbolsBrowser();   // View > Symbols
+    void openNavigation();       // View > Navigation
+    // View > Reports, opened on one of ReportsDialog::Tab. Typed as int so the
+    // header does not have to pull the dialog in.
+    void openReports(int tab);
+    // ── Insert > Scripts ──
+    void openScripts();
+    // ── View > Strategy Tester ──
+    void openStrategyTester();
+    // One place for the View entries the desk named but that do not exist yet
+    // (Strategy Tester, and three of the four Reports). Says what is missing
+    // rather than opening something that is not it.
+    void comingSoon(const QString& feature);
+    // ── File > Login to Web Service ──
+    // The trading account signs in with email and password; the web service is
+    // reached with the API key and secret the dashboard issues. Same dialog,
+    // opened on its other mode.
+    void openWebServiceLogin();
 
 protected:
     // Remembers where the window was and whether it was maximized.
@@ -86,6 +119,12 @@ private:
     // Money as text, or a mask when privacy mode is on.
     QString money(double v, const QString& currency = QString()) const;
     void switchAccount(const QString& accountId);
+    // Everything a workspace profile records, read off the live window.
+    struct WorkspaceProfile captureProfile(const QString& name) const;
+    // True when the trade panel is showing. Read from the menu action rather
+    // than the widget: the panel is collapsed, not hidden, so it is never
+    // isHidden() even when it has been shut.
+    bool tradePanelVisible() const;
 
     Config       m_cfg;
     ApiClient*   m_api;
@@ -109,9 +148,22 @@ private:
     bool     m_authRecoveryTried = false;
     QLabel*  m_identity = nullptr;     // menu-bar left: name | type | account no.
     QMenu*   m_accountsMenu = nullptr;
+    QMenu*   m_profileMenu  = nullptr;  // File > Profile, rebuilt when opened
     QAction* m_darkAction   = nullptr;
     QAction* m_privacyAction = nullptr;
     QAction* m_bloterAction = nullptr;  // show/hide the trade blotter
+    QAction* m_marketWatchAction = nullptr;
+    QAction* m_dataWindowAction  = nullptr;
+    // View > Navigation, kept alive between openings so the tree does not have
+    // to be rebuilt and the trader's expanded sections survive.
+    class NavigationDialog* m_navigation = nullptr;
+    // Insert > Scripts. Kept alive once opened: a live script must keep running
+    // while the trader is back on the charts, and closing the window only hides
+    // it (after asking, if a script is still going).
+    class ScriptsDialog* m_scripts = nullptr;
+    // View > Strategy Tester. Kept so a test's results and settings survive
+    // closing the window, which a trader does between runs.
+    class StrategyTesterDialog* m_tester = nullptr;
     QActionGroup* m_layoutGroup = nullptr;  // 1 / 2 / 4 chart panes
     // The saved grid is restored once, from the first symbols payload — panes
     // cannot be pointed at an instrument before its metadata exists. Symbols

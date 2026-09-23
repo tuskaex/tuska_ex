@@ -98,9 +98,12 @@ WatchlistWidget::WatchlistWidget(QWidget* parent) : QWidget(parent) {
     // MT5's column set. High / Low are the day's range and Time is the last
     // tick — a quote with no time on it gives a trader no way to tell a live
     // price from one frozen since the market closed.
-    m_table->setColumnCount(7);
-    m_table->setHorizontalHeaderLabels({tr("Symbol"), tr("Bid"), tr("Ask"), tr("Spread"),
-                                        tr("High"), tr("Low"), tr("Time")});
+    m_table->setColumnCount(8);
+    // Change sits next to Ask rather than at the end: it is read together with
+    // the price, and a trader scanning the list for the day's movers should not
+    // have to cross Spread, High and Low to find it.
+    m_table->setHorizontalHeaderLabels({tr("Symbol"), tr("Bid"), tr("Ask"), tr("Change"),
+                                        tr("Spread"), tr("High"), tr("Low"), tr("Time")});
     m_table->verticalHeader()->setVisible(false);
     m_table->verticalHeader()->setDefaultSectionSize(20);   // MT5-tight rows
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -131,9 +134,10 @@ WatchlistWidget::WatchlistWidget(QWidget* parent) : QWidget(parent) {
     m_table->setColumnWidth(0, 104);
     m_table->setColumnWidth(1, 84);
     m_table->setColumnWidth(2, 84);
-    m_table->setColumnWidth(3, 56);
-    m_table->setColumnWidth(4, 80);
+    m_table->setColumnWidth(3, 68);   // Change
+    m_table->setColumnWidth(4, 56);   // Spread
     m_table->setColumnWidth(5, 80);
+    m_table->setColumnWidth(6, 80);
     // Time is last, so stretchLastSection owns its width.
 
     // Every column is present; the panel is simply narrower than the row. The
@@ -241,10 +245,11 @@ void WatchlistWidget::setSymbols(const QVector<SymbolSpec>& symbols) {
 }
 
 int WatchlistWidget::columnForKey(const QString& key) {
-    if (key == "spread") return 3;
-    if (key == "high")   return 4;
-    if (key == "low")    return 5;
-    if (key == "time")   return 6;
+    if (key == "change") return 3;
+    if (key == "spread") return 4;
+    if (key == "high")   return 5;
+    if (key == "low")    return 6;
+    if (key == "time")   return 7;
     return -1;
 }
 
@@ -385,7 +390,7 @@ void WatchlistWidget::setSymbolColours(const QStringList& pairs) {
 }
 
 void WatchlistWidget::applyColumns() {
-    for (const char* key : {"spread", "high", "low", "time"}) {
+    for (const char* key : {"change", "spread", "high", "low", "time"}) {
         const int col = columnForKey(QString::fromLatin1(key));
         if (col >= 0) m_table->setColumnHidden(col, m_hidden.contains(QString::fromLatin1(key)));
     }
@@ -516,6 +521,7 @@ void WatchlistWidget::openRowMenu(const QPoint& pos) {
     // High and Low are ONE entry there, and a trader who wants the day's range
     // wants both halves of it, so they are toggled together here too.
     struct { const char* keys; const char* label; } kCols[] = {
+        {"change",   QT_TR_NOOP("Change")},
         {"spread",   QT_TR_NOOP("Spread")},
         {"high,low", QT_TR_NOOP("High/Low")},
         {"time",     QT_TR_NOOP("Time")},
@@ -636,7 +642,8 @@ void WatchlistWidget::applyFilter() {
     }
 }
 
-void WatchlistWidget::setDailyRange(const QString& symbol, double high, double low) {
+void WatchlistWidget::setDailyRange(const QString& symbol, double high, double low,
+                                    double open) {
     auto it = m_rows.find(symbol);
     if (it == m_rows.end() || it->row < 0) return;
     Row& row = it.value();
@@ -648,8 +655,39 @@ void WatchlistWidget::setDailyRange(const QString& symbol, double high, double l
     row.high = row.hasRange ? qMax(row.high, high) : high;
     row.low  = row.hasRange ? qMin(row.low,  low)  : low;
     row.hasRange = true;
-    if (auto* h = m_table->item(row.row, 4)) h->setText(QString::number(row.high, 'f', row.digits));
-    if (auto* l = m_table->item(row.row, 5)) l->setText(QString::number(row.low,  'f', row.digits));
+    if (auto* h = m_table->item(row.row, 5)) h->setText(QString::number(row.high, 'f', row.digits));
+    if (auto* l = m_table->item(row.row, 6)) l->setText(QString::number(row.low,  'f', row.digits));
+
+    // The day's OPEN is what Change is measured from, and the daily bar is the
+    // only place it comes from — a terminal started mid-session has no way to
+    // derive it from the ticks it has seen. Until it arrives the column reads
+    // "—" rather than showing a change measured from an arbitrary moment.
+    if (open > 0.0) {
+        row.dayOpen = open;
+        row.hasOpen = true;
+        refreshChange(row);
+    }
+}
+
+// Percentage move from the day's open, coloured the way the rest of the
+// terminal colours direction. Split out because both the daily-bar seed and
+// every tick have to redraw it.
+void WatchlistWidget::refreshChange(const Row& row) {
+    auto* cell = m_table->item(row.row, 3);
+    if (!cell) return;
+    if (!row.hasOpen || row.dayOpen <= 0.0 || row.lastBid <= 0.0) {
+        cell->setText(QStringLiteral("—"));
+        cell->setForeground(QColor(Theme::p().muted));
+        return;
+    }
+    const double pct = (row.lastBid - row.dayOpen) / row.dayOpen * 100.0;
+    const auto& t = Theme::p();
+    // Signed, so a flat-looking 0.00 still says which side of the open it is on
+    // once it moves. qFuzzyIsNull keeps a true zero from reading as "+0.00%".
+    cell->setText(QString("%1%2%%")
+                      .arg(pct > 0.0 ? QStringLiteral("+") : QString())
+                      .arg(pct, 0, 'f', 2));
+    cell->setForeground(QColor(qFuzzyIsNull(pct) ? t.text : (pct > 0.0 ? t.up : t.down)));
 }
 
 void WatchlistWidget::updateQuote(const Quote& q) {
@@ -683,8 +721,10 @@ void WatchlistWidget::updateQuote(const Quote& q) {
         ask->setText(QString::number(q.ask, 'f', row.digits));
         ask->setForeground(dirColor);
     }
+    refreshChange(row);
+
     // Spread in points, the unit MT5 shows it in.
-    if (auto* sp = m_table->item(row.row, 3)) {
+    if (auto* sp = m_table->item(row.row, 4)) {
         const double points = q.spread * std::pow(10.0, row.digits - 1);
         sp->setText(QString::number(points, 'f', 1));
     }
@@ -693,9 +733,9 @@ void WatchlistWidget::updateQuote(const Quote& q) {
     if (q.bid > 0.0) {
         if (!row.hasRange) { row.high = row.low = q.bid; row.hasRange = true; }
         else { row.high = qMax(row.high, q.bid); row.low = qMin(row.low, q.bid); }
-        if (auto* h = m_table->item(row.row, 4))
+        if (auto* h = m_table->item(row.row, 5))
             h->setText(QString::number(row.high, 'f', row.digits));
-        if (auto* l = m_table->item(row.row, 5))
+        if (auto* l = m_table->item(row.row, 6))
             l->setText(QString::number(row.low,  'f', row.digits));
     }
 
@@ -703,7 +743,7 @@ void WatchlistWidget::updateQuote(const Quote& q) {
     // timestamp shown in UTC next to a local-time title reads as a stopped
     // clock for anyone not on UTC. An unparseable timestamp falls back to
     // arrival time rather than blanking a column that says "is this live?".
-    if (auto* tm = m_table->item(row.row, 6)) {
+    if (auto* tm = m_table->item(row.row, 7)) {
         const QDateTime stamp = q.timestamp.isValid() ? q.timestamp.toLocalTime()
                                                       : QDateTime::currentDateTime();
         tm->setText(stamp.time().toString("HH:mm:ss"));

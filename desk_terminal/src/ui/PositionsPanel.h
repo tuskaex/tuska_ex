@@ -29,6 +29,19 @@ class PositionsPanel : public QWidget {
 public:
     explicit PositionsPanel(QWidget* parent = nullptr);
 
+    // Writes the History tab out as a standalone HTML statement — MT5's
+    // "Report", and the form a trader's accountant or broker asks for.
+    // Public because View > Reports > Summary opens it as well as the panel's
+    // own "Save report" button.
+    void exportHistoryReport();
+
+    // The closed trades the panel last received, UNFILTERED, plus the account
+    // they belong to. View > Reports computes its tables from these rather than
+    // re-fetching: the blotter already polls them, and a report that disagreed
+    // with the History tab beside it would be the worse bug.
+    QVector<HistoryTrade> history() const { return m_lastHistory; }
+    AccountInfo account() const { return m_lastAccount; }
+
 public slots:
     void setPositions(const QVector<OpenPosition>& positions);
     void setOrders(const QVector<PendingOrder>& orders);
@@ -84,9 +97,6 @@ private slots:
     // and the comment. One slot because QTableWidget reports them all through
     // the same itemChanged signal.
     void onBracketEdited(class QTableWidgetItem* item);
-    // Writes the History tab out as a standalone HTML statement — MT5's
-    // "Report", and the form a trader's accountant or broker asks for.
-    void exportHistoryReport();
 
 private:
     // Time filter, one per tab. Which timestamp it tests depends on the tab:

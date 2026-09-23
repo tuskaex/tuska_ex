@@ -23,6 +23,19 @@ public:
     QString email;         // the address signed in with (prefills the login form)
     QString accountsJson = "[]";   // [{account_id, account_number, is_demo, currency}]
 
+    // MT5's "Remember password" on the sign-in card. Off by default, and off
+    // means the field below is cleared as well as unused.
+    //
+    // Be clear about what this is: savedPassword is stored in the same
+    // plaintext JSON file as the tokens above, so ticking the box puts the
+    // account password on disk in readable form. That is what the option does
+    // in MetaTrader too, and the desk asked for it — but it is a real choice,
+    // which is why it is opt-in rather than the default. The session itself
+    // does NOT depend on it: the refresh token already keeps a trader signed in
+    // across restarts, and this only spares retyping when that lapses.
+    bool    rememberPassword = false;
+    QString savedPassword;
+
     // UI preferences
     QString theme   = "light"; // "dark" | "light" — light mirrors the MT5 layout
     bool    privacy = false;   // mask balances / account numbers on screen
@@ -59,6 +72,17 @@ public:
     QStringList watchHiddenSymbols;
     // Grid lines in the Market Watch table, also from that menu.
     bool        watchGrid = true;
+
+    // View > Market Watch. The panel can be closed outright, MT5-style, which
+    // hands its whole column to the charts. On by default — it is the first
+    // thing the layout is built around.
+    bool        marketWatchVisible = true;
+
+    // View > Data Window. The charting library's widget-bar panel: OHLCV and
+    // every indicator's value at the crosshair. Off by default because it takes
+    // real width from the candles, and because it is a reading tool rather than
+    // something a trader wants up all session.
+    bool        dataWindow = false;
 
     // Row colours a trader has put on instruments in Market Watch, as
     // "SYMBOL=name" entries ("XAUUSD=amber"). A flat list rather than a nested

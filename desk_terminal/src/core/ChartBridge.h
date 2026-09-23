@@ -20,6 +20,10 @@ class ChartBridge : public QObject {
     // toolbar and the bottom date-range bar in that state — in a quarter-sized
     // pane they cost more room than they earn.
     Q_PROPERTY(bool    compact        READ compact        NOTIFY compactChanged)
+    // View > Data Window. The charting library's own panel, on the widget bar
+    // down the right of the chart: OHLCV plus every indicator's value at the
+    // crosshair. Off by default — it takes real width from the candles.
+    Q_PROPERTY(bool    dataWindow     READ dataWindow     NOTIFY dataWindowChanged)
 public:
     ChartBridge(ApiClient* api, PriceStream* stream, QObject* parent = nullptr);
 
@@ -28,11 +32,15 @@ public:
     QString positionsJson() const { return m_positionsJson; }
     QString theme()         const { return m_theme; }
     bool    compact()       const { return m_compact; }
+    bool    dataWindow()    const { return m_dataWindow; }
 
     void setTheme(const QString& theme);   // "dark" | "light"
     // Rebuilds the chart with a reduced chrome set. Costly (the widget is torn
     // down and recreated), so it is only called when the value actually flips.
     void setCompact(bool compact);
+    // Same cost as setCompact: the widget bar is a constructor option, so the
+    // chart is torn down and rebuilt. Only emits on an actual change.
+    void setDataWindow(bool on);
 
     void setSymbols(const QVector<SymbolSpec>& symbols);  // called by MainWindow
     void setCurrentSymbol(const QString& symbol);          // watchlist selection
@@ -86,6 +94,36 @@ public:
                                          const QString& content);
     Q_INVOKABLE void removeDrawingTemplate(const QString& tool, const QString& name);
 
+    // ── Workspace profiles (File > Profile) ────────────────────────────
+    //
+    // A profile has to bring a pane back as it was left: instrument, timeframe,
+    // indicators, drawings and chart style. Only the charting library knows all
+    // of that, and only through its own save() callback.
+    //
+    // Rather than a request/response round trip at save time — which would make
+    // "Save Profile" asynchronous and racy across four panes — the web layer
+    // pushes the state here whenever the library says something worth
+    // persisting changed (its onAutoSaveNeeded event). C++ keeps the latest,
+    // so writing a profile is a synchronous read of chartState().
+    Q_INVOKABLE void pushChartState(const QString& stateJson);
+    QString chartState() const { return m_chartState; }
+    // C++ -> JS: put a pane back into a state captured earlier. A no-op on the
+    // web side if the string is not something the library wrote.
+    void loadChartState(const QString& stateJson);
+
+    // ── View > Navigation: Indicators ────────────────────────────────
+    //
+    // The navigator lists the indicators this chart can draw and adds one on a
+    // double-click, which is what MT5's Navigator does. The list belongs to the
+    // charting library, so the web layer pushes it up once the chart is ready
+    // rather than C++ keeping a copy that would go stale against the vendor
+    // bundle.
+    Q_INVOKABLE void pushStudies(const QString& namesJson);
+    QString studies() const { return m_studies; }
+    // C++ -> JS: add one to this pane. A name the library does not know is
+    // ignored on the far side.
+    void createStudy(const QString& name);
+
     // JS -> C++: a TradingView dialog (Indicators, settings, …) opened or
     // closed. Those render INSIDE the chart iframe, so the native one-click
     // strip floating over the web view would otherwise cover them permanently.
@@ -107,12 +145,21 @@ signals:
     void positionsChanged();
     void themeChanged(const QString& theme);
     void compactChanged(bool compact);
+    void dataWindowChanged(bool on);
     void barsReady(const QString& reqId, const QString& barsJson);
     void tick(const QString& symbol, double bid, double ask, double tsMs);
     // Result of a modifyBrackets()/closePosition() call, back to the broker adapter.
     void positionOp(const QString& positionId, const QString& op, bool ok, const QString& message);
     // Raised when a chart dialog opens/closes, so the host can hide the strip.
     void overlayHiddenChanged(bool hidden);
+    // C++ -> JS, for loadChartState(). Separate from any signal the chart
+    // already listens to: this one rebuilds the whole pane.
+    void chartStateLoad(const QString& stateJson);
+    // C++ -> JS, for createStudy().
+    void studyRequested(const QString& name);
+    // Raised once the web layer has handed over the indicator list, so the
+    // navigator can fill in a section that was empty when it opened.
+    void studiesChanged();
 
 private slots:
     void onBarsReceived(const QString& symbol, const QString& timeframe, const QVector<Bar>& bars);
@@ -125,7 +172,10 @@ private:
     QString      m_positionsJson = "[]";
     QString      m_currentSymbol;
     bool         m_compact = false;
+    bool         m_dataWindow = false;
     QString      m_theme = "dark";
+    QString      m_chartState;   // latest state the web layer pushed up
+    QString      m_studies = "[]";   // indicator names the library offers
 
     // Correlate async /bars responses (which carry only symbol+tf) back to the
     // JS reqId that asked, FIFO per (symbol,timeframe).

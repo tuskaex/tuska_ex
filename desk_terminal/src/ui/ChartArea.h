@@ -59,6 +59,12 @@ public:
 
     WebChartWidget* activeChart() const;
 
+    // ── View > Navigation: Indicators ──
+    // Read from, and applied to, the ACTIVE pane — an indicator is added to the
+    // chart the trader is looking at, exactly as the chart's own dialog does.
+    QString studies() const;
+    void    addStudy(const QString& name);
+
     // The instrument the ACTIVE pane is showing. Not the same thing as the
     // Market Watch selection once a trader clicks between panes — the one-click
     // strip and the order window follow this, or they would quote a different
@@ -68,6 +74,14 @@ public:
     // Per-pane symbols, left to right, for the panes currently visible. Saved
     // to Config so a 2x2 comes back as it was left rather than as one chart.
     QStringList visibleSymbols() const;
+
+    // ── Workspace profiles (File > Profile) ──
+    // One serialised chart state per VISIBLE pane, left to right: symbol,
+    // timeframe, indicators, drawings. A pane whose chart has not finished
+    // loading contributes an empty string, and restore skips those rather than
+    // handing the library something it cannot read.
+    QStringList chartStates() const;
+    void        setChartStates(const QStringList& states);
 
     // Select a pane programmatically. Exists for restoring a saved layout:
     // showSymbol() only ever targets the ACTIVE pane, so seeding four of them
@@ -79,6 +93,9 @@ public:
     void setSymbols(const QVector<SymbolSpec>& symbols);
     void setPositions(const QVector<OpenPosition>& positions);
     void setTheme(const QString& theme);
+    // View > Data Window, on every pane. Panes built later pick it up from
+    // m_dataWindow rather than opening without it.
+    void setDataWindow(bool on);
     void showSymbol(const QString& symbol);
 
     // The one-click strip floats over whichever pane is active and moves with it.
@@ -145,6 +162,7 @@ private:
     QWidget* m_overlay = nullptr;
     int m_count  = 1;
     int m_active = 0;
+    bool m_dataWindow = false;          // ditto, for the widget-bar panel
     QVector<SymbolSpec> m_symbols;      // replayed into panes built later
     QVector<OpenPosition> m_positions;
 };
