@@ -30,10 +30,28 @@ public:
     // ChartBridge::compact.
     void setCompact(bool compact);
 
+    // View > Data Window: the library's widget-bar panel with OHLCV and every
+    // indicator's value at the crosshair. Rebuilds the chart, like setCompact.
+    void setDataWindow(bool on);
+
+    // ── Workspace profiles ──
+    // This pane's symbol, timeframe, indicators and drawings, as the charting
+    // library serialises them. Empty until the chart has finished loading —
+    // see ChartBridge::pushChartState for why it is a cache and not a call.
+    // ── View > Navigation: Indicators ──
+    // The indicator names this chart can draw, as a JSON array. Empty until the
+    // chart has loaded and reported them.
+    QString studies() const;
+    void    createStudy(const QString& name);
+    QString chartState() const;
+    void    setChartState(const QString& stateJson);
+
 signals:
     // The trader picked a symbol inside the chart itself. Relayed so the pane
     // header can follow, and so the choice survives a restart.
     void symbolPickedInChart(const QString& symbol);
+    // The indicator list arrived from the web layer.
+    void studiesChanged();
 
 protected:
     void resizeEvent(QResizeEvent* e) override;

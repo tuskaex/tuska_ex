@@ -104,3 +104,7 @@ class ClosePositionRequest(BaseModel):
 class ModifyPositionRequest(BaseModel):
     stop_loss: Optional[Decimal] = None
     take_profit: Optional[Decimal] = None
+    # The trader's own label for the position, editable after it is open. Sent
+    # only when it is being changed — modify_position keys off the fields the
+    # client actually set, so omitting it leaves the stored comment alone.
+    comment: Optional[str] = Field(default=None, max_length=255)

@@ -86,6 +86,16 @@ Config Config::load() {
         for (const QJsonValue& v : o.value("watchHiddenColumns").toArray())
             c.watchHiddenColumns << v.toString();
     }
+    if (o.contains("marketWatchVisible"))
+        c.marketWatchVisible = o.value("marketWatchVisible").toBool(true);
+    if (o.contains("dataWindow")) c.dataWindow = o.value("dataWindow").toBool(false);
+    if (o.contains("rememberPassword")) {
+        c.rememberPassword = o.value("rememberPassword").toBool(false);
+        // Only read the password back when the box was ticked. A file left
+        // over from a session where it was later switched off must not quietly
+        // resurrect the password.
+        if (c.rememberPassword) c.savedPassword = o.value("savedPassword").toString();
+    }
     if (o.contains("restBase") && !o.value("restBase").toString().isEmpty())
         c.restBase = o.value("restBase").toString();
     if (o.contains("wsUrl") && !o.value("wsUrl").toString().isEmpty())
@@ -119,6 +129,12 @@ bool Config::save() const {
     o["ticketPosX"]         = ticketPosX;
     o["ticketPosY"]         = ticketPosY;
     o["windowGeometry"]    = windowGeometry;
+    o["marketWatchVisible"] = marketWatchVisible;
+    o["dataWindow"]         = dataWindow;
+    o["rememberPassword"]  = rememberPassword;
+    // Written only while the box is ticked, so unticking it erases what was
+    // there rather than leaving the password behind in the file.
+    o["savedPassword"]      = rememberPassword ? savedPassword : QString();
 
     QFile f(filePath());
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))

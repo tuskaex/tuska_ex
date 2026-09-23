@@ -10,7 +10,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Official Qt (MSVC) with WebEngine for the embedded TradingView charts.
 # Svg: the header/panel icons are rendered from SVG path data via QSvgRenderer
 # so they stay sharp on scaled displays and take the theme colour.
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network WebSockets WebEngineWidgets WebChannel Svg)
+# Qml is here for QJSEngine, NOT for QML itself: Insert > Scripts runs the
+# trader's own JavaScript, and the Strategy Tester runs it over historical bars.
+# It was already being linked transitively through WebEngine; naming it makes
+# that a dependency this project owns rather than one it happens to inherit.
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network WebSockets WebEngineWidgets WebChannel Svg Qml)
 
 if (APPLE AND TARGET WrapOpenGL::WrapOpenGL)
     # Drop AGL from the link line, or the build dies at the very last step with
@@ -50,9 +54,18 @@ set(SOURCES
     src/core/ApiClient.cpp
     src/core/PriceStream.cpp
     src/core/ChartBridge.cpp
+    src/core/Profiles.cpp
+    src/core/ScriptEngine.cpp
+    src/core/StrategyTester.cpp
     src/ui/Theme.cpp
     src/ui/Toast.cpp
     src/ui/LoginDialog.cpp
+    src/ui/OpenAccountDialog.cpp
+    src/ui/SymbolsDialog.cpp
+    src/ui/NavigationDialog.cpp
+    src/ui/ReportsDialog.cpp
+    src/ui/ScriptsDialog.cpp
+    src/ui/StrategyTesterDialog.cpp
     src/ui/WatchlistWidget.cpp
     src/ui/WebChartWidget.cpp
     src/ui/ChartArea.cpp
@@ -79,10 +92,19 @@ set(HEADERS
     src/core/ApiError.h
     src/core/PriceStream.h
     src/core/ChartBridge.h
+    src/core/Profiles.h
+    src/core/ScriptEngine.h
+    src/core/StrategyTester.h
     src/ui/Theme.h
     src/ui/Toast.h
     src/ui/Icons.h
     src/ui/LoginDialog.h
+    src/ui/OpenAccountDialog.h
+    src/ui/SymbolsDialog.h
+    src/ui/NavigationDialog.h
+    src/ui/ReportsDialog.h
+    src/ui/ScriptsDialog.h
+    src/ui/StrategyTesterDialog.h
     src/ui/WatchlistWidget.h
     src/ui/WebChartWidget.h
     src/ui/ChartArea.h
@@ -111,7 +133,7 @@ set(HEADERS
 # package-macos.sh reads that back to name the .dmg. It had drifted to 1.0.1
 # while Windows shipped 1.0.6, so the Mac build carried the same code under a
 # five-releases-old version number — the exact bug this comment warns about.
-set(TX_VERSION "2.0")
+set(TX_VERSION "2.1")
 
 # App icon + version info. The .rc gives the EXE its icon (Explorer, desktop
 # shortcut, taskbar); the .qrc carries the same artwork for setWindowIcon();
@@ -190,4 +212,5 @@ target_link_libraries(terminal PRIVATE
     Qt6::WebEngineWidgets
     Qt6::WebChannel
     Qt6::Svg
+    Qt6::Qml
 )

@@ -82,6 +82,8 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
     // strip covering those dialogs is to take it off screen while they are up.
     connect(m_bridge, &ChartBridge::symbolPickedInChart,
             this, &WebChartWidget::symbolPickedInChart);
+    connect(m_bridge, &ChartBridge::studiesChanged,
+            this, &WebChartWidget::studiesChanged);
     connect(m_bridge, &ChartBridge::overlayHiddenChanged, this, [this](bool hidden) {
         if (m_overlay) m_overlay->setVisible(!hidden);
     });
@@ -220,6 +222,26 @@ void WebChartWidget::setPositions(const QVector<OpenPosition>& positions) {
 
 void WebChartWidget::setCompact(bool compact) {
     m_bridge->setCompact(compact);
+}
+
+void WebChartWidget::setDataWindow(bool on) {
+    m_bridge->setDataWindow(on);
+}
+
+QString WebChartWidget::studies() const {
+    return m_bridge->studies();
+}
+
+void WebChartWidget::createStudy(const QString& name) {
+    m_bridge->createStudy(name);
+}
+
+QString WebChartWidget::chartState() const {
+    return m_bridge->chartState();
+}
+
+void WebChartWidget::setChartState(const QString& stateJson) {
+    m_bridge->loadChartState(stateJson);
 }
 
 void WebChartWidget::setTheme(const QString& theme) {

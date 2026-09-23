@@ -312,7 +312,7 @@ void ApiClient::fetchDailyRange(const QString& symbol) {
         // Newest first, so the current day is the first entry.
         const Bar b = parseBar(bars.first().toObject());
         if (b.high <= 0.0 || b.low <= 0.0) return;
-        emit dailyRangeReceived(sym, b.high, b.low);
+        emit dailyRangeReceived(sym, b.high, b.low, b.open);
     });
 }
 

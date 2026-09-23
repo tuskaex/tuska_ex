@@ -5,6 +5,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
@@ -96,6 +97,20 @@ QPushButton#ghost {
     border-radius: 10px; font-size: 12px; font-weight: 700;
 }
 QPushButton#ghost:hover { border-color: %ACCENT%; color: %ACCENT%; }
+/* "Remember password". A check box that carries ANY style sheet stops drawing
+   its native indicator, so the box and the tick have to be drawn here — the
+   same trap as the spin arrows in resources/app.qrc. Without this the option
+   rendered as a bare label with nothing to tick. */
+QCheckBox#remember { background: transparent; color: %MUTED%; font-size: 12px; }
+QCheckBox#remember::indicator {
+    width: 15px; height: 15px; border-radius: 4px;
+    border: 1px solid %INPUTBORDER%; background: %INPUTBG%;
+}
+QCheckBox#remember::indicator:hover { border-color: %ACCENT%; }
+QCheckBox#remember::indicator:checked {
+    background: %ACCENT%; border-color: %ACCENT%;
+    image: url(:/check.svg);
+}
 )QSS")
         .replace("%CARDBG%",      cardBg)
         .replace("%INPUTBORDER%", c.inputBorder)
@@ -149,9 +164,12 @@ static QWidget* bullet(const QString& text) {
     return w;
 }
 
-LoginDialog::LoginDialog(const Config& cfg, QWidget* parent)
-    : QDialog(parent), m_cfg(cfg), m_net(new QNetworkAccessManager(this)) {
-    setWindowTitle(tr("TuskaEx Terminal — Sign in"));
+LoginDialog::LoginDialog(const Config& cfg, QWidget* parent, Mode mode)
+    : QDialog(parent), m_cfg(cfg), m_mode(mode),
+      m_net(new QNetworkAccessManager(this)) {
+    setWindowTitle(mode == Mode::WebService
+                       ? tr("TuskaEx Terminal — Web service")
+                       : tr("TuskaEx Terminal — Sign in"));
     setModal(true);
     // Frameless + translucent so the card can have rounded corners and a real
     // drop shadow. The card is draggable by any empty area (see mouseMoveEvent).
@@ -188,9 +206,22 @@ LoginDialog::LoginDialog(const Config& cfg, QWidget* parent)
     // Preselect the profile matching the saved endpoints.
     {
         QSignalBlocker b(m_profile);
-        if (m_cfg.restBase == TX_REST)         m_profile->setCurrentText(tr("TuskaEx"));
+        if (m_cfg.restBase == TX_REST)         m_profile->setCurrentText(tr("TuskaEx Live 01"));
         else if (m_cfg.restBase == LOCAL_REST) m_profile->setCurrentText(tr("Local dev"));
         else                                   m_profile->setCurrentText(tr("Custom"));
+    }
+    // File > Login to Web Service opens straight on the key/secret pair. The
+    // toggle that would switch back is hidden in this build, so the dialog a
+    // trader gets is exactly the one the menu entry named.
+    if (m_mode == Mode::WebService) {
+        m_keyMode = true;
+        m_credRows->hide();
+        m_keyRows->show();
+        m_stepTitle->setText(tr("Web service"));
+        m_stepSub->setText(tr("Connect to the TuskaEx web service with the API key "
+                              "and secret from your dashboard. This is separate "
+                              "from your trading account sign-in."));
+        m_loginBtn->setText(tr("Connect"));
     }
     // (No auto-reveal of Advanced: the endpoint fields are hidden in this build.)
 }
@@ -309,7 +340,7 @@ QWidget* LoginDialog::buildFormPanel() {
     m_profile = new QComboBox;
     m_profile->setObjectName("input");
     m_profile->setCursor(Qt::PointingHandCursor);
-    m_profile->addItems({tr("TuskaEx"), tr("Local dev"), tr("Custom")});
+    m_profile->addItems({tr("TuskaEx Live 01"), tr("Local dev"), tr("Custom")});
     connect(m_profile, &QComboBox::currentTextChanged, this,
             [this](const QString& n) { applyProfile(n); });
 
@@ -338,16 +369,29 @@ QWidget* LoginDialog::buildFormPanel() {
     auto* rows = new QVBoxLayout;
     rows->setContentsMargins(0, 0, 0, 0);
     rows->setSpacing(14);
-    // Server picker, API-key mode and the endpoint fields are all built but
-    // hidden: the sign-in path is email + password only. They stay constructed
-    // because the login code still reads m_rest / m_ws for the endpoints and
-    // m_profile for the active profile — hiding beats deleting here, since the
-    // values must still exist. Show any of them again by dropping its hide().
-    auto* serverField = field(tr("SERVER"), m_profile);
-    serverField->hide();
-    rows->addWidget(serverField);
+    // SERVER is on show — File > Login to Trade Account is specified as an
+    // MT5-style card, and the server a trader is signing in to is part of that.
+    // API-key mode and the raw endpoint fields stay built-but-hidden: the login
+    // code still reads m_rest / m_ws, so the widgets must exist even when the
+    // trader is not the one filling them in.
+    rows->addWidget(field(tr("SERVER"), m_profile));
     rows->addWidget(field(tr("EMAIL"), m_email));
     rows->addWidget(field(tr("PASSWORD"), m_password));
+
+    // MT5's "Remember password". Off unless the trader asks for it — see
+    // Config::savedPassword for what ticking it actually writes to disk.
+    m_remember = new QCheckBox(tr("Remember password"));
+    m_remember->setCursor(Qt::PointingHandCursor);
+    m_remember->setChecked(m_cfg.rememberPassword);
+    m_remember->setToolTip(tr("Keeps your password in this terminal's settings "
+                              "file so it is filled in next time."));
+    // Styled from the card's sheet, by name — see the QCheckBox#remember rules
+    // there for why the indicator has to be drawn explicitly.
+    m_remember->setObjectName("remember");
+    if (m_cfg.rememberPassword && !m_cfg.savedPassword.isEmpty())
+        m_password->setText(m_cfg.savedPassword);
+    rows->addWidget(m_remember);
+
     m_credRows = new QWidget;
     m_credRows->setObjectName("credRows");
     m_credRows->setLayout(rows);
@@ -495,7 +539,7 @@ void LoginDialog::mouseMoveEvent(QMouseEvent* e) {
 // --- behaviour --------------------------------------------------------------
 
 void LoginDialog::applyProfile(const QString& name) {
-    if (name == tr("TuskaEx"))        { m_rest->setText(TX_REST);    m_ws->setText(TX_WS); }
+    if (name == tr("TuskaEx Live 01")) { m_rest->setText(TX_REST);    m_ws->setText(TX_WS); }
     else if (name == tr("Local dev")) { m_rest->setText(LOCAL_REST); m_ws->setText(LOCAL_WS); }
     else if (m_advanced->isHidden())  { m_advancedBtn->click(); }   // Custom → reveal
 }
@@ -785,6 +829,13 @@ void LoginDialog::onConnect() {
     m_cfg.accountsJson = m_accountsJson;
     m_cfg.restBase     = m_rest->text().trimmed();
     m_cfg.wsUrl        = m_ws->text().trimmed();
+
+    // "Remember password" — recorded only once the sign-in has actually
+    // succeeded, so a mistyped password is never the one that gets kept.
+    // Unticked clears any previously saved one; Config::save() writes an empty
+    // string in that case rather than leaving the old value in the file.
+    m_cfg.rememberPassword = m_remember && m_remember->isChecked();
+    m_cfg.savedPassword    = m_cfg.rememberPassword ? m_password->text() : QString();
 
     // The JWT alone is not enough. Market data, bars, /trade and the tick
     // WebSocket all live behind /api/algo, which authenticates ONLY with

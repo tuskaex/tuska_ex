@@ -259,10 +259,45 @@ void ChartBridge::setOverlayHidden(bool hidden) {
     emit overlayHiddenChanged(hidden);
 }
 
+// ── Workspace profiles ──────────────────────────────────────────────────────
+
+void ChartBridge::pushChartState(const QString& stateJson) {
+    // Only ever cached, never written to disk from here. Profiles are the one
+    // thing that persists it, and they store it in their own file so a pane's
+    // running state cannot quietly overwrite a profile the trader saved.
+    if (!stateJson.isEmpty()) m_chartState = stateJson;
+}
+
+void ChartBridge::pushStudies(const QString& namesJson) {
+    if (namesJson.isEmpty()) return;
+    m_studies = namesJson;
+    emit studiesChanged();
+}
+
+void ChartBridge::createStudy(const QString& name) {
+    if (name.trimmed().isEmpty()) return;
+    emit studyRequested(name);
+}
+
+void ChartBridge::loadChartState(const QString& stateJson) {
+    if (stateJson.isEmpty()) return;
+    // Take the cache along at once. The web layer will push the same state
+    // back after it loads, but a profile switched twice in quick succession
+    // would otherwise capture the state the pane is leaving behind.
+    m_chartState = stateJson;
+    emit chartStateLoad(stateJson);
+}
+
 void ChartBridge::setTheme(const QString& theme) {
     if (theme == m_theme) return;
     m_theme = theme;
     emit themeChanged(theme);
+}
+
+void ChartBridge::setDataWindow(bool on) {
+    if (on == m_dataWindow) return;
+    m_dataWindow = on;
+    emit dataWindowChanged(on);
 }
 
 void ChartBridge::setCompact(bool compact) {

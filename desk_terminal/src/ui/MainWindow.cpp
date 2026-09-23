@@ -10,11 +10,18 @@
 #include "ui/OrderDialog.h"
 #include "ui/EditOrderDialog.h"
 #include "ui/LoginDialog.h"
+#include "ui/OpenAccountDialog.h"
+#include "ui/SymbolsDialog.h"
+#include "ui/NavigationDialog.h"
+#include "ui/ReportsDialog.h"
+#include "ui/ScriptsDialog.h"
+#include "ui/StrategyTesterDialog.h"
 #include "ui/WalletDialog.h"
 #include "ui/SymbolSpecDialog.h"
 #include "ui/ShareTradeDialog.h"
 #include "core/ApiClient.h"
 #include "core/PriceStream.h"
+#include "core/Profiles.h"
 
 #include <QSplitter>
 #include <QStatusBar>
@@ -25,6 +32,8 @@
 #include <QLabel>
 #include <QTimer>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <algorithm>
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -214,7 +223,32 @@ void MainWindow::buildMenuBar() {
 #endif
 
     // ── File ──
+    //
+    // Ordered the way MT5 orders it, which is the order the desk asked for:
+    // the order window first, then the workspace, then the two ways of getting
+    // an account and signing in, and only then the housekeeping. New order is
+    // duplicated from the Trade menu on purpose — it is the entry a trader
+    // coming from MetaTrader looks for under File, and the Trade menu is where
+    // this terminal has always kept it.
     QMenu* file = bar->addMenu(tr("&File"));
+    QAction* fileOrder = file->addAction(tr("&New Order…"));
+    fileOrder->setShortcuts({QKeySequence(Qt::Key_F9),
+                             QKeySequence(QStringLiteral("Ctrl+P"))});
+    connect(fileOrder, &QAction::triggered, this, &MainWindow::openOrderWindow);
+
+    file->addSeparator();
+    m_profileMenu = file->addMenu(tr("&Profile"));
+    connect(m_profileMenu, &QMenu::aboutToShow, this, &MainWindow::rebuildProfileMenu);
+
+    file->addSeparator();
+    connect(file->addAction(tr("&Open an Account…")), &QAction::triggered,
+            this, &MainWindow::openAccountSignup);
+    connect(file->addAction(tr("Login to &Trade Account…")), &QAction::triggered,
+            this, &MainWindow::openSettings);
+    connect(file->addAction(tr("Login to &Web Service…")), &QAction::triggered,
+            this, &MainWindow::openWebServiceLogin);
+
+    file->addSeparator();
     connect(file->addAction(tr("&Settings…")), &QAction::triggered,
             this, &MainWindow::openSettings);
     connect(file->addAction(tr("&Refresh")), &QAction::triggered,
@@ -241,7 +275,66 @@ void MainWindow::buildMenuBar() {
     connect(m_accountsMenu, &QMenu::aboutToShow, this, &MainWindow::rebuildAccountsMenu);
 
     // ── View ──
+    //
+    // The first block is the one the desk specified, in its order: the panels a
+    // trader opens and closes. Everything below the separator is this
+    // terminal's own appearance settings, which have always lived here.
     QMenu* view = bar->addMenu(tr("&View"));
+
+    connect(view->addAction(tr("&Symbols…")), &QAction::triggered,
+            this, &MainWindow::openSymbolsBrowser);
+
+    m_marketWatchAction = view->addAction(tr("&Market Watch"));
+    m_marketWatchAction->setCheckable(true);
+    m_marketWatchAction->setChecked(m_cfg.marketWatchVisible);
+    connect(m_marketWatchAction, &QAction::triggered, this, [this](bool on) {
+        m_watch->setVisible(on);
+        m_cfg.marketWatchVisible = on;
+        m_cfg.save();
+        if (on) fitWatchlistWidth();
+    });
+
+    m_dataWindowAction = view->addAction(tr("&Data Window"));
+    m_dataWindowAction->setCheckable(true);
+    m_dataWindowAction->setChecked(m_cfg.dataWindow);
+    connect(m_dataWindowAction, &QAction::triggered, this, [this](bool on) {
+        // Rebuilds each chart — the widget bar is a constructor option. Said
+        // out loud in the status bar, because a full-window chart blinking is
+        // otherwise alarming.
+        m_charts->setDataWindow(on);
+        m_cfg.dataWindow = on;
+        m_cfg.save();
+        setStatus(on ? tr("Data Window on — OHLC and indicator values follow the crosshair")
+                     : tr("Data Window off"));
+    });
+
+    connect(view->addAction(tr("&Navigation")), &QAction::triggered,
+            this, &MainWindow::openNavigation);
+
+    connect(view->addAction(tr("Strategy &Tester…")), &QAction::triggered,
+            this, &MainWindow::openStrategyTester);
+
+    QMenu* reports = view->addMenu(tr("&Reports"));
+    // One dialog, opened on the tab the trader picked. The four entries exist
+    // because the desk specified four, and a menu that opened the same window
+    // from every one of them would make the specification look ignored.
+    struct { const char* label; ReportsDialog::Tab tab; } kReports[] = {
+        {QT_TR_NOOP("&Summary"),      ReportsDialog::Summary},
+        {QT_TR_NOOP("&Risk"),         ReportsDialog::Risk},
+        {QT_TR_NOOP("&Long && Short"), ReportsDialog::LongShort},
+        {QT_TR_NOOP("S&ymbols"),      ReportsDialog::Symbols},
+    };
+    for (const auto& r : kReports) {
+        connect(reports->addAction(tr(r.label)), &QAction::triggered, this,
+                [this, tab = r.tab]() { openReports(tab); });
+    }
+    reports->addSeparator();
+    // The HTML statement the panel has always been able to save — the document
+    // form of the same figures, for an accountant or a broker.
+    connect(reports->addAction(tr("Save &statement…")), &QAction::triggered,
+            this, [this]() { m_positions->exportHistoryReport(); });
+
+    view->addSeparator();
     m_darkAction = view->addAction(tr("&Dark theme"));
     m_darkAction->setCheckable(true);
     m_darkAction->setChecked(Theme::isDark());
@@ -353,6 +446,49 @@ void MainWindow::buildMenuBar() {
         const int h = m_centerSplit->height();
         m_centerSplit->setSizes(on ? QList<int>{h - 200, 200} : QList<int>{h, 1});
     });
+
+    // ── Insert ──
+    //
+    // The desk's structure in full, so the shape of what is coming is visible
+    // and nothing here is a surprise later. None of it is built: an EA
+    // converter, a bridge that mirrors another terminal's positions and a
+    // script engine are each a project of their own, not a menu entry. Every
+    // item says exactly that when opened, which is a better answer than a menu
+    // that quietly lacks the feature the specification promised.
+    QMenu* insert = bar->addMenu(tr("&Insert"));
+
+    QMenu* indicator = insert->addMenu(tr("&Indicator"));
+    // The one live entry: indicators already exist, on the chart's own toolbar.
+    connect(indicator->addAction(tr("&Add an indicator…")), &QAction::triggered,
+            this, [this]() {
+        setStatus(tr("Indicators are on the chart toolbar — click \"Indicators\""));
+    });
+
+    QMenu* ea = insert->addMenu(tr("&Expert Advisor (EA)"));
+    for (const char* item : {QT_TR_NOOP("&Import MT5 EA code…"),
+                             QT_TR_NOOP("&Convert to Desktop code"),
+                             QT_TR_NOOP("&Validate / Compile"),
+                             QT_TR_NOOP("&Run EA")}) {
+        const QString label = tr(item);
+        connect(ea->addAction(label), &QAction::triggered, this,
+                [this]() { comingSoon(tr("Expert Advisors")); });
+    }
+
+    QMenu* mirror = insert->addMenu(tr("Any Terminal → Our &Desktop"));
+    for (const char* item : {QT_TR_NOOP("&Connect terminal…"),
+                             QT_TR_NOOP("&Live position copy"),
+                             QT_TR_NOOP("Position &synchronization"),
+                             QT_TR_NOOP("&Manage copy settings")}) {
+        const QString label = tr(item);
+        connect(mirror->addAction(label), &QAction::triggered, this,
+                [this]() { comingSoon(tr("Live position copy")); });
+    }
+
+    // Scripts is real: one window holds the list, the editor, Compile, Run and
+    // Stop, so the specification's six entries are six buttons rather than six
+    // menu items that each open the same thing.
+    connect(insert->addAction(tr("&Scripts…")), &QAction::triggered,
+            this, &MainWindow::openScripts);
 
     // ── who you are trading as, at the far left of the menu row ──
     // A TopLeftCorner widget is laid out before the menu items, so this reads
@@ -567,6 +703,11 @@ void MainWindow::connectServices() {
     m_watch->setHiddenSymbols(m_cfg.watchHiddenSymbols);
     m_watch->setSymbolColours(m_cfg.watchSymbolColours);
     m_watch->setGridVisible(m_cfg.watchGrid);
+    // View > Market Watch and View > Data Window, restored from the last
+    // session. Applied here with the panel's other preferences rather than in
+    // buildMenuBar(), which only sets the menu's tick.
+    m_watch->setVisible(m_cfg.marketWatchVisible);
+    m_charts->setDataWindow(m_cfg.dataWindow);
     connect(m_watch, &WatchlistWidget::hiddenSymbolsChanged, this,
             [this](const QStringList& syms) {
         m_cfg.watchHiddenSymbols = syms;
@@ -593,8 +734,8 @@ void MainWindow::connectServices() {
         fitWatchlistWidth();
     });
     connect(m_api, &ApiClient::dailyRangeReceived, this,
-            [this](const QString& sym, double high, double low) {
-        m_watch->setDailyRange(sym, high, low);
+            [this](const QString& sym, double high, double low, double open) {
+        m_watch->setDailyRange(sym, high, low, open);
     });
 
     // The chart (TradingView) pulls bars + ticks itself via the ChartBridge,
@@ -671,6 +812,13 @@ void MainWindow::connectServices() {
     });
     connect(m_api, &ApiClient::positionsReceived, m_positions, &PositionsPanel::setPositions);
     connect(m_api, &ApiClient::positionsReceived, m_charts,    &ChartArea::setPositions);
+    // A running script reads its open positions from the same poll the blotter
+    // does, so terminal.positions() can never describe a different book from
+    // the one on screen.
+    connect(m_api, &ApiClient::positionsReceived, this,
+            [this](const QVector<OpenPosition>& p) {
+        if (m_scripts) m_scripts->setPositions(p);
+    });
     connect(m_api, &ApiClient::ordersReceived,    m_positions, &PositionsPanel::setOrders);
     connect(m_api, &ApiClient::historyReceived,   m_positions, &PositionsPanel::setHistory);
     connect(m_api, &ApiClient::transactionsReceived, m_positions, &PositionsPanel::setTransactions);
@@ -811,8 +959,17 @@ void MainWindow::connectServices() {
     // Live stream fan-out
     connect(m_stream, &PriceStream::tickReceived, m_watch,  &WatchlistWidget::updateQuote);
     connect(m_stream, &PriceStream::tickReceived, m_ticket, &OrderTicket::updateQuote);
-    connect(m_stream, &PriceStream::tickReceived, this,
-            [this](const Quote& q) { if (q.valid) m_lastQuotes.insert(q.symbol, q); });
+    connect(m_stream, &PriceStream::tickReceived, this, [this](const Quote& q) {
+        if (!q.valid) return;
+        m_lastQuotes.insert(q.symbol, q);
+        // A live script sees the same ticks the screen does. Guarded on
+        // isRunning() so a closed or idle Scripts window costs nothing per
+        // tick — this runs several times a second per instrument.
+        if (m_scripts && m_scripts->isRunning()) {
+            m_scripts->setQuotes(m_lastQuotes);
+            m_scripts->deliverTick(q);
+        }
+    });
     connect(m_stream, &PriceStream::statusChanged, this, [this](const QString& s) {
         const bool live = s.startsWith("Live");
         // Only a live->live repeat is dropped. The old guard compared liveness
@@ -1199,6 +1356,10 @@ void MainWindow::openOrderWindow() {
 // same row here only because the menu selects it first, and relying on that
 // would break the moment the menu gains a way to name another instrument.
 void MainWindow::openSpecification(const QString& symbol) {
+    openSpecificationOn(symbol, this);
+}
+
+void MainWindow::openSpecificationOn(const QString& symbol, QWidget* parent) {
     if (symbol.isEmpty()) return;
     // No requireSession(): the trading catalog is public, so an API-key
     // session can read contract terms even though it cannot reach the blotter.
@@ -1207,7 +1368,7 @@ void MainWindow::openSpecification(const QString& symbol) {
     // dead menu entry is worse than a sheet with a few dashes in it.
     SymbolSpec spec = m_specs.value(symbol);
     if (spec.symbol.isEmpty()) spec.symbol = symbol;
-    SymbolSpecDialog dlg(spec, m_lastQuotes.value(symbol), this);
+    SymbolSpecDialog dlg(spec, m_lastQuotes.value(symbol), parent);
     // Bid, ask and the spread keep moving while the panel is open — a spread
     // frozen at the moment the menu was clicked is the one figure in here that
     // would actively mislead.
@@ -1231,4 +1392,345 @@ void MainWindow::openSettings() {
     m_api->fetchSymbols();
     m_api->fetchAccount();
     setStatus(tr("Reconnected with updated settings"));
+}
+
+// --- View --------------------------------------------------------------------
+
+void MainWindow::comingSoon(const QString& feature) {
+    QMessageBox::information(
+        this, feature,
+        tr("%1 is not built yet.\n\nIt is on the desktop terminal's roadmap and "
+           "will appear in this menu when it lands.").arg(feature));
+}
+
+void MainWindow::openStrategyTester() {
+    if (!m_tester) {
+        m_tester = new StrategyTesterDialog(m_api, this);
+    }
+    // Refreshed on every open: the instrument table arrives after the window
+    // is built, and a tester opened early would otherwise have an empty picker
+    // for the rest of the session.
+    m_tester->setSymbols(m_specs);
+    m_tester->show();
+    m_tester->raise();
+    m_tester->activateWindow();
+}
+
+void MainWindow::openScripts() {
+    if (!m_scripts) {
+        m_scripts = new ScriptsDialog(m_api, this);
+        // Seeded now and refreshed on every tick while a script is live, so a
+        // script started mid-session does not begin blind.
+        m_scripts->setSymbols(m_specs.keys());
+        m_scripts->setAccount(m_lastAccount);
+        m_scripts->setQuotes(m_lastQuotes);
+        // Positions arrive with the next poll, a few seconds away, via the
+        // connection in connectServices().
+        m_api->fetchPositions();
+    }
+    m_scripts->show();
+    m_scripts->raise();
+    m_scripts->activateWindow();
+}
+
+void MainWindow::openReports(int tab) {
+    ReportsDialog dlg(m_positions->history(), m_positions->account(),
+                      static_cast<ReportsDialog::Tab>(tab), this);
+    dlg.exec();
+}
+
+void MainWindow::openSymbolsBrowser() {
+    if (m_specs.isEmpty()) {
+        setStatus(tr("Instruments have not loaded yet — try again in a moment"), true);
+        return;
+    }
+
+    // m_specs is keyed by symbol, so it comes out in hash order. Sorted here so
+    // the dialog's groups list their instruments alphabetically.
+    QVector<SymbolSpec> all;
+    all.reserve(m_specs.size());
+    for (auto it = m_specs.cbegin(); it != m_specs.cend(); ++it) all.append(it.value());
+    std::sort(all.begin(), all.end(), [](const SymbolSpec& a, const SymbolSpec& b) {
+        return a.symbol.compare(b.symbol, Qt::CaseInsensitive) < 0;
+    });
+
+    SymbolsDialog dlg(all, m_cfg.watchHiddenSymbols, this);
+    // Specification opens on top of the browser rather than replacing it: a
+    // trader comparing two instruments should not lose their place in the list.
+    connect(&dlg, &SymbolsDialog::specificationRequested, this,
+            [this, &dlg](const QString& symbol) {
+        // Parented to the browser, not to the window: the browser is modal, and
+        // a sheet parented past it would open blocked.
+        openSpecificationOn(symbol, &dlg);
+    });
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    const QStringList hidden = dlg.hiddenSymbols();
+    m_cfg.watchHiddenSymbols = hidden;
+    m_cfg.save();
+    m_watch->setHiddenSymbols(hidden);
+    fitWatchlistWidth();
+    setStatus(tr("Market Watch updated"));
+}
+
+void MainWindow::openNavigation() {
+    if (!m_navigation) {
+        m_navigation = new NavigationDialog(this);
+        connect(m_navigation, &NavigationDialog::accountActivated,
+                this, &MainWindow::switchAccount);
+        connect(m_navigation, &NavigationDialog::indicatorActivated, this,
+                [this](const QString& name) {
+            m_charts->addStudy(name);
+            setStatus(tr("%1 added to the active chart").arg(name));
+        });
+        // The list belongs to the chart and arrives once it has loaded, which
+        // can be after the navigator is already open.
+        if (WebChartWidget* c = m_charts->activeChart()) {
+            connect(c, &WebChartWidget::studiesChanged, m_navigation, [this]() {
+                if (m_navigation) m_navigation->setIndicators(m_charts->studies());
+            });
+        }
+    }
+    m_navigation->setAccounts(m_cfg.accountsJson, m_cfg.accountId, m_cfg.privacy);
+    m_navigation->setIndicators(m_charts->studies());
+    m_navigation->show();
+    m_navigation->raise();
+    m_navigation->activateWindow();
+}
+
+void MainWindow::openAccountSignup() {
+    OpenAccountDialog dlg(m_cfg, this);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    // The dialog finishes holding a live session for the account it just
+    // opened, so the terminal can connect to it straight away rather than
+    // sending the trader back to the sign-in card.
+    m_cfg = dlg.config();
+    m_cfg.save();
+    m_api->setConfig(m_cfg);
+    applySessionRenewal();
+    m_stream->setConfig(m_cfg);
+    m_stream->stop();
+    m_stream->start();
+    m_api->fetchSymbols();
+    m_api->fetchAccount();
+    updateIdentity();
+
+    const QString number = dlg.accountNumber();
+    setStatus(tr("Account %1 is open — you are signed in").arg(number));
+    Toast::success(this, tr("Account opened"),
+                   tr("Your login ID is %1. Use it with the password you just "
+                      "chose to sign in anywhere.").arg(number));
+}
+
+void MainWindow::openWebServiceLogin() {
+    // Same dialog, opened on its API key/secret mode. The trading account is
+    // reached with the website's email and password; the web service is reached
+    // with the key pair the dashboard issues, and a desk can be entitled to one
+    // without the other.
+    LoginDialog dlg(m_cfg, this, LoginDialog::Mode::WebService);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+    m_cfg = dlg.config();
+    m_api->setConfig(m_cfg);
+    applySessionRenewal();
+    m_stream->setConfig(m_cfg);
+    m_stream->stop();
+    m_stream->start();
+    m_api->fetchSymbols();
+    m_api->fetchAccount();
+    setStatus(tr("Connected to the web service"));
+}
+
+// --- File > Profile ---------------------------------------------------------
+
+bool MainWindow::tradePanelVisible() const {
+    // The panel is collapsed rather than hidden, so it is never isHidden().
+    // The menu action is the honest record of whether it is showing.
+    return !m_bloterAction || m_bloterAction->isChecked();
+}
+
+WorkspaceProfile MainWindow::captureProfile(const QString& name) const {
+    WorkspaceProfile p;
+    p.name = name;
+
+    p.chartCount   = m_charts->chartCount();
+    p.chartSymbols = m_charts->visibleSymbols();
+    // Timeframes, indicators and drawings ride along inside these — they are
+    // the charting library's own serialisation, one string per pane.
+    p.chartStates  = m_charts->chartStates();
+
+    // saveGeometry() carries the maximized flag as well as the frame, so a
+    // profile taken on a maximized window comes back maximized rather than at
+    // whatever size it had before.
+    p.windowGeometry = QString::fromLatin1(saveGeometry().toBase64());
+    if (m_bodySplit)
+        p.bodySplit = QString::fromLatin1(m_bodySplit->saveState().toBase64());
+    if (m_centerSplit)
+        p.centerSplit = QString::fromLatin1(m_centerSplit->saveState().toBase64());
+    p.tradePanelVisible  = tradePanelVisible();
+    p.marketWatchVisible = m_watch->isVisibleTo(this);
+    p.dataWindow         = m_cfg.dataWindow;
+
+    // Read off the panel rather than out of m_cfg. The two are kept in step,
+    // but the panel is the thing the trader has been changing, and a profile
+    // must not depend on a config write having already happened.
+    p.watchHiddenColumns = m_watch->hiddenColumns();
+    p.watchFavourites    = m_watch->favourites();
+    p.watchHiddenSymbols = m_watch->hiddenSymbols();
+    p.watchSymbolColours = m_watch->symbolColours();
+    p.watchGrid          = m_watch->gridVisible();
+
+    p.theme           = Theme::name();
+    p.tableFontFamily = Theme::tableFontFamily();
+    p.tableFontSize   = Theme::tableFontSize();
+    p.ticketPosX      = m_cfg.ticketPosX;
+    p.ticketPosY      = m_cfg.ticketPosY;
+    return p;
+}
+
+void MainWindow::saveProfileAs() {
+    bool ok = false;
+    const QString suggested = Profiles::lastUsed();
+    QString name = QInputDialog::getText(
+        this, tr("Save Profile"),
+        tr("Save the current charts, Market Watch and window layout as:"),
+        QLineEdit::Normal, suggested, &ok).trimmed();
+    if (!ok || name.isEmpty()) return;
+
+    if (Profiles::exists(name) &&
+        QMessageBox::question(
+            this, tr("Replace profile"),
+            tr("A profile named \"%1\" already exists. Replace it?").arg(name),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    if (!Profiles::save(captureProfile(name))) {
+        QMessageBox::warning(this, tr("Save Profile"),
+                             tr("Could not write %1.").arg(Profiles::filePath()));
+        return;
+    }
+    setStatus(tr("Profile \"%1\" saved").arg(name));
+    Toast::success(this, tr("Profile saved"),
+                   tr("\"%1\" now holds this workspace.").arg(name));
+}
+
+void MainWindow::loadProfile(const QString& name) {
+    WorkspaceProfile p;
+    if (!Profiles::load(name, &p)) {
+        setStatus(tr("Profile \"%1\" is no longer there").arg(name), true);
+        return;
+    }
+
+    // Theme first. Switching it tears down and rebuilds every chart pane, so
+    // any per-pane state restored before it would be thrown away. The panes
+    // buffer a state that arrives mid-rebuild, but doing it in the right order
+    // means they rarely have to.
+    if (p.theme != Theme::name()) {
+        Theme::setMode(p.theme == QLatin1String("dark") ? Theme::Mode::Dark
+                                                        : Theme::Mode::Light);
+        m_cfg.theme = Theme::name();
+        if (m_darkAction) m_darkAction->setChecked(Theme::isDark());
+        m_charts->setTheme(Theme::name());
+    }
+    Theme::setTableFont(p.tableFontFamily, p.tableFontSize);
+    m_cfg.tableFontFamily = p.tableFontFamily;
+    m_cfg.tableFontSize   = p.tableFontSize;
+
+    // ── Market Watch ──
+    m_watch->setHiddenColumns(p.watchHiddenColumns);
+    m_watch->setFavourites(p.watchFavourites);
+    m_watch->setHiddenSymbols(p.watchHiddenSymbols);
+    m_watch->setSymbolColours(p.watchSymbolColours);
+    m_watch->setGridVisible(p.watchGrid);
+    m_cfg.watchHiddenColumns = p.watchHiddenColumns;
+    m_cfg.watchFavourites    = p.watchFavourites;
+    m_cfg.watchHiddenSymbols = p.watchHiddenSymbols;
+    m_cfg.watchSymbolColours = p.watchSymbolColours;
+    m_cfg.watchGrid          = p.watchGrid;
+
+    // ── charts ──
+    m_charts->setChartCount(p.chartCount);
+    if (m_layoutGroup) {
+        for (QAction* a : m_layoutGroup->actions())
+            a->setChecked(a->data().toInt() == p.chartCount);
+    }
+    // Point each pane at its instrument before handing over the saved state.
+    // A pane whose state never got captured — its chart was still loading when
+    // the profile was taken — then still lands on the right symbol.
+    for (int i = 0; i < p.chartSymbols.size() && i < p.chartCount; ++i) {
+        if (p.chartSymbols[i].isEmpty()) continue;
+        m_charts->setActivePane(i);
+        m_charts->showSymbol(p.chartSymbols[i]);
+    }
+    m_charts->setActivePane(0);
+    m_charts->setChartStates(p.chartStates);
+    m_cfg.chartCount   = p.chartCount;
+    m_cfg.chartSymbols = p.chartSymbols;
+
+    // ── window and panels ──
+    if (!p.windowGeometry.isEmpty())
+        restoreGeometry(QByteArray::fromBase64(p.windowGeometry.toLatin1()));
+    if (m_bodySplit && !p.bodySplit.isEmpty())
+        m_bodySplit->restoreState(QByteArray::fromBase64(p.bodySplit.toLatin1()));
+    if (m_centerSplit && !p.centerSplit.isEmpty())
+        m_centerSplit->restoreState(QByteArray::fromBase64(p.centerSplit.toLatin1()));
+    m_positions->setCollapsed(!p.tradePanelVisible);
+    if (m_bloterAction) m_bloterAction->setChecked(p.tradePanelVisible);
+    m_watch->setVisible(p.marketWatchVisible);
+    if (m_marketWatchAction) m_marketWatchAction->setChecked(p.marketWatchVisible);
+    m_cfg.marketWatchVisible = p.marketWatchVisible;
+    m_charts->setDataWindow(p.dataWindow);
+    if (m_dataWindowAction) m_dataWindowAction->setChecked(p.dataWindow);
+    m_cfg.dataWindow = p.dataWindow;
+
+    m_cfg.ticketPosX = p.ticketPosX;
+    m_cfg.ticketPosY = p.ticketPosY;
+    m_cfg.windowGeometry = p.windowGeometry;
+    m_cfg.save();
+
+    Profiles::setLastUsed(name);
+    applyTheme();
+    setStatus(tr("Profile \"%1\" loaded").arg(name));
+}
+
+void MainWindow::rebuildProfileMenu() {
+    m_profileMenu->clear();
+
+    connect(m_profileMenu->addAction(tr("&Save Profile…")), &QAction::triggered,
+            this, &MainWindow::saveProfileAs);
+
+    const QStringList saved = Profiles::names();
+    const QString current = Profiles::lastUsed();
+
+    QMenu* loadMenu = m_profileMenu->addMenu(tr("&Load Profile"));
+    if (saved.isEmpty()) {
+        QAction* none = loadMenu->addAction(tr("No saved profiles"));
+        none->setEnabled(false);
+    } else {
+        for (const QString& n : saved) {
+            QAction* a = loadMenu->addAction(n);
+            a->setCheckable(true);
+            a->setChecked(n == current);
+            connect(a, &QAction::triggered, this, [this, n]() { loadProfile(n); });
+        }
+    }
+
+    m_profileMenu->addSeparator();
+    QMenu* delMenu = m_profileMenu->addMenu(tr("&Delete Profile"));
+    delMenu->setEnabled(!saved.isEmpty());
+    for (const QString& n : saved) {
+        connect(delMenu->addAction(n), &QAction::triggered, this, [this, n]() {
+            if (QMessageBox::question(
+                    this, tr("Delete profile"),
+                    tr("Delete the profile \"%1\"? This cannot be undone.").arg(n),
+                    QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+                return;
+            Profiles::remove(n);
+            setStatus(tr("Profile \"%1\" deleted").arg(n));
+        });
+    }
 }

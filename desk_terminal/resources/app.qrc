@@ -12,6 +12,10 @@
              in a neutral grey that reads on both themes. -->
         <file>spin-up.svg</file>
         <file>spin-down.svg</file>
+        <!-- Tick for the "Remember password" check box. Same reason as the
+             spin arrows above: a style sheet on a check box replaces the
+             native indicator drawing. -->
+        <file>check.svg</file>
         <file>tuskaex.ico</file>
     </qresource>
 </RCC>

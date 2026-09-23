@@ -84,6 +84,14 @@
   let widget = null;
   let datafeed = null;
   let bridgeRef = null;
+  // True only between onChartReady and the next rebuild. widget is non-null
+  // well before the chart will accept a load(), so a profile restored while the
+  // pane is still building has to wait — see applyChartState().
+  let chartReady = false;
+  // A workspace profile's state for this pane, held until the chart can take
+  // it. Loading a profile that also changes the theme rebuilds every pane, and
+  // without this the restore would land in the gap and be lost.
+  let pendingState = null;
 
   /*
    * Save / load adapter for the charting library.
@@ -192,6 +200,9 @@
     // Read live rather than taking it as an argument: createChart is also
     // called from themeChanged, which knows nothing about the grid.
     const compact = !!bridge.compact;
+    // View > Data Window. The library's own widget-bar panel, which is the only
+    // thing that knows every indicator's value at the crosshair.
+    const dataWindow = !!bridge.dataWindow;
     const surface = surfaceFor(t);
     document.body.style.background = surface;
     // Lives outside the widget, so a theme rebuild only restyles it.
@@ -207,6 +218,8 @@
         interval = ch.resolution() || interval;
       } catch (e) { /* chart not ready — fall back to the defaults */ }
     }
+
+    chartReady = false;
 
     // Tear the old one down first: the overlay holds a rAF loop, bridge signal
     // handlers and a DOM layer, all of which must go with its chart.
@@ -243,6 +256,17 @@
       // The library needs a layout name to show in the header before the first
       // save; it renames itself as soon as one is saved.
       saved_data_meta_info: { uid: 1, name: "TuskaEx", description: "" },
+      // The widget bar down the right of the chart. Only the Data Window is
+      // turned on — watchlist, news and details all duplicate panels the
+      // terminal already has natively. Constructor-only, like the compact
+      // features below, which is why toggling it rebuilds the chart.
+      ...(dataWindow ? { widgetbar: { datawindow: true } } : {}),
+      // Makes the library raise onAutoSaveNeeded a couple of seconds after the
+      // trader changes something. That event is what keeps C++'s copy of this
+      // pane's state current, so File > Profile > Save Profile can capture the
+      // timeframe, the indicators and the drawings without an async round trip.
+      // Nothing is written to disk on this timer — see pushChartState().
+      auto_save_delay: 2,
       // Quick-access timeframe buttons in the header (1m 3m 5m … D W M),
       // matching the web terminal's toolbar.
       favorites: {
@@ -283,8 +307,22 @@
     window.txPositions = window.makePositionOverlay(widget, bridge);
 
     widget.onChartReady(() => {
+      chartReady = true;
       const l = document.getElementById("loading");
       if (l) l.style.display = "none";
+
+      // A profile was loaded while this pane was rebuilding. Apply it before
+      // anything else touches the chart, and before the first state push below
+      // — otherwise the pane would report the state it is about to discard.
+      if (pendingState) {
+        const s = pendingState;
+        pendingState = null;
+        try {
+          widget.load(s);
+        } catch (e) {
+          console.warn("profile: the chart refused the saved state", e);
+        }
+      }
       // Re-attached per widget: a theme switch rebuilds the chart, and with it
       // the iframe the observer was watching.
       watchDialogs(bridge);
@@ -307,7 +345,49 @@
       } catch (e) {
         console.warn("onSymbolChanged subscribe failed", e);
       }
+
+      // Seed the native side's copy of this pane's state, then keep it current.
+      // The first push matters on its own: a profile saved before the trader
+      // touches the chart still has to bring back the symbol and timeframe.
+      pushChartState(bridge);
+
+      // Hand the navigator the indicators this build can draw. Read from the
+      // library rather than listed in C++, so it can never disagree with the
+      // vendor bundle sitting in web/vendor.
+      try {
+        const studies = widget.getStudiesList();
+        if (Array.isArray(studies)) bridge.pushStudies(JSON.stringify(studies));
+      } catch (e) {
+        console.warn("could not read the indicator list", e);
+      }
+
+      try {
+        widget.subscribe("onAutoSaveNeeded", () => pushChartState(bridge));
+      } catch (e) {
+        console.warn("onAutoSaveNeeded subscribe failed", e);
+      }
     });
+  }
+
+  /*
+   * Hands C++ this pane's full chart state — symbol, timeframe, indicators,
+   * drawings, chart style — for File > Profile. The library only surrenders it
+   * through a callback, so this cannot be a getter; C++ caches whatever arrives
+   * and reads the cache when a profile is saved.
+   */
+  function pushChartState(bridge) {
+    if (!widget) return;
+    try {
+      widget.save((state) => {
+        try {
+          bridge.pushChartState(JSON.stringify(state));
+        } catch (e) {
+          console.warn("profile: could not hand state to the terminal", e);
+        }
+      });
+    } catch (e) {
+      // Chart torn down between the event and the save — nothing to keep.
+    }
   }
 
   /*
@@ -412,6 +492,52 @@
     // ChartBridge::setCompact only emits on an actual change, so switching
     // between 2 and 4 panes does not rebuild anything.
     bridge.compactChanged.connect(() => createChart(bridge, bridge.theme));
+    // Same rebuild path: widgetbar is a constructor option with no runtime
+    // toggle, exactly like the compact feature set.
+    bridge.dataWindowChanged.connect(() => createChart(bridge, bridge.theme));
+
+    // A workspace profile is being loaded: put this pane back the way it was
+    // saved. widget.load() restores the symbol, timeframe, indicators and
+    // drawings in one go, so nothing else here has to be told about it.
+    bridge.chartStateLoad.connect(applyChartState);
+
+    // View > Navigation > Indicators, double-clicked. createStudy takes the
+    // library's own study name, which is exactly what getStudiesList handed
+    // over, so no mapping is needed in between.
+    bridge.studyRequested.connect((name) => {
+      if (!name || !widget || !chartReady) return;
+      try {
+        widget.activeChart().createStudy(name);
+      } catch (e) {
+        console.warn("could not add the indicator", name, e);
+      }
+    });
+  }
+
+  /*
+   * Restores one pane from a workspace profile, or queues the state until the
+   * chart is ready to take it. Loading a profile can change the theme, and a
+   * theme change rebuilds the widget — so the state frequently arrives while
+   * there is no chart to give it to.
+   */
+  function applyChartState(json) {
+    if (!json) return;
+    let state;
+    try {
+      state = JSON.parse(json);
+    } catch (e) {
+      console.warn("profile: chart state is not valid JSON", e);
+      return;
+    }
+    if (!widget || !chartReady) {
+      pendingState = state;
+      return;
+    }
+    try {
+      widget.load(state);
+    } catch (e) {
+      console.warn("profile: the chart refused the saved state", e);
+    }
   }
 
   function fail(msg) {
