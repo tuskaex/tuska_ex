@@ -130,6 +130,13 @@ struct Transaction {
 struct HistoryTrade {
     QString id, symbol, side;
     double  lots = 0, openPrice = 0, closePrice = 0, profit = 0, swap = 0, commission = 0;
+    // The brackets the position was carrying when it closed. The platform has
+    // always sent these on a closed trade and the blotter simply never read
+    // them, so History could not show the S/L and T/P columns MetaTrader puts
+    // there — the two that say whether a losing trade was protected.
+    // 0 means the bracket was not set, which is how every other table here
+    // already reads an absent level.
+    double  sl = 0, tp = 0;
     QString openedAt, closedAt, closeReason;
 };
 

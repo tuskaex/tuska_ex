@@ -712,10 +712,16 @@ QString PositionsPanel::historyReportHtml() const {
         h += QStringLiteral("<td>") + num(t.lots, 2) + QStringLiteral("</td>");
         h += QStringLiteral("<td class=\"l\">") + esc(t.symbol) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.openPrice, d) + QStringLiteral("</td>");
-        // Closed trades come back without their brackets — the platform keeps
-        // the levels on the open position, not on the history row — so these
-        // stay blank rather than being filled with a guess.
-        h += QStringLiteral("<td></td><td></td>");
+        // The brackets the trade was carrying when it closed. These used to be
+        // left blank on the belief that a closed trade comes back without them;
+        // the platform does send them, keyed off the originating position, and
+        // the terminal simply was not reading them. An unset bracket is still
+        // blank — MT's statement leaves the cell empty rather than printing a
+        // zero, and a zero here would read as a level that was actually set.
+        h += QStringLiteral("<td>") + (t.sl > 0.0 ? num(t.sl, d) : QString())
+           + QStringLiteral("</td>");
+        h += QStringLiteral("<td>") + (t.tp > 0.0 ? num(t.tp, d) : QString())
+           + QStringLiteral("</td>");
         h += QStringLiteral("<td class=\"c\">") + esc(stamp(r.when)) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.closePrice, d) + QStringLiteral("</td>");
         h += QStringLiteral("<td>") + num(t.commission, 2) + QStringLiteral("</td>");
@@ -970,8 +976,20 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
                             tr("Commission"), tr("Profit"), tr("Comment"), tr("Action")});
     m_orderTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
                               tr("Price"), tr("S/L"), tr("T/P"), tr("Action")});
+    // MetaTrader's History columns, in MetaTrader's order. The desk sent a
+    // screenshot of this tab asking for exactly that set.
+    //
+    // "Time" and "Price" each appear twice, which is MT5's own doing and reads
+    // correctly there because the open pair and the close pair sit either side
+    // of S/L and T/P. This table had the two Price columns adjacent and no S/L,
+    // T/P or close time at all, so the pair was simply two identical headers
+    // with no way to tell which was which.
+    //
+    // The four that were missing were all in the payload already; the blotter
+    // just never read them. See HistoryTrade::sl.
     m_histTable = makeTable({tr("Symbol"), tr("Ticket"), tr("Time"), tr("Type"), tr("Volume"),
-                             tr("Price"), tr("Price"), tr("Swap"), tr("Commission"), tr("Profit")});
+                             tr("Price"), tr("S/L"), tr("T/P"), tr("Time"), tr("Price"),
+                             tr("Commission"), tr("Swap"), tr("Profit")});
     m_txnTable = makeTable({tr("Time"), tr("Type"), tr("Method"), tr("Description"),
                             tr("Amount"), tr("Currency")});
 
@@ -1418,22 +1436,34 @@ void PositionsPanel::setHistory(const QVector<HistoryTrade>& history) {
         return m_privacy ? QString::fromUtf8(MASK) : fmt(v);
     };
     for (const HistoryTrade& h : shown) {
+        const int d = digitsFor(h.symbol);
+        // A bracket that was never set reads as a dash, not as 0.00 — a stop
+        // loss of zero is a price, and on this table it would sit in a column
+        // of real ones looking like the trade had been protected at nothing.
+        auto level = [&](double v) { return v > 0.0 ? fmt(v, d) : QStringLiteral("—"); };
+
         m_histTable->setItem(r, 0, cell(h.symbol));
         m_histTable->setItem(r, 1, ticketCell(h.id));
-        m_histTable->setItem(r, 2, cell(shortTime(h.closedAt)));
+        // The OPEN time here and the close time further along, as MetaTrader
+        // orders them. This column used to carry the close time under a bare
+        // "Time" heading, so the moment a trade was entered was nowhere on the
+        // tab at all.
+        m_histTable->setItem(r, 2, cell(shortTime(h.openedAt)));
         auto* typeItem = cell(typeText(h.side));
         typeItem->setForeground(h.side.compare("sell", Qt::CaseInsensitive) == 0
                                 ? QColor(c.down) : QColor(c.up));
         m_histTable->setItem(r, 3, typeItem);
         m_histTable->setItem(r, 4, cell(fmt(h.lots), R));
-        const int d = digitsFor(h.symbol);
         m_histTable->setItem(r, 5, cell(fmt(h.openPrice, d), R));
-        m_histTable->setItem(r, 6, cell(fmt(h.closePrice, d), R));
-        m_histTable->setItem(r, 7, cell(cash(h.swap), R));
-        m_histTable->setItem(r, 8, cell(cash(h.commission), R));
+        m_histTable->setItem(r, 6, cell(level(h.sl), R));
+        m_histTable->setItem(r, 7, cell(level(h.tp), R));
+        m_histTable->setItem(r, 8, cell(shortTime(h.closedAt)));
+        m_histTable->setItem(r, 9, cell(fmt(h.closePrice, d), R));
+        m_histTable->setItem(r, 10, cell(cash(h.commission), R));
+        m_histTable->setItem(r, 11, cell(cash(h.swap), R));
         auto* pnl = cell(cash(h.profit), R);
         pnl->setForeground(h.profit >= 0 ? QColor(c.up) : QColor(c.down));
-        m_histTable->setItem(r, 9, pnl);
+        m_histTable->setItem(r, 12, pnl);
         ++r;
     }
     refreshHistorySummary();
