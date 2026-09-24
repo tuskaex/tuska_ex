@@ -16,6 +16,12 @@
 #include <QDateTime>
 #include <QResizeEvent>
 #include <QUrl>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QPainter>
+#include <QPrinter>
+#include <QPrintDialog>
+#include <QPrintPreviewDialog>
 
 #ifndef TX_SOURCE_WEB_DIR
 #define TX_SOURCE_WEB_DIR ""
@@ -86,6 +92,10 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
             this, &WebChartWidget::studiesChanged);
     connect(m_bridge, &ChartBridge::resolutionChanged,
             this, &WebChartWidget::resolutionChanged);
+    connect(m_bridge, &ChartBridge::saveImageRequested,
+            this, &WebChartWidget::saveChartImage);
+    connect(m_bridge, &ChartBridge::printRequested,
+            this, &WebChartWidget::printChart);
     connect(m_bridge, &ChartBridge::overlayHiddenChanged, this, [this](bool hidden) {
         if (m_overlay) m_overlay->setVisible(!hidden);
     });
@@ -244,6 +254,98 @@ QString WebChartWidget::chartState() const {
 
 void WebChartWidget::setChartState(const QString& stateJson) {
     m_bridge->loadChartState(stateJson);
+}
+
+// ── "Save As Picture…", "Print Preview" and "Print…" ────────────────────────
+//
+// One capture serves all three, so the printed page and the saved PNG are the
+// chart exactly as it was on screen.
+//
+// grab() on the web view, rather than a screen capture of the same rectangle.
+// A screen capture would pick up anything overlapping the chart — the one-click
+// strip, a tooltip, another window — and on macOS it would need the screen
+// recording permission, which is a dialog nobody expects from a trading
+// terminal. QtWebEngine paints the page through the widget's normal paint path
+// here, which is why this works at all; it is also why the one-click strip,
+// which is a sibling widget rather than part of the view, is correctly absent.
+QPixmap WebChartWidget::captureChart() const {
+    if (!m_view) return {};
+    const QPixmap pm = m_view->grab();
+    // A null grab is possible if the view has never been shown. Say so rather
+    // than writing an empty file the trader has to open to discover is blank.
+    if (pm.isNull() || pm.width() < 2 || pm.height() < 2) return {};
+    return pm;
+}
+
+void WebChartWidget::saveChartImage() {
+    const QPixmap pm = captureChart();
+    if (pm.isNull()) {
+        QMessageBox::warning(this, tr("Save As Picture"),
+                             tr("The chart could not be captured. Try again once "
+                                "it has finished loading."));
+        return;
+    }
+
+    // Named after the instrument and the moment, because the alternative is a
+    // folder of chart1.png … chart9.png that nobody can tell apart later.
+    const QString stamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_HH-mm-ss");
+    const QString symbol = m_bridge->currentSymbol().isEmpty()
+                             ? QStringLiteral("chart") : m_bridge->currentSymbol();
+    const QString suggested =
+        QStandardPaths::writableLocation(QStandardPaths::PicturesLocation)
+        + QString("/%1_%2.png").arg(symbol, stamp);
+
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Save As Picture"), suggested, tr("PNG image (*.png)"));
+    if (path.isEmpty()) return;          // cancelled
+
+    if (!pm.save(path, "PNG"))
+        QMessageBox::warning(this, tr("Save As Picture"),
+                             tr("Could not write %1.").arg(path));
+}
+
+void WebChartWidget::printChart(bool preview) {
+    const QPixmap pm = captureChart();
+    if (pm.isNull()) {
+        QMessageBox::warning(this, tr("Print"),
+                             tr("The chart could not be captured. Try again once "
+                                "it has finished loading."));
+        return;
+    }
+
+    // Landscape: a chart is far wider than it is tall, and portrait would put
+    // it in a band across the middle of the sheet with the rest blank.
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setPageOrientation(QPageLayout::Landscape);
+
+    // Scaled to fit the page, keeping the aspect ratio and centred. A chart
+    // stretched to the paper's proportions is a chart with the wrong slope on
+    // every trend line on it.
+    auto paint = [&pm](QPrinter* target) {
+        QPainter p(target);
+        if (!p.isActive()) return;
+        const QRect page = target->pageLayout().paintRectPixels(target->resolution());
+        QSize size = pm.size();
+        size.scale(page.size(), Qt::KeepAspectRatio);
+        const QRect where(page.x() + (page.width()  - size.width())  / 2,
+                          page.y() + (page.height() - size.height()) / 2,
+                          size.width(), size.height());
+        p.drawPixmap(where, pm);
+    };
+
+    if (preview) {
+        QPrintPreviewDialog dlg(&printer, this);
+        dlg.setWindowTitle(tr("Print Preview"));
+        connect(&dlg, &QPrintPreviewDialog::paintRequested, this,
+                [&paint](QPrinter* target) { paint(target); });
+        dlg.exec();
+        return;
+    }
+
+    QPrintDialog dlg(&printer, this);
+    dlg.setWindowTitle(tr("Print chart"));
+    if (dlg.exec() != QDialog::Accepted) return;
+    paint(&printer);
 }
 
 void WebChartWidget::setResolution(const QString& res) {
