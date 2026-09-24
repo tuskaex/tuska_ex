@@ -88,6 +88,34 @@ public:
     Q_INVOKABLE void saveChartTemplate(const QString& name, const QString& content);
     Q_INVOKABLE void removeChartTemplate(const QString& name);
 
+    // ── MetaTrader templates: the whole chart, not just its indicators ──
+    //
+    // Separate from the three buckets above, which belong to the charting
+    // library's own dialogs and carry the shapes those dialogs expect. A
+    // MetaTrader template is the thing the desk actually asked for: every
+    // indicator AND every drawing on the chart, plus its style, saved under a
+    // name and put back on another chart later. That is a full chart state —
+    // the same serialisation a workspace profile stores — so it cannot share a
+    // bucket with a study template without breaking the Indicators dialog that
+    // reads the other one.
+    //
+    // Deliberately NOT carrying the symbol into the chart it is applied to. The
+    // state has one in it, because the library always saves one, but a template
+    // describes a setup rather than an instrument: applying it on GBPUSD must
+    // not jump the pane to whatever was on screen when it was saved. The web
+    // layer puts the pane's own symbol back after the load.
+    Q_INVOKABLE QString listTemplates() const;
+    Q_INVOKABLE QString templateContent(const QString& name) const;
+    Q_INVOKABLE void removeTemplate(const QString& name);
+    // JS -> C++: here is the chart's state, please ask for a name and keep it.
+    // The naming prompt lives on the native side because a modal dialog raised
+    // from inside the page would be a browser prompt sitting in the middle of
+    // the chart, and QtWebEngine can refuse those outright.
+    Q_INVOKABLE void saveTemplateAs(const QString& stateJson);
+    // Writes one, once a name has been chosen. Not invokable: the only caller
+    // is the widget that asked for the name.
+    void storeTemplate(const QString& name, const QString& content);
+
     Q_INVOKABLE QString listDrawingTemplates(const QString& tool) const;
     Q_INVOKABLE QString drawingTemplateContent(const QString& tool, const QString& name) const;
     Q_INVOKABLE void saveDrawingTemplate(const QString& tool, const QString& name,
@@ -205,6 +233,10 @@ signals:
     // The chart's right-click menu asked for a picture or a print.
     void saveImageRequested();
     void printRequested(bool preview);
+    // "Save Template…": the chart's state is in hand and needs a name.
+    // There is deliberately no matching "templates changed" signal: the menu
+    // re-reads the list every time it opens, so it can never be stale.
+    void templateSaveRequested(const QString& stateJson);
 
 private slots:
     void onBarsReceived(const QString& symbol, const QString& timeframe, const QVector<Bar>& bars);

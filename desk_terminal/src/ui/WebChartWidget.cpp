@@ -18,6 +18,10 @@
 #include <QUrl>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QJsonDocument>
+#include <QJsonArray>
 #include <QPainter>
 #include <QPrinter>
 #include <QPrintDialog>
@@ -96,6 +100,8 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
             this, &WebChartWidget::saveChartImage);
     connect(m_bridge, &ChartBridge::printRequested,
             this, &WebChartWidget::printChart);
+    connect(m_bridge, &ChartBridge::templateSaveRequested,
+            this, &WebChartWidget::saveTemplate);
     connect(m_bridge, &ChartBridge::overlayHiddenChanged, this, [this](bool hidden) {
         if (m_overlay) m_overlay->setVisible(!hidden);
     });
@@ -346,6 +352,40 @@ void WebChartWidget::printChart(bool preview) {
     dlg.setWindowTitle(tr("Print chart"));
     if (dlg.exec() != QDialog::Accepted) return;
     paint(&printer);
+}
+
+// "Save Template…" from the chart's right-click menu.
+//
+// The state arrives already captured, because only the page can produce it and
+// only it knows the moment the trader asked. All that is left is a name, and
+// that has to be asked for here: a prompt raised inside the page would be a
+// browser dialog planted in the middle of the chart, and QtWebEngine is within
+// its rights to refuse to show one at all.
+void WebChartWidget::saveTemplate(const QString& stateJson) {
+    bool ok = false;
+    const QString name = QInputDialog::getText(
+        this, tr("Save Template"),
+        tr("Name this template.\n\nIt keeps every indicator and every drawing on "
+           "this chart, and its style. Applying it later leaves the instrument "
+           "alone — a template is a setup, not a symbol."),
+        QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok || name.isEmpty()) return;
+
+    // Overwriting is allowed but never silent: these are hand-made setups and
+    // losing one to a name collision is not a small thing.
+    const QJsonArray existing =
+        QJsonDocument::fromJson(m_bridge->listTemplates().toUtf8()).array();
+    for (const QJsonValue& v : existing) {
+        if (v.toString() != name) continue;
+        if (QMessageBox::question(
+                this, tr("Save Template"),
+                tr("A template called \"%1\" already exists. Replace it?").arg(name))
+            != QMessageBox::Yes)
+            return;
+        break;
+    }
+
+    m_bridge->storeTemplate(name, stateJson);
 }
 
 void WebChartWidget::setResolution(const QString& res) {
