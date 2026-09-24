@@ -36,7 +36,7 @@ EditOrderDialog::EditOrderDialog(const PendingOrder& order, const SymbolSpec& sp
     auto* live = new QLabel(tr("Bid %1   Ask %2")
                             .arg(bid > 0 ? QString::number(bid, 'f', digits) : QStringLiteral("—"),
                                  ask > 0 ? QString::number(ask, 'f', digits) : QStringLiteral("—")));
-    live->setStyleSheet(QString("color:%1; font-size:11px; font-family:Consolas,monospace;")
+    live->setStyleSheet(QString("color:%1; font-size:11px; font-family:" TX_MONO_FONT ",monospace;")
                         .arg(c.muted));
 
     m_price = new QDoubleSpinBox;

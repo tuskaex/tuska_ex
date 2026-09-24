@@ -11,6 +11,7 @@ class PriceStream : public QObject {
     Q_OBJECT
 public:
     explicit PriceStream(const Config& cfg, QObject* parent = nullptr);
+    ~PriceStream() override;
 
     void setConfig(const Config& cfg) { m_cfg = cfg; }
     void start();

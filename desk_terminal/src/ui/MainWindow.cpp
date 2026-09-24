@@ -403,10 +403,17 @@ void MainWindow::buildMenuBar() {
     familyGroup->setExclusive(true);
     struct { const char* family; const char* label; } faces[] = {
         {"Tahoma",    QT_TR_NOOP("Tahoma  (MT5)")},
+#ifdef Q_OS_MACOS
+        // Segoe UI is a Windows face; picking it on a Mac changed nothing
+        // visible, because Qt quietly substituted something else. Helvetica
+        // Neue is the nearest face every Mac ships.
+        {"Helvetica Neue", QT_TR_NOOP("Helvetica Neue")},
+#else
         {"Segoe UI",  QT_TR_NOOP("Segoe UI")},
+#endif
         {"Verdana",   QT_TR_NOOP("Verdana")},
         {"Arial",     QT_TR_NOOP("Arial")},
-        {"Consolas",  QT_TR_NOOP("Consolas  (monospace)")},
+        {TX_MONO_FONT, QT_TR_NOOP(TX_MONO_FONT "  (monospace)")},
     };
     for (const auto& f : faces) {
         QAction* a = fontMenu->addAction(tr(f.label));

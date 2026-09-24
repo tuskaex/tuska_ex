@@ -118,7 +118,7 @@ QWidget* OrderDialog::buildMarketTab() {
                            "letter-spacing:1px; background:transparent;");
         auto* px = new QLabel("—");
         px->setStyleSheet("color:#ffffff; font-size:16px; font-weight:800;"
-                          "font-family:Consolas,monospace; background:transparent;");
+                          "font-family:" TX_MONO_FONT ",monospace; background:transparent;");
         v->addWidget(cap);
         v->addWidget(px);
         *priceOut = px;
@@ -134,7 +134,7 @@ QWidget* OrderDialog::buildMarketTab() {
     m_spreadLbl->setAlignment(Qt::AlignCenter);
     m_spreadLbl->setFixedWidth(62);
     m_spreadLbl->setStyleSheet(QString("color:%1; font-size:10px; font-weight:800;"
-                                       "font-family:Consolas,monospace;").arg(c.muted));
+                                       "font-family:" TX_MONO_FONT ",monospace;").arg(c.muted));
 
     auto* tiles = new QHBoxLayout;
     tiles->setSpacing(6);
@@ -274,7 +274,7 @@ QWidget* OrderDialog::buildMarketTab() {
 
     m_marginLbl = new QLabel;
     m_marginLbl->setStyleSheet(QString("color:%1; font-size:11px;"
-                                       "font-family:Consolas,monospace;").arg(c.muted));
+                                       "font-family:" TX_MONO_FONT ",monospace;").arg(c.muted));
 
     m_mktSubmit = new QPushButton;
     m_mktSubmit->setMinimumHeight(40);
@@ -371,7 +371,7 @@ void OrderDialog::refreshMarket() {
                          .arg(QString::number(margin, 'f', 2),
                               QString::number(m_freeMargin, 'f', 2)));
     m_marginLbl->setStyleSheet(QString("color:%1; font-size:11px;"
-                                       "font-family:Consolas,monospace;")
+                                       "font-family:" TX_MONO_FONT ",monospace;")
                                .arg(affordable ? c.muted : c.warn));
 
     m_mktSubmit->setText(buy ? tr("BUY %1").arg(m_spec.symbol)
@@ -404,7 +404,7 @@ QWidget* OrderDialog::buildPendingTab() {
     auto* page = new QWidget;
 
     m_live = new QLabel;
-    m_live->setStyleSheet(QString("color:%1; font-size:11px; font-family:Consolas,monospace;")
+    m_live->setStyleSheet(QString("color:%1; font-size:11px; font-family:" TX_MONO_FONT ",monospace;")
                           .arg(c.muted));
 
     m_side = new QComboBox;

@@ -551,7 +551,7 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
 
         m_txnPageLbl = new QLabel;
         m_txnPageLbl->setStyleSheet(QString("color:%1; font-size:11px;"
-                                            "font-family:Consolas,monospace;").arg(c.muted));
+                                            "font-family:" TX_MONO_FONT ",monospace;").arg(c.muted));
 
         h->addWidget(m_txnPageSize);
         h->addSpacing(4);

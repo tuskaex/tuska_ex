@@ -173,7 +173,17 @@ LoginDialog::LoginDialog(const Config& cfg, QWidget* parent, Mode mode)
     setModal(true);
     // Frameless + translucent so the card can have rounded corners and a real
     // drop shadow. The card is draggable by any empty area (see mouseMoveEvent).
-    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    Qt::WindowFlags flags = Qt::Dialog | Qt::FramelessWindowHint;
+#ifdef Q_OS_MACOS
+    // macOS gives every window its own shadow, traced from the window's alpha.
+    // Here that alpha includes the soft halo of the card's drop shadow, so the
+    // OS outlined the halo too and the card sat inside a second, dark rounded
+    // frame with a grey plate behind it. The card already draws its shadow
+    // below; the system one is dropped. Windows adds none to a frameless
+    // window, which is why the frame only ever showed on a Mac.
+    flags |= Qt::NoDropShadowWindowHint;
+#endif
+    setWindowFlags(flags);
     setAttribute(Qt::WA_TranslucentBackground);
     setStyleSheet(sheet());
 

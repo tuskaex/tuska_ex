@@ -117,7 +117,7 @@ void SymbolSpecDialog::addRow(const QString& key, const QString& caption, const 
     m_table->setItem(r, 0, new QTableWidgetItem(caption));
     auto* v = new QTableWidgetItem(value);
     v->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    QFont mono("Consolas");
+    QFont mono(QStringLiteral(TX_MONO_FONT));
     mono.setStyleHint(QFont::Monospace);
     v->setFont(mono);
     m_table->setItem(r, 1, v);
