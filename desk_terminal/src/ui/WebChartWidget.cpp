@@ -356,25 +356,26 @@ void WebChartWidget::printChart(bool preview) {
 
 // "Save Template…" from the chart's right-click menu.
 //
-// The state arrives already captured, because only the page can produce it and
-// only it knows the moment the trader asked. All that is left is a name, and
-// that has to be asked for here: a prompt raised inside the page would be a
-// browser dialog planted in the middle of the chart, and QtWebEngine is within
-// its rights to refuse to show one at all.
-void WebChartWidget::saveTemplate(const QString& stateJson) {
+// Both halves arrive already captured — the indicators and the drawings —
+// because only the page can produce either and only it knows the moment the
+// trader asked. All that is left is a name, and that has to be asked for here:
+// a prompt raised inside the page would be a browser dialog planted in the
+// middle of the chart, and QtWebEngine is within its rights to refuse to show
+// one at all.
+void WebChartWidget::saveTemplate(const QString& studyJson, const QString& drawingsJson) {
     bool ok = false;
     const QString name = QInputDialog::getText(
         this, tr("Save Template"),
         tr("Name this template.\n\nIt keeps every indicator and every drawing on "
-           "this chart, and its style. Applying it later leaves the instrument "
-           "alone — a template is a setup, not a symbol."),
+           "this chart. Applying it later leaves the instrument and the "
+           "timeframe alone — a template is a setup, not a symbol."),
         QLineEdit::Normal, QString(), &ok).trimmed();
     if (!ok || name.isEmpty()) return;
 
     // Overwriting is allowed but never silent: these are hand-made setups and
     // losing one to a name collision is not a small thing.
     const QJsonArray existing =
-        QJsonDocument::fromJson(m_bridge->listTemplates().toUtf8()).array();
+        QJsonDocument::fromJson(m_bridge->listStudyTemplates().toUtf8()).array();
     for (const QJsonValue& v : existing) {
         if (v.toString() != name) continue;
         if (QMessageBox::question(
@@ -385,7 +386,7 @@ void WebChartWidget::saveTemplate(const QString& stateJson) {
         break;
     }
 
-    m_bridge->storeTemplate(name, stateJson);
+    m_bridge->storeTemplate(name, studyJson, drawingsJson);
 }
 
 void WebChartWidget::setResolution(const QString& res) {

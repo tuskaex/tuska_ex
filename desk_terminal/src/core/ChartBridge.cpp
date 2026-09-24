@@ -178,8 +178,12 @@ void ChartBridge::saveStudyTemplate(const QString& name, const QString& content)
     namedPut("studyTemplates", name,
              QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact)));
 }
+// Deletes BOTH halves. The library's own dialog calls this one, and a template
+// deleted there that left its drawings behind would hand them to the next
+// template that happened to reuse the name.
 void ChartBridge::removeStudyTemplate(const QString& name) {
     namedRemove("studyTemplates", name);
+    namedRemove("templateDrawings", name);
 }
 
 QString ChartBridge::listChartTemplates() const     { return namedList("chartTemplates"); }
@@ -195,27 +199,38 @@ void ChartBridge::removeChartTemplate(const QString& name) {
 
 // Drawing templates are per TOOL — a "Fib Retracement" template must not be
 // offered on a trend line — so the bucket is nested one level deeper.
-// MetaTrader templates — a whole chart under a name. Its own bucket, for the
-// reason spelled out in the header: this holds a full chart state and the three
-// buckets above hold shapes the library's own dialogs wrote.
-QString ChartBridge::listTemplates() const     { return namedList("templates"); }
-
-QString ChartBridge::templateContent(const QString& name) const {
-    return namedGet("templates", name);
+// The drawings half of a template — see the header for why it is a bucket of
+// its own rather than part of the study template beside it.
+QString ChartBridge::templateDrawings(const QString& name) const {
+    return namedGet("templateDrawings", name);
 }
 
-void ChartBridge::storeTemplate(const QString& name, const QString& content) {
-    if (name.trimmed().isEmpty() || content.isEmpty()) return;
-    namedPut("templates", name, content);
+void ChartBridge::saveTemplateDrawings(const QString& name, const QString& content) {
+    if (name.trimmed().isEmpty()) return;
+    // An empty state is written rather than skipped. Saving a template from a
+    // chart with nothing drawn on it MUST clear whatever the previous template
+    // of that name carried, or the old drawings come back on the next load.
+    namedPut("templateDrawings", name, content);
+}
+
+void ChartBridge::storeTemplate(const QString& name, const QString& studyJson,
+                                const QString& drawingsJson) {
+    if (name.trimmed().isEmpty() || studyJson.isEmpty()) return;
+    // Through saveStudyTemplate(), not namedPut(), so a template saved from our
+    // own menu gets the same symbol and interval stripped out as one saved from
+    // the library's dialog.
+    saveStudyTemplate(name, studyJson);
+    saveTemplateDrawings(name, drawingsJson);
 }
 
 void ChartBridge::removeTemplate(const QString& name) {
-    namedRemove("templates", name);
+    namedRemove("studyTemplates", name);
+    namedRemove("templateDrawings", name);
 }
 
-void ChartBridge::saveTemplateAs(const QString& stateJson) {
-    if (stateJson.isEmpty()) return;
-    emit templateSaveRequested(stateJson);
+void ChartBridge::saveTemplateAs(const QString& studyJson, const QString& drawingsJson) {
+    if (studyJson.isEmpty()) return;
+    emit templateSaveRequested(studyJson, drawingsJson);
 }
 
 QString ChartBridge::listDrawingTemplates(const QString& tool) const {

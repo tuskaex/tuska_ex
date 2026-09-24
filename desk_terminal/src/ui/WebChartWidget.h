@@ -79,9 +79,10 @@ private slots:
     void saveChartImage();
     void printChart(bool preview);
 
-    // "Save Template…" — names the chart state the page just handed over, and
-    // warns before writing over a template that already exists.
-    void saveTemplate(const QString& stateJson);
+    // "Save Template…" — names the two halves the page just handed over (the
+    // indicators and the drawings), and warns before writing over a template
+    // that already exists.
+    void saveTemplate(const QString& studyJson, const QString& drawingsJson);
 
 private:
     static QString resolveIndexHtml();   // locate web/index.html

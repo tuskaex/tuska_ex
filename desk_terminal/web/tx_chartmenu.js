@@ -18,11 +18,11 @@
  *
  *   Indicators List, Auto Arrange, Properties   the library's own actions
  *   Timeframes, Grid, Volumes, Zoom             the library's chart API
- *   Template                                    a full chart state — every
- *                                               indicator and every drawing —
- *                                               in the store beside
- *                                               config.json, shared by all
- *                                               four panes
+ *   Template                                    the template store beside
+ *                                               config.json — every indicator
+ *                                               and every drawing, shared by
+ *                                               all four panes and by the
+ *                                               chart's own template button
  *   Save As Picture, Print, Print Preview       C++ — a file dialog and a
  *                                               printer are not things the
  *                                               page has
@@ -151,50 +151,41 @@
     }
 
     /*
-     * MetaTrader's Template menu: save this chart's whole setup under a name,
-     * and put it back on another chart later.
+     * MetaTrader's Template menu: save this chart's setup under a name, and put
+     * it back on another chart later.
      *
-     * "Whole setup" is the point, and it is what the desk asked for after the
-     * first version of this menu shipped: every indicator AND every drawing,
-     * plus the chart's style. The library's own study templates carry only the
-     * indicators — createStudyTemplate has no option to include drawings, and
-     * the Indicators dialog that writes them decides what goes in. So a
-     * template here is a full chart state, the same serialisation a workspace
-     * profile stores, kept in its own bucket beside config.json and shared by
-     * all four panes.
+     * "Setup" means every indicator AND every drawing, which is what the desk
+     * asked for. The library's study template carries only the indicators, so
+     * the drawings travel beside it under the same name — see ChartBridge's
+     * templateDrawings for the whole story.
      *
-     * Applying one deliberately does NOT change the instrument. The saved state
-     * always carries a symbol, because the library always writes one, but a
-     * template is a setup rather than a thing to look at — applying it on
-     * GBPUSD must not jump the pane to whatever was on screen when it was
-     * saved. So the pane's own symbol goes back on once the load settles.
+     * This is the SAME list the chart's own "Save Indicator template…" writes
+     * to, deliberately. Two template systems in one terminal, each with its own
+     * list and its own save button, is how a trader ends up unable to find the
+     * one they made. Saving from either place produces a template the other can
+     * apply.
+     *
+     * Applying one never changes the instrument or the timeframe. Both are
+     * stripped when a template is written, in the one place templates are
+     * written, so a template made on XAUUSD cannot drag a GBPUSD chart across.
      */
     function applyTemplate(name) {
-      call(bridge, bridge.templateContent, name).then(function (text) {
-        var state = parseJson(text, null);
-        var w = getWidget();
-        var c = chart();
-        if (!state || !w || !c) return;
-
-        var symbol = "";
-        try { symbol = c.symbol(); } catch (e) { /* not ready */ }
-
-        var done;
-        try {
-          done = w.load(state);
-        } catch (e) {
-          console.warn("chart menu: the chart refused the template", name, e);
-          return;
-        }
-        if (!done || typeof done.then !== "function" || !symbol) return;
-        done.then(function () {
-          try {
-            var ch = w.activeChart();
-            if (ch.symbol() !== symbol) ch.setSymbol(symbol);
-          } catch (e) { /* torn down mid-load */ }
-        }, function (e) {
-          console.warn("chart menu: loading the template failed", name, e);
-        });
+      var c = chart();
+      if (!c) return;
+      // The drawings first, then the indicators. They touch different things,
+      // so the order is not load-bearing; both simply have to happen.
+      call(bridge, bridge.templateDrawings, name).then(function (text) {
+        var drawings = parseJson(text, null);
+        if (!drawings) return;
+        try { return c.applyLineToolsState(drawings); }
+        catch (e) { console.warn("chart menu: the chart refused the drawings", name, e); }
+      }).then(function () {
+        return call(bridge, bridge.studyTemplateContent, name);
+      }).then(function (text) {
+        var tpl = parseJson(text, null);
+        if (!tpl) return;
+        try { c.applyStudyTemplate(tpl); }
+        catch (e) { console.warn("chart menu: the chart refused the template", name, e); }
       });
     }
 
@@ -228,18 +219,28 @@
         actionId: "tx-tpl-save",
         label: "Save Template…",
         onExecute: function () {
-          var w = getWidget();
-          if (!w) return;
+          var c = chart();
+          if (!c) return;
+          var study = "", drawings = "";
           try {
-            // includeDrawings defaults to true; named anyway, because it is the
-            // entire reason this entry exists.
-            w.save(function (state) {
-              try { bridge.saveTemplateAs(JSON.stringify(state)); }
-              catch (e) { console.warn("chart menu: could not hand the template over", e); }
-            }, { includeDrawings: true });
+            // Neither the symbol nor the interval: a template is a setup, not
+            // an instrument. C++ strips them again on the way in, so this is
+            // belt and braces rather than the only guard.
+            study = JSON.stringify(
+              c.createStudyTemplate({ saveSymbol: false, saveInterval: false }));
           } catch (e) {
-            console.warn("chart menu: could not capture the chart", e);
+            console.warn("chart menu: could not capture the indicators", e);
+            return;
           }
+          try {
+            drawings = JSON.stringify(c.getLineToolsState());
+          } catch (e) {
+            // An empty string is sent on purpose: saving from a chart with
+            // nothing drawn has to clear whatever this name carried before.
+            console.warn("chart menu: could not capture the drawings", e);
+          }
+          try { bridge.saveTemplateAs(study, drawings); }
+          catch (e) { console.warn("chart menu: could not hand the template over", e); }
         },
       }));
 
@@ -381,7 +382,7 @@
           }
           if (KEEP.test(name)) return Promise.resolve(items);
 
-          return call(bridge, bridge.listTemplates).then(function (text) {
+          return call(bridge, bridge.listStudyTemplates).then(function (text) {
             var names = parseJson(text, []);
             var built = build(actionsFactory, Array.isArray(names) ? names : []);
             // A chart that is not ready yet yields nothing; hand back the
