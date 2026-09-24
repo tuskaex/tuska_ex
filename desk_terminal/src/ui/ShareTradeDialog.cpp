@@ -184,7 +184,7 @@ ShareTradeDialog::ShareTradeDialog(const OpenPosition& position, const SymbolSpe
     m_urlBox->setPlaceholderText(tr("The link appears here once created"));
     m_urlBox->setStyleSheet(QString(
         "QLineEdit{background:%1; border:1px solid %2; border-radius:6px;"
-        "padding:5px 8px; color:%3; font-family:Consolas,monospace;}")
+        "padding:5px 8px; color:%3; font-family:" TX_MONO_FONT ",monospace;}")
         .arg(c.inputBg, c.inputBorder, c.textStrong));
 
     m_status = new QLabel;
@@ -446,7 +446,7 @@ QPixmap ShareTradeDialog::renderCard(int width) const {
     // ── the link ──
     p.setPen(QColor(255, 255, 255, 160));
     QFont mono = font(10, QFont::Normal);
-    mono.setFamily(QStringLiteral("Consolas"));
+    mono.setFamily(QStringLiteral(TX_MONO_FONT));
     mono.setStyleHint(QFont::Monospace);
     p.setFont(mono);
     QString shown = m_code.isEmpty()

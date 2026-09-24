@@ -21,6 +21,18 @@ PriceStream::PriceStream(const Config& cfg, QObject* parent)
     });
 }
 
+PriceStream::~PriceStream() {
+    // Members die in reverse declaration order, so m_reconnectTimer is already
+    // gone when m_ws's destructor closes the socket. That close emits
+    // disconnected(), and onDisconnected() — still believing the stream should
+    // run, because quitting never called stop() — started the destroyed timer.
+    // Every quit on a Mac ended in a SIGSEGV and a "quit unexpectedly" dialog.
+    // Cut the socket's signals and stop the timer while both still exist.
+    m_wantRun = false;
+    m_ws.disconnect(this);
+    m_reconnectTimer.stop();
+}
+
 void PriceStream::start() {
     m_wantRun = true;
     emit statusChanged(tr("Connecting…"));

@@ -4,6 +4,19 @@
 #include <QPalette>
 #include <QFont>
 
+// The monospace face every price and number field names in its style sheet.
+// Consolas ships with Windows only; on a Mac a style sheet naming it resolved
+// to whatever Qt substituted, so the BUY/SELL prices, the order window and the
+// dialogs came out in a different face from the Windows build. Menlo is the
+// monospace macOS ships on every install. A string literal, so call sites can
+// splice it into the literals their style sheets are already built from:
+//     "font-family:" TX_MONO_FONT ",monospace;"
+#ifdef Q_OS_MACOS
+#define TX_MONO_FONT "Menlo"
+#else
+#define TX_MONO_FONT "Consolas"
+#endif
+
 // Central theme for the whole terminal — a light and a dark palette plus the
 // global Qt style sheet built from whichever is active.
 //

@@ -210,13 +210,26 @@ QString spinStyle() {
         .arg(c.inputBg, c.textStrong, c.inputBorder, c.accent, c.btnBg, c.btnHover);
 }
 
+// The face the whole app is set in. Segoe UI is what the Windows build was
+// designed against, but it ships with Windows only: on a Mac the sheet named
+// three faces it did not have and Qt fell back to whatever it chose, which is
+// why the mac build never looked like the Windows one. There it takes the
+// system's own UI face instead — the one every native Mac control uses.
+static QString uiFontCss() {
+#ifdef Q_OS_MACOS
+    return QString("\"%1\", sans-serif").arg(QGuiApplication::font().family());
+#else
+    return QStringLiteral("\"Segoe UI\", \"Inter\", sans-serif");
+#endif
+}
+
 QString styleSheet() {
     const Palette& c = p();
     return QString(R"QSS(
 /* MetaTrader-style density: small type, tight rows, a visible grid. Every rule
    below is deliberately compact — the point of this layout is to fit a market
    watch, a chart and the full trade blotter on one screen. */
-* { font-family: "Segoe UI", "Inter", sans-serif; font-size: 11px; }
+* { font-family: %UIFONT%; font-size: 11px; }
 
 QMainWindow, QWidget { background: %BG%; color: %TEXT%; }
 QMainWindow::separator { background: %BORDER%; width: 1px; height: 1px; }
@@ -311,6 +324,7 @@ QToolTip { background: %PANELALT%; color: %TEXTSTRONG%; border: 1px solid %BTNBO
 QMenu { background: %MENUBG%; color: %TEXT%; border: 1px solid %MENUBORDER%; }
 QMenu::item:selected { background: %MENUSEL%; }
 )QSS")
+        .replace("%UIFONT%",      uiFontCss())
         .replace("%BG%",          c.bg)
         .replace("%PANELALT%",    c.panelAlt)
         .replace("%PANEL%",       c.panel)

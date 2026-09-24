@@ -21,7 +21,13 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
     // Frameless, so the card can be rounded and carry its own header. The
     // translucent background is what lets the corners actually be round rather
     // than sitting on a square grey plate.
-    setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint);
+    Qt::WindowFlags flags = Qt::Dialog | Qt::FramelessWindowHint;
+#ifdef Q_OS_MACOS
+    // Same as LoginDialog: macOS traces its own window shadow around the card's
+    // drop-shadow halo, which reads as a second dark frame around the card.
+    flags |= Qt::NoDropShadowWindowHint;
+#endif
+    setWindowFlags(flags);
     setAttribute(Qt::WA_TranslucentBackground);
 
     const auto& c = Theme::p();
@@ -108,7 +114,7 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         auto* vl = new QLabel(v);
         vl->setStyleSheet(QString("background:transparent; border:none; color:%1;"
                                   "font-size:12px; font-weight:700;"
-                                  "font-family:Consolas,monospace;").arg(colour));
+                                  "font-family:" TX_MONO_FONT ",monospace;").arg(colour));
         vl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
         g->addWidget(kl, r, 0);
         g->addWidget(vl, r, 1);
@@ -185,7 +191,7 @@ ModifyBracketsDialog::ModifyBracketsDialog(const OpenPosition& pos, int digits, 
         auto* l = new QLabel;
         l->setStyleSheet(QString("background:transparent; border:none;"
                                  "color:%1; font-size:11px;"
-                                 "font-family:Consolas,monospace;").arg(c.dim));
+                                 "font-family:" TX_MONO_FONT ",monospace;").arg(c.dim));
         return l;
     };
     m_slDist = mkDist();
@@ -282,7 +288,7 @@ void ModifyBracketsDialog::refreshDistances() {
             out->setText(tr("not set"));
             out->setStyleSheet(QString("background:transparent; border:none;"
                                        "color:%1; font-size:11px;"
-                                       "font-family:Consolas,monospace;").arg(c.dim));
+                                       "font-family:" TX_MONO_FONT ",monospace;").arg(c.dim));
             return;
         }
         if (!(ref > 0.0) || !(pip > 0.0)) { out->setText(QString()); return; }
@@ -301,7 +307,7 @@ void ModifyBracketsDialog::refreshDistances() {
                                       : (sell ? !below : below);
         out->setStyleSheet(QString("background:transparent; border:none;"
                                    "color:%1; font-size:11px;"
-                                   "font-family:Consolas,monospace;")
+                                   "font-family:" TX_MONO_FONT ",monospace;")
                            .arg(wrongSide ? c.warn : c.dim));
     };
 

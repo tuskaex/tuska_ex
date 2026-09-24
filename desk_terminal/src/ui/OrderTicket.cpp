@@ -78,7 +78,7 @@ void OrderTicket::styleTile(const Tile& t, const QString& base, const QString& h
     t.caption->setStyleSheet("background:transparent; color:rgba(255,255,255,0.88);"
                              "font-size:9px; font-weight:800; letter-spacing:0.8px;");
     t.price->setStyleSheet("background:transparent; color:#ffffff; font-size:11px;"
-                           "font-weight:800; font-family:Consolas,monospace;");
+                           "font-weight:800; font-family:" TX_MONO_FONT ",monospace;");
 }
 
 OrderTicket::OrderTicket(QWidget* parent) : QWidget(parent) {
@@ -278,7 +278,7 @@ void OrderTicket::applyTheme() {
 
     const QString input = QString(
         "QDoubleSpinBox{background:%1; color:%2; border:1px solid %3; border-radius:3px;"
-        "padding:3px 2px; font-size:11px; font-weight:700; font-family:Consolas,monospace;}"
+        "padding:3px 2px; font-size:11px; font-weight:700; font-family:" TX_MONO_FONT ",monospace;}"
         "QDoubleSpinBox:focus{border-color:%4;}")
         .arg(c.inputBg, c.textStrong, c.inputBorder, c.accent);
     m_volume->setStyleSheet(input);
