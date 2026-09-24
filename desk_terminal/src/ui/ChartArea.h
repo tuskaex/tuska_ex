@@ -72,6 +72,18 @@ public:
     QString activeResolution() const;
     void    selectLineTool(const QString& tool);
 
+    // MetaTrader's timeframe names against the charting library's resolution
+    // strings — {"M5", "5"}, {"H1", "60"} and so on.
+    //
+    // One table, exposed, because two places need it and two copies would
+    // drift: the timeframe toolbar builds its buttons from it, and the chart
+    // tabs below read it the other way round to title themselves "XAUUSD,M5".
+    static const QVector<QPair<QString, QString>>& timeframes();
+    // "M5" for "5". Falls back to the resolution itself for anything the nine
+    // buttons do not cover — the chart header offers 3m, 45m and 2h, and a tab
+    // showing one of those should say so rather than go blank.
+    static QString timeframeLabel(const QString& res);
+
     // The instrument the ACTIVE pane is showing. Not the same thing as the
     // Market Watch selection once a trader clicks between panes — the one-click
     // strip and the order window follow this, or they would quote a different
@@ -146,6 +158,22 @@ private:
     // longer simply the first m_count of them once any can be minimized.
     void tile(const QVector<int>& order);
 
+    // ── the chart tabs along the bottom ──
+    //
+    // MetaTrader's tab bar, which the desk asked for: one tab per open chart,
+    // titled "XAUUSD,M5", with a ✕ on each and a + at the end.
+    //
+    // Rebuilt rather than patched. There are at most four tabs and they change
+    // on almost anything — a symbol picked in the chart, a timeframe button, a
+    // pane closed, the grid resized — so keeping them in step by hand would be
+    // several subscriptions that each had to remember to fire.
+    void buildTabBar();
+    void refreshTabs();
+    // A tab was clicked. Activates that pane, brings it back if it was
+    // minimized, and when one pane is being shown alone, makes it that one —
+    // which is what tabs are FOR: many charts open, one on screen.
+    void showPaneFromTab(int index);
+
     Pane& ensurePane(int index);          // builds it the first time it is shown
     void  relayout();
     void  setActive(int index);
@@ -165,6 +193,8 @@ private:
     QGridLayout* m_grid;
     QWidget*     m_minStrip = nullptr;   // the row of minimized title bars
     QHBoxLayout* m_minLay   = nullptr;
+    QWidget*     m_tabHost  = nullptr;   // the chart tabs along the bottom
+    QHBoxLayout* m_tabLay   = nullptr;
     // Pane slot shown alone, or -1 for the normal grid. Cleared by anything
     // that redefines the grid (a close, a layout change), because a stored
     // slot number does not survive panes shifting under it.

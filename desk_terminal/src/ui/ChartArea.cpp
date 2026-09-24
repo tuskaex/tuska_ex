@@ -31,8 +31,13 @@ ChartArea::ChartArea(ApiClient* api, PriceStream* stream, QWidget* parent)
     m_minLay->addStretch(1);
     m_minStrip->hide();
 
+    buildTabBar();
+
     root->addWidget(m_gridHost, 1);
     root->addWidget(m_minStrip, 0);
+    // Along the bottom, where MetaTrader puts them and where the desk's
+    // screenshot shows them.
+    root->addWidget(m_tabHost, 0);
 
     m_panes.resize(4);
     ensurePane(0);
@@ -136,6 +141,7 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
                 if (q.symbol == symbol) return;
                 q.symbol = symbol;
                 refreshPaneHeaders();
+                refreshTabs();
                 emit symbolPickedInChart(symbol);
                 return;
             }
@@ -149,6 +155,9 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
     // highlight would point it at a chart the trader is not looking at.
     connect(p.chart, &WebChartWidget::resolutionChanged, this,
             [this, w = p.chart](const QString& res) {
+        // Every pane's tab shows its own timeframe, so all of them redraw;
+        // only the ACTIVE pane's change moves the toolbar highlight.
+        refreshTabs();
         if (activeChart() == w) emit activeResolutionChanged(res);
     });
 
@@ -175,6 +184,11 @@ bool ChartArea::eventFilter(QObject* o, QEvent* e) {
     if (e->type() == QEvent::MouseButtonPress) {
         const QVariant idx = o->property("paneIndex");
         if (idx.isValid()) setActive(idx.toInt());
+        // A chart tab. Separate from paneIndex because a tab does more than
+        // select: it can also bring a minimized pane back, or change which
+        // pane is the one being shown alone.
+        const QVariant tab = o->property("tabIndex");
+        if (tab.isValid()) showPaneFromTab(tab.toInt());
     }
     return QWidget::eventFilter(o, e);
 }
@@ -328,6 +342,9 @@ void ChartArea::relayout() {
 
     refreshPaneHeaders();
     paintPaneStates();
+    // The tabs describe the grid, so every relayout is a reason to redraw them:
+    // a pane closed, minimized, maximized or added changes what they say.
+    refreshTabs();
     if (m_overlay) setOverlayWidget(m_overlay);   // re-home it on the active pane
 }
 
@@ -416,6 +433,7 @@ void ChartArea::setActive(int index) {
     if (m_panes[index].minimized) return;
     m_active = index;
     paintPaneStates();
+    refreshTabs();               // the active tab is the highlighted one
     if (m_overlay) setOverlayWidget(m_overlay);
     emit activeChartChanged(index);
     // Panes keep their own timeframes, so stepping between them moves the
@@ -467,7 +485,149 @@ void ChartArea::paintPaneStates() {
     }
 }
 
-void ChartArea::applyTheme() { paintPaneStates(); }
+// ── the chart tabs ─────────────────────────────────────────────────────────
+
+const QVector<QPair<QString, QString>>& ChartArea::timeframes() {
+    // MetaTrader's name, then the charting library's resolution string.
+    static const QVector<QPair<QString, QString>> kTf = {
+        {QStringLiteral("M1"),  QStringLiteral("1")},
+        {QStringLiteral("M5"),  QStringLiteral("5")},
+        {QStringLiteral("M15"), QStringLiteral("15")},
+        {QStringLiteral("M30"), QStringLiteral("30")},
+        {QStringLiteral("H1"),  QStringLiteral("60")},
+        {QStringLiteral("H4"),  QStringLiteral("240")},
+        {QStringLiteral("D1"),  QStringLiteral("1D")},
+        {QStringLiteral("W1"),  QStringLiteral("1W")},
+        {QStringLiteral("MN"),  QStringLiteral("1M")},
+    };
+    return kTf;
+}
+
+QString ChartArea::timeframeLabel(const QString& res) {
+    for (const auto& tf : timeframes())
+        if (tf.second == res) return tf.first;
+    return res;
+}
+
+void ChartArea::buildTabBar() {
+    m_tabHost = new QWidget(this);
+    m_tabLay = new QHBoxLayout(m_tabHost);
+    m_tabLay->setContentsMargins(2, 0, 2, 0);
+    m_tabLay->setSpacing(2);
+    m_tabLay->addStretch(1);
+}
+
+void ChartArea::refreshTabs() {
+    if (!m_tabLay) return;
+
+    // Torn down and rebuilt. At most four tabs plus a +, so this is cheap, and
+    // the alternative is keeping five widgets in step with a symbol that can
+    // change from three different places.
+    while (QLayoutItem* it = m_tabLay->takeAt(0)) {
+        if (QWidget* w = it->widget()) w->deleteLater();
+        delete it;
+    }
+
+    const auto& c = Theme::p();
+    for (int i = 0; i < m_count; ++i) {
+        const Pane& p = m_panes[i];
+        const QString sym = p.symbol.isEmpty() ? tr("Chart %1").arg(i + 1) : p.symbol;
+        const QString tf  = p.chart ? timeframeLabel(p.chart->resolution()) : QString();
+        const QString title = tf.isEmpty() ? sym : QStringLiteral("%1,%2").arg(sym, tf);
+
+        auto* tab = new QWidget(m_tabHost);
+        auto* lay = new QHBoxLayout(tab);
+        lay->setContentsMargins(8, 2, 4, 2);
+        lay->setSpacing(4);
+
+        auto* name = new QLabel(title, tab);
+        lay->addWidget(name);
+
+        auto* shut = new QToolButton(tab);
+        shut->setText(QStringLiteral("✕"));
+        shut->setCursor(Qt::PointingHandCursor);
+        shut->setAutoRaise(true);
+        shut->setFixedSize(14, 14);
+        // The last chart cannot be closed — closePane() refuses it, and a ✕
+        // that silently does nothing is worse than one that is plainly off.
+        shut->setEnabled(m_count > 1);
+        shut->setToolTip(tr("Close this chart"));
+        connect(shut, &QToolButton::clicked, this, [this, i]() { closePane(i); });
+        lay->addWidget(shut);
+
+        const bool active = (i == m_active);
+        tab->setStyleSheet(QString(
+            "QWidget { background:%1; border:1px solid %2; border-bottom:none;"
+            "          border-top-left-radius:4px; border-top-right-radius:4px; }"
+            "QLabel { background:transparent; border:none; color:%3; font-size:11px; }"
+            "QToolButton { background:transparent; border:none; color:%4; font-size:10px; }"
+            "QToolButton:hover { color:%5; }")
+            .arg(active ? c.panel : c.panelAlt,
+                 active ? c.accent : c.border,
+                 active ? c.textStrong : c.muted,
+                 c.dim, c.down));
+        // A click anywhere on the tab, not only on its text: the whole thing
+        // looks like a button and a trader will aim at the middle of it.
+        tab->installEventFilter(this);
+        tab->setProperty("tabIndex", i);
+        name->setProperty("tabIndex", i);
+        name->installEventFilter(this);
+        tab->setCursor(Qt::PointingHandCursor);
+
+        m_tabLay->addWidget(tab);
+    }
+
+    // A new chart, MetaTrader's own "+" at the end of the row. Off once all
+    // four panes are in use — the grid tiles 1, 2, 3 or 4 and no more.
+    auto* plus = new QToolButton(m_tabHost);
+    plus->setText(QStringLiteral("+"));
+    plus->setAutoRaise(true);
+    plus->setCursor(Qt::PointingHandCursor);
+    plus->setFixedSize(18, 18);
+    plus->setEnabled(m_count < 4);
+    plus->setToolTip(m_count < 4 ? tr("New chart")
+                                 : tr("Four charts is the most this grid holds"));
+    plus->setStyleSheet(QString("QToolButton { border:none; color:%1; font-size:14px; }"
+                                "QToolButton:hover { color:%2; }")
+                        .arg(c.muted, c.textStrong));
+    connect(plus, &QToolButton::clicked, this, [this]() {
+        const int next = m_count + 1;
+        if (next > 4) return;
+        setChartCount(next);
+        // Land on the chart that was just opened, which is what the click asked
+        // for — otherwise the new pane appears and the selection stays put.
+        setActive(next - 1);
+    });
+    m_tabLay->addWidget(plus);
+    // Last, and re-added on every rebuild — the clear above takes the spacer
+    // out with everything else. Without it the tabs share the whole width
+    // between them and one chart gets a tab as wide as the window.
+    m_tabLay->addStretch(1);
+
+    m_tabHost->setStyleSheet(QString("background:%1;").arg(c.bg));
+}
+
+void ChartArea::showPaneFromTab(int index) {
+    if (index < 0 || index >= m_count) return;
+    if (m_panes[index].minimized) {
+        restorePane(index);          // relayouts and refreshes the tabs itself
+        setActive(index);
+        return;
+    }
+    // One pane is being shown alone: the tab picks WHICH one. This is the whole
+    // point of a tab bar — several charts open, one on screen — and it reuses
+    // the maximize slot rather than inventing a second way to say the same.
+    if (m_maximized >= 0 && m_maximized != index) {
+        m_maximized = index;
+        relayout();
+    }
+    setActive(index);
+}
+
+void ChartArea::applyTheme() {
+    paintPaneStates();
+    refreshTabs();
+}
 
 WebChartWidget* ChartArea::activeChart() const {
     return m_panes[m_active].chart;
@@ -565,6 +725,7 @@ void ChartArea::showSymbol(const QString& symbol) {
     p.symbol = symbol;
     p.chart->showSymbol(symbol);
     refreshPaneHeaders();
+    refreshTabs();          // the tab is titled from the symbol
 }
 
 void ChartArea::setOverlayWidget(QWidget* overlay) {

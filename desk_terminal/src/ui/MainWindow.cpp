@@ -715,16 +715,15 @@ void MainWindow::buildToolBars() {
     // timeframes, so nothing here has to know about either.
     m_tfGroup = new QActionGroup(this);
     m_tfGroup->setExclusive(true);
-    struct { const char* label; const char* res; } kTf[] = {
-        {"M1", "1"},  {"M5", "5"},   {"M15", "15"}, {"M30", "30"}, {"H1", "60"},
-        {"H4", "240"},{"D1", "1D"},  {"W1", "1W"},  {"MN", "1M"},
-    };
-    for (const auto& t : kTf) {
-        QAction* a = new QAction(QString::fromLatin1(t.label), this);
+    // ChartArea owns the table. The chart tabs along the bottom read it the
+    // other way round to title themselves "XAUUSD,M5", and two copies of the
+    // same nine pairs would eventually disagree.
+    for (const auto& t : ChartArea::timeframes()) {
+        QAction* a = new QAction(t.first, this);
         a->setCheckable(true);
-        a->setData(QString::fromLatin1(t.res));
+        a->setData(t.second);
         m_tfGroup->addAction(a);
-        connect(a, &QAction::triggered, this, [this, res = QString(t.res)]() {
+        connect(a, &QAction::triggered, this, [this, res = t.second]() {
             m_charts->setResolution(res);
         });
         // Added as a widget rather than an action: a toolbar carries ONE button
