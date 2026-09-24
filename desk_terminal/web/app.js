@@ -149,13 +149,59 @@
       getAllStudyTemplates: () =>
         call(bridge.listStudyTemplates)
           .then((t) => parseJson(t, []).map((name) => ({ name }))),
+      // Drops the drawings alongside — see saveStudyTemplate below.
       removeStudyTemplate: (info) => call(bridge.removeStudyTemplate, info.name),
-      // The instrument and timeframe are stripped on the C++ side, in the one
-      // place templates are written — see ChartBridge::saveStudyTemplate.
-      saveStudyTemplate: (data) =>
-        call(bridge.saveStudyTemplate, data.name, data.content),
+
+      /*
+       * "Save Indicator template…" — and the drawings with it.
+       *
+       * The desk asked for templates that keep every indicator AND every tool
+       * on the chart, and sent a screenshot of this dialog as the place they
+       * save them. `data.content` holds the indicators and nothing else: the
+       * library builds it and offers no way to include drawings.
+       *
+       * So the drawings are captured here, from the same chart at the same
+       * moment, and stored beside it under the same name. getLineToolsState()
+       * touches the drawings only, which is what lets the library go on owning
+       * the indicator half exactly as before.
+       *
+       * The instrument and timeframe are stripped on the C++ side, in the one
+       * place templates are written — see ChartBridge::saveStudyTemplate.
+       */
+      saveStudyTemplate: (data) => {
+        let drawings = "";
+        try {
+          drawings = JSON.stringify(widget.activeChart().getLineToolsState());
+        } catch (e) {
+          // A chart with nothing drawn on it, or one still loading. An empty
+          // string is stored on purpose: it has to CLEAR whatever a previous
+          // template of this name carried.
+          console.warn("template: could not read the drawings", e);
+        }
+        return call(bridge.saveStudyTemplate, data.name, data.content)
+          .then(() => call(bridge.saveTemplateDrawings, data.name, drawings));
+      },
+
+      /*
+       * Loading one puts the drawings back first, then hands the indicators to
+       * the library, which applies them as it always has.
+       *
+       * Order matters only in that both must happen; they touch different
+       * things. A template saved before this shipped simply has no drawings
+       * stored, and loads as it used to.
+       */
       getStudyTemplateContent: (info) =>
-        call(bridge.studyTemplateContent, info.name),
+        call(bridge.templateDrawings, info.name)
+          .then((text) => {
+            const state = parseJson(text, null);
+            if (!state) return;
+            try {
+              return widget.activeChart().applyLineToolsState(state);
+            } catch (e) {
+              console.warn("template: the chart refused the drawings", e);
+            }
+          })
+          .then(() => call(bridge.studyTemplateContent, info.name)),
 
       // Chart templates carry the STYLE (candle colours, scales, background).
       // Stored as text and parsed back here, because the library hands this
