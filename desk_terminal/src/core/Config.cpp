@@ -81,6 +81,15 @@ Config Config::load() {
     // Absent from the file means a first run, and a first run shows the three
     // columns a trader watches all day. An empty ARRAY is different: it is a
     // trader who has switched every column on, and must be left that way.
+    if (o.contains("blotterHiddenColumns")) {
+        c.blotterHiddenColumns.clear();
+        for (const QJsonValue& v : o.value("blotterHiddenColumns").toArray())
+            c.blotterHiddenColumns << v.toString();
+    }
+    if (o.contains("blotterAutoArrange"))
+        c.blotterAutoArrange = o.value("blotterAutoArrange").toBool(true);
+    if (o.contains("blotterGrid"))
+        c.blotterGrid = o.value("blotterGrid").toBool(true);
     if (o.contains("watchHiddenColumns")) {
         c.watchHiddenColumns.clear();
         for (const QJsonValue& v : o.value("watchHiddenColumns").toArray())
@@ -120,6 +129,9 @@ bool Config::save() const {
     o["chartCount"]   = chartCount;
     o["chartSymbols"] = QJsonArray::fromStringList(chartSymbols);
     o["watchHiddenColumns"] = QJsonArray::fromStringList(watchHiddenColumns);
+    o["blotterHiddenColumns"] = QJsonArray::fromStringList(blotterHiddenColumns);
+    o["blotterAutoArrange"]   = blotterAutoArrange;
+    o["blotterGrid"]          = blotterGrid;
     o["watchFavourites"]    = QJsonArray::fromStringList(watchFavourites);
     o["watchHiddenSymbols"] = QJsonArray::fromStringList(watchHiddenSymbols);
     o["watchGrid"]          = watchGrid;
