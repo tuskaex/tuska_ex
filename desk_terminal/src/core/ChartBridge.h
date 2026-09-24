@@ -124,6 +124,30 @@ public:
     // ignored on the far side.
     void createStudy(const QString& name);
 
+    // ── The timeframe and drawing toolbars ─────────────────────────────
+    //
+    // Both of these already exist inside the chart, and both are things a
+    // trader coming from MetaTrader reaches for on a toolbar above the chart
+    // instead. Neither can be driven by setting a property: the timeframe and
+    // the active drawing tool belong to the charting library, so the native
+    // buttons ask for them here and the web layer does the work.
+    //
+    // `res` is the library's own resolution string ("1", "60", "1D", …), not
+    // the server timeframe the datafeed speaks — the datafeed already maps
+    // between the two.
+    void setResolution(const QString& res);
+    QString resolution() const { return m_resolution; }
+    // The library's own tool name ("trend_line", "fib_retracement", "cursor",
+    // …). A name it does not know is ignored on the far side rather than
+    // leaving the chart in a half-armed state.
+    void selectLineTool(const QString& tool);
+
+    // JS -> C++: the timeframe was changed from inside the chart, by its own
+    // header or a keyboard shortcut. Without this the toolbar's M1…MN buttons
+    // would keep the highlight on whichever one was last clicked and quietly
+    // disagree with the chart underneath them.
+    Q_INVOKABLE void chartResolutionPicked(const QString& res);
+
     // JS -> C++: a TradingView dialog (Indicators, settings, …) opened or
     // closed. Those render INSIDE the chart iframe, so the native one-click
     // strip floating over the web view would otherwise cover them permanently.
@@ -160,6 +184,13 @@ signals:
     // Raised once the web layer has handed over the indicator list, so the
     // navigator can fill in a section that was empty when it opened.
     void studiesChanged();
+    // C++ -> JS, for setResolution() and selectLineTool().
+    void resolutionRequested(const QString& res);
+    void lineToolRequested(const QString& tool);
+    // The pane's timeframe actually changed, whoever asked for it. The toolbar
+    // follows this rather than its own clicks, so a change made inside the
+    // chart moves the highlight too.
+    void resolutionChanged(const QString& res);
 
 private slots:
     void onBarsReceived(const QString& symbol, const QString& timeframe, const QVector<Bar>& bars);
@@ -176,6 +207,15 @@ private:
     QString      m_theme = "dark";
     QString      m_chartState;   // latest state the web layer pushed up
     QString      m_studies = "[]";   // indicator names the library offers
+    // The pane's current timeframe, as the library spells it.
+    //
+    // Starts EMPTY on purpose. It used to hold app.js's default of "5", and
+    // chartResolutionPicked() ignores a value equal to the one it already has —
+    // so a chart opening on 5m, which is the usual case, seeded the same string
+    // and the change was swallowed. The toolbar then sat with no timeframe
+    // highlighted until the trader changed one by hand. Empty can never match
+    // what the chart reports, so the first seed always gets through.
+    QString      m_resolution;
 
     // Correlate async /bars responses (which carry only symbol+tf) back to the
     // JS reqId that asked, FIFO per (symbol,timeframe).

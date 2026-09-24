@@ -142,6 +142,16 @@ ChartArea::Pane& ChartArea::ensurePane(int index) {
         }
     });
 
+    // The timeframe toolbar highlights the ACTIVE pane's timeframe, so only
+    // that pane's changes are worth relaying. Every pane is connected anyway
+    // and the filter happens here: a pane can change timeframe while another
+    // is active (a profile load touches all four), and letting that move the
+    // highlight would point it at a chart the trader is not looking at.
+    connect(p.chart, &WebChartWidget::resolutionChanged, this,
+            [this, w = p.chart](const QString& res) {
+        if (activeChart() == w) emit activeResolutionChanged(res);
+    });
+
     v->addWidget(p.header);
     v->addWidget(p.chart, 1);
 
@@ -408,6 +418,9 @@ void ChartArea::setActive(int index) {
     paintPaneStates();
     if (m_overlay) setOverlayWidget(m_overlay);
     emit activeChartChanged(index);
+    // Panes keep their own timeframes, so stepping between them moves the
+    // toolbar highlight as surely as changing one does.
+    emit activeResolutionChanged(activeResolution());
 }
 
 void ChartArea::onFocusChanged(QWidget* now) {
@@ -502,6 +515,23 @@ QString ChartArea::studies() const {
 
 void ChartArea::addStudy(const QString& name) {
     if (WebChartWidget* c = activeChart()) c->createStudy(name);
+}
+
+// The timeframe and drawing toolbars act on the ACTIVE pane only, exactly as
+// the Market Watch and the one-click strip already do. Applying either to every
+// pane would make a four-chart grid useless: the whole point of it is four
+// instruments on four timeframes at once.
+void ChartArea::setResolution(const QString& res) {
+    if (WebChartWidget* c = activeChart()) c->setResolution(res);
+}
+
+QString ChartArea::activeResolution() const {
+    WebChartWidget* c = activeChart();
+    return c ? c->resolution() : QString();
+}
+
+void ChartArea::selectLineTool(const QString& tool) {
+    if (WebChartWidget* c = activeChart()) c->selectLineTool(tool);
 }
 
 void ChartArea::setDataWindow(bool on) {

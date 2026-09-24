@@ -170,4 +170,151 @@ inline QIcon share(const QColor& c, int px = 18) {
         "<path d='M8.6 13.5l6.8 4M15.4 6.5l-6.8 4'/>"), c, px);
 }
 
+// ── The two toolbars under the menu bar ────────────────────────────────
+//
+// MetaTrader puts a Standard row and a Line Studies row there, and the desk
+// asked for the same. Drawn here in the same 24px / 2px-stroke convention as
+// everything above, so they take the theme colour and stay sharp on a scaled
+// display — a toolbar of mismatched glyphs is the first thing that reads as
+// unfinished.
+
+// Chart layout — the 2x2 grid.
+inline QIcon gridFour(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='7' height='7' rx='1'/>"
+        "<rect x='14' y='3' width='7' height='7' rx='1'/>"
+        "<rect x='3' y='14' width='7' height='7' rx='1'/>"
+        "<rect x='14' y='14' width='7' height='7' rx='1'/>"), c, px);
+}
+
+// Profiles — a folder, which is what a saved workspace reads as.
+inline QIcon folder(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5"
+        "a2 2 0 0 1-2-2z'/>"), c, px);
+}
+
+// Market Watch — a table with a leading column, not a hamburger: the panel is
+// a quote table and the glyph should say so.
+inline QIcon table(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='4' width='18' height='16' rx='2'/>"
+        "<path d='M3 9h18M9 9v11'/>"), c, px);
+}
+
+// Data Window — the library's panel down the right-hand side.
+inline QIcon sidePanel(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='4' width='18' height='16' rx='2'/>"
+        "<path d='M15 4v16'/>"), c, px);
+}
+
+// Navigation — a compass, MT5's own Navigator metaphor.
+inline QIcon compass(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='12' cy='12' r='9'/>"
+        "<path d='M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z'/>"), c, px);
+}
+
+// Symbols — a list whose rows are ticked, which is exactly what the browser is.
+inline QIcon checklist(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M10 6h11M10 12h11M10 18h11'/>"
+        "<path d='M3 6l1.4 1.4L7.2 4.6M3 12l1.4 1.4L7.2 10.6M3 18l1.4 1.4L7.2 16.6'/>"), c, px);
+}
+
+// New Order — a plus in a box, the one button on the row a trader must never
+// have to hunt for.
+inline QIcon plusBox(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/>"
+        "<path d='M12 8v8M8 12h8'/>"), c, px);
+}
+
+// Scripts — angle brackets. The scripts here are JavaScript, and this is the
+// glyph that says "code" without claiming to be MetaTrader's MQL.
+inline QIcon code(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M9 18l-6-6 6-6M15 6l6 6-6 6'/>"), c, px);
+}
+
+// Strategy Tester — run.
+inline QIcon play(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M6 4l14 8-14 8z'/>"), c, px);
+}
+
+// Reports — a sheet with bars on it.
+inline QIcon report(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='4' y='3' width='16' height='18' rx='2'/>"
+        "<path d='M8 17v-4M12 17v-7M16 17v-2'/>"), c, px);
+}
+
+// ── Line studies ──
+// The drawing tools, in the order MetaTrader lays them out.
+
+inline QIcon cursorArrow(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M5 3l6 16 2.2-6.2L19.4 11z'/>"), c, px);
+}
+
+inline QIcon crosshair(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 2v20M2 12h20'/>"), c, px);
+}
+
+inline QIcon verticalLine(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap("<path d='M12 3v18'/>"), c, px);
+}
+
+inline QIcon horizontalLine(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap("<path d='M3 12h18'/>"), c, px);
+}
+
+inline QIcon trendLine(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M5 19L19 5'/>"
+        "<circle cx='5' cy='19' r='1.8'/>"
+        "<circle cx='19' cy='5' r='1.8'/>"), c, px);
+}
+
+// A ray is a trend line with only one end — anchored, then running off.
+inline QIcon ray(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M5 19L21 3'/>"
+        "<circle cx='5' cy='19' r='1.8'/>"), c, px);
+}
+
+// Fibonacci retracement — its levels.
+inline QIcon fib(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M3 5h18M3 10h18M3 14h18M3 19h18'/>"), c, px);
+}
+
+inline QIcon rectangle(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='5' width='18' height='14' rx='1'/>"), c, px);
+}
+
+// Text — the letter itself, drawn as strokes. A glyph from the UI font would
+// not take the stroke weight of everything beside it.
+inline QIcon textTool(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M5 20L12 4l7 16'/>"
+        "<path d='M7.6 14.5h8.8'/>"), c, px);
+}
+
+inline QIcon brush(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M3 17q3-8 6.5 0t6.5-4 5 1'/>"), c, px);
+}
+
+inline QIcon eraser(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M20 20H9l-4.5-4.5a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l4.5 4.5"
+        "a2 2 0 0 1 0 2.8z'/>"
+        "<path d='M9 20l7.8-7.8'/>"), c, px);
+}
+
 } // namespace Icons
