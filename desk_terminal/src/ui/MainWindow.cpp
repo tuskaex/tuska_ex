@@ -963,6 +963,23 @@ void MainWindow::connectServices() {
             [this](const QString& s) { onSymbolActivated(s); openOrderWindow(); });
     connect(m_watch, &WatchlistWidget::specificationRequested,
             this, &MainWindow::openSpecification);
+    // The blotter's own right-click choices: which columns are on, whether the
+    // widths are shared, whether the grid shows.
+    m_positions->setHiddenColumns(m_cfg.blotterHiddenColumns);
+    m_positions->setAutoArrange(m_cfg.blotterAutoArrange);
+    m_positions->setGridVisible(m_cfg.blotterGrid);
+    connect(m_positions, &PositionsPanel::columnsChanged, this,
+            [this](const QStringList& keys) {
+        m_cfg.blotterHiddenColumns = keys;
+        m_cfg.save();
+    });
+    connect(m_positions, &PositionsPanel::viewPrefsChanged, this,
+            [this](bool autoArrange, bool grid) {
+        m_cfg.blotterAutoArrange = autoArrange;
+        m_cfg.blotterGrid        = grid;
+        m_cfg.save();
+    });
+
     m_watch->setHiddenColumns(m_cfg.watchHiddenColumns);
     // Deferred: the saved column set is applied here, AFTER the constructor
     // sized the splitter, and the splitter has no real width until the window

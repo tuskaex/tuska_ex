@@ -15,6 +15,10 @@
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QHeaderView>
+#include <QMenu>
+#include <QAction>
+#include <QActionGroup>
+#include <QHash>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
@@ -238,9 +242,196 @@ bool PositionsPanel::passes(int tab, const QString& iso) const {
     switch (mode) {
     case RangeToday: return d == today;
     case RangeWeek:  return d >= today.addDays(-(today.dayOfWeek() - 1)) && d <= today;
+    // Rolling windows, not calendar ones: "last month" on the 3rd should not
+    // mean the two days of this month. MetaTrader counts back from today and
+    // so does this.
+    case RangeMonth:   return d >= today.addMonths(-1) && d <= today;
+    case RangeQuarter: return d >= today.addMonths(-3) && d <= today;
     case RangeDay:   return m_date[tab] && d == m_date[tab]->date();
     }
     return true;
+}
+
+// ── the blotter's right-click menu ─────────────────────────────────────────
+
+QTableWidget* PositionsPanel::tableFor(int tab) const {
+    switch (tab) {
+    case 0: return m_posTable;
+    case 1: return m_orderTable;
+    case 2: return m_histTable;
+    case 3: return m_txnTable;
+    }
+    return nullptr;
+}
+
+QString PositionsPanel::colKey(int tab, const QString& header) {
+    static const char* kTabs[] = {"trade", "pending", "history", "txn"};
+    const QString t = (tab >= 0 && tab < 4) ? QString::fromLatin1(kTabs[tab])
+                                            : QString::number(tab);
+    return t + QLatin1Char('/') + header;
+}
+
+bool PositionsPanel::columnIsFixed(const QString& header) {
+    // PositionsPanel::tr, not QObject::tr. The headers were translated in this
+    // class's context, and comparing against a lookup made in another one would
+    // stop matching the moment a translation is loaded.
+    return header == tr("Symbol") || header == tr("Action");
+}
+
+void PositionsPanel::setHiddenColumns(const QStringList& keys) {
+    m_hiddenCols = keys;
+    applyColumnVisibility();
+}
+
+void PositionsPanel::applyColumnVisibility() {
+    for (int tab = 0; tab < 4; ++tab) {
+        QTableWidget* t = tableFor(tab);
+        if (!t) continue;
+        for (int c = 0; c < t->columnCount(); ++c) {
+            QTableWidgetItem* head = t->horizontalHeaderItem(c);
+            if (!head) continue;
+            const QString name = head->text();
+            // A fixed column is shown whatever the saved set says. Config is a
+            // plain text file and a hand-edited one must not be able to take
+            // the close buttons off the Trade tab.
+            const bool hide = !columnIsFixed(name)
+                              && m_hiddenCols.contains(colKey(tab, name));
+            t->setColumnHidden(c, hide);
+        }
+    }
+}
+
+void PositionsPanel::setAutoArrange(bool on) {
+    m_autoArrange = on;
+    applyHeaderMode();
+}
+
+void PositionsPanel::applyHeaderMode() {
+    for (int tab = 0; tab < 4; ++tab) {
+        QTableWidget* t = tableFor(tab);
+        if (!t) continue;
+        // Interactive, not ResizeToContents, when Auto Arrange is off. The
+        // point of switching it off is to set a column's width by hand, and a
+        // contents-sized header snaps straight back on the next poll.
+        t->horizontalHeader()->setSectionResizeMode(
+            m_autoArrange ? QHeaderView::Stretch : QHeaderView::Interactive);
+        // Leaving Interactive columns at whatever width Stretch last gave them
+        // means they stay exactly as they look now, which is the least
+        // surprising thing to hand over for dragging.
+        t->horizontalHeader()->setStretchLastSection(false);
+    }
+}
+
+void PositionsPanel::setGridVisible(bool on) {
+    m_gridOn = on;
+    applyGrid();
+}
+
+void PositionsPanel::applyGrid() {
+    for (int tab = 0; tab < 4; ++tab)
+        if (QTableWidget* t = tableFor(tab)) t->setShowGrid(m_gridOn);
+}
+
+/*
+ * MetaTrader's menu on the blotter, as the desk's screenshot shows it: the
+ * period, the report, the column switches, then Auto Arrange and Grid.
+ *
+ * Two entries from that screenshot are deliberately absent.
+ *
+ * "Save as Detailed Report" is not here because this terminal has one
+ * statement, and it already carries both halves MetaTrader splits across two
+ * files: every closed transaction and the summary underneath. A second entry
+ * writing a byte-identical file would be a menu item pretending to be a
+ * feature.
+ *
+ * The A and G accelerators are not bound. The Trade tab has editable cells —
+ * the comment and both brackets — and a single letter bound over the table
+ * would be caught before the editor got it.
+ */
+void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
+    QTableWidget* t = tableFor(tab);
+    if (!t) return;
+
+    QMenu menu(this);
+
+    // ── period ──
+    // Drives the existing combo rather than a second copy of the filter, so the
+    // two can never disagree about what the table is showing.
+    if (QComboBox* box = m_range[tab]) {
+        auto* group = new QActionGroup(&menu);
+        group->setExclusive(true);
+        for (int i = 0; i < box->count(); ++i) {
+            QAction* a = menu.addAction(box->itemText(i));
+            a->setCheckable(true);
+            a->setChecked(box->currentIndex() == i);
+            group->addAction(a);
+            connect(a, &QAction::triggered, this,
+                    [box, i]() { box->setCurrentIndex(i); });
+        }
+        menu.addSeparator();
+    }
+
+    // ── the statement ──
+    if (tab == 2) {
+        connect(menu.addAction(tr("Save as Report…")), &QAction::triggered,
+                this, &PositionsPanel::exportHistoryReport);
+        menu.addSeparator();
+    }
+
+    // ── columns ──
+    // A submenu rather than the flat list MetaTrader uses: it offers three
+    // switches and this tab has thirteen columns, which flat would turn into a
+    // menu taller than the blotter it drops out of.
+    QMenu* cols = menu.addMenu(tr("Columns"));
+    for (int c = 0; c < t->columnCount(); ++c) {
+        QTableWidgetItem* head = t->horizontalHeaderItem(c);
+        if (!head) continue;
+        const QString name = head->text();
+        if (columnIsFixed(name)) continue;
+        const QString key = colKey(tab, name);
+        QAction* a = cols->addAction(name);
+        a->setCheckable(true);
+        a->setChecked(!m_hiddenCols.contains(key));
+        connect(a, &QAction::triggered, this, [this, key](bool on) {
+            if (on) m_hiddenCols.removeAll(key);
+            else if (!m_hiddenCols.contains(key)) m_hiddenCols << key;
+            applyColumnVisibility();
+            emit columnsChanged(m_hiddenCols);
+        });
+    }
+    // History and Trade both carry a "Time" and a "Price" twice, as MetaTrader
+    // does. Two entries with the same word would be a coin toss, so say which.
+    {
+        QHash<QString, int> seen;
+        for (QAction* a : cols->actions()) seen[a->text()]++;
+        QHash<QString, int> nth;
+        for (QAction* a : cols->actions()) {
+            if (seen.value(a->text()) < 2) continue;
+            const QString base = a->text();
+            a->setText(++nth[base] == 1 ? tr("%1 (open)").arg(base)
+                                        : tr("%1 (close)").arg(base));
+        }
+    }
+
+    menu.addSeparator();
+
+    QAction* arrange = menu.addAction(tr("Auto Arrange"));
+    arrange->setCheckable(true);
+    arrange->setChecked(m_autoArrange);
+    connect(arrange, &QAction::triggered, this, [this](bool on) {
+        setAutoArrange(on);
+        emit viewPrefsChanged(m_autoArrange, m_gridOn);
+    });
+
+    QAction* grid = menu.addAction(tr("Grid"));
+    grid->setCheckable(true);
+    grid->setChecked(m_gridOn);
+    connect(grid, &QAction::triggered, this, [this](bool on) {
+        setGridVisible(on);
+        emit viewPrefsChanged(m_autoArrange, m_gridOn);
+    });
+
+    menu.exec(globalPos);
 }
 
 QWidget* PositionsPanel::buildFilterBar(int tab) {
@@ -253,7 +444,8 @@ QWidget* PositionsPanel::buildFilterBar(int tab) {
 
     auto* box = new QComboBox;
     box->setCursor(Qt::PointingHandCursor);
-    box->addItems({tr("Today"), tr("This week"), tr("All"), tr("Date")});
+    box->addItems({tr("Today"), tr("This week"), tr("Last month"), tr("Last 3 months"),
+                   tr("All"), tr("Date")});
     // Defaults to All, NOT Today. On the Trade tab a date filter hides open
     // positions, and a position opened yesterday is still very much open — a
     // blotter that silently omits live risk on first paint is not acceptable.
@@ -992,6 +1184,25 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
                              tr("Commission"), tr("Swap"), tr("Profit")});
     m_txnTable = makeTable({tr("Time"), tr("Type"), tr("Method"), tr("Description"),
                             tr("Amount"), tr("Currency")});
+
+    // MetaTrader's menu, on the table AND on its header. The header matters:
+    // that is where a trader goes to change columns, and a menu that appeared
+    // only over the rows would be missed by everyone who looked for it there.
+    for (int tab = 0; tab < 4; ++tab) {
+        QTableWidget* t = tableFor(tab);
+        if (!t) continue;
+        t->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(t, &QTableWidget::customContextMenuRequested, this,
+                [this, tab, t](const QPoint& p) {
+            openTableMenu(tab, t->viewport()->mapToGlobal(p));
+        });
+        QHeaderView* head = t->horizontalHeader();
+        head->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(head, &QHeaderView::customContextMenuRequested, this,
+                [this, tab, head](const QPoint& p) {
+            openTableMenu(tab, head->mapToGlobal(p));
+        });
+    }
 
     // Action holds a control, not data: pin it narrow so it does not take an
     // equal share of the width like the value columns do — just wide enough for

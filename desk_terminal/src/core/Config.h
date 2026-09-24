@@ -61,6 +61,22 @@ public:
     QStringList watchHiddenColumns{QStringLiteral("spread"), QStringLiteral("high"),
                                    QStringLiteral("low"),    QStringLiteral("time")};
 
+    // Blotter columns the trader has switched OFF, as "<tab>/<header>" keys —
+    // "history/Taxes", "trade/Swap". Keyed by the header's text rather than by
+    // its position, because a column added to a tab would otherwise silently
+    // shift every stored index along and hide the wrong things.
+    //
+    // Symbol and Action can never be hidden and never appear here: one names
+    // the row and the other holds its buttons.
+    QStringList blotterHiddenColumns;
+
+    // Blotter view preferences, from the same right-click menu.
+    // autoArrange on: the columns share the width between them, which is how
+    // the blotter has always opened. Off: they keep their own widths and can be
+    // dragged, which is the only way to make one column bigger than its share.
+    bool blotterAutoArrange = true;
+    bool blotterGrid        = true;
+
     // Instruments starred in Market Watch. Kept per trader rather than derived
     // from anything: a favourite is a statement about what someone watches, and
     // the only place that can be recorded is here.

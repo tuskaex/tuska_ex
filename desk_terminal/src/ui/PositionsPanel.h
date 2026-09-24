@@ -69,6 +69,26 @@ public slots:
     // but not the digits they should be shown at.
     void setSymbolDigits(const QHash<QString, int>& digits);
 
+    // ── The blotter's right-click menu ────────────────────────────────
+    //
+    // MetaTrader puts the period, the report and the column switches on a
+    // right-click over the table, and the desk asked for the same — by name,
+    // for the column half: "need selected n de select particular column
+    // names".
+    //
+    // Columns are named rather than numbered: keys are "<tab>/<header>", so a
+    // column added to a tab later cannot shift every stored index along and
+    // hide the wrong things. The panel does not own the Config, so it takes the
+    // set in and hands changes back, exactly as Market Watch already does.
+    void setHiddenColumns(const QStringList& keys);
+    QStringList hiddenColumns() const { return m_hiddenCols; }
+    // Auto Arrange on: the columns share the width. Off: they keep their own
+    // and can be dragged, which is the only way to make one wider than a share.
+    void setAutoArrange(bool on);
+    bool autoArrange() const { return m_autoArrange; }
+    void setGridVisible(bool on);
+    bool gridVisible() const { return m_gridOn; }
+
     void setCollapsed(bool collapsed);
     bool isCollapsed() const { return m_collapsed; }
     void setPrivacy(bool on);                    // mask the money columns
@@ -91,6 +111,11 @@ signals:
     void bracketEdited(const QString& positionId, const QString& kind, double level);
     // The Comment cell was edited in place. An empty string clears it.
     void commentEdited(const QString& positionId, const QString& comment);
+    // A column was switched on or off, so the set can be persisted.
+    void columnsChanged(const QStringList& hiddenKeys);
+    // Auto Arrange or Grid was flipped. Both travel together because both are
+    // saved in the same place and neither is worth a signal of its own.
+    void viewPrefsChanged(bool autoArrange, bool grid);
 
 private slots:
     // Handles every in-place edit on the Trade table: the two bracket cells
@@ -101,7 +126,11 @@ private slots:
 private:
     // Time filter, one per tab. Which timestamp it tests depends on the tab:
     // open time for Trade/Pending, close time for History.
-    enum Range { RangeToday = 0, RangeWeek, RangeAll, RangeDay };
+    // The order here IS the combo's order — each value is its index — so these
+    // may be reordered only alongside the list in buildFilterBar().
+    // Last month and Last 3 months are MetaTrader's own periods, added because
+    // the desk asked for its History right-click menu and those two are on it.
+    enum Range { RangeToday = 0, RangeWeek, RangeMonth, RangeQuarter, RangeAll, RangeDay };
 
     // Tests an API timestamp against tab `tab`'s filter. Rows whose timestamp
     // cannot be parsed always pass: hiding a real trade because of an
@@ -109,6 +138,24 @@ private:
     // have excluded.
     bool passes(int tab, const QString& iso) const;
     QWidget* buildFilterBar(int tab);
+
+    // ── the right-click menu ──
+    // The table behind a filtered tab: 0 Trade, 1 Pending, 2 History,
+    // 3 Transactions. Null for anything else.
+    QTableWidget* tableFor(int tab) const;
+    // globalPos, not a viewport point: the same menu is raised from the table
+    // AND from its header, and each maps its own coordinates.
+    void openTableMenu(int tab, const QPoint& globalPos);
+    // "<tab>/<header>". One place builds it so the menu, the saved set and the
+    // applying pass can never spell a key three different ways.
+    static QString colKey(int tab, const QString& header);
+    // Columns a trader must not be able to lose: Symbol names the row and
+    // Action holds its buttons, so hiding either breaks the tab rather than
+    // tidying it.
+    static bool columnIsFixed(const QString& header);
+    void applyColumnVisibility();
+    void applyHeaderMode();          // Auto Arrange
+    void applyGrid();
     QWidget* wrapTable(int tab, QTableWidget* table);
     // Which slice of the ledger the Transactions tab shows. Funding is money
     // in and out of the account; trading is what the account did with it.
@@ -143,6 +190,12 @@ private:
     bool m_populating = false;
     bool m_collapsed = false;
     bool m_privacy = false;
+
+    // Right-click menu state. Defaults match how the blotter has always opened:
+    // every column present, widths shared, grid on.
+    QStringList m_hiddenCols;
+    bool m_autoArrange = true;
+    bool m_gridOn      = true;
 
     // Last snapshots, so a privacy/theme/filter change can re-render without a
     // poll. These always hold the UNFILTERED server data — filtering happens on
