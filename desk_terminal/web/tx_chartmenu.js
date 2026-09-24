@@ -18,8 +18,11 @@
  *
  *   Indicators List, Auto Arrange, Properties   the library's own actions
  *   Timeframes, Grid, Volumes, Zoom             the library's chart API
- *   Template                                    the template store in C++,
- *                                               shared by all four panes
+ *   Template                                    a full chart state — every
+ *                                               indicator and every drawing —
+ *                                               in the store beside
+ *                                               config.json, shared by all
+ *                                               four panes
  *   Save As Picture, Print, Print Preview       C++ — a file dialog and a
  *                                               printer are not things the
  *                                               page has
@@ -147,35 +150,117 @@
       });
     }
 
-    // MT5's Template menu is "put my saved chart setup on this chart". The
-    // nearest real thing here is an indicator template, which is what the
-    // library's Indicators dialog saves and what the store beside config.json
-    // already holds — shared by all four panes.
+    /*
+     * MetaTrader's Template menu: save this chart's whole setup under a name,
+     * and put it back on another chart later.
+     *
+     * "Whole setup" is the point, and it is what the desk asked for after the
+     * first version of this menu shipped: every indicator AND every drawing,
+     * plus the chart's style. The library's own study templates carry only the
+     * indicators — createStudyTemplate has no option to include drawings, and
+     * the Indicators dialog that writes them decides what goes in. So a
+     * template here is a full chart state, the same serialisation a workspace
+     * profile stores, kept in its own bucket beside config.json and shared by
+     * all four panes.
+     *
+     * Applying one deliberately does NOT change the instrument. The saved state
+     * always carries a symbol, because the library always writes one, but a
+     * template is a setup rather than a thing to look at — applying it on
+     * GBPUSD must not jump the pane to whatever was on screen when it was
+     * saved. So the pane's own symbol goes back on once the load settles.
+     */
+    function applyTemplate(name) {
+      call(bridge, bridge.templateContent, name).then(function (text) {
+        var state = parseJson(text, null);
+        var w = getWidget();
+        var c = chart();
+        if (!state || !w || !c) return;
+
+        var symbol = "";
+        try { symbol = c.symbol(); } catch (e) { /* not ready */ }
+
+        var done;
+        try {
+          done = w.load(state);
+        } catch (e) {
+          console.warn("chart menu: the chart refused the template", name, e);
+          return;
+        }
+        if (!done || typeof done.then !== "function" || !symbol) return;
+        done.then(function () {
+          try {
+            var ch = w.activeChart();
+            if (ch.symbol() !== symbol) ch.setSymbol(symbol);
+          } catch (e) { /* torn down mid-load */ }
+        }, function (e) {
+          console.warn("chart menu: loading the template failed", name, e);
+        });
+      });
+    }
+
     function buildTemplates(f, names) {
+      var items = [];
+
       if (!names.length) {
-        return [f.createAction({
+        items.push(f.createAction({
           actionId: "tx-tpl-none",
           label: "No templates saved yet",
           disabled: true,
           onExecute: function () {},
-        })];
-      }
-      return names.map(function (name) {
-        return f.createAction({
-          actionId: "tx-tpl-" + name,
-          label: name,
-          onExecute: function () {
-            call(bridge, bridge.studyTemplateContent, name).then(function (text) {
-              var tpl = parseJson(text, null);
-              if (!tpl) return;
-              var c = chart();
-              if (!c) return;
-              try { c.applyStudyTemplate(tpl); }
-              catch (e) { console.warn("chart menu: template refused", name, e); }
-            });
-          },
+        }));
+      } else {
+        names.forEach(function (name) {
+          items.push(f.createAction({
+            actionId: "tx-tpl-" + name,
+            label: name,
+            onExecute: function () { applyTemplate(name); },
+          }));
         });
-      });
+      }
+
+      items.push(f.createSeparator());
+
+      // Captured here rather than read from the state the terminal already
+      // caches: that copy is refreshed a couple of seconds after a change, so a
+      // drawing made a moment ago would be missing from the template that is
+      // supposed to contain it.
+      items.push(f.createAction({
+        actionId: "tx-tpl-save",
+        label: "Save Template…",
+        onExecute: function () {
+          var w = getWidget();
+          if (!w) return;
+          try {
+            // includeDrawings defaults to true; named anyway, because it is the
+            // entire reason this entry exists.
+            w.save(function (state) {
+              try { bridge.saveTemplateAs(JSON.stringify(state)); }
+              catch (e) { console.warn("chart menu: could not hand the template over", e); }
+            }, { includeDrawings: true });
+          } catch (e) {
+            console.warn("chart menu: could not capture the chart", e);
+          }
+        },
+      }));
+
+      if (names.length) {
+        items.push(f.createAction({
+          actionId: "tx-tpl-delete",
+          label: "Delete Template",
+          subItems: names.map(function (name) {
+            return f.createAction({
+              actionId: "tx-tpl-del-" + name,
+              label: name,
+              onExecute: function () {
+                try { bridge.removeTemplate(name); } catch (e) {}
+              },
+            });
+          }),
+          onExecute: function () {},
+        }));
+      }
+
+      return items;
     }
 
     function build(f, templateNames) {
@@ -296,7 +381,7 @@
           }
           if (KEEP.test(name)) return Promise.resolve(items);
 
-          return call(bridge, bridge.listStudyTemplates).then(function (text) {
+          return call(bridge, bridge.listTemplates).then(function (text) {
             var names = parseJson(text, []);
             var built = build(actionsFactory, Array.isArray(names) ? names : []);
             // A chart that is not ready yet yields nothing; hand back the

@@ -195,6 +195,29 @@ void ChartBridge::removeChartTemplate(const QString& name) {
 
 // Drawing templates are per TOOL — a "Fib Retracement" template must not be
 // offered on a trend line — so the bucket is nested one level deeper.
+// MetaTrader templates — a whole chart under a name. Its own bucket, for the
+// reason spelled out in the header: this holds a full chart state and the three
+// buckets above hold shapes the library's own dialogs wrote.
+QString ChartBridge::listTemplates() const     { return namedList("templates"); }
+
+QString ChartBridge::templateContent(const QString& name) const {
+    return namedGet("templates", name);
+}
+
+void ChartBridge::storeTemplate(const QString& name, const QString& content) {
+    if (name.trimmed().isEmpty() || content.isEmpty()) return;
+    namedPut("templates", name, content);
+}
+
+void ChartBridge::removeTemplate(const QString& name) {
+    namedRemove("templates", name);
+}
+
+void ChartBridge::saveTemplateAs(const QString& stateJson) {
+    if (stateJson.isEmpty()) return;
+    emit templateSaveRequested(stateJson);
+}
+
 QString ChartBridge::listDrawingTemplates(const QString& tool) const {
     return namedList("drawingTemplates/" + tool);
 }
