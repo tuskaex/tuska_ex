@@ -346,6 +346,23 @@
         console.warn("onSymbolChanged subscribe failed", e);
       }
 
+      // Same thing for the timeframe, which the native toolbar's M1…MN buttons
+      // highlight. The chart's own header and its keyboard shortcuts change it
+      // too, so the highlight has to follow the chart rather than the last
+      // button that was clicked. Seeded once here as well: a pane restored from
+      // a profile opens on the saved timeframe, which no click ever announced.
+      try {
+        const seed = widget.activeChart().resolution();
+        if (seed) bridge.chartResolutionPicked(String(seed));
+        widget.activeChart().onIntervalChanged().subscribe(null, (interval) => {
+          try {
+            if (interval) bridge.chartResolutionPicked(String(interval));
+          } catch (e) { /* chart torn down mid-callback */ }
+        });
+      } catch (e) {
+        console.warn("onIntervalChanged subscribe failed", e);
+      }
+
       // Seed the native side's copy of this pane's state, then keep it current.
       // The first push matters on its own: a profile saved before the trader
       // touches the chart still has to bring back the symbol and timeframe.
@@ -510,6 +527,35 @@
         widget.activeChart().createStudy(name);
       } catch (e) {
         console.warn("could not add the indicator", name, e);
+      }
+    });
+
+    // The native timeframe buttons above the chart. setResolution is a promise
+    // and rejects for a resolution this datafeed cannot serve, so the rejection
+    // is caught — an unhandled one shows up in the diagnostic log as a bare
+    // "Uncaught (in promise)" with nothing naming the timeframe that caused it.
+    bridge.resolutionRequested.connect((res) => {
+      if (!res || !widget || !chartReady) return;
+      try {
+        const p = widget.activeChart().setResolution(String(res));
+        if (p && typeof p.catch === "function")
+          p.catch((e) => console.warn("the chart refused the timeframe", res, e));
+      } catch (e) {
+        console.warn("could not set the timeframe", res, e);
+      }
+    });
+
+    // The native drawing-tool buttons. selectLineTool ARMS a tool: the next
+    // click on the candles starts that drawing. "cursor" disarms, which is what
+    // the arrow button on the left of the row is for.
+    bridge.lineToolRequested.connect((tool) => {
+      if (!tool || !widget || !chartReady) return;
+      try {
+        const p = widget.selectLineTool(String(tool));
+        if (p && typeof p.catch === "function")
+          p.catch((e) => console.warn("the chart refused the drawing tool", tool, e));
+      } catch (e) {
+        console.warn("could not select the drawing tool", tool, e);
       }
     });
   }

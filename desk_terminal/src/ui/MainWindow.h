@@ -1,6 +1,8 @@
 #pragma once
 #include <QMainWindow>
 #include <QHash>
+#include <QIcon>
+#include <QVector>
 #include "core/Config.h"
 #include "core/Models.h"
 
@@ -18,6 +20,7 @@ class QAction;
 class QActionGroup;
 class QSplitter;
 class QFrame;
+class QToolBar;
 
 // MetaTrader-style shell:
 //
@@ -90,6 +93,14 @@ protected:
 private:
     void connectServices();
     void buildMenuBar();
+    // The two rows under the menu, MetaTrader's Standard and Line Studies
+    // toolbars. Runs AFTER buildMenuBar(): the buttons share that menu's
+    // actions rather than owning a second copy of each, so a toggle flipped
+    // from either place shows as flipped in both.
+    void buildToolBars();
+    // Toolbar icons are pixmaps, not style-sheet rules, so nothing repaints
+    // them when the theme flips. Re-renders every one at the new colour.
+    void restyleToolBars();
     void rebuildAccountsMenu();
     void setStatus(const QString& text, bool error = false);
     void toggleTheme();
@@ -165,6 +176,22 @@ private:
     // closing the window, which a trader does between runs.
     class StrategyTesterDialog* m_tester = nullptr;
     QActionGroup* m_layoutGroup = nullptr;  // 1 / 2 / 4 chart panes
+
+    // ── the two toolbars ──
+    QToolBar* m_stdBar  = nullptr;   // New Order, panels, tools
+    QToolBar* m_drawBar = nullptr;   // drawing tools + M1…MN
+    // The timeframe buttons, exclusive. Kept so the ACTIVE pane's timeframe can
+    // move the highlight — the chart's own header changes it too.
+    QActionGroup* m_tfGroup = nullptr;
+    // The drawing tools, exclusive, so the armed one is visible. Not synced
+    // back from the chart: the library disarms to its own cursor after a shape
+    // is finished, and there is no event for it, so the row would lie. The
+    // arrow button is how a trader says "done", exactly as in MetaTrader.
+    QActionGroup* m_toolGroup = nullptr;
+    // Every toolbar action paired with the function that draws its icon, so a
+    // theme switch can re-render all of them at the new colour.
+    using IconFn = QIcon (*)(const QColor&, int);
+    QVector<QPair<QAction*, IconFn>> m_barIcons;
     // The saved grid is restored once, from the first symbols payload — panes
     // cannot be pointed at an instrument before its metadata exists. Symbols
     // can be re-fetched mid-session, hence the latch.

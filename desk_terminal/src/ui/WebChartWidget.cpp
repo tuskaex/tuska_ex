@@ -84,6 +84,8 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
             this, &WebChartWidget::symbolPickedInChart);
     connect(m_bridge, &ChartBridge::studiesChanged,
             this, &WebChartWidget::studiesChanged);
+    connect(m_bridge, &ChartBridge::resolutionChanged,
+            this, &WebChartWidget::resolutionChanged);
     connect(m_bridge, &ChartBridge::overlayHiddenChanged, this, [this](bool hidden) {
         if (m_overlay) m_overlay->setVisible(!hidden);
     });
@@ -242,6 +244,18 @@ QString WebChartWidget::chartState() const {
 
 void WebChartWidget::setChartState(const QString& stateJson) {
     m_bridge->loadChartState(stateJson);
+}
+
+void WebChartWidget::setResolution(const QString& res) {
+    m_bridge->setResolution(res);
+}
+
+QString WebChartWidget::resolution() const {
+    return m_bridge->resolution();
+}
+
+void WebChartWidget::selectLineTool(const QString& tool) {
+    m_bridge->selectLineTool(tool);
 }
 
 void WebChartWidget::setTheme(const QString& theme) {

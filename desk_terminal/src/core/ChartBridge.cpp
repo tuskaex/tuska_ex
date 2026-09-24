@@ -279,6 +279,27 @@ void ChartBridge::createStudy(const QString& name) {
     emit studyRequested(name);
 }
 
+void ChartBridge::setResolution(const QString& res) {
+    if (res.trimmed().isEmpty()) return;
+    // Deliberately NOT guarded on m_resolution. The toolbar highlight is driven
+    // by chartResolutionPicked(), which only fires once the library has really
+    // switched — so a request that the chart quietly refused (a resolution the
+    // datafeed cannot serve) must stay re-sendable rather than being swallowed
+    // as "already there".
+    emit resolutionRequested(res);
+}
+
+void ChartBridge::selectLineTool(const QString& tool) {
+    if (tool.trimmed().isEmpty()) return;
+    emit lineToolRequested(tool);
+}
+
+void ChartBridge::chartResolutionPicked(const QString& res) {
+    if (res.isEmpty() || res == m_resolution) return;
+    m_resolution = res;
+    emit resolutionChanged(res);
+}
+
 void ChartBridge::loadChartState(const QString& stateJson) {
     if (stateJson.isEmpty()) return;
     // Take the cache along at once. The web layer will push the same state

@@ -46,12 +46,22 @@ public:
     QString chartState() const;
     void    setChartState(const QString& stateJson);
 
+    // ── The timeframe and drawing toolbars ──
+    // Both live inside the charting library; these hand a native button's
+    // choice down to it. See ChartBridge::setResolution.
+    void    setResolution(const QString& res);
+    QString resolution() const;
+    void    selectLineTool(const QString& tool);
+
 signals:
     // The trader picked a symbol inside the chart itself. Relayed so the pane
     // header can follow, and so the choice survives a restart.
     void symbolPickedInChart(const QString& symbol);
     // The indicator list arrived from the web layer.
     void studiesChanged();
+    // This pane's timeframe changed, from a toolbar button or from inside the
+    // chart. The toolbar highlight follows it.
+    void resolutionChanged(const QString& res);
 
 protected:
     void resizeEvent(QResizeEvent* e) override;

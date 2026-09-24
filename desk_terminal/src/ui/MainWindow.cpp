@@ -29,6 +29,9 @@
 #include <QMenu>
 #include <QAction>
 #include <QActionGroup>
+#include <QToolBar>
+#include <QToolButton>
+#include "ui/Icons.h"
 #include <QLabel>
 #include <QTimer>
 #include <QMessageBox>
@@ -145,6 +148,9 @@ MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     // returns to when a trader un-maximizes it mid-session.
 
     buildMenuBar();
+    // After the menu, always: the rows share its actions rather than owning a
+    // second copy of each toggle.
+    buildToolBars();
 
     // --- status bar ---
     // Transient messages only (trade results, errors, connection trouble). The
@@ -516,6 +522,268 @@ void MainWindow::buildMenuBar() {
     // No sign-out button in the menu row — signing out lives in File -> Log out.
 }
 
+// ── the two toolbars under the menu bar ─────────────────────────────────────
+//
+// MetaTrader's Standard row and its Line Studies row, which is what the desk
+// asked for and what a trader coming from MT5 reaches for before they look at
+// a menu. Two rules hold the whole thing together:
+//
+//   * Every button here does something real. No entry is a picture of a
+//     feature this terminal does not have — the menus already refuse to do
+//     that, and a toolbar full of dead icons is worse, because a toolbar looks
+//     like the fast path.
+//   * Nothing owns its own copy of a toggle. Market Watch, Data Window, the
+//     theme and privacy all share the menu's QAction, so flipping one from
+//     either place shows as flipped in both. That is the bug this kind of row
+//     usually ships with.
+//
+// The drawing tools and the timeframes are not ours at all: both belong to the
+// charting library. The buttons ask for them through ChartArea, which applies
+// them to the ACTIVE pane — a four-chart grid exists precisely so its panes can
+// be on different instruments and different timeframes.
+void MainWindow::buildToolBars() {
+    // Keeps the icon and the function that drew it together, so a theme switch
+    // can repaint the row. Returns the action for further wiring.
+    auto icon = [this](QAction* a, IconFn fn) {
+        a->setIcon(fn(QColor(Theme::p().text), 18));
+        m_barIcons.append({a, fn});
+        return a;
+    };
+
+    // ── row 1: Standard ──
+    m_stdBar = addToolBar(tr("Standard"));
+    m_stdBar->setObjectName(QStringLiteral("standardBar"));
+    m_stdBar->setIconSize(QSize(18, 18));
+    // Fixed in place. MetaTrader lets these float, but a toolbar dragged off
+    // into its own window over a trading screen is a way to lose a button, not
+    // a feature anyone asked for.
+    m_stdBar->setMovable(false);
+    m_stdBar->setFloatable(false);
+    m_stdBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+
+    // New Order carries its label, exactly as MT5's does. It is the one control
+    // on the row that must never be hunted for, and an icon alone would make it
+    // one of a dozen identical squares.
+    QAction* newOrder = m_stdBar->addAction(tr("New Order"));
+    icon(newOrder, &Icons::plusBox);
+    newOrder->setToolTip(tr("New order  (F9)"));
+    connect(newOrder, &QAction::triggered, this, &MainWindow::openOrderWindow);
+    if (auto* btn = qobject_cast<QToolButton*>(m_stdBar->widgetForAction(newOrder)))
+        btn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
+    m_stdBar->addSeparator();
+
+    // Chart layout and Profiles are menus, not single actions — each is a
+    // choice between several, and MT5 shows both as a button with an arrow.
+    // The menus are the SAME objects the menu bar uses, so neither can drift.
+    auto dropdown = [this, &icon](QAction* a, IconFn fn, QMenu* menu, const QString& tip) {
+        icon(a, fn);
+        a->setToolTip(tip);
+        if (auto* btn = qobject_cast<QToolButton*>(m_stdBar->widgetForAction(a))) {
+            btn->setMenu(menu);
+            btn->setPopupMode(QToolButton::InstantPopup);
+        }
+    };
+
+    QMenu* layoutMenu = new QMenu(this);
+    if (m_layoutGroup)
+        for (QAction* a : m_layoutGroup->actions()) layoutMenu->addAction(a);
+    dropdown(m_stdBar->addAction(tr("Chart layout")), &Icons::gridFour, layoutMenu,
+             tr("Chart layout — 1, 2 or 4 panes"));
+
+    if (m_profileMenu)
+        dropdown(m_stdBar->addAction(tr("Profiles")), &Icons::folder, m_profileMenu,
+                 tr("Workspace profiles — save and load"));
+
+    m_stdBar->addSeparator();
+
+    // The panel toggles.
+    //
+    // Deliberately NOT the View menu's own action put on the row. A checkable
+    // menu item that carries an icon loses its tick in several Qt styles — the
+    // icon takes the check column — so giving the shared action an icon would
+    // fix the toolbar by breaking the menu. Two objects instead, kept in step
+    // in BOTH directions, so a panel closed from either place reads as closed
+    // in the other.
+    auto mirrorToggle = [this, &icon](QAction* menuAction, IconFn fn, const QString& tip) {
+        if (!menuAction) return;
+        QAction* a = m_stdBar->addAction(menuAction->text());
+        icon(a, fn);
+        a->setToolTip(tip);
+        a->setCheckable(true);
+        a->setChecked(menuAction->isChecked());
+        // trigger() runs the menu action's own handler, so the behaviour lives
+        // in exactly one place. toggled() carries the state back without
+        // re-triggering, which is what stops the two bouncing off each other.
+        connect(a, &QAction::triggered, menuAction, &QAction::trigger);
+        connect(menuAction, &QAction::toggled, a, &QAction::setChecked);
+    };
+
+    mirrorToggle(m_marketWatchAction, &Icons::table, tr("Market Watch"));
+    mirrorToggle(m_dataWindowAction, &Icons::sidePanel,
+                 tr("Data Window — OHLC and indicators at the crosshair"));
+
+    QAction* nav = m_stdBar->addAction(tr("Navigation"));
+    icon(nav, &Icons::compass);
+    nav->setToolTip(tr("Navigation"));
+    connect(nav, &QAction::triggered, this, &MainWindow::openNavigation);
+
+    QAction* syms = m_stdBar->addAction(tr("Symbols"));
+    icon(syms, &Icons::checklist);
+    syms->setToolTip(tr("Symbols — choose what Market Watch shows"));
+    connect(syms, &QAction::triggered, this, &MainWindow::openSymbolsBrowser);
+
+    m_stdBar->addSeparator();
+
+    QAction* scripts = m_stdBar->addAction(tr("Scripts"));
+    icon(scripts, &Icons::code);
+    scripts->setToolTip(tr("Scripts — write and run a trading script"));
+    connect(scripts, &QAction::triggered, this, &MainWindow::openScripts);
+
+    QAction* tester = m_stdBar->addAction(tr("Strategy Tester"));
+    icon(tester, &Icons::play);
+    tester->setToolTip(tr("Strategy Tester — run a script over history"));
+    connect(tester, &QAction::triggered, this, &MainWindow::openStrategyTester);
+
+    QMenu* reportsMenu = new QMenu(this);
+    struct { const char* label; ReportsDialog::Tab tab; } kBarReports[] = {
+        {QT_TR_NOOP("Summary"),      ReportsDialog::Summary},
+        {QT_TR_NOOP("Risk"),         ReportsDialog::Risk},
+        {QT_TR_NOOP("Long && Short"), ReportsDialog::LongShort},
+        {QT_TR_NOOP("Symbols"),      ReportsDialog::Symbols},
+    };
+    for (const auto& r : kBarReports) {
+        connect(reportsMenu->addAction(tr(r.label)), &QAction::triggered, this,
+                [this, tab = r.tab]() { openReports(tab); });
+    }
+    dropdown(m_stdBar->addAction(tr("Reports")), &Icons::report, reportsMenu,
+             tr("Reports"));
+
+    m_stdBar->addSeparator();
+
+    // Appearance, on the far right of the row, mirroring the View menu the same
+    // way the panel toggles above do.
+    mirrorToggle(m_darkAction, &Icons::moon, tr("Dark theme"));
+    mirrorToggle(m_privacyAction, &Icons::eyeOff, tr("Hide balances"));
+
+    // ── row 2: Line Studies and timeframes ──
+    addToolBarBreak();
+    m_drawBar = addToolBar(tr("Line Studies"));
+    m_drawBar->setObjectName(QStringLiteral("lineStudiesBar"));
+    m_drawBar->setIconSize(QSize(18, 18));
+    m_drawBar->setMovable(false);
+    m_drawBar->setFloatable(false);
+    m_drawBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+
+    m_toolGroup = new QActionGroup(this);
+    m_toolGroup->setExclusive(true);
+
+    // Name on the left is the library's own tool id — see SupportedLineTools in
+    // the vendored typings. Nothing translates these; they are an API, not text.
+    struct { const char* tool; IconFn fn; const char* tip; bool gapAfter; } kTools[] = {
+        {"cursor",          &Icons::cursorArrow,    QT_TR_NOOP("Cursor — stop drawing"), false},
+        {"measure",         &Icons::crosshair,      QT_TR_NOOP("Crosshair — measure"),   true},
+        {"vertical_line",   &Icons::verticalLine,   QT_TR_NOOP("Vertical line"),         false},
+        {"horizontal_line", &Icons::horizontalLine, QT_TR_NOOP("Horizontal line"),       false},
+        {"trend_line",      &Icons::trendLine,      QT_TR_NOOP("Trend line"),            false},
+        {"ray",             &Icons::ray,            QT_TR_NOOP("Ray"),                   false},
+        {"fib_retracement", &Icons::fib,            QT_TR_NOOP("Fibonacci retracement"), false},
+        {"rectangle",       &Icons::rectangle,      QT_TR_NOOP("Rectangle"),             false},
+        {"text",            &Icons::textTool,       QT_TR_NOOP("Text"),                  false},
+        {"brush",           &Icons::brush,          QT_TR_NOOP("Freehand"),              false},
+        {"eraser",          &Icons::eraser,         QT_TR_NOOP("Eraser"),                true},
+    };
+    for (const auto& t : kTools) {
+        QAction* a = m_drawBar->addAction(tr(t.tip));
+        icon(a, t.fn);
+        a->setToolTip(tr(t.tip));
+        a->setCheckable(true);
+        m_toolGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, tool = QString(t.tool)]() {
+            m_charts->selectLineTool(tool);
+        });
+        if (t.gapAfter) m_drawBar->addSeparator();
+    }
+    // Opens on the arrow, which is the chart's resting state.
+    if (!m_toolGroup->actions().isEmpty())
+        m_toolGroup->actions().first()->setChecked(true);
+
+    // ── timeframes ──
+    //
+    // Left of the arrow is MetaTrader's label; right is the resolution string
+    // the charting library speaks. The datafeed maps those to the server's own
+    // timeframes, so nothing here has to know about either.
+    m_tfGroup = new QActionGroup(this);
+    m_tfGroup->setExclusive(true);
+    struct { const char* label; const char* res; } kTf[] = {
+        {"M1", "1"},  {"M5", "5"},   {"M15", "15"}, {"M30", "30"}, {"H1", "60"},
+        {"H4", "240"},{"D1", "1D"},  {"W1", "1W"},  {"MN", "1M"},
+    };
+    for (const auto& t : kTf) {
+        QAction* a = new QAction(QString::fromLatin1(t.label), this);
+        a->setCheckable(true);
+        a->setData(QString::fromLatin1(t.res));
+        m_tfGroup->addAction(a);
+        connect(a, &QAction::triggered, this, [this, res = QString(t.res)]() {
+            m_charts->setResolution(res);
+        });
+        // Added as a widget rather than an action: a toolbar carries ONE button
+        // style, and these are the only text buttons on a row of icons.
+        auto* btn = new QToolButton(m_drawBar);
+        btn->setDefaultAction(a);
+        btn->setToolButtonStyle(Qt::ToolButtonTextOnly);
+        btn->setAutoRaise(true);
+        m_drawBar->addWidget(btn);
+    }
+
+    // The highlight follows the ACTIVE pane, not the last button pressed: the
+    // chart's own header and its keyboard shortcuts change the timeframe too,
+    // and stepping between panes lands on a chart with its own.
+    connect(m_charts, &ChartArea::activeResolutionChanged, this,
+            [this](const QString& res) {
+        if (!m_tfGroup) return;
+        // A resolution none of the nine buttons carries (the chart header
+        // offers 3m, 45m, 2h and more) leaves the row unchecked rather than
+        // highlighting a neighbour. QActionGroup will not clear an exclusive
+        // group, hence the temporary toggle — the same trick the chart-layout
+        // group already uses.
+        m_tfGroup->setExclusive(false);
+        for (QAction* a : m_tfGroup->actions())
+            a->setChecked(a->data().toString() == res);
+        m_tfGroup->setExclusive(true);
+    });
+
+    restyleToolBars();
+}
+
+void MainWindow::restyleToolBars() {
+    const auto& c = Theme::p();
+    const QColor ink(c.text);
+    for (const auto& pair : m_barIcons)
+        if (pair.first && pair.second) pair.first->setIcon(pair.second(ink, 18));
+
+    // Toolbars are not covered by the global sheet, and a QToolBar with no rule
+    // of its own paints in the Fusion style's grey — which on the dark theme is
+    // a light band across the top of a dark window.
+    //
+    // `panel`, NOT `headerBg`. headerBg is the brand strip's colour and it is a
+    // strong blue in the light theme, which turned both rows into a blue band
+    // with barely visible icons on it. panel is the neutral surface every other
+    // chrome-coloured widget here uses.
+    const QString sheet = QString(
+        "QToolBar { background:%1; border:0; border-bottom:1px solid %2; spacing:2px;"
+        "           padding:2px 6px; }"
+        "QToolBar::separator { background:%2; width:1px; margin:4px 6px; }"
+        "QToolButton { color:%3; background:transparent; border:1px solid transparent;"
+        "              border-radius:4px; padding:3px 6px; font-size:11px; }"
+        "QToolButton:hover { background:%4; border-color:%2; }"
+        "QToolButton:checked { background:%5; border-color:%6; color:%7; }"
+        "QToolButton::menu-indicator { image:none; }")
+        .arg(c.panel, c.border, c.text, c.btnHover, c.rowSel, c.accent, c.rowSelText);
+    if (m_stdBar)  m_stdBar->setStyleSheet(sheet);
+    if (m_drawBar) m_drawBar->setStyleSheet(sheet);
+}
+
 void MainWindow::rebuildAccountsMenu() {
     m_accountsMenu->clear();
     const QJsonArray accts = QJsonDocument::fromJson(m_cfg.accountsJson.toUtf8()).array();
@@ -569,6 +837,7 @@ void MainWindow::applyTheme() {
     if (m_identityDivider)
         m_identityDivider->setStyleSheet(
             QString("background:%1; border:none;").arg(Theme::p().border));
+    restyleToolBars();
 }
 
 void MainWindow::toggleTheme() {

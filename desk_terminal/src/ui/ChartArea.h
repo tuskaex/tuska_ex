@@ -65,6 +65,13 @@ public:
     QString studies() const;
     void    addStudy(const QString& name);
 
+    // ── The timeframe and drawing toolbars ──
+    // Both act on the ACTIVE pane. Panes keep their own timeframe and their own
+    // drawings, which is the point of a grid — see setResolution's comment.
+    void    setResolution(const QString& res);
+    QString activeResolution() const;
+    void    selectLineTool(const QString& tool);
+
     // The instrument the ACTIVE pane is showing. Not the same thing as the
     // Market Watch selection once a trader clicks between panes — the one-click
     // strip and the order window follow this, or they would quote a different
@@ -112,6 +119,10 @@ signals:
     // tracking "what am I looking at" (the price stream subscription, the
     // saved layout) can follow without the trader having to use Market Watch.
     void symbolPickedInChart(const QString& symbol);
+    // The ACTIVE pane's timeframe, whenever it changes and whenever the active
+    // pane changes. The toolbar's M1…MN highlight follows this rather than its
+    // own clicks, so it is right no matter where the change came from.
+    void activeResolutionChanged(const QString& res);
 
 protected:
     // Clicks on a pane's header select it; the header carries a "paneIndex".
