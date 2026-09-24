@@ -1,5 +1,6 @@
 #pragma once
 #include <QWidget>
+#include <QPixmap>
 #include "core/Models.h"
 
 class ApiClient;
@@ -71,8 +72,18 @@ private slots:
     // slot rather than a plain private helper.
     void positionOverlay();
 
+    // ── the chart's right-click menu, native half ──
+    // "Save As Picture…" and "Print" / "Print Preview". Both work off one
+    // capture of the chart as it is on screen, so what is printed is what the
+    // trader was looking at — which is the whole point of printing a chart.
+    void saveChartImage();
+    void printChart(bool preview);
+
 private:
     static QString resolveIndexHtml();   // locate web/index.html
+    // The chart as it looks right now. Empty if the capture failed, which
+    // callers must check rather than saving a blank sheet.
+    QPixmap captureChart() const;
 
     ChartBridge*    m_bridge;
     QWebEngineView* m_view;

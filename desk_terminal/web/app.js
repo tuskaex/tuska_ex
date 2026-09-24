@@ -83,6 +83,10 @@
 
   let widget = null;
   let datafeed = null;
+  // MetaTrader's chart right-click menu — see tx_chartmenu.js. Built once and
+  // kept across rebuilds: it reads the live `widget` through the getter below
+  // rather than holding a chart of its own.
+  let chartMenu = null;
   let bridgeRef = null;
   // True only between onChartReady and the next rebuild. widget is non-null
   // well before the chart will accept a load(), so a profile restored while the
@@ -207,6 +211,9 @@
     document.body.style.background = surface;
     // Lives outside the widget, so a theme rebuild only restyles it.
     ensureWatermark(t);
+    // A rebuild throws the chart's overrides away, so the menu's idea of
+    // whether the grid is on has to go back to the default with them.
+    if (chartMenu) chartMenu.reset();
 
     // Carry the user's current view across the rebuild.
     let symbol = bridge.currentSymbol || "EURUSD";
@@ -253,6 +260,10 @@
       // Saved layouts and templates go through our own adapter, into a file
       // beside config.json. No TradingView account and no server is involved.
       save_load_adapter: makeSaveLoadAdapter(bridge),
+      // MetaTrader's menu on the candles, in place of the library's own. A
+      // constructor option, which is why the rebuild paths below re-apply it
+      // for free. See tx_chartmenu.js.
+      ...(chartMenu ? { context_menu: chartMenu.options } : {}),
       // The library needs a layout name to show in the header before the first
       // save; it renames itself as soon as one is saved.
       saved_data_meta_info: { uid: 1, name: "TuskaEx", description: "" },
@@ -482,12 +493,26 @@
 
     update();
     console.info("dialog watch: attached");
+
+    // The chart menu's keyboard shortcuts live on the same iframe document.
+    // Bound here because this is the one place that has already resolved it,
+    // and it guards itself against being bound twice.
+    if (chartMenu) chartMenu.bindShortcuts(doc);
   }
 
   function boot(bridge) {
     window.sc = bridge;
     bridgeRef = bridge;
     datafeed = window.makeDatafeed(bridge);
+    // The getter, not the widget: createChart replaces `widget` on every theme
+    // or layout change, and a captured reference would go on driving the chart
+    // that was torn down.
+    if (window.makeChartMenu) chartMenu = window.makeChartMenu(bridge, () => widget);
+    // Said out loud, because the failure is otherwise silent: without the
+    // module the widget is built with no context_menu option at all and the
+    // chart quietly keeps the library's own menu.
+    console.info(chartMenu ? "chart menu: MetaTrader menu installed"
+                           : "chart menu: MISSING — tx_chartmenu.js did not load");
     createChart(bridge, bridge.theme);
 
     // Registered ONCE, outside createChart — they read the current `widget`, so

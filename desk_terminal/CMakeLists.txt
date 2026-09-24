@@ -14,7 +14,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # trader's own JavaScript, and the Strategy Tester runs it over historical bars.
 # It was already being linked transitively through WebEngine; naming it makes
 # that a dependency this project owns rather than one it happens to inherit.
-find_package(Qt6 REQUIRED COMPONENTS Widgets Network WebSockets WebEngineWidgets WebChannel Svg Qml)
+# PrintSupport backs the chart's right-click "Print" and "Print Preview". It
+# was already being deployed beside the exe as a transitive dependency of
+# Widgets, which is exactly the kind of thing that keeps working until the day
+# it does not — naming it makes it a dependency this project owns.
+find_package(Qt6 REQUIRED COMPONENTS Widgets Network WebSockets WebEngineWidgets WebChannel Svg Qml PrintSupport)
 
 if (APPLE AND TARGET WrapOpenGL::WrapOpenGL)
     # Drop AGL from the link line, or the build dies at the very last step with
@@ -213,4 +217,5 @@ target_link_libraries(terminal PRIVATE
     Qt6::WebChannel
     Qt6::Svg
     Qt6::Qml
+    Qt6::PrintSupport
 )

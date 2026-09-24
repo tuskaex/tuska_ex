@@ -153,6 +153,17 @@ public:
     // strip floating over the web view would otherwise cover them permanently.
     Q_INVOKABLE void setOverlayHidden(bool hidden);
 
+    // ── The chart's right-click menu: the entries only C++ can serve ───
+    //
+    // Everything else on that menu is the charting library's own business and
+    // is done inside the page. These three are not: saving a picture needs a
+    // file dialog and printing needs a printer, and the web layer has neither.
+    // It asks here instead, and WebChartWidget — which owns the view being
+    // captured — does the work.
+    Q_INVOKABLE void requestSaveImage();
+    // preview=true opens the print preview rather than the printer dialog.
+    Q_INVOKABLE void requestPrint(bool preview);
+
     // JS -> C++: the trader picked a symbol inside the chart's own search box,
     // rather than from the Market Watch. Without this the native side never
     // learns, keeps filtering ticks to the old symbol, and the newly chosen one
@@ -191,6 +202,9 @@ signals:
     // follows this rather than its own clicks, so a change made inside the
     // chart moves the highlight too.
     void resolutionChanged(const QString& res);
+    // The chart's right-click menu asked for a picture or a print.
+    void saveImageRequested();
+    void printRequested(bool preview);
 
 private slots:
     void onBarsReceived(const QString& symbol, const QString& timeframe, const QVector<Bar>& bars);

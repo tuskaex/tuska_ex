@@ -294,6 +294,14 @@ void ChartBridge::selectLineTool(const QString& tool) {
     emit lineToolRequested(tool);
 }
 
+void ChartBridge::requestSaveImage() {
+    emit saveImageRequested();
+}
+
+void ChartBridge::requestPrint(bool preview) {
+    emit printRequested(preview);
+}
+
 void ChartBridge::chartResolutionPicked(const QString& res) {
     if (res.isEmpty() || res == m_resolution) return;
     m_resolution = res;
