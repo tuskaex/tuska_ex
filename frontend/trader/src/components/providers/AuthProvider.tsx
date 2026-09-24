@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, markSessionStarted } from '@/stores/authStore';
 import { usePlatformStatusStore } from '@/stores/platformStatusStore';
 import { useRouter, usePathname } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -79,7 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
      * No-ops (no request at all) when the URL carries no code, which is every
      * page load on the CRM itself. */
     void (async () => {
-      await redeemHandoffFromUrl();
+      // A redeemed hand-off is the one way a session appears on this domain
+      // without anyone signing in here, so it has to record that it did.
+      // Without this, loadUser() below would see no session hint, skip the
+      // call entirely and show a freshly arrived trader the logged-out site.
+      if (await redeemHandoffFromUrl()) markSessionStarted();
       await loadUser();
     })();
   }, [loadUser]);
