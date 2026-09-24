@@ -171,6 +171,8 @@ static HistoryTrade parseHistory(const QJsonObject& o) {
     h.profit      = firstDouble(o, {"profit", "pnl"});
     h.swap        = o.value("swap").toDouble();
     h.commission  = o.value("commission").toDouble();
+    h.sl          = firstDouble(o, {"sl", "stop_loss"});
+    h.tp          = firstDouble(o, {"tp", "take_profit"});
     h.openedAt    = firstString(o, {"opened_at"});
     h.closedAt    = firstString(o, {"closed_at", "close_time"});
     h.closeReason = o.value("close_reason").toString();
