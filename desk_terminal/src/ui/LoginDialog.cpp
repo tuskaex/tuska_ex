@@ -379,12 +379,20 @@ QWidget* LoginDialog::buildFormPanel() {
     auto* rows = new QVBoxLayout;
     rows->setContentsMargins(0, 0, 0, 0);
     rows->setSpacing(14);
-    // SERVER is on show — File > Login to Trade Account is specified as an
-    // MT5-style card, and the server a trader is signing in to is part of that.
-    // API-key mode and the raw endpoint fields stay built-but-hidden: the login
-    // code still reads m_rest / m_ws, so the widgets must exist even when the
-    // trader is not the one filling them in.
-    rows->addWidget(field(tr("SERVER"), m_profile));
+    // SERVER is built but NOT shown, which is what the desk asked for.
+    //
+    // There is one server. The box only ever read "TuskaEx Live 01", and the
+    // other two entries pointed at a developer's own machine — a control whose
+    // single meaningful value is already its default is furniture on a sign-in
+    // card, and the one place a trader can pick the wrong thing and be unable
+    // to log in at all.
+    //
+    // It stays constructed because applyProfile() drives m_rest / m_ws from it
+    // and the login code reads those. Same arrangement as API-key mode and the
+    // raw endpoint fields: built, wired, not on the card.
+    QWidget* serverRow = field(tr("SERVER"), m_profile);
+    rows->addWidget(serverRow);
+    serverRow->hide();
     rows->addWidget(field(tr("EMAIL"), m_email));
     rows->addWidget(field(tr("PASSWORD"), m_password));
 
