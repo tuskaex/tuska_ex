@@ -684,9 +684,14 @@ void WatchlistWidget::refreshChange(const Row& row) {
     const auto& t = Theme::p();
     // Signed, so a flat-looking 0.00 still says which side of the open it is on
     // once it moves. qFuzzyIsNull keeps a true zero from reading as "+0.00%".
-    cell->setText(QString("%1%2%%")
+    // The "%" is appended, NOT written as "%%" inside the format string.
+    // QString::arg is not printf: it only ever substitutes %1…%99 and leaves
+    // everything else alone, so "%%" is two literal percent signs. Every row of
+    // this column was reading "-0.65%%".
+    cell->setText(QString("%1%2")
                       .arg(pct > 0.0 ? QStringLiteral("+") : QString())
-                      .arg(pct, 0, 'f', 2));
+                      .arg(pct, 0, 'f', 2)
+                  + QStringLiteral("%"));
     cell->setForeground(QColor(qFuzzyIsNull(pct) ? t.text : (pct > 0.0 ? t.up : t.down)));
 }
 

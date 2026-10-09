@@ -83,6 +83,20 @@ WebChartWidget::WebChartWidget(ApiClient* api, PriceStream* stream, QWidget* par
     profile->setHttpCacheType(QWebEngineProfile::NoCache);
     m_view->setPage(new DiagPage(profile, m_view));
 
+    // No browser context menu on the chart, ever.
+    //
+    // Right-clicking the candles raises MetaTrader's menu, which the charting
+    // library draws inside the page. Right-clicking anywhere the library does
+    // not handle — the margin around the chart, the watermark layer — fell
+    // through to Chromium's own menu instead, offering a trader Back, Forward,
+    // Reload, Save page and View page source. That is a web page admitting it
+    // is a web page, in the middle of a trading terminal.
+    //
+    // Suppressing it at the VIEW does not disturb the library: Qt stops drawing
+    // its own menu, while the page still receives the contextmenu event and
+    // builds ours from it.
+    m_view->setContextMenuPolicy(Qt::NoContextMenu);
+
     m_channel = new QWebChannel(this);
     m_channel->registerObject(QStringLiteral("sc"), m_bridge);
     m_view->page()->setWebChannel(m_channel);
