@@ -75,7 +75,7 @@ function buildRewriter(base: RGB) {
         const to = byTriplet.get(`${r},${g},${b}`);
         return to ? `${open}${to[0]}${s1}${to[1]}${s2}${to[2]}` : all;
       })
-      .replace(hexRe, (all, h: string) => byHex.get(h.toLowerCase()) ?? all);
+      .replace(hexRe, (all, h: string) => byHex.get(`#${h.toLowerCase()}`) ?? all);
 }
 
 /** Override CSS for every rule that uses a platform blue, keeping the at-rule
