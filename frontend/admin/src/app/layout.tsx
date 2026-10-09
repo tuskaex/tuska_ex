@@ -42,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
         // `/brand/icon` resolves the tenant from the Host header on the server,
         // so the browser's very first favicon request already returns their
         // logo. See src/app/brand/icon/route.ts.
-        icons: { icon: '/brand/icon' },
+        icons: { icon: '/brand/icon?v=2', shortcut: '/brand/icon?v=2' },
       }
     : { title: 'TuskaEx Admin', description: 'TuskaEx broker administration panel' };
 }

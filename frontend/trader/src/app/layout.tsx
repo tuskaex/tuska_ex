@@ -40,7 +40,9 @@ export const metadata: Metadata = {
   // Beats the `src/app/icon.png` file convention, which is one file served to
   // every host and so put TuskaEx's mark in the browser tab of a broker's own
   // client. See src/app/brand/icon/route.ts.
-  icons: { icon: '/brand/icon' },
+  // `?v=` busts favicons browsers cached under the bare URL; bump it when the
+  // icon logic changes, not on every logo upload (the route serves the latest).
+  icons: { icon: '/brand/icon?v=2', shortcut: '/brand/icon?v=2' },
 };
 
 export const viewport: Viewport = {
