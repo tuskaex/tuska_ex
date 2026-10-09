@@ -323,6 +323,22 @@ def to_public_payload(owner: User | None) -> dict:
     }
 
 
+async def tenant_public_payload(owner: User | None, db: AsyncSession) -> dict:
+    """to_public_payload for a tenant, with the platform logo as a fallback.
+
+    The platform owner asked for this: a broker who has not uploaded a logo of
+    their own shows the logo set on Admin → Platform brand, instead of their
+    name as plain text. A broker's own logo always wins. An unknown domain
+    (owner None) still gets nulls — nothing is shown for a host nobody owns.
+    """
+    payload = to_public_payload(owner)
+    if owner is not None and not payload["logo_url"]:
+        platform = await find_platform_brand(db)
+        if platform is not None and platform.logo_url:
+            payload["logo_url"] = platform.logo_url
+    return payload
+
+
 # ─── Write ───────────────────────────────────────────────────────────────
 
 _HEX_COLOR = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")

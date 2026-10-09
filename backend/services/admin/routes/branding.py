@@ -267,7 +267,7 @@ async def branding_by_code(code: str, db: AsyncSession = Depends(get_db)):
     public chrome; to_public_payload carries no email, no ids, no SMTP.
     """
     owner = await branding_service.find_by_code(code, db)
-    return branding_service.to_public_payload(owner)
+    return await branding_service.tenant_public_payload(owner, db)
 
 
 @public_router.get("/platform")
@@ -289,7 +289,7 @@ async def branding_platform(db: AsyncSession = Depends(get_db)):
 @public_router.get("/by-domain")
 async def branding_by_domain(domain: str, db: AsyncSession = Depends(get_db)):
     owner = await branding_service.find_by_domain(domain, db)
-    return branding_service.to_public_payload(owner)
+    return await branding_service.tenant_public_payload(owner, db)
 
 
 # ─── Media ───────────────────────────────────────────────────────────────
