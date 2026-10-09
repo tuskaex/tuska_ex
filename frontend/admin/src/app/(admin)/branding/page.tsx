@@ -8,6 +8,7 @@ import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
+import BrokerLogos from './BrokerLogos';
 import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import toast from 'react-hot-toast';
 import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
@@ -27,18 +28,19 @@ export default function BrandingPage() {
   // caller is not the platform owner and has no tenants to choose between —
   // the picker simply does not render.
   const [tenants, setTenants] = useState<SubAdmin[]>([]);
-  useEffect(() => {
-    void (async () => {
-      try {
-        const res = await adminApi.get<PaginatedResponse<SubAdmin>>('/sub-admins', {
-          per_page: '100',
-        });
-        setTenants(res.items || []);
-      } catch {
-        setTenants([]);
-      }
-    })();
+  const loadTenants = useCallback(async () => {
+    try {
+      const res = await adminApi.get<PaginatedResponse<SubAdmin>>('/sub-admins', {
+        per_page: '100',
+      });
+      setTenants(res.items || []);
+    } catch {
+      setTenants([]);
+    }
   }, []);
+  useEffect(() => {
+    void loadTenants();
+  }, [loadTenants]);
 
   const [brand, setBrand] = useState({
     brand_name: '',
@@ -251,6 +253,10 @@ export default function BrandingPage() {
             page belongs to TuskaEx and is never used on a tenant&apos;s domain.
           </p>
         </div>
+      )}
+
+      {tenants.length > 0 && (
+        <BrokerLogos tenants={tenants} onChanged={() => void loadTenants()} />
       )}
 
       {/* This screen writes the CALLER's row. On a super-admin that is the
