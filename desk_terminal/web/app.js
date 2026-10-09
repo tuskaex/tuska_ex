@@ -619,6 +619,18 @@
     // The native drawing-tool buttons. selectLineTool ARMS a tool: the next
     // click on the candles starts that drawing. "cursor" disarms, which is what
     // the arrow button on the left of the row is for.
+    // A native menu asking the chart to run one of its own actions — the
+    // Indicators dialog is the one that matters, since it lives inside the
+    // chart and Insert > Indicator has no other way to reach it.
+    bridge.chartActionRequested.connect((id) => {
+      if (!id || !widget || !chartReady) return;
+      try {
+        widget.activeChart().executeActionById(String(id));
+      } catch (e) {
+        console.warn("the chart refused the action", id, e);
+      }
+    });
+
     bridge.lineToolRequested.connect((tool) => {
       if (!tool || !widget || !chartReady) return;
       try {

@@ -471,11 +471,15 @@ void MainWindow::buildMenuBar() {
     QMenu* insert = bar->addMenu(tr("&Insert"));
 
     QMenu* indicator = insert->addMenu(tr("&Indicator"));
-    // The one live entry: indicators already exist, on the chart's own toolbar.
+    // Opens the chart's own Indicators dialog on the ACTIVE pane. It used to
+    // print a line in the status bar telling the trader to go and find the
+    // button themselves, which is a menu entry that does not do its job.
     connect(indicator->addAction(tr("&Add an indicator…")), &QAction::triggered,
-            this, [this]() {
-        setStatus(tr("Indicators are on the chart toolbar — click \"Indicators\""));
-    });
+            this, [this]() { m_charts->runChartAction(QStringLiteral("insertIndicator")); });
+    // The list of what is already ON the chart, which is the other half of
+    // MetaTrader's Indicators List and reachable from the same place.
+    connect(indicator->addAction(tr("&Indicators on this chart…")), &QAction::triggered,
+            this, [this]() { m_charts->runChartAction(QStringLiteral("paneObjectTree")); });
 
     QMenu* ea = insert->addMenu(tr("&Expert Advisor (EA)"));
     for (const char* item : {QT_TR_NOOP("&Import MT5 EA code…"),

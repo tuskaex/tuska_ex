@@ -146,9 +146,19 @@ private:
     // globalPos, not a viewport point: the same menu is raised from the table
     // AND from its header, and each maps its own coordinates.
     void openTableMenu(int tab, const QPoint& globalPos);
-    // "<tab>/<header>". One place builds it so the menu, the saved set and the
-    // applying pass can never spell a key three different ways.
-    static QString colKey(int tab, const QString& header);
+    // "<tab>/<header>", with an occurrence marker appended from the second
+    // column of that name onwards: "history/Time", then "history/Time#2".
+    //
+    // The marker is not decoration. History and Trade both carry a Time and a
+    // Price TWICE, as MetaTrader does — open and close. Keyed on the header
+    // alone, the two shared one key, so switching off the open Time switched
+    // off the close one with it and the two menu entries ticked and unticked
+    // together.
+    static QString colKey(int tab, const QString& header, int ordinal);
+    // The key for column `c`, counting how many earlier columns of the same
+    // table already carry its header. One place works the ordinal out, so the
+    // menu, the saved set and the applying pass cannot disagree about it.
+    static QString colKeyAt(int tab, const QTableWidget* t, int c);
     // Columns a trader must not be able to lose: Symbol names the row and
     // Action holds its buttons, so hiding either breaks the tab rather than
     // tidying it.

@@ -401,6 +401,10 @@ void WebChartWidget::selectLineTool(const QString& tool) {
     m_bridge->selectLineTool(tool);
 }
 
+void WebChartWidget::runChartAction(const QString& actionId) {
+    m_bridge->runChartAction(actionId);
+}
+
 void WebChartWidget::setTheme(const QString& theme) {
     m_bridge->setTheme(theme);
     // The page paints its own background before the widget boots; keep the

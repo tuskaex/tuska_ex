@@ -694,6 +694,10 @@ void ChartArea::selectLineTool(const QString& tool) {
     if (WebChartWidget* c = activeChart()) c->selectLineTool(tool);
 }
 
+void ChartArea::runChartAction(const QString& actionId) {
+    if (WebChartWidget* c = activeChart()) c->runChartAction(actionId);
+}
+
 void ChartArea::setDataWindow(bool on) {
     m_dataWindow = on;
     // A no-op per pane when the value is unchanged, so this cannot rebuild

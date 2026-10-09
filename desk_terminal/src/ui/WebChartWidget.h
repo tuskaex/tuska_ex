@@ -53,6 +53,8 @@ public:
     void    setResolution(const QString& res);
     QString resolution() const;
     void    selectLineTool(const QString& tool);
+    // Runs one of the chart's own actions by id — see ChartBridge.
+    void    runChartAction(const QString& actionId);
 
 signals:
     // The trader picked a symbol inside the chart itself. Relayed so the pane

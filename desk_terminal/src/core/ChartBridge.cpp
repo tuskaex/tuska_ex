@@ -332,6 +332,11 @@ void ChartBridge::selectLineTool(const QString& tool) {
     emit lineToolRequested(tool);
 }
 
+void ChartBridge::runChartAction(const QString& actionId) {
+    if (actionId.trimmed().isEmpty()) return;
+    emit chartActionRequested(actionId);
+}
+
 void ChartBridge::requestSaveImage() {
     emit saveImageRequested();
 }

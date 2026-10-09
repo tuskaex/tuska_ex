@@ -175,6 +175,13 @@ public:
     // leaving the chart in a half-armed state.
     void selectLineTool(const QString& tool);
 
+    // Runs one of the charting library's own actions on this pane by its id —
+    // "insertIndicator", "chartProperties", "chartReset" and the rest of
+    // ChartActionId. These are dialogs and commands that live inside the chart
+    // and have no other entry point, so a native menu wanting one has to ask
+    // the chart to run it rather than trying to reproduce it.
+    void runChartAction(const QString& actionId);
+
     // JS -> C++: the timeframe was changed from inside the chart, by its own
     // header or a keyboard shortcut. Without this the toolbar's M1…MN buttons
     // would keep the highlight on whichever one was last clicked and quietly
@@ -228,9 +235,10 @@ signals:
     // Raised once the web layer has handed over the indicator list, so the
     // navigator can fill in a section that was empty when it opened.
     void studiesChanged();
-    // C++ -> JS, for setResolution() and selectLineTool().
+    // C++ -> JS, for setResolution(), selectLineTool() and runChartAction().
     void resolutionRequested(const QString& res);
     void lineToolRequested(const QString& tool);
+    void chartActionRequested(const QString& actionId);
     // The pane's timeframe actually changed, whoever asked for it. The toolbar
     // follows this rather than its own clicks, so a change made inside the
     // chart moves the highlight too.

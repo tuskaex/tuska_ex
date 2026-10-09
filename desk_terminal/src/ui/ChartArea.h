@@ -71,6 +71,9 @@ public:
     void    setResolution(const QString& res);
     QString activeResolution() const;
     void    selectLineTool(const QString& tool);
+    // Runs one of the chart's own actions on the ACTIVE pane — the Indicators
+    // dialog and the rest of what lives inside the chart.
+    void    runChartAction(const QString& actionId);
 
     // MetaTrader's timeframe names against the charting library's resolution
     // strings — {"M5", "5"}, {"H1", "60"} and so on.

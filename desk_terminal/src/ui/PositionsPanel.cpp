@@ -264,11 +264,28 @@ QTableWidget* PositionsPanel::tableFor(int tab) const {
     return nullptr;
 }
 
-QString PositionsPanel::colKey(int tab, const QString& header) {
+QString PositionsPanel::colKey(int tab, const QString& header, int ordinal) {
     static const char* kTabs[] = {"trade", "pending", "history", "txn"};
     const QString t = (tab >= 0 && tab < 4) ? QString::fromLatin1(kTabs[tab])
                                             : QString::number(tab);
-    return t + QLatin1Char('/') + header;
+    QString key = t + QLatin1Char('/') + header;
+    // The first of a name keeps the bare key, so anything already saved before
+    // the marker existed still matches.
+    if (ordinal > 0) key += QLatin1Char('#') + QString::number(ordinal + 1);
+    return key;
+}
+
+QString PositionsPanel::colKeyAt(int tab, const QTableWidget* t, int c) {
+    if (!t) return {};
+    const QTableWidgetItem* head = t->horizontalHeaderItem(c);
+    if (!head) return {};
+    const QString name = head->text();
+    int ordinal = 0;
+    for (int i = 0; i < c; ++i) {
+        const QTableWidgetItem* h = t->horizontalHeaderItem(i);
+        if (h && h->text() == name) ++ordinal;
+    }
+    return colKey(tab, name, ordinal);
 }
 
 bool PositionsPanel::columnIsFixed(const QString& header) {
@@ -295,7 +312,7 @@ void PositionsPanel::applyColumnVisibility() {
             // plain text file and a hand-edited one must not be able to take
             // the close buttons off the Trade tab.
             const bool hide = !columnIsFixed(name)
-                              && m_hiddenCols.contains(colKey(tab, name));
+                              && m_hiddenCols.contains(colKeyAt(tab, t, c));
             t->setColumnHidden(c, hide);
         }
     }
@@ -383,13 +400,30 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
     // switches and this tab has thirteen columns, which flat would turn into a
     // menu taller than the blotter it drops out of.
     QMenu* cols = menu.addMenu(tr("Columns"));
+    // How many columns of this tab share each header, worked out first so an
+    // entry can say WHICH one it is while it is being created.
+    QHash<QString, int> total;
+    for (int c = 0; c < t->columnCount(); ++c)
+        if (QTableWidgetItem* h = t->horizontalHeaderItem(c)) total[h->text()]++;
+
+    QHash<QString, int> seenSoFar;
     for (int c = 0; c < t->columnCount(); ++c) {
         QTableWidgetItem* head = t->horizontalHeaderItem(c);
         if (!head) continue;
         const QString name = head->text();
+        const int ordinal = seenSoFar[name]++;
         if (columnIsFixed(name)) continue;
-        const QString key = colKey(tab, name);
-        QAction* a = cols->addAction(name);
+        const QString key = colKeyAt(tab, t, c);
+
+        // History and Trade both carry a Time and a Price twice, as MetaTrader
+        // does — the open one and the close one. Two entries reading the same
+        // word would be a coin toss, so each says which it is.
+        QString label = name;
+        if (total.value(name) > 1)
+            label = ordinal == 0 ? tr("%1 (open)").arg(name)
+                                 : tr("%1 (close)").arg(name);
+
+        QAction* a = cols->addAction(label);
         a->setCheckable(true);
         a->setChecked(!m_hiddenCols.contains(key));
         connect(a, &QAction::triggered, this, [this, key](bool on) {
@@ -398,19 +432,6 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
             applyColumnVisibility();
             emit columnsChanged(m_hiddenCols);
         });
-    }
-    // History and Trade both carry a "Time" and a "Price" twice, as MetaTrader
-    // does. Two entries with the same word would be a coin toss, so say which.
-    {
-        QHash<QString, int> seen;
-        for (QAction* a : cols->actions()) seen[a->text()]++;
-        QHash<QString, int> nth;
-        for (QAction* a : cols->actions()) {
-            if (seen.value(a->text()) < 2) continue;
-            const QString base = a->text();
-            a->setText(++nth[base] == 1 ? tr("%1 (open)").arg(base)
-                                        : tr("%1 (close)").arg(base));
-        }
     }
 
     menu.addSeparator();
