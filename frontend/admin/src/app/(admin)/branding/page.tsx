@@ -8,7 +8,6 @@ import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
-import WhiteLabelManager from './WhiteLabelManager';
 import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import toast from 'react-hot-toast';
 import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
@@ -255,7 +254,10 @@ export default function BrandingPage() {
         </div>
       )}
 
-      <WhiteLabelManager tenants={tenants} onChanged={() => void loadTenants()} />
+      <div className="bg-bg-secondary border border-accent/40 rounded-md p-3 text-xs text-text-secondary">
+        Edit each broker&apos;s logo, colours, domain and access under{' '}
+        <Link href="/white-labels" className="text-accent hover:underline">White-labels</Link>.
+      </div>
 
       {/* This screen writes the CALLER's row. On a super-admin that is the
           PLATFORM's brand: `find_platform_brand` resolves it and
