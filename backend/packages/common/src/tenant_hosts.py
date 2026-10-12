@@ -110,6 +110,7 @@ async def refresh(force: bool = False) -> None:
                         ).where(
                             User.custom_domain.isnot(None),
                             User.custom_domain_status == "READY",
+                            User.status == "active",
                         )
                     )
                 ).all()

@@ -334,6 +334,9 @@ async def tenant_public_payload(owner: User | None, db: AsyncSession) -> dict:
     (owner None) still gets nulls — nothing is shown for a host nobody owns.
     """
     payload = to_public_payload(owner)
+    # Whether this host belongs to a live broker at all. The apps serve nothing
+    # on a domain whose broker was deleted or suspended.
+    payload["active"] = owner is not None
     if owner is not None and not payload["logo_url"]:
         platform = await find_platform_brand(db)
         if platform is not None and platform.logo_url:
@@ -886,6 +889,7 @@ async def find_by_domain(host: str, db: AsyncSession) -> User | None:
         select(User).where(
             User.custom_domain.in_(candidates),
             User.custom_domain_status == STATUS_READY,
+            User.status == "active",
         )
     )).scalars().all()
     for row in rows:

@@ -133,6 +133,7 @@ async def find_owner_by_host(request: Request | None, db: AsyncSession) -> User 
                 select(User).where(
                     User.custom_domain == apex,
                     User.custom_domain_status == "READY",
+                    User.status == "active",
                     User.role.in_(POOL_OWNER_ROLES),
                 )
             )

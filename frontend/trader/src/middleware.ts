@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isTenantBlockedPath } from '@/config/marketingPaths';
 import { isTenantHost } from '@/lib/tenantHost';
+import { siteNotAvailable, tenantHostIsLive } from '@/lib/tenantLiveness';
 
 /**
  * ── Terminal on its own domain (NEXT_PUBLIC_TERMINAL_ORIGIN) ──────
@@ -163,7 +164,13 @@ function terminalHost(): string {
   }
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
+  // A domain whose broker was deleted or suspended serves nothing at all.
+  const reqHost = req.headers.get('host')?.toLowerCase().split(':')[0] ?? '';
+  if (isTenantHost(reqHost) && !(await tenantHostIsLive(reqHost))) {
+    return siteNotAvailable();
+  }
+
   /* Rate-limit auth endpoints FIRST — before the host-routing logic
    * below. This applies whether the host split is configured or not
    * (local dev gets protection too). */
@@ -294,4 +301,7 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico|images/|charting_library/|datafeeds/).*)'],
+  // Node runtime: the broker lookup reads ADMIN_API_INTERNAL_URL at request
+  // time and calls the admin service on the internal network.
+  runtime: 'nodejs',
 };
