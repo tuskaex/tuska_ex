@@ -16,11 +16,9 @@
  *     that flash would show a competitor's brand to the broker's own client.
  *  2. `fetchTenantBranding()` — asks the backend who owns this domain.
  *
- * The endpoint is public by necessity: a visitor at the login screen has no
- * session yet and still has to see whose site they are on. It lives on the
- * admin service, which the trader app does not proxy, so the tenant vhost
- * routes /api/v1/public/branding/ straight there — see
- * deploy/scripts/connect-tenant-domain.sh.
+ * The lookup is public by necessity: a visitor at the login screen has no
+ * session yet and still has to see whose site they are on. It goes through
+ * this app's own /brand/info route, which asks the admin service server-side.
  */
 
 import { BRAND_LOGO, BRAND_NAME } from '@/config/brand';
@@ -53,14 +51,11 @@ type PublicBranding = {
  */
 export async function fetchTenantBranding(): Promise<PublicBranding | null> {
   if (typeof window === 'undefined') return null;
-  // split() can type as undefined under noUncheckedIndexedAccess; the host is
-  // never empty in a browser, but the fallback keeps the call well-typed.
-  const host = window.location.host.split(':')[0] ?? window.location.host;
   try {
-    const res = await fetch(
-      `/api/v1/public/branding/by-domain?domain=${encodeURIComponent(host)}`,
-      { credentials: 'omit' },
-    );
+    // Same-origin route that resolves the brand server-side from the Host
+    // (src/app/brand/info). It does not depend on nginx routing
+    // /api/v1/public/* to the admin service, and its logo_url is same-origin.
+    const res = await fetch('/brand/info', { credentials: 'omit' });
     if (!res.ok) return null;
     const data = (await res.json()) as PublicBranding;
     return data ?? null;

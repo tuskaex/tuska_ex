@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { isTenantHost } from '@/lib/tenantHost';
+import { fetchLogo, resolveBrand, servedHost } from '@/lib/brandServer';
 
 /**
  * The tab icon for whichever brand this host belongs to, resolved on the
@@ -33,50 +32,9 @@ import { isTenantHost } from '@/lib/tenantHost';
 
 export const dynamic = 'force-dynamic';
 
-/** Small: a logo that misses this is not a favicon. */
-const MAX_BYTES = 512 * 1024;
-const UPSTREAM_TIMEOUT_MS = 2500;
-
 /** Long enough not to re-fetch on every navigation, short enough that a tenant
  *  who uploads a new logo sees it the same session. */
 const CACHE = 'public, max-age=300, stale-while-revalidate=3600';
-
-type PublicBranding = { brand_name: string | null; logo_url: string | null; brand_color?: string | null };
-
-/**
- * Branding lives on the ADMIN service, which this app does not otherwise talk
- * to — the gateway proxy in front of every other server call does not carry
- * `/api/v1/public/branding`. Hence its own variable, set alongside the gateway
- * one in docker-compose.
- */
-function adminApiBase(): string {
-  return (
-    process.env.ADMIN_API_INTERNAL_URL ||
-    process.env.ADMIN_API_PROXY_TARGET ||
-    'http://admin-api:8001'
-  ).replace(/\/$/, '');
-}
-
-/** The hostname this request was served as. X-Forwarded-Host first, because
- *  nginx terminates for us and `Host` is then the upstream name. */
-async function servedHost(): Promise<string> {
-  const h = await headers();
-  const fwd = (h.get('x-forwarded-host') ?? '').split(',')[0]?.trim();
-  return (fwd || h.get('host') || '').toLowerCase().trim();
-}
-
-async function getJson(url: string): Promise<PublicBranding | null> {
-  try {
-    const res = await fetch(url, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    return (await res.json()) as PublicBranding;
-  } catch {
-    return null;
-  }
-}
 
 /** First letter of the brand, or of their own domain when they have set no
  *  name. Their hostname is the one thing we always know and it is factually
@@ -103,63 +61,26 @@ function monogramResponse(letter: string, color?: string | null): NextResponse {
   });
 }
 
-/** The bytes behind a `logo_url`, or null to fall back.
- *
- * `logo_url` is a site-relative path (/api/v1/admin/branding/media/…) that a
- * browser resolves against its own origin. Server side there is no origin to
- * resolve against, so it is joined to the admin service directly — the same
- * bytes, one hop fewer, and it works before nginx has a vhost for a domain
- * still being connected.
- */
-async function serveLogo(logoPath: string | null | undefined): Promise<NextResponse | null> {
-  const path = logoPath?.trim();
-  if (!path) return null;
-  try {
-    const res = await fetch(`${adminApiBase()}${path}`, {
-      cache: 'no-store',
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-    });
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength === 0 || buf.byteLength > MAX_BYTES) return null;
-    return new NextResponse(buf, {
-      headers: {
-        'Content-Type': res.headers.get('content-type') || 'image/png',
-        'Cache-Control': CACHE,
-      },
-    });
-  } catch {
-    return null;
-  }
-}
-
 export async function GET(): Promise<NextResponse> {
   const host = await servedHost();
-  const isTenant = isTenantHost(host);
+  const { isTenant, brand } = await resolveBrand(host);
 
-  // TuskaEx's own host. The platform now has a settable brand of its own —
-  // Platform brand → Upload logo writes `find_platform_brand`'s row — so ask
-  // for it before falling back to the bundled `src/app/icon.png`.
+  // Any logo up to the upload limit: the old 512 KB cap silently turned most
+  // real uploads into a letter tile.
+  const logo = await fetchLogo(brand?.logo_url);
+  if (logo) {
+    return new NextResponse(logo.body, {
+      headers: { 'Content-Type': logo.type, 'Cache-Control': CACHE },
+    });
+  }
+
+  // TuskaEx's own host with no uploaded logo: the bundled icon. A relative
+  // Location keeps this correct behind the proxy.
   if (!isTenant) {
-    const platform = await getJson(`${adminApiBase()}/api/v1/public/branding/platform`);
-    const served = await serveLogo(platform?.logo_url);
-    if (served) return served;
-    // A relative Location keeps this correct behind the proxy, where the
-    // request URL this handler sees is the internal one, not the address the
-    // browser used.
     return new NextResponse(null, {
       status: 307,
       headers: { Location: '/icon.png', 'Cache-Control': CACHE },
     });
   }
-
-  const domain = host.split(':')[0] || host;
-  const brand = await getJson(
-    `${adminApiBase()}/api/v1/public/branding/by-domain?domain=${encodeURIComponent(domain)}`,
-  );
-
-  const served = await serveLogo(brand?.logo_url);
-  if (served) return served;
-
   return monogramResponse(initial(brand?.brand_name, host), brand?.brand_color);
 }

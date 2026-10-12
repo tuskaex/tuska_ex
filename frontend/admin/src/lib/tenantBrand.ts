@@ -88,7 +88,8 @@ type PublicBranding = { brand_name: string | null; logo_url: string | null };
 export async function fetchPlatformBrand(): Promise<PublicBranding | null> {
   if (typeof window === 'undefined') return null;
   try {
-    const res = await fetch('/api/v1/public/branding/platform', { credentials: 'omit' });
+    // Same-origin route, resolved server-side (src/app/brand/info).
+    const res = await fetch('/brand/info', { credentials: 'omit' });
     if (!res.ok) return null;
     return (await res.json()) as PublicBranding;
   } catch {
@@ -102,12 +103,10 @@ export async function fetchPlatformBrand(): Promise<PublicBranding | null> {
  */
 export async function fetchTenantBrand(): Promise<PublicBranding | null> {
   if (typeof window === 'undefined') return null;
-  const host = window.location.host.split(':')[0] || window.location.host;
   try {
-    const res = await fetch(
-      `/api/v1/public/branding/by-domain?domain=${encodeURIComponent(host)}`,
-      { credentials: 'omit' },
-    );
+    // Same-origin route, resolved server-side from the Host (src/app/brand/info),
+    // so it does not depend on nginx routing /api/v1/public/* anywhere.
+    const res = await fetch('/brand/info', { credentials: 'omit' });
     if (!res.ok) return null;
     return (await res.json()) as PublicBranding;
   } catch {
