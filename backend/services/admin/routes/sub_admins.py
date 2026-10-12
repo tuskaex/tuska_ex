@@ -224,6 +224,30 @@ async def upload_tenant_logo(
     )
 
 
+@router.delete("/{sub_admin_id}/branding/logo")
+async def clear_tenant_logo(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.clear_logo(
+        sub_admin_id=sub_admin_id, admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.delete("/{sub_admin_id}/domain")
+async def disconnect_tenant_domain(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.disconnect_domain(
+        sub_admin_id=sub_admin_id, admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
 @router.put("/{sub_admin_id}/branding/smtp")
 async def update_tenant_smtp(
     sub_admin_id: uuid.UUID,

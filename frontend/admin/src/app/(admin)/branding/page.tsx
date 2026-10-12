@@ -8,7 +8,7 @@ import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
-import BrokerLogos from './BrokerLogos';
+import WhiteLabelManager from './WhiteLabelManager';
 import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import toast from 'react-hot-toast';
 import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
@@ -255,9 +255,7 @@ export default function BrandingPage() {
         </div>
       )}
 
-      {tenants.length > 0 && (
-        <BrokerLogos tenants={tenants} onChanged={() => void loadTenants()} />
-      )}
+      <WhiteLabelManager tenants={tenants} onChanged={() => void loadTenants()} />
 
       {/* This screen writes the CALLER's row. On a super-admin that is the
           PLATFORM's brand: `find_platform_brand` resolves it and

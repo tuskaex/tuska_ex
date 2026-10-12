@@ -635,6 +635,48 @@ async def upload_logo(
     return out
 
 
+async def clear_logo(
+    *, sub_admin_id: uuid.UUID, admin: User, ip_address: str | None, db: AsyncSession,
+) -> dict:
+    """Remove a broker's logo; their domain then shows the platform fallback."""
+    from services import branding_service as _b
+
+    sub = await _brand_target(sub_admin_id, admin, db)
+    previous = sub.logo_url
+    out = await _b.clear_logo(admin=admin, owner=sub, db=db)
+    await write_audit_log(
+        db, admin.id, "clear_sub_admin_branding_logo", "sub_admin", sub.id,
+        old_values={"logo_url": previous}, ip_address=ip_address,
+    )
+    await db.commit()
+    return out
+
+
+async def disconnect_domain(
+    *, sub_admin_id: uuid.UUID, admin: User, ip_address: str | None, db: AsyncSession,
+) -> dict:
+    """Detach a broker's custom domain; it stops resolving to them at once."""
+    from services import branding_service as _b
+    from packages.common.src import tenant_hosts
+
+    _only_super_admin(admin)
+    sub = await _load_sub_admin(sub_admin_id, db)
+    old = {"custom_domain": sub.custom_domain, "custom_domain_status": sub.custom_domain_status}
+    sub.custom_domain = None
+    sub.app_subdomain = None
+    sub.admin_subdomain = None
+    sub.custom_domain_status = None
+    sub.custom_domain_last_error = None
+    sub.custom_domain_provisioned_at = None
+    await write_audit_log(
+        db, admin.id, "disconnect_sub_admin_domain", "sub_admin", sub.id,
+        old_values=old, new_values={"custom_domain": None}, ip_address=ip_address,
+    )
+    await db.commit()
+    tenant_hosts.invalidate()
+    return _b.domain_payload(sub)
+
+
 async def update_smtp(
     *, sub_admin_id: uuid.UUID, host: str | None, port: int | None,
     user: str | None, password: str | None, sender: str | None, tls: bool | None,
