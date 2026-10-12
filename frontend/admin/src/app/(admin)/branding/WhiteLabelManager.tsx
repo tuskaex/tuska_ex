@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { adminApi } from '@/lib/api';
 import { adminMediaSrc } from '@/lib/mediaSrc';
 import { cn } from '@/lib/utils';
-import type { SubAdmin, TenantBranding } from '@/types';
+import type { SubAdmin, SubAdminReport, TenantBranding } from '@/types';
 import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import { PERMISSION_GROUPS, groupChecked, isGrantable, toggleGroup } from '../sub-admins/permissions';
 
@@ -128,6 +128,7 @@ export default function WhiteLabelManager({
 
       {editing && (
         <EditBroker
+          key={editing.id}
           tenant={editing}
           onClose={() => setEditing(null)}
           onChanged={onChanged}
@@ -137,7 +138,7 @@ export default function WhiteLabelManager({
   );
 }
 
-type Tab = 'branding' | 'domain' | 'access' | 'account';
+type Tab = 'overview' | 'branding' | 'domain' | 'access' | 'account';
 
 function EditBroker({
   tenant,
@@ -148,7 +149,9 @@ function EditBroker({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const [tab, setTab] = useState<Tab>('branding');
+  const [tab, setTab] = useState<Tab>('overview');
+  const [loaded, setLoaded] = useState(false);
+  const [report, setReport] = useState<SubAdminReport | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -171,27 +174,56 @@ function EditBroker({
   const [perms, setPerms] = useState<string[]>(tenant.permissions || []);
   const [features, setFeatures] = useState<Record<string, boolean>>(tenant.client_features || {});
 
+  const [fresh, setFresh] = useState<SubAdmin>(tenant);
+
   // Account
   const [firstName, setFirstName] = useState(tenant.first_name || '');
   const [lastName, setLastName] = useState(tenant.last_name || '');
   const [phone, setPhone] = useState(tenant.phone || '');
   const [status, setStatus] = useState(tenant.status);
 
+  // Everything is re-read from the server for THIS broker when the window
+  // opens, so nothing from the list snapshot or a previously opened broker
+  // can show up here.
   useEffect(() => {
+    let cancelled = false;
     void (async () => {
-      try {
-        const b = await adminApi.get<TenantBranding>(`/sub-admins/${tenant.id}/branding`);
-        setBranding(b);
-        setBrandName(b.brand_name || '');
-        setSupportEmail(b.support_email || '');
-        setSupportWa(b.support_whatsapp || '');
-        setBrandColor(b.brand_color || DEFAULT_BRAND_COLOR);
-        setAdminColor(b.admin_color || b.brand_color || DEFAULT_BRAND_COLOR);
-        setLogoUrl(b.logo_url || null);
-      } catch (e: unknown) {
-        toast.error(e instanceof Error ? e.message : 'Could not load branding');
+      const [s, b, r] = await Promise.allSettled([
+        adminApi.get<SubAdmin>(`/sub-admins/${tenant.id}`),
+        adminApi.get<TenantBranding>(`/sub-admins/${tenant.id}/branding`),
+        adminApi.get<SubAdminReport>(`/sub-admins/${tenant.id}/report`),
+      ]);
+      if (cancelled) return;
+      if (s.status === 'fulfilled') {
+        const t = s.value;
+        setDomain(t.domain?.custom_domain || '');
+        setAppSub(t.domain?.app_subdomain || '');
+        setAdminSub(t.domain?.admin_subdomain ?? 'admin');
+        setDomainInfo(t.domain);
+        setPerms(t.permissions || []);
+        setFeatures(t.client_features || {});
+        setFirstName(t.first_name || '');
+        setLastName(t.last_name || '');
+        setPhone(t.phone || '');
+        setStatus(t.status);
+        setFresh(t);
+      } else {
+        toast.error('Could not load this broker');
       }
+      if (b.status === 'fulfilled') {
+        const v = b.value;
+        setBranding(v);
+        setBrandName(v.brand_name || '');
+        setSupportEmail(v.support_email || '');
+        setSupportWa(v.support_whatsapp || '');
+        setBrandColor(v.brand_color || DEFAULT_BRAND_COLOR);
+        setAdminColor(v.admin_color || v.brand_color || DEFAULT_BRAND_COLOR);
+        setLogoUrl(v.logo_url || null);
+      }
+      if (r.status === 'fulfilled') setReport(r.value);
+      setLoaded(true);
     })();
+    return () => { cancelled = true; };
   }, [tenant.id]);
 
   useEffect(() => {
@@ -288,6 +320,7 @@ function EditBroker({
     }, status === 'active' ? 'Blocked' : 'Unblocked');
 
   const tabs: [Tab, string][] = [
+    ['overview', 'Overview'],
     ['branding', 'Branding'],
     ['domain', 'Domain'],
     ['access', 'Access'],
@@ -333,7 +366,63 @@ function EditBroker({
         </div>
 
         <div className="p-4 space-y-4">
-          {tab === 'branding' && (
+          {!loaded && (
+            <div className="flex items-center justify-center py-10">
+              <Loader2 size={18} className="animate-spin text-text-tertiary" />
+            </div>
+          )}
+
+          {loaded && tab === 'overview' && (
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 text-xs">
+              <Detail label="Brand name" value={brandName || '—'} />
+              <Detail label="Broker code" value={fresh.code || '—'} mono />
+              <Detail label="Contact name" value={[firstName, lastName].filter(Boolean).join(' ') || '—'} />
+              <Detail label="Login email" value={fresh.email} />
+              <Detail label="Mobile" value={phone || '—'} />
+              <Detail label="Status" value={status} />
+              <Detail label="Created" value={fresh.created_at ? new Date(fresh.created_at).toLocaleString() : '—'} />
+              <Detail label="Clients" value={String(report?.client_count ?? fresh.user_count)} />
+              {report && <Detail label="Trading accounts" value={String(report.account_count)} />}
+              {report && (
+                <Detail
+                  label="Clients' total balance"
+                  value={`$${Number(report.total_balance || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                />
+              )}
+              <Detail
+                label="Domain"
+                value={domainInfo?.custom_domain ? `${domainInfo.custom_domain} (${domainInfo.status || 'not live'})` : 'Not connected'}
+              />
+              <Detail label="User panel URL" value={domainInfo?.app_url || '—'} />
+              <Detail label="Admin panel URL" value={domainInfo?.admin_url || '—'} />
+              <Detail label="Referral link" value={branding?.referral_link || '—'} mono />
+              <Detail label="Support email" value={supportEmail || '—'} />
+              <Detail label="Support WhatsApp" value={supportWa || '—'} />
+              <Detail
+                label="Outbound email"
+                value={branding?.smtp_configured ? `Own account (${branding.smtp_from})` : 'Platform account, sent in their name'}
+              />
+              <div>
+                <dt className="text-xxs text-text-tertiary">Colours (user / admin)</dt>
+                <dd className="mt-0.5 flex items-center gap-1.5">
+                  <span className="h-4 w-4 rounded-full border border-border-primary" style={{ backgroundColor: brandColor || DEFAULT_BRAND_COLOR }} />
+                  <span className="font-mono text-text-secondary">{brandColor || DEFAULT_BRAND_COLOR}</span>
+                  <span className="h-4 w-4 rounded-full border border-border-primary ml-2" style={{ backgroundColor: adminColor || DEFAULT_BRAND_COLOR }} />
+                  <span className="font-mono text-text-secondary">{adminColor || DEFAULT_BRAND_COLOR}</span>
+                </dd>
+              </div>
+              <Detail
+                label="Admin sections granted"
+                value={PERMISSION_GROUPS.filter((g) => isGrantable(g) && groupChecked(g, perms)).map((g) => g.label).join(', ') || 'None'}
+              />
+              <Detail
+                label="Client features on"
+                value={CLIENT_FEATURES.filter(([k]) => features[k] !== false).map(([, l]) => l).join(', ') || 'None'}
+              />
+            </dl>
+          )}
+
+          {loaded && tab === 'branding' && (
             <>
               <div className="flex items-center gap-4">
                 <div className="w-28 h-14 rounded-md border border-border-primary bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
@@ -389,7 +478,7 @@ function EditBroker({
             </>
           )}
 
-          {tab === 'domain' && (
+          {loaded && tab === 'domain' && (
             <>
               <Field label="Domain (apex, e.g. broker.com)">
                 <input value={domain} onChange={(e) => setDomain(e.target.value.trim().toLowerCase())} placeholder="broker.com" className={inputCls} />
@@ -427,7 +516,7 @@ function EditBroker({
             </>
           )}
 
-          {tab === 'access' && (
+          {loaded && tab === 'access' && (
             <>
               <div>
                 <p className="text-xxs text-text-tertiary mb-1.5">Admin panel sections this broker can see (only their own clients).</p>
@@ -458,7 +547,7 @@ function EditBroker({
             </>
           )}
 
-          {tab === 'account' && (
+          {loaded && tab === 'account' && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="First name">
@@ -486,6 +575,15 @@ function EditBroker({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Detail({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xxs text-text-tertiary">{label}</dt>
+      <dd className={cn('mt-0.5 text-text-primary break-all', mono && 'font-mono text-xxs')}>{value}</dd>
     </div>
   );
 }

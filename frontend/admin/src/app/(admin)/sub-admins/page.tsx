@@ -100,11 +100,22 @@ export default function SubAdminsPage() {
     void fetchData();
   }, [fetchData]);
 
-  const openCreate = () => {
+  // One reset used on open, after a successful create and on cancel, so the
+  // previous broker's details never carry into the next form.
+  const resetForm = () => {
     setForm({ ...EMPTY_FORM });
     setChecked([...DEFAULT_NEW_TENANT_PERMISSIONS]);
     pickLogo(null);
+  };
+
+  const openCreate = () => {
+    resetForm();
     setShowModal(true);
+  };
+
+  const closeCreate = () => {
+    setShowModal(false);
+    resetForm();
   };
 
   const submit = async () => {
@@ -151,7 +162,7 @@ export default function SubAdminsPage() {
         }
       }
       toast.success('Sub-broker created');
-      setShowModal(false);
+      closeCreate();
       void fetchData();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Could not create sub-broker');
@@ -337,6 +348,8 @@ export default function SubAdminsPage() {
                 <Field label="Email">
                   <input
                     type="email"
+                    name="new-broker-email"
+                    autoComplete="off"
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     className={inputCls}
@@ -360,6 +373,8 @@ export default function SubAdminsPage() {
                 <Field label="Password (min 8)">
                   <input
                     type="password"
+                    name="new-broker-password"
+                    autoComplete="new-password"
                     value={form.password}
                     onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
                     className={inputCls}
@@ -368,6 +383,8 @@ export default function SubAdminsPage() {
                 <Field label="Confirm password">
                   <input
                     type="password"
+                    name="new-broker-password-confirm"
+                    autoComplete="new-password"
                     value={form.confirm}
                     onChange={(e) => setForm((f) => ({ ...f, confirm: e.target.value }))}
                     className={cn(
@@ -506,7 +523,7 @@ export default function SubAdminsPage() {
             <div className="px-4 py-3 border-t border-border-primary flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowModal(false)}
+                onClick={closeCreate}
                 className="px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary"
               >
                 Cancel
