@@ -207,4 +207,8 @@ private:
     QString     m_currentSymbol;
     AccountInfo m_lastAccount;          // re-rendered when privacy/theme flips
     bool        m_streamLive = false;
+    // The last feed status and API error written to the Journal. Both repeat
+    // on every retry and every poll; only a change is worth a line.
+    QString     m_lastJournalFeed;
+    QString     m_lastJournalError;
 };

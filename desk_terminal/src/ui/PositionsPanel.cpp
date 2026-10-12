@@ -15,6 +15,7 @@
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QHeaderView>
+#include "core/Journal.h"
 #include <QMenu>
 #include <QAction>
 #include <QActionGroup>
@@ -1288,11 +1289,63 @@ PositionsPanel::PositionsPanel(QWidget* parent) : QWidget(parent) {
     // POSITIONS — a trade writes ledger rows but is not one itself.
     m_tabTxn = m_tabs->addTab(wrapTable(3, m_txnTable), tr("Transactions"));
 
+    // ── Journal ──
+    // MetaTrader's record of what the terminal itself did this session: orders
+    // sent and filled, requests refused, the feed dropping and coming back.
+    // The web terminal has had one; the desktop only ever said these things in
+    // the status bar, where each line replaced the last.
+    m_journalTable = makeTable({tr("Time"), tr("Source"), tr("Message")});
+    // Message carries the text; the other two only need room for theirs.
+    m_journalTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    m_journalTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    m_journalTable->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    {
+        auto* page = new QWidget;
+        auto* v = new QVBoxLayout(page);
+        v->setContentsMargins(0, 0, 0, 0);
+        v->setSpacing(0);
+        auto* bar = new QWidget;
+        auto* h = new QHBoxLayout(bar);
+        h->setContentsMargins(6, 3, 6, 3);
+        h->addStretch(1);
+        auto* clearBtn = new QPushButton(tr("Clear"));
+        clearBtn->setCursor(Qt::PointingHandCursor);
+        connect(clearBtn, &QPushButton::clicked, this, []() { Journal::instance()->clear(); });
+        h->addWidget(clearBtn);
+        v->addWidget(bar);
+        v->addWidget(m_journalTable, 1);
+        m_tabJournal = m_tabs->addTab(page, tr("Journal"));
+    }
+    connect(Journal::instance(), &Journal::appended, this, [this]() { renderJournal(); });
+    connect(Journal::instance(), &Journal::cleared,  this, [this]() { renderJournal(); });
+    renderJournal();
+
     auto* lay = new QVBoxLayout(this);
     lay->setContentsMargins(0, 0, 0, 0);
     lay->addWidget(m_tabs);
 
     connect(Theme::notifier(), &Theme::Notifier::changed, this, &PositionsPanel::applyTheme);
+}
+
+void PositionsPanel::renderJournal() {
+    if (!m_journalTable) return;
+    const auto& rows = Journal::instance()->entries();
+    const auto& c = Theme::p();
+    m_journalTable->setRowCount(rows.size());
+    for (int r = 0; r < rows.size(); ++r) {
+        const Journal::Entry& e = rows[r];
+        m_journalTable->setItem(r, 0, cell(e.at.toString(QStringLiteral("yyyy.MM.dd HH:mm:ss"))));
+        m_journalTable->setItem(r, 1, cell(e.source));
+        auto* msg = cell(e.message);
+        if (e.level == Journal::Error)        msg->setForeground(QColor(c.down));
+        else if (e.level == Journal::Success) msg->setForeground(QColor(c.up));
+        m_journalTable->setItem(r, 2, msg);
+    }
+    // A count on the tab, like every other one here — and the way a trader
+    // notices that something has been written without having to open it.
+    if (m_tabJournal >= 0)
+        m_tabs->setTabText(m_tabJournal, rows.isEmpty() ? tr("Journal")
+                                                        : tr("Journal (%1)").arg(rows.size()));
 }
 
 void PositionsPanel::applyTheme() {

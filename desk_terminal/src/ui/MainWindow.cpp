@@ -22,6 +22,7 @@
 #include "core/ApiClient.h"
 #include "core/PriceStream.h"
 #include "core/Profiles.h"
+#include "core/Journal.h"
 
 #include <QSplitter>
 #include <QStatusBar>
@@ -935,6 +936,59 @@ void MainWindow::refreshAll() {
 }
 
 void MainWindow::connectServices() {
+    // ── Journal: the outcome half ──
+    //
+    // ApiClient writes a "sent" line for every trade request it makes; these
+    // write what came back. Together they are MetaTrader's journal: a running
+    // record of what the terminal did, which the status bar could never be —
+    // each message there replaced the last.
+    connect(m_api, &ApiClient::tradeResult, this, [](const TradeResult& r) {
+        if (!r.ok) { Journal::error(QStringLiteral("Trade"), tr("rejected: %1").arg(r.message)); return; }
+        if (r.status == "filled")
+            Journal::success(QStringLiteral("Trade"),
+                tr("%1 %2 %3 lots filled at %4").arg(r.action, r.symbol)
+                    .arg(r.lots, 0, 'f', 2).arg(r.price));
+        else if (r.status == "closed")
+            Journal::success(QStringLiteral("Trade"),
+                tr("closed %1 %2 position(s), P/L %3").arg(r.closedCount).arg(r.symbol)
+                    .arg(r.totalProfit, 0, 'f', 2));
+        else if (r.status == "no_positions")
+            Journal::info(QStringLiteral("Trade"), tr("no open %1 positions to close").arg(r.symbol));
+    });
+    connect(m_api, &ApiClient::positionOpResult, this,
+            [](const QString& id, const QString& op, bool ok, const QString& msg) {
+        const QString what = op == "close" ? tr("close") : op == "comment" ? tr("comment") : tr("modify");
+        if (ok) Journal::success(QStringLiteral("Trade"), tr("#%1 %2: %3").arg(id.left(8), what, msg));
+        else    Journal::error(QStringLiteral("Trade"),   tr("#%1 %2 failed: %3").arg(id.left(8), what, msg));
+    });
+    connect(m_api, &ApiClient::orderOpResult, this,
+            [](const QString&, bool ok, const QString& msg) {
+        if (ok) Journal::success(QStringLiteral("Trade"), msg);
+        else    Journal::error(QStringLiteral("Trade"), msg);
+    });
+    connect(m_api, &ApiClient::sessionRefreshed, this,
+            []() { Journal::info(QStringLiteral("Session"), tr("access token renewed")); });
+    connect(m_api, &ApiClient::sessionRefreshFailed, this,
+            [](const QString& msg) { Journal::error(QStringLiteral("Session"), tr("renewal failed: %1").arg(msg)); });
+    // The feed and the API repeat themselves — a dropped socket reports on
+    // every retry, a failing poll every four seconds. Only a CHANGE is a line
+    // worth keeping; a journal that is ninety percent one repeated message
+    // hides the one line that matters.
+    connect(m_stream, &PriceStream::statusChanged, this, [this](const QString& s) {
+        if (s == m_lastJournalFeed) return;
+        m_lastJournalFeed = s;
+        const bool bad = s.contains("disconnect", Qt::CaseInsensitive) || s.contains("retry", Qt::CaseInsensitive);
+        if (bad) Journal::error(QStringLiteral("Network"), s);
+        else     Journal::info(QStringLiteral("Network"), s);
+    });
+    connect(m_api, &ApiClient::errorOccurred, this,
+            [this](const QString& context, const QString& message, int) {
+        const QString line = tr("%1 — %2").arg(context, message);
+        if (line == m_lastJournalError) return;
+        m_lastJournalError = line;
+        Journal::error(QStringLiteral("Network"), line);
+    });
+
     // REST responses
     connect(m_api, &ApiClient::symbolsReceived, this, &MainWindow::onSymbolsReceived);
     connect(m_api, &ApiClient::accountReceived, m_account, &AccountPanel::setAccount);
@@ -943,6 +997,7 @@ void MainWindow::connectServices() {
     connect(m_api, &ApiClient::accountReceived, this, [this](const AccountInfo& a) {
         if (!a.valid) return;
         setStatus(QString());   // a good poll clears any stale transient error
+        m_lastJournalError.clear();
         m_lastAccount = a;
         updateIdentity();
     });

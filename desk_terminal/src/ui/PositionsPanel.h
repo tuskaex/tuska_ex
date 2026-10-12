@@ -17,9 +17,9 @@ class CalendarPanel;
 // Pending orders, and closed-trade History — using MT5's column set:
 // Symbol | Ticket | Time | Type | Volume | Price | S/L | T/P | Price | Profit.
 //
-// MT5's third tab is Journal; there is no log store behind this terminal, so
-// that tab is deliberately absent rather than faked. Data is pushed in by
-// MainWindow, which polls the REST endpoints.
+// MT5's Journal tab is here too, fed by core/Journal — the terminal's own
+// record of this session rather than anything from the server. Data for the
+// other tabs is pushed in by MainWindow, which polls the REST endpoints.
 //
 // The ✕ on a row closes THAT position and nothing else. It used to emit a
 // symbol and close every position for it, which meant a trader with two BTCUSD
@@ -189,6 +189,11 @@ private:
     QTableWidget* m_orderTable;
     QTableWidget* m_histTable;
     QTableWidget* m_txnTable;
+    // The Journal tab — see core/Journal. Not one of the four filtered tabs:
+    // it has no period filter and no column menu, it is a running log.
+    QTableWidget* m_journalTable = nullptr;
+    int           m_tabJournal = -1;
+    void          renderJournal();
     // One slot per FILTERED tab: 0 Trade, 1 Pending, 2 History,
     // 3 Transactions. News and Calendar have no slot — News has no filter at
     // all, and the Calendar owns its own (impact + countries), which filter a

@@ -1,5 +1,6 @@
 #include "core/ApiClient.h"
 #include "core/ApiError.h"
+#include "core/Journal.h"
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkCookie>
@@ -339,6 +340,9 @@ void ApiClient::fetchHistory(int limit) {
 
 void ApiClient::placeOrder(const QString& action, const QString& symbol, double volume,
                            double sl, double tp, const QString& comment) {
+    Journal::info(QStringLiteral("Trade"),
+                  QStringLiteral("%1 %2 %3 lots — sent").arg(action.toUpper(), symbol)
+                      .arg(volume, 0, 'f', 2));
     QJsonObject body;
     body["action"] = action.toUpper();
     body["symbol"] = symbol;
@@ -353,6 +357,8 @@ void ApiClient::placeOrder(const QString& action, const QString& symbol, double 
 }
 
 void ApiClient::closePositions(const QString& symbol) {
+    Journal::info(QStringLiteral("Trade"),
+                  QStringLiteral("close all %1 — sent").arg(symbol));
     QJsonObject body;
     body["action"] = "CLOSE";
     body["symbol"] = symbol;
@@ -402,6 +408,10 @@ static void handleOrderOp(ApiClient* self, QNetworkReply* reply, const QString& 
 void ApiClient::placePendingOrder(const QString& symbol, const QString& side,
                                   const QString& type, double lots, double price,
                                   double sl, double tp, const QString& comment) {
+    Journal::info(QStringLiteral("Trade"),
+                  QStringLiteral("%1 %2 %3 %4 lots at %5 — sent")
+                      .arg(side.toLower(), type.toLower(), symbol)
+                      .arg(lots, 0, 'f', 2).arg(price));
     QJsonObject body;
     body["account_id"] = m_cfg.accountId;
     body["symbol"]     = symbol;
@@ -420,6 +430,8 @@ void ApiClient::placePendingOrder(const QString& symbol, const QString& side,
 
 void ApiClient::modifyPendingOrder(const QString& orderId, double price, double lots,
                                    double sl, double tp) {
+    Journal::info(QStringLiteral("Trade"),
+                  QStringLiteral("modify order #%1 — sent").arg(orderId.left(8)));
     QJsonObject body;
     if (price >= 0.0) body["price"] = price;
     if (lots  >  0.0) body["lots"]  = lots;
@@ -435,11 +447,17 @@ void ApiClient::modifyPendingOrder(const QString& orderId, double price, double 
 }
 
 void ApiClient::cancelOrder(const QString& orderId) {
+    Journal::info(QStringLiteral("Trade"),
+                  QStringLiteral("cancel order #%1 — sent").arg(orderId.left(8)));
     QNetworkReply* r = m_net->deleteResource(v1Request("/orders/" + orderId));
     handleOrderOp(this, r, "cancel");
 }
 
 void ApiClient::modifyBracket(const QString& positionId, const QString& kind, double level) {
+    Journal::info(QStringLiteral("Trade"),
+                  level > 0.0
+                      ? QStringLiteral("#%1 %2 → %3 — sent").arg(positionId.left(8), kind.toUpper()).arg(level)
+                      : QStringLiteral("#%1 remove %2 — sent").arg(positionId.left(8), kind.toUpper()));
     const QString field = (kind == "tp") ? "take_profit" : "stop_loss";
 
     // level <= 0 means "remove this bracket", sent as an explicit JSON null.
@@ -538,6 +556,10 @@ void ApiClient::refreshSession() {
 }
 
 void ApiClient::closePositionById(const QString& positionId, double lots) {
+    Journal::info(QStringLiteral("Trade"),
+                  lots > 0.0
+                      ? QStringLiteral("close #%1, %2 lots — sent").arg(positionId.left(8)).arg(lots, 0, 'f', 2)
+                      : QStringLiteral("close #%1 — sent").arg(positionId.left(8)));
     // The endpoint takes an optional "lots". Omitting it means close the whole
     // position, so a full close sends {} rather than the size — the server then
     // uses its own record of the position instead of trusting a number this

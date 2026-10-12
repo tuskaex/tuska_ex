@@ -61,6 +61,7 @@ set(SOURCES
     src/core/Profiles.cpp
     src/core/ScriptEngine.cpp
     src/core/StrategyTester.cpp
+    src/core/Journal.cpp
     src/ui/Theme.cpp
     src/ui/Toast.cpp
     src/ui/LoginDialog.cpp
@@ -99,6 +100,7 @@ set(HEADERS
     src/core/Profiles.h
     src/core/ScriptEngine.h
     src/core/StrategyTester.h
+    src/core/Journal.h
     src/ui/Theme.h
     src/ui/Toast.h
     src/ui/Icons.h
