@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_platform_permission
 from packages.common.src.models import User
 from services import social_service
 
@@ -32,7 +32,7 @@ class RejectRequest(BaseModel):
 async def list_master_requests(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("social.view")),
+    admin: User = Depends(require_platform_permission("social.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.list_master_requests(page=page, per_page=per_page, db=db)
@@ -43,7 +43,7 @@ async def approve_master_request(
     master_id: uuid.UUID,
     body: ApproveRequest,
     request: Request,
-    admin: User = Depends(require_permission("social.manage")),
+    admin: User = Depends(require_platform_permission("social.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.approve_master_request(
@@ -61,7 +61,7 @@ async def reject_master_request(
     master_id: uuid.UUID,
     body: RejectRequest,
     request: Request,
-    admin: User = Depends(require_permission("social.manage")),
+    admin: User = Depends(require_platform_permission("social.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.reject_master_request(
@@ -75,7 +75,7 @@ async def reject_master_request(
 async def list_masters(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("social.view")),
+    admin: User = Depends(require_platform_permission("social.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.list_masters(page=page, per_page=per_page, db=db)
@@ -86,7 +86,7 @@ async def update_master_settings(
     master_id: uuid.UUID,
     body: ApproveRequest,
     request: Request,
-    admin: User = Depends(require_permission("social.manage")),
+    admin: User = Depends(require_platform_permission("social.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.update_master_settings(
@@ -102,7 +102,7 @@ async def update_master_settings(
 async def delete_master(
     master_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("social.manage")),
+    admin: User = Depends(require_platform_permission("social.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.delete_master(
@@ -117,7 +117,7 @@ async def master_transactions(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     filter_type: str = Query("all"),
-    admin: User = Depends(require_permission("social.view")),
+    admin: User = Depends(require_platform_permission("social.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.master_transactions(
@@ -128,7 +128,7 @@ async def master_transactions(
 
 @router.get("/pamm-analytics")
 async def pamm_analytics(
-    admin: User = Depends(require_permission("social.view")),
+    admin: User = Depends(require_platform_permission("social.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.pamm_analytics(db=db)
@@ -138,7 +138,7 @@ async def pamm_analytics(
 async def distribute_pamm_profit(
     master_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("social.manage")),
+    admin: User = Depends(require_platform_permission("social.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.distribute_pamm_profit(

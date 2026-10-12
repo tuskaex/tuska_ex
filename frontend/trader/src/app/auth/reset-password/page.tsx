@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { scorePassword } from '@/lib/passwordStrength';
 import toast from 'react-hot-toast';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
   return (
@@ -27,6 +28,7 @@ function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () => void }
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const brand = useTenantBrand();
   // Email now sends a 6-digit code (no magic link). Pre-fill from a legacy
   // ?token= link if present, otherwise the user types the code.
   const [code, setCode] = useState(searchParams.get('token') || '');
@@ -69,6 +71,16 @@ function ResetPasswordForm() {
   return (
     <div className="auth-page min-h-screen relative overflow-hidden bg-bg-primary flex flex-col items-center justify-center px-6 py-10">
       <div className="w-full max-w-[400px]">
+        {brand.isTenant ? (
+          <div className="mb-8 flex flex-col items-center gap-3 min-h-14">
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brand.logoUrl} alt={brand.brandName} className="h-14 w-auto object-contain" />
+            ) : brand.brandName ? (
+              <span className="font-bold tracking-tight text-lg text-text-primary">{brand.brandName}</span>
+            ) : null}
+          </div>
+        ) : (
         <div className="mb-8 flex flex-col items-center gap-3">
           {/* Inline TuskaEx brand mark — no PNG dependency.
               Same mark as the navbar / hero so the user knows they
@@ -91,6 +103,7 @@ function ResetPasswordForm() {
             <span className="text-[#D60101]">Ex</span>
           </span>
         </div>
+        )}
         <div className="glass-panel rounded-3xl p-8 noise-texture overflow-hidden">
           <h1 className="text-xl font-bold text-text-primary mb-2">Reset password</h1>
           <p className="text-xs text-text-tertiary mb-6">Enter the 6-digit code we emailed you, then choose a new password.</p>

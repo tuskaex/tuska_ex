@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import ThemeInitScript from '@/components/ThemeInitScript';
 import AppToaster from '@/components/AppToaster';
+import { isTenantAdminHost } from '@/lib/tenantBrand';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,9 +25,7 @@ const inter = Inter({
  * the admin service blinks, and the sidebar already carries their logo.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  const host = (await headers()).get('host');
-  const platform = (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_HOST ?? '').trim().toLowerCase();
-  const isTenant = Boolean(platform) && (host ?? '').toLowerCase() !== platform;
+  const isTenant = isTenantAdminHost((await headers()).get('host'));
   return isTenant
     ? {
         title: 'Admin',

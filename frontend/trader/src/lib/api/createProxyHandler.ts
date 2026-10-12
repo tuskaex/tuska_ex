@@ -140,7 +140,10 @@ export function createProxyHandler(opts: ProxyOptions) {
      * Not a spoofing vector: the gateway matches this against the COOKIE_DOMAINS
      * allow-list and falls back to COOKIE_DOMAIN on no match, so a forged value
      * can only pick between domains we already issue on. */
-    const browserHost = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    // Host only: nginx passes the visitor's Host verbatim, and the gateway now
+    // also decides which broker's clients may sign in from it, so a
+    // client-sent X-Forwarded-Host must not be able to choose.
+    const browserHost = req.headers.get('host');
     if (browserHost) headers.set('x-forwarded-host', browserHost);
 
     const incomingCt = req.headers.get('content-type');

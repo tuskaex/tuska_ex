@@ -26,6 +26,14 @@ def _request_is_https(request: Request) -> bool:
     return request.url.scheme == "https"
 
 
+def _panel_host(request: Request) -> str:
+    """The admin panel hostname the browser is on, as the admin app's proxy
+    forwards it."""
+    from packages.common.src.tenant_hosts import normalise_host
+    raw = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    return normalise_host(raw.split(",")[0])
+
+
 def _set_admin_cookie(resp: Response, request: Request, token: str) -> None:
     """Drop the admin JWT into an HttpOnly cookie. SameSite=strict so the
     browser never attaches it to cross-site requests, plus Secure
@@ -64,7 +72,7 @@ async def admin_login(
     # 6 seconds, enough to retype a wrong password but not enough for
     # credential stuffing / spraying. Audit finding H1.
     rate_limit_http(request, "admin-login", 10, 60.0)
-    result = await auth_service.admin_login(body=body, db=db)
+    result = await auth_service.admin_login(body=body, db=db, host=_panel_host(request))
     _set_admin_cookie(response, request, result.access_token)
     return result.model_dump(exclude={"access_token", "token_type"})
 
@@ -79,7 +87,7 @@ async def admin_refresh(
     """Same body-stripping as `/login` — refresh result returns the new
     token only via the HttpOnly cookie."""
     rate_limit_http(request, "admin-refresh", 30, 60.0)
-    result = await auth_service.admin_refresh(body=body, db=db)
+    result = await auth_service.admin_refresh(body=body, db=db, host=_panel_host(request))
     _set_admin_cookie(response, request, result.access_token)
     return result.model_dump(exclude={"access_token", "token_type"})
 

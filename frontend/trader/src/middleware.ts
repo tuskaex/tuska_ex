@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isMarketingPath } from '@/config/marketingPaths';
+import { isTenantHost } from '@/lib/tenantHost';
 
 /**
  * ── Terminal on its own domain (NEXT_PUBLIC_TERMINAL_ORIGIN) ──────
@@ -48,7 +49,9 @@ import { isMarketingPath } from '@/config/marketingPaths';
  */
 
 const TRADE_PREFIXES = ['/trading/terminal'];
-const NEUTRAL_PREFIXES = ['/api/', '/_next/', '/s/', '/static/', '/images/'];
+const NEUTRAL_PREFIXES = ['/api/', '/_next/', '/s/', '/static/', '/images/', '/brand/'];
+const ACCESS_COOKIE = 'tx_access';
+const REFRESH_COOKIE = 'tx_refresh';
 const NEUTRAL_EXACT = new Set<string>(['/favicon.ico', '/robots.txt', '/sitemap.xml']);
 
 /* ── Rate-limit configuration ──────────────────────────────────
@@ -123,7 +126,15 @@ function isTradePath(path: string): boolean {
 
 function isNeutral(path: string): boolean {
   if (NEUTRAL_EXACT.has(path)) return true;
+  // Files served from public/ (logos, videos, manifest) — never pages.
+  if (/\.[a-z0-9]{2,12}$/i.test(path)) return true;
   return NEUTRAL_PREFIXES.some((p) => path.startsWith(p));
+}
+
+function isAuthPath(path: string): boolean {
+  // /chart is the mobile app's WebView chart, authenticated by ?token=
+  // rather than a cookie.
+  return path === '/auth' || path.startsWith('/auth/') || path === '/chart';
 }
 
 /** True only for a real address-bar navigation.
@@ -227,11 +238,22 @@ export function middleware(req: NextRequest) {
    * Only marketing is redirected. /auth, /s/ share links, the API, static
    * assets and every authenticated app route are untouched — a tenant's users
    * need all of those. */
-  const platformHosts = [...crmHosts, termHost].filter(Boolean);
-  const onTenantDomain = platformHosts.length > 0 && !platformHosts.includes(host);
-  if (onTenantDomain && !isNeutral(pathname) && isMarketingPath(pathname)) {
-    if (!isTopLevelNavigation(req)) return NextResponse.next();
+  // Beyond marketing: a visitor with no session on a tenant domain only ever
+  // gets the sign-in pages. Signed-in clients reach their app pages as usual.
+  const onTenantDomain = isTenantHost(host);
+  // The portal is TuskaEx's own "how do you sign in" chooser, linked only from
+  // its marketing navbar.
+  if (onTenantDomain && pathname === '/auth/portal' && isTopLevelNavigation(req)) {
     return noCacheRedirect(new URL('/auth/login', req.url).toString());
+  }
+  if (onTenantDomain && !isNeutral(pathname) && !isAuthPath(pathname)) {
+    const signedIn = Boolean(
+      req.cookies.get(ACCESS_COOKIE)?.value || req.cookies.get(REFRESH_COOKIE)?.value,
+    );
+    if (isMarketingPath(pathname) || !signedIn) {
+      if (!isTopLevelNavigation(req)) return NextResponse.next();
+      return noCacheRedirect(new URL('/auth/login', req.url).toString());
+    }
   }
   if (
     termHost && host !== termHost && crmHosts.includes(host)

@@ -178,7 +178,21 @@ function BookTab() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchStats(); checkLpStatus(); loadLpSettings(); }, [fetchStats, checkLpStatus, loadLpSettings]);
+  // The LP connection is the platform's; a white-label sub-admin manages only
+  // their clients' A/B assignment, and the LP routes refuse them.
+  const [isPlatform, setIsPlatform] = useState(false);
+  useEffect(() => {
+    fetchStats();
+    (async () => {
+      try {
+        const me = await adminApi.get<{ role: string }>('/auth/me');
+        if (me.role === 'sub_admin') return;
+        setIsPlatform(true);
+        checkLpStatus();
+        loadLpSettings();
+      } catch { /* ignore */ }
+    })();
+  }, [fetchStats, checkLpStatus, loadLpSettings]);
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   // Debounce search
@@ -255,6 +269,7 @@ function BookTab() {
 
   return (
     <div className="space-y-4">
+      {isPlatform && (<>
       {/* LP Connection Banner */}
       <div
         className={cn(
@@ -360,6 +375,7 @@ function BookTab() {
           </div>
         )}
       </div>
+      </>)}
 
       {/* Info Box */}
       <div className="flex items-start gap-3 px-4 py-3 rounded-md bg-accent/5 border border-accent/20 text-xs text-text-secondary">

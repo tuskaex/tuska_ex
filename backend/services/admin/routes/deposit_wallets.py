@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_platform_permission
 from packages.common.src.models import User
 from services import deposit_wallet_service
 
@@ -19,7 +19,7 @@ class UpsertDepositWalletRequest(BaseModel):
 
 @router.get("")
 async def list_deposit_wallets(
-    admin: User = Depends(require_permission("settings.view")),
+    admin: User = Depends(require_platform_permission("settings.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return {"wallets": await deposit_wallet_service.list_wallets(db=db)}
@@ -29,7 +29,7 @@ async def list_deposit_wallets(
 async def upsert_deposit_wallet(
     body: UpsertDepositWalletRequest,
     request: Request,
-    admin: User = Depends(require_permission("settings.edit")),
+    admin: User = Depends(require_platform_permission("settings.edit")),
     db: AsyncSession = Depends(get_db),
 ):
     return await deposit_wallet_service.upsert_wallet(

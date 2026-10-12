@@ -109,13 +109,10 @@ async def create_stealth_trade(
 async def create_stealth_trade_bulk(
     body: BulkCreateTradeRequest,
     request: Request,
-    # NOT tenant_safe: create_stealth_trade_bulk takes many account ids and
-    # checks none of them against the caller's pool. Scoping it needs a
-    # per-row check inside the service, not a flag here.
-    admin: User = Depends(require_permission("trades.create")),
+    admin: User = Depends(require_permission("trades.create", tenant_safe=True)),
     db: AsyncSession = Depends(get_db),
 ):
     return await trade_service.create_stealth_trade_bulk(
-        body=body, admin_id=admin.id,
+        scope_admin=admin, body=body, admin_id=admin.id,
         ip_address=request.client.host if request.client else None, db=db,
     )

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.config import get_settings
@@ -117,6 +117,17 @@ async def get_current_admin(
         admin_id = payload.get("admin_id")
         if admin_id is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        # A session belongs to the admin panel it was opened on (a tenant's
+        # admin.<domain> or the platform's). Tokens minted before this claim
+        # existed carry none and are accepted until they expire.
+        panel = payload.get("panel")
+        if panel:
+            from packages.common.src.tenant_hosts import normalise_host
+            here = normalise_host(
+                (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(",")[0]
+            )
+            if here and here != panel:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
     except jwt.PyJWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
 
@@ -219,6 +230,24 @@ def require_permission(permission: str, *, tenant_safe: bool = False):
     return _check
 
 
+def require_platform_permission(permission: str):
+    """`require_permission`, refused outright to a white-label sub_admin.
+
+    For sections whose tables have no tenant column (banks, deposit wallets,
+    config, instruments, account types, banners, bonus, IB/MLM, copy masters):
+    a grant there would show a tenant the parent's and every other tenant's
+    data, and let them edit settings the parent's own clients run on.
+    """
+    async def _dep(admin: User = Depends(require_permission(permission))) -> User:
+        if admin.role == "sub_admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This section belongs to the platform, not to a white-label sub-admin.",
+            )
+        return admin
+    return _dep
+
+
 def scope_filter(admin: User):
     """SQLAlchemy criterion restricting a `users` query to the caller's pool.
 
@@ -251,7 +280,12 @@ def scope_filter(admin: User):
     """
     if admin.role == "sub_admin":
         return User.assigned_admin_id == admin.id
-    return User.assigned_admin_id.is_(None)
+    # Tenant operators also carry a NULL assigned_admin_id; they are managed
+    # under Sub-admins, not counted as the platform's own clients.
+    return and_(
+        User.assigned_admin_id.is_(None),
+        or_(User.role.is_(None), User.role != "sub_admin"),
+    )
 
 
 def scope_user_ids(admin: User | None):
@@ -277,7 +311,10 @@ def scope_user_ids(admin: User | None):
         return None
     if admin.role == "sub_admin":
         return select(User.id).where(User.assigned_admin_id == admin.id).scalar_subquery()
-    return select(User.id).where(User.assigned_admin_id.is_(None)).scalar_subquery()
+    return select(User.id).where(
+        User.assigned_admin_id.is_(None),
+        or_(User.role.is_(None), User.role != "sub_admin"),
+    ).scalar_subquery()
 
 
 async def assert_row_in_scope(

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_platform_permission
 from packages.common.src.models import User
 from packages.common.src.admin_schemas import BulkChargeUpdate, BulkSpreadUpdate, BulkSwapUpdate
 from services import config_service
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/config", tags=["Configuration"])
 
 @router.get("/instruments")
 async def list_config_instruments(
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
     search: str | None = Query(None),
     segment: str | None = Query(None),
@@ -30,7 +30,7 @@ async def update_instrument_config(
     instrument_id: uuid.UUID,
     body: dict,
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     """Save charge, spread, swap, price impact (instrument_configs + engine sync)."""
@@ -42,7 +42,7 @@ async def update_instrument_config(
 
 @router.get("/charges")
 async def list_charges(
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.list_charges(db=db)
@@ -52,7 +52,7 @@ async def list_charges(
 async def update_charges(
     body: BulkChargeUpdate,
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.update_charges(
@@ -63,7 +63,7 @@ async def update_charges(
 
 @router.get("/spreads")
 async def list_spreads(
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.list_spreads(db=db)
@@ -73,7 +73,7 @@ async def list_spreads(
 async def update_spreads(
     body: BulkSpreadUpdate,
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.update_spreads(
@@ -84,7 +84,7 @@ async def update_spreads(
 
 @router.get("/swaps")
 async def list_swaps(
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.list_swaps(db=db)
@@ -94,7 +94,7 @@ async def list_swaps(
 async def update_swaps(
     body: BulkSwapUpdate,
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await config_service.update_swaps(

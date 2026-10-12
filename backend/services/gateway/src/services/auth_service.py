@@ -355,6 +355,16 @@ async def _consume_referral(db: AsyncSession, user_id: UUID, referral_code: str)
     )
     ib_profile = ib_q.scalar_one_or_none()
     if ib_profile:
+        # Never across brokers: a referral pays commission up the IB tree, so a
+        # link between two pools would pay one broker's IB for another's client.
+        rows = (await db.execute(
+            select(User.id, User.assigned_admin_id, User.role)
+            .where(User.id.in_([ib_profile.user_id, user_id]))
+        )).all()
+        # A tenant's sub-admin acting as IB owns the pool they recruit into.
+        pools = {uid: (uid if role == "sub_admin" else owner) for uid, owner, role in rows}
+        if pools.get(ib_profile.user_id) != pools.get(user_id):
+            return
         db.add(Referral(referrer_id=ib_profile.user_id, referred_id=user_id, ib_profile_id=ib_profile.id))
 
 

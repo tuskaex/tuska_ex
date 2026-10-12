@@ -57,12 +57,25 @@ async def _calculate_live_return(account_id: UUID) -> dict:
     return {}
 
 
+def _in_callers_pool(user_id: UUID):
+    """Masters a caller may see and copy: those in the caller's own pool.
+
+    A white-label broker's clients copy that broker's masters only, and the
+    platform's clients the platform's. NULL = the platform pool, hence
+    IS NOT DISTINCT FROM rather than '='.
+    """
+    caller_pool = select(User.assigned_admin_id).where(User.id == user_id).scalar_subquery()
+    peers = select(User.id).where(User.assigned_admin_id.is_not_distinct_from(caller_pool))
+    return MasterAccount.user_id.in_(peers)
+
+
 async def list_leaderboard(
     sort_by: str, page: int, per_page: int, user_id: UUID, db: AsyncSession,
 ) -> dict:
     count_result = await db.execute(
         select(func.count()).select_from(MasterAccount).where(
             MasterAccount.status == "approved",
+            _in_callers_pool(user_id),
             or_(
                 MasterAccount.master_type == "signal_provider",
                 MasterAccount.master_type.is_(None),
@@ -77,6 +90,7 @@ async def list_leaderboard(
         .join(User, MasterAccount.user_id == User.id)
         .where(
             MasterAccount.status == "approved",
+            _in_callers_pool(user_id),
             or_(
                 MasterAccount.master_type == "signal_provider",
                 MasterAccount.master_type.is_(None),
@@ -140,7 +154,10 @@ async def get_provider_detail(
     result = await db.execute(
         select(MasterAccount, User.first_name, User.last_name)
         .join(User, MasterAccount.user_id == User.id)
-        .where(MasterAccount.id == provider_id, MasterAccount.status == "approved")
+        .where(
+            MasterAccount.id == provider_id, MasterAccount.status == "approved",
+            _in_callers_pool(user_id),
+        )
     )
     row = result.one_or_none()
     if not row:
@@ -320,7 +337,8 @@ async def start_copy(
     """
     master_result = await db.execute(
         select(MasterAccount).where(
-            MasterAccount.id == master_id, MasterAccount.status == "approved"
+            MasterAccount.id == master_id, MasterAccount.status == "approved",
+            _in_callers_pool(user_id),
         )
     )
     master = master_result.scalar_one_or_none()
@@ -1495,7 +1513,9 @@ async def follower_earnings(user_id: UUID, db: AsyncSession) -> dict:
     }
 
 
-async def list_managed_accounts(page: int, per_page: int, db: AsyncSession) -> dict:
+async def list_managed_accounts(
+    page: int, per_page: int, db: AsyncSession, user_id: UUID | None = None,
+) -> dict:
     # /pamm Browse shows PAMM pools only. Legacy "MAMM" master type has
     # been retired — MAM Trading now lives under /social (signal_provider
     # master_type) with its own leaderboard.
@@ -1503,6 +1523,7 @@ async def list_managed_accounts(page: int, per_page: int, db: AsyncSession) -> d
         select(func.count()).select_from(MasterAccount).where(
             MasterAccount.status == "approved",
             MasterAccount.master_type == "pamm",
+            _in_callers_pool(user_id),
         )
     )
     total = count_result.scalar()
@@ -1513,6 +1534,7 @@ async def list_managed_accounts(page: int, per_page: int, db: AsyncSession) -> d
         .where(
             MasterAccount.status == "approved",
             MasterAccount.master_type == "pamm",
+            _in_callers_pool(user_id),
         )
         .order_by(MasterAccount.total_return_pct.desc())
         .offset((page - 1) * per_page).limit(per_page)
@@ -1580,6 +1602,7 @@ async def invest_managed_account(
             MasterAccount.id == master_id,
             MasterAccount.status == "approved",
             MasterAccount.master_type.in_(["mamm", "pamm"]),
+            _in_callers_pool(user_id),
         )
     )
     master = master_result.scalar_one_or_none()
@@ -1831,12 +1854,15 @@ async def get_my_followers(user_id: UUID, db: AsyncSession) -> dict:
     }
 
 
-async def get_provider_followers(provider_id: UUID, db: AsyncSession) -> dict:
+async def get_provider_followers(
+    provider_id: UUID, db: AsyncSession, user_id: UUID | None = None,
+) -> dict:
     """Public view of a provider's followers (limited info for privacy)."""
     master_result = await db.execute(
         select(MasterAccount).where(
             MasterAccount.id == provider_id,
             MasterAccount.status.in_(["approved", "active"]),
+            _in_callers_pool(user_id),
         )
     )
     master = master_result.scalar_one_or_none()

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_platform_permission
 from packages.common.src.models import User
 from services import instruments_admin_service
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/instruments", tags=["Instruments"])
 
 @router.get("")
 async def list_instruments(
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
     search: str | None = Query(None),
     segment: str | None = Query(None),
@@ -30,7 +30,7 @@ async def list_instruments(
 @router.get("/{instrument_id}")
 async def get_instrument(
     instrument_id: uuid.UUID,
-    admin: User = Depends(require_permission("config.view")),
+    admin: User = Depends(require_platform_permission("config.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await instruments_admin_service.get_instrument(instrument_id=instrument_id, db=db)
@@ -41,7 +41,7 @@ async def put_instrument_config(
     instrument_id: uuid.UUID,
     body: dict[str, Any],
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await instruments_admin_service.put_instrument_config(
@@ -54,7 +54,7 @@ async def put_instrument_config(
 async def create_instrument(
     body: dict[str, Any],
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await instruments_admin_service.create_instrument(
@@ -67,7 +67,7 @@ async def create_instrument(
 async def deactivate_instrument(
     instrument_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await instruments_admin_service.deactivate_instrument(
@@ -80,7 +80,7 @@ async def deactivate_instrument(
 async def bulk_update_configs(
     body: dict[str, Any],
     request: Request,
-    admin: User = Depends(require_permission("config.update")),
+    admin: User = Depends(require_platform_permission("config.update")),
     db: AsyncSession = Depends(get_db),
 ):
     return await instruments_admin_service.bulk_update_configs(

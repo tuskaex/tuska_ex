@@ -1,15 +1,35 @@
 """Admin Analytics Service — dashboard stats, exposure, profitable users."""
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from dependencies import scope_user_ids
 from packages.common.src.models import (
     User, Position, Transaction, Deposit, Withdrawal,
     Instrument, PositionStatus, OrderSide, TradingAccount,
     TradeHistory, MasterAccount, IBProfile, IBCommission,
     InvestorAllocation, CopyTrade, UserBonus,
 )
+
+
+def _scope(admin):
+    """(user-id subquery, trading-account-id subquery) for the caller's pool.
+
+    Position and TradeHistory key on account_id, so the pool filter hops
+    through trading_accounts.
+    """
+    users = scope_user_ids(admin)
+    accounts = select(TradingAccount.id).where(TradingAccount.user_id.in_(users))
+    return users, accounts
+
+
+def _txn_in_scope(admin, users):
+    """Transactions in the caller's pool. Platform-level rows (no user, e.g.
+    some admin_commission entries) belong to the platform, never a tenant."""
+    if admin is not None and admin.role == "sub_admin":
+        return Transaction.user_id.in_(users)
+    return or_(Transaction.user_id.in_(users), Transaction.user_id.is_(None))
 
 
 def _start_of_today():
@@ -27,9 +47,9 @@ def _start_of_month():
     return today.replace(day=1)
 
 
-async def _revenue_stats(db: AsyncSession, since=None):
-    commission_filter = [Position.commission != 0]
-    swap_filter = [Position.swap != 0]
+async def _revenue_stats(db: AsyncSession, accounts, since=None):
+    commission_filter = [Position.commission != 0, Position.account_id.in_(accounts)]
+    swap_filter = [Position.swap != 0, Position.account_id.in_(accounts)]
     pnl_filter = []
 
     if since:
@@ -47,12 +67,11 @@ async def _revenue_stats(db: AsyncSession, since=None):
     )
     total_swap = abs(float(swap_q.scalar() or 0))
 
-    pnl_q_filters = []
+    pnl_q_filters = [TradeHistory.account_id.in_(accounts)]
     if since:
         pnl_q_filters.append(TradeHistory.closed_at >= since)
     pnl_q = await db.execute(
-        select(func.coalesce(func.sum(TradeHistory.profit), 0)).where(*pnl_q_filters) if pnl_q_filters
-        else select(func.coalesce(func.sum(TradeHistory.profit), 0))
+        select(func.coalesce(func.sum(TradeHistory.profit), 0)).where(*pnl_q_filters)
     )
     user_pnl = float(pnl_q.scalar() or 0)
 
@@ -65,36 +84,45 @@ async def _revenue_stats(db: AsyncSession, since=None):
     }
 
 
-async def analytics_dashboard(db: AsyncSession) -> dict:
-    today = await _revenue_stats(db, _start_of_today())
-    week = await _revenue_stats(db, _start_of_week())
-    month = await _revenue_stats(db, _start_of_month())
-    all_time = await _revenue_stats(db)
+async def analytics_dashboard(db: AsyncSession, admin) -> dict:
+    users, accounts = _scope(admin)
+    today = await _revenue_stats(db, accounts, _start_of_today())
+    week = await _revenue_stats(db, accounts, _start_of_week())
+    month = await _revenue_stats(db, accounts, _start_of_month())
+    all_time = await _revenue_stats(db, accounts)
 
     dep_q = await db.execute(
         select(func.coalesce(func.sum(Deposit.amount), 0)).where(
-            Deposit.status.in_(["approved", "auto_approved"])
+            Deposit.status.in_(["approved", "auto_approved"]),
+            Deposit.user_id.in_(users),
         )
     )
     total_deposits = float(dep_q.scalar() or 0)
 
     wd_q = await db.execute(
         select(func.coalesce(func.sum(Withdrawal.amount), 0)).where(
-            Withdrawal.status.in_(["approved", "completed"])
+            Withdrawal.status.in_(["approved", "completed"]),
+            Withdrawal.user_id.in_(users),
         )
     )
     total_withdrawals = float(wd_q.scalar() or 0)
 
     open_pos_q = await db.execute(
-        select(func.count(Position.id)).where(Position.status == PositionStatus.OPEN.value)
+        select(func.count(Position.id)).where(
+            Position.status == PositionStatus.OPEN.value,
+            Position.account_id.in_(accounts),
+        )
     )
 
-    closed_trades_q = await db.execute(select(func.count(TradeHistory.id)))
+    closed_trades_q = await db.execute(
+        select(func.count(TradeHistory.id)).where(TradeHistory.account_id.in_(accounts))
+    )
 
     # Admin commission earned from all sources (PAMM performance fee, copy-trade, etc.)
     admin_comm_all_q = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
             Transaction.type == "admin_commission",
+            _txn_in_scope(admin, users),
         )
     )
     total_admin_commission = float(admin_comm_all_q.scalar() or 0)
@@ -103,6 +131,7 @@ async def analytics_dashboard(db: AsyncSession) -> dict:
     pamm_admin_q = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
             Transaction.type == "admin_commission",
+            _txn_in_scope(admin, users),
             Transaction.description.ilike("%pamm%") | Transaction.description.ilike("%performance%") | Transaction.description.ilike("%management%"),
         )
     )
@@ -112,40 +141,55 @@ async def analytics_dashboard(db: AsyncSession) -> dict:
     copy_rev_q = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
             Transaction.type == "admin_commission",
+            _txn_in_scope(admin, users),
             Transaction.description.ilike("%copy%"),
         )
     )
     copy_trade_admin_revenue = float(copy_rev_q.scalar() or 0)
 
     master_count_q = await db.execute(
-        select(func.count(MasterAccount.id)).where(MasterAccount.status.in_(["approved", "active"]))
+        select(func.count(MasterAccount.id)).where(
+            MasterAccount.status.in_(["approved", "active"]),
+            MasterAccount.user_id.in_(users),
+        )
     )
 
     ib_count_q = await db.execute(
-        select(func.count(IBProfile.id)).where(IBProfile.is_active == True)
+        select(func.count(IBProfile.id)).where(IBProfile.is_active == True, IBProfile.user_id.in_(users))
     )
     total_ibs = ib_count_q.scalar() or 0
 
     sub_broker_q = await db.execute(
-        select(func.count(User.id)).where(User.role == "sub_broker", User.status == "active")
+        select(func.count(User.id)).where(
+            User.role == "sub_broker", User.status == "active", User.id.in_(users),
+        )
     )
     total_sub_brokers = sub_broker_q.scalar() or 0
 
     ib_commission_q = await db.execute(
-        select(func.coalesce(func.sum(IBCommission.amount), 0))
+        select(func.coalesce(func.sum(IBCommission.amount), 0)).where(
+            IBCommission.source_user_id.in_(users)
+        )
     )
     total_ib_commission = float(ib_commission_q.scalar() or 0)
 
     ib_pending_q = await db.execute(
-        select(func.coalesce(func.sum(IBCommission.amount), 0)).where(IBCommission.status == "pending")
+        select(func.coalesce(func.sum(IBCommission.amount), 0)).where(
+            IBCommission.status == "pending", IBCommission.source_user_id.in_(users),
+        )
     )
     ib_pending_commission = float(ib_pending_q.scalar() or 0)
 
-    total_copy_trades_q = await db.execute(select(func.count(CopyTrade.id)))
+    allocations = select(InvestorAllocation.id).where(InvestorAllocation.investor_user_id.in_(users))
+    total_copy_trades_q = await db.execute(
+        select(func.count(CopyTrade.id)).where(CopyTrade.investor_allocation_id.in_(allocations))
+    )
     total_copy_trades = total_copy_trades_q.scalar() or 0
 
     active_copies_q = await db.execute(
-        select(func.count(CopyTrade.id)).where(CopyTrade.status == "open")
+        select(func.count(CopyTrade.id)).where(
+            CopyTrade.status == "open", CopyTrade.investor_allocation_id.in_(allocations),
+        )
     )
     active_copies = active_copies_q.scalar() or 0
 
@@ -153,29 +197,36 @@ async def analytics_dashboard(db: AsyncSession) -> dict:
     copy_perf_fee_q = await db.execute(
         select(func.coalesce(func.sum(Transaction.amount), 0)).where(
             Transaction.type.in_(["ib_commission", "performance_fee", "master_commission"]),
+            _txn_in_scope(admin, users),
         )
     )
     master_earnings_total = float(copy_perf_fee_q.scalar() or 0)
 
     total_aum_q = await db.execute(
         select(func.coalesce(func.sum(InvestorAllocation.allocation_amount), 0)).where(
-            InvestorAllocation.status == "active"
+            InvestorAllocation.status == "active",
+            InvestorAllocation.investor_user_id.in_(users),
         )
     )
     total_aum = float(total_aum_q.scalar() or 0)
 
     total_followers_q = await db.execute(
-        select(func.count(InvestorAllocation.id)).where(InvestorAllocation.status == "active")
+        select(func.count(InvestorAllocation.id)).where(
+            InvestorAllocation.status == "active",
+            InvestorAllocation.investor_user_id.in_(users),
+        )
     )
     total_followers = total_followers_q.scalar() or 0
 
     bonus_given_q = await db.execute(
-        select(func.coalesce(func.sum(UserBonus.amount), 0))
+        select(func.coalesce(func.sum(UserBonus.amount), 0)).where(UserBonus.user_id.in_(users))
     )
     total_bonus_given = float(bonus_given_q.scalar() or 0)
 
     active_bonus_q = await db.execute(
-        select(func.count(UserBonus.id)).where(UserBonus.status == "active")
+        select(func.count(UserBonus.id)).where(
+            UserBonus.status == "active", UserBonus.user_id.in_(users),
+        )
     )
     active_bonuses = active_bonus_q.scalar() or 0
 
@@ -207,7 +258,8 @@ async def analytics_dashboard(db: AsyncSession) -> dict:
     }
 
 
-async def get_exposure(db: AsyncSession) -> dict:
+async def get_exposure(db: AsyncSession, admin) -> dict:
+    _, accounts = _scope(admin)
     result = await db.execute(
         select(
             Position.instrument_id,
@@ -224,7 +276,7 @@ async def get_exposure(db: AsyncSession) -> dict:
                 case((Position.side == OrderSide.SELL.value, 1), else_=0)
             ).label("sell_count"),
         )
-        .where(Position.status == PositionStatus.OPEN.value)
+        .where(Position.status == PositionStatus.OPEN.value, Position.account_id.in_(accounts))
         .group_by(Position.instrument_id)
     )
     rows = result.all()
@@ -252,6 +304,7 @@ async def get_exposure(db: AsyncSession) -> dict:
             func.count(TradeHistory.id).label("trades_count"),
             func.sum(case((TradeHistory.profit > 0, 1), else_=0)).label("wins"),
         )
+        .where(TradeHistory.account_id.in_(accounts))
         .group_by(TradeHistory.account_id)
         .order_by(func.sum(TradeHistory.profit).desc())
         .limit(10)
@@ -289,7 +342,7 @@ async def get_exposure(db: AsyncSession) -> dict:
     }
 
 
-async def platform_pnl_detail(db: AsyncSession) -> dict:
+async def platform_pnl_detail(db: AsyncSession, admin) -> dict:
     """Comprehensive Platform P&L breakdown for the
     /admin/analytics/platform-pnl page. Surfaces:
 
@@ -313,11 +366,12 @@ async def platform_pnl_detail(db: AsyncSession) -> dict:
     month = _start_of_month()
     thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
 
+    users, accounts = _scope(admin)
     periods = {
-        "today": await _revenue_stats(db, since=today),
-        "this_week": await _revenue_stats(db, since=week),
-        "this_month": await _revenue_stats(db, since=month),
-        "all_time": await _revenue_stats(db),
+        "today": await _revenue_stats(db, accounts, since=today),
+        "this_week": await _revenue_stats(db, accounts, since=week),
+        "this_month": await _revenue_stats(db, accounts, since=month),
+        "all_time": await _revenue_stats(db, accounts),
     }
 
     # Helper: build a "user impact" list. Both lists are derived from
@@ -331,7 +385,7 @@ async def platform_pnl_detail(db: AsyncSession) -> dict:
             func.count(TradeHistory.id).label("trades_count"),
         )
         .join(TradingAccount, TradeHistory.account_id == TradingAccount.id)
-        .where(TradingAccount.is_demo == False)
+        .where(TradingAccount.is_demo == False, TradingAccount.user_id.in_(users))
         .group_by(TradingAccount.user_id)
     )
     user_rows = user_agg_q.all()
@@ -394,6 +448,7 @@ async def platform_pnl_detail(db: AsyncSession) -> dict:
         .join(TradingAccount, TradeHistory.account_id == TradingAccount.id)
         .where(
             TradingAccount.is_demo == False,
+            TradingAccount.user_id.in_(users),
             TradeHistory.closed_at >= thirty_days_ago,
         )
         .order_by(func.abs(TradeHistory.profit).desc())
@@ -446,6 +501,7 @@ async def platform_pnl_detail(db: AsyncSession) -> dict:
 
 async def list_user_pnl_breakdown(
     db: AsyncSession,
+    admin,
     page: int = 1,
     per_page: int = 50,
     search: str | None = None,
@@ -473,7 +529,7 @@ async def list_user_pnl_breakdown(
             func.max(TradeHistory.closed_at).label("last_closed_at"),
         )
         .join(TradingAccount, TradeHistory.account_id == TradingAccount.id)
-        .where(TradingAccount.is_demo == False)
+        .where(TradingAccount.is_demo == False, TradingAccount.user_id.in_(scope_user_ids(admin)))
         .group_by(TradingAccount.user_id)
     )
 

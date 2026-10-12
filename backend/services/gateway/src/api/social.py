@@ -220,7 +220,7 @@ async def list_managed_accounts(
     db: AsyncSession = Depends(get_db),
 ):
     return await social_service.list_managed_accounts(
-        page=page, per_page=per_page, db=db,
+        page=page, per_page=per_page, db=db, user_id=current_user["user_id"],
     )
 
 

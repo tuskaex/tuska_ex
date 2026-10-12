@@ -51,7 +51,7 @@ const NAV_ITEMS: NavItem[] = [
     perm: 'kyc.view',
   },
   { tenantSafe: true, label: 'Trades', href: '/trades', icon: CandlestickChart, perm: 'trades.view' },
-  { label: 'Book Management', href: '/book', icon: BookOpen, perm: 'trades.view' },
+  { tenantSafe: true, label: 'Book Management', href: '/book', icon: BookOpen, perm: 'trades.view' },
   { tenantSafe: true, label: 'Deposits', href: '/deposits', icon: Wallet, perm: 'deposits.view' },
   { tenantSafe: true, label: 'Transactions', href: '/transactions', icon: Receipt, perm: 'deposits.view' },
   { label: 'Banks', href: '/banks', icon: Landmark, perm: 'banks.view' },
@@ -76,7 +76,9 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'MLM Config', href: '/business/mlm' },
     ],
   },
-  { label: 'Analytics', href: '/analytics', icon: BarChart3, perm: 'analytics.view' },
+  // exposure.view, not analytics.view: that is the Dashboard grant, and sharing
+  // it showed Analytics to every tenant given a Dashboard. Pool-scoped server-side.
+  { tenantSafe: true, label: 'Analytics', href: '/analytics', icon: BarChart3, perm: 'exposure.view' },
   { tenantSafe: true, label: 'Audit logs', href: '/audit-logs', icon: ScrollText, perm: 'audit_logs.view' },
   { label: 'Admin audit logs', href: '/admin-audit-logs', icon: ScrollText, perm: 'audit_logs.view' },
   { label: 'Bonus', href: '/bonus', icon: Gift, perm: 'bonus.view' },
@@ -156,8 +158,12 @@ export default function AdminSidebar({
         const me = await adminApi.get<{ permissions: string[]; employee_role: string; role: string }>('/auth/me');
         setPermissions(me.permissions || []);
         setEmployeeRole(me.employee_role || '');
-        setRole(me.role || '');
-      } catch {}
+        setRole(me.role || 'unknown');
+      } catch {
+        // Unknown caller: show only the pool-scoped sections, never more.
+        setPermissions([]);
+        setRole('unknown');
+      }
     })();
   }, []);
 
@@ -180,14 +186,18 @@ export default function AdminSidebar({
      door the backend answers 403 on is worse than not showing it: they click
      it, get "not available to white-label sub-admins", and reasonably conclude
      the product is broken. */
-  // A sub_admin sees a section when it is pool-scoped (tenantSafe) OR when the
-  // super-admin explicitly granted its permission. The second half is what the
-  // permission form's platform-wide rows now mean: ticked on purpose, showing
-  // platform data. Sections with no `perm` at all stay platform-only — there is
-  // nothing to grant, so there is no way to have opted in.
-  const visibleItems = NAV_ITEMS
-    .filter(item => role !== 'sub_admin' || item.tenantSafe || !!item.perm)
-    .filter(item => hasAccess(item.perm));
+  // A sub_admin sees a section only when it is pool-scoped (tenantSafe) AND
+  // they were granted its permission. Platform-wide sections (banks, config,
+  // bonus, banners, IB, social) are refused to sub-admins by the API whatever
+  // was ticked, so they are never offered here.
+  // Until /auth/me answers, a sub-admin's role is unknown; nothing is shown
+  // rather than the optimistic full menu.
+  const isPlatformStaff = role === 'admin' || role === 'super_admin';
+  const visibleItems = role === ''
+    ? []
+    : NAV_ITEMS
+      .filter(item => isPlatformStaff || item.tenantSafe)
+      .filter(item => hasAccess(item.perm));
 
   return (
     <div className={cn(

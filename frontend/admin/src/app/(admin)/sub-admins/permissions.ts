@@ -51,6 +51,8 @@ export interface PermissionGroup {
 }
 
 const NO_TENANT_COLUMN = 'Platform administration — not per-tenant yet';
+const SHARED_BY_ALL_TENANTS =
+  'Shared by the platform and every tenant — granting it would show and edit their data too';
 
 /** Sidebar order, top to bottom. Sub-admins and White-label omitted on purpose. */
 export const PERMISSION_GROUPS: PermissionGroup[] = [
@@ -122,6 +124,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Platform deposit banks — not per-tenant yet',
     perms: ['banks.view', 'banks.create', 'banks.update'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'account_types',
@@ -129,6 +133,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Platform account tiers — edits apply to every tenant',
     perms: ['config.view'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'config',
@@ -136,6 +142,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Charges, spreads, swaps — edits apply to every tenant',
     perms: ['config.view'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'social',
@@ -143,6 +151,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Platform-wide — shows every tenant',
     perms: ['social.view', 'social.manage'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'business',
@@ -150,13 +160,14 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ IB, MLM and copy programs run platform-wide',
     perms: ['ib.view', 'ib.manage'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'analytics',
     label: 'Analytics',
-    hint: '⚠ Platform totals — Dashboard has their own numbers',
-    perms: ['analytics.view', 'exposure.view'],
-    platformWide: true,
+    hint: 'Revenue, exposure and P&L for their own clients',
+    perms: ['exposure.view'],
   },
   {
     key: 'ledger',
@@ -183,6 +194,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Platform bonus templates — not per-tenant yet',
     perms: ['bonus.view', 'bonus.create', 'bonus.update'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'banners',
@@ -190,6 +203,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     hint: '⚠ Platform banners — not per-tenant yet',
     perms: ['banners.view', 'banners.create', 'banners.update', 'banners.delete'],
     platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
     key: 'support',

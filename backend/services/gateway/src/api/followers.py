@@ -28,5 +28,5 @@ async def get_provider_followers(
 ):
     """Public view of a provider's followers (limited info for privacy)."""
     return await social_service.get_provider_followers(
-        provider_id=provider_id, db=db,
+        provider_id=provider_id, db=db, user_id=current_user["user_id"],
     )

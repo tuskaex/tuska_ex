@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
-from dependencies import require_permission
+from dependencies import require_platform_permission
 from packages.common.src.models import User
 from packages.common.src.admin_schemas import (
     MLMConfigIn, UpdateIBCommissionIn, RejectIBIn, IBCommissionPlanIn,
@@ -19,7 +19,7 @@ async def list_ib_applications(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     status_filter: str = Query(None, alias="status"),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.list_ib_applications(
@@ -31,7 +31,7 @@ async def list_ib_applications(
 async def approve_ib_application(
     app_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.approve_ib_application(
@@ -44,7 +44,7 @@ async def approve_ib_application(
 async def reject_ib_application(
     app_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.reject_ib_application(
@@ -57,7 +57,7 @@ async def reject_ib_application(
 async def list_ib_agents(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.list_ib_agents(page=page, per_page=per_page, db=db)
@@ -68,7 +68,7 @@ async def update_ib_commission(
     agent_id: uuid.UUID,
     body: UpdateIBCommissionIn,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.update_ib_commission(
@@ -82,7 +82,7 @@ async def reject_active_ib(
     agent_id: uuid.UUID,
     body: RejectIBIn,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.reject_active_ib(
@@ -93,7 +93,7 @@ async def reject_active_ib(
 
 @router.get("/ib/commission-plans")
 async def list_commission_plans(
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.list_commission_plans(db=db)
@@ -103,7 +103,7 @@ async def list_commission_plans(
 async def create_commission_plan(
     body: IBCommissionPlanIn,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.create_commission_plan(
@@ -117,7 +117,7 @@ async def update_commission_plan(
     plan_id: uuid.UUID,
     body: IBCommissionPlanIn,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.update_commission_plan(
@@ -130,7 +130,7 @@ async def update_commission_plan(
 async def delete_commission_plan(
     plan_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.delete_commission_plan(
@@ -141,7 +141,7 @@ async def delete_commission_plan(
 
 @router.get("/mlm/config")
 async def get_mlm_config(
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.get_mlm_config(db=db)
@@ -151,7 +151,7 @@ async def get_mlm_config(
 async def update_mlm_config(
     body: MLMConfigIn,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.update_mlm_config(
@@ -174,7 +174,7 @@ class _MoveUserBody(_BM):
 @router.get("/ib/tree")
 async def get_ib_tree(
     ib_id: str | None = Query(None),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     _id = uuid.UUID(ib_id) if ib_id else None
@@ -185,7 +185,7 @@ async def get_ib_tree(
 async def get_unassigned_users(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.get_unassigned_users(page=page, per_page=per_page, db=db)
@@ -196,7 +196,7 @@ async def get_ib_referrals(
     agent_id: uuid.UUID,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.get_ib_referrals(ib_id=agent_id, page=page, per_page=per_page, db=db)
@@ -210,7 +210,7 @@ async def get_ib_commissions(
     # one shot" call. Pages of 20 are still the default for the on-screen table.
     per_page: int = Query(50, ge=1, le=2000),
     status_filter: str | None = Query(None, alias="status"),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.get_ib_commissions(
@@ -224,7 +224,7 @@ async def set_parent_ib(
     agent_id: uuid.UUID,
     body: _SetParentBody,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     parent_id = uuid.UUID(body.parent_ib_id) if body.parent_ib_id else None
@@ -239,7 +239,7 @@ async def move_user_to_ib(
     user_id: uuid.UUID,
     body: _MoveUserBody,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.move_user_to_ib(
@@ -255,7 +255,7 @@ async def list_sub_broker_applications(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
     status_filter: str = Query(None, alias="status"),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.list_sub_broker_applications(
@@ -267,7 +267,7 @@ async def list_sub_broker_applications(
 async def approve_sub_broker(
     app_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.approve_sub_broker(
@@ -280,7 +280,7 @@ async def approve_sub_broker(
 async def reject_sub_broker(
     app_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.reject_sub_broker(
@@ -293,7 +293,7 @@ async def reject_sub_broker(
 async def list_sub_brokers(
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     return await business_service.list_sub_brokers(page=page, per_page=per_page, db=db)
@@ -305,7 +305,7 @@ async def list_sub_brokers(
 async def list_masters(
     page: int = Query(1, ge=1),
     per_page: int = Query(50, ge=1, le=200),
-    admin: User = Depends(require_permission("ib.view")),
+    admin: User = Depends(require_platform_permission("ib.view")),
     db: AsyncSession = Depends(get_db),
 ):
     """List all copy-trade masters (signal_provider, pamm, mamm)."""
@@ -316,7 +316,7 @@ async def list_masters(
 async def delete_master(
     master_id: uuid.UUID,
     request: Request,
-    admin: User = Depends(require_permission("ib.manage")),
+    admin: User = Depends(require_platform_permission("ib.manage")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a copy-trade master. Closes all open copy positions, refunds

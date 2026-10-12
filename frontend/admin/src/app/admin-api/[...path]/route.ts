@@ -37,6 +37,13 @@ async function proxy(req: NextRequest, segments: string[]): Promise<NextResponse
   // Preserve client IP in the audit logs.
   const fwdFor = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip');
   if (fwdFor) headers.set('x-forwarded-for', fwdFor);
+  // The admin API binds a login to the panel it was made on (a tenant's
+  // admin.<domain> vs the platform's). nginx passes the visitor's Host
+  // verbatim; a client-sent X-Forwarded-Host is ignored so it cannot be forged.
+  const host = req.headers.get('host');
+  if (host) headers.set('x-forwarded-host', host);
+  const proto = req.headers.get('x-forwarded-proto');
+  if (proto) headers.set('x-forwarded-proto', proto);
 
   const method = req.method.toUpperCase();
   const hasBody = !['GET', 'HEAD'].includes(method);

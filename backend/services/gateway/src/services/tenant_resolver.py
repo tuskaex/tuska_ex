@@ -21,6 +21,7 @@ where every row sat before this module existed.
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 
 from fastapi import Request
@@ -39,6 +40,30 @@ POOL_OWNER_ROLES = ("sub_admin", "super_admin")
 ORIGIN_PLATFORM = "PLATFORM"
 ORIGIN_REFERRAL = "BRANDED_REFERRAL"
 ORIGIN_DOMAIN = "CUSTOM_DOMAIN"
+
+
+def platform_web_hosts() -> set[str]:
+    """TuskaEx's own browser-facing hostnames (not the API host the mobile app
+    calls), including the speedtrade.tech terminal domain. PLATFORM_WEB_HOSTS,
+    comma-separated, overrides the default."""
+    raw = os.environ.get(
+        "PLATFORM_WEB_HOSTS",
+        "tuskaex.com,www.tuskaex.com,trade.tuskaex.com,speedtrade.tech,www.speedtrade.tech",
+    )
+    return {tenant_hosts.normalise_host(h) for h in raw.split(",") if h.strip()}
+
+
+async def _tenant_has_live_domain(tenant_id: uuid.UUID, db: AsyncSession) -> bool:
+    try:
+        status = (await db.execute(
+            select(User.custom_domain_status).where(
+                User.id == tenant_id, User.custom_domain.isnot(None),
+            )
+        )).scalar_one_or_none()
+    except Exception:
+        logger.warning("tenant domain lookup failed for %s", tenant_id, exc_info=True)
+        return False
+    return status == "READY"
 
 
 def served_host(request: Request | None) -> str:
@@ -143,7 +168,38 @@ async def resolve_signup_owner(
     if owner is not None:
         return _pool_id(owner), ORIGIN_DOMAIN, False
 
+    # An IB's referral link is built on the platform host, so a tenant IB's
+    # recruits would otherwise land in the platform pool. They join the IB's
+    # broker instead; the code still goes on to the IB engine (False).
+    ib_pool = await _pool_of_ib_code(referral_code, db)
+    if ib_pool is not None:
+        return ib_pool, ORIGIN_REFERRAL, False
+
     return None, ORIGIN_PLATFORM, False
+
+
+async def _pool_of_ib_code(code: str | None, db: AsyncSession) -> uuid.UUID | None:
+    c = (code or "").strip()
+    if not c:
+        return None
+    try:
+        from packages.common.src.models import IBProfile
+
+        row = (
+            await db.execute(
+                select(User.id, User.assigned_admin_id, User.role)
+                .join(IBProfile, IBProfile.user_id == User.id)
+                .where(IBProfile.referral_code == c, IBProfile.is_active == True)  # noqa: E712
+                .limit(1)
+            )
+        ).first()
+        if row is None:
+            return None
+        ib_id, ib_pool, ib_role = row
+        return ib_id if ib_role == "sub_admin" else ib_pool
+    except Exception:
+        logger.warning("IB pool lookup failed for %r", c, exc_info=True)
+        return None
 
 
 def _pool_id(owner: User) -> uuid.UUID | None:
@@ -174,18 +230,23 @@ async def assert_login_allowed_on_host(
 ) -> bool:
     """May this user sign in on the host the request arrived on?
 
-    Fails OPEN when the host resolves to no tenant. That covers the platform's
-    own hostnames, local development, and a tenant whose domain is connected but
-    not yet served — none of which should lock anybody out.
-
-    When the host DOES belong to a tenant, only that tenant's own clients (and
-    the tenant themselves) may sign in. Without this, every broker's login page
+    When the host belongs to a tenant, only that tenant's own clients (and the
+    tenant themselves) may sign in. Without this, every broker's login page
     accepts every other broker's users, which both leaks the existence of those
     accounts and puts a client on a site that is not their broker's.
+
+    On TuskaEx's own web hosts, a tenant's client whose broker has a live
+    domain is refused: they belong on that domain, not in TuskaEx's user
+    panel. A client whose broker has no live domain yet has nowhere else to
+    sign in, so they are let through. Other hosts (the mobile app on
+    api.tuskaex.com, local dev) are left to the caller's broker_code check.
     """
     owner = await find_owner_by_host(request, db)
     if owner is None:
-        return True
+        tenant_id = getattr(user, "assigned_admin_id", None)
+        if tenant_id is None or served_host(request) not in platform_web_hosts():
+            return True
+        return not await _tenant_has_live_domain(tenant_id, db)
     if owner.role == "super_admin":
         return True
     if owner.id == user.id:

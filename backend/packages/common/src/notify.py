@@ -35,12 +35,16 @@ async def notify_all_admins(
     notif_type: str = "system",
     action_url: str | None = None,
     commit: bool = True,
+    about_user_id: UUID | None = None,
 ) -> int:
-    """Fan-out a notification to every user with role 'admin' or
-    'super_admin'. Used for back-office events (new deposit, proof
-    upload, KYC submission, master application, etc.) so the admin
-    bell icon lights up in real time without polling Postgres for
-    state.
+    """Fan-out a back-office notification (new deposit, proof upload, KYC
+    submission, master application, etc.) so the admin bell lights up in
+    real time.
+
+    `about_user_id` names the client the event concerns. A white-label
+    tenant's client is that tenant's business: the event goes to their
+    sub-admin only, never to the platform's staff. Platform clients (and
+    events with no client) go to every 'admin' / 'super_admin'.
 
     Returns the number of admin rows that received the notification.
     Safe to call inside another transaction (`commit=False`).
@@ -48,10 +52,18 @@ async def notify_all_admins(
     from .models import User  # local import — avoid circulars at load
     from sqlalchemy import select
 
-    admins_q = await db.execute(
-        select(User.id).where(User.role.in_(["admin", "super_admin"]))
-    )
-    admin_ids = [row[0] for row in admins_q.all()]
+    tenant_id = None
+    if about_user_id is not None:
+        tenant_id = (await db.execute(
+            select(User.assigned_admin_id).where(User.id == about_user_id)
+        )).scalar_one_or_none()
+    if tenant_id is not None:
+        admin_ids = [tenant_id]
+    else:
+        admins_q = await db.execute(
+            select(User.id).where(User.role.in_(["admin", "super_admin"]))
+        )
+        admin_ids = [row[0] for row in admins_q.all()]
     for admin_id in admin_ids:
         await create_notification(
             db,

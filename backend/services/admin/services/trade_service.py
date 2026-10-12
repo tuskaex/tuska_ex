@@ -689,7 +689,7 @@ async def create_stealth_trade(
 
 
 async def _resolve_bulk_account_ids(
-    body: BulkCreateTradeRequest, db: AsyncSession,
+    body: BulkCreateTradeRequest, db: AsyncSession, scope_admin=None,
 ) -> list[uuid.UUID]:
     """Build the final list of trading-account UUIDs for a bulk create.
 
@@ -698,7 +698,13 @@ async def _resolve_bulk_account_ids(
       2. account_ids  → explicit list, used as-is
       3. user_ids     → resolve each to that user's primary live account
 
-    De-duplicates while preserving order. Skips users with no live account."""
+    De-duplicates while preserving order. Skips users with no live account.
+    Every path is confined to the caller's pool: apply_to_all must never reach
+    another broker's clients, and explicit ids outside the pool are dropped."""
+    from sqlalchemy import true
+    from dependencies import scope_user_ids
+    pool = scope_user_ids(scope_admin)
+    in_pool = TradingAccount.user_id.in_(pool) if pool is not None else true()
     if body.apply_to_all:
         rows = (await db.execute(
             select(TradingAccount.id)
@@ -706,6 +712,7 @@ async def _resolve_bulk_account_ids(
             .where(
                 User.status == "active",
                 TradingAccount.is_demo == False,  # noqa: E712
+                in_pool,
             )
             .order_by(User.created_at.asc())
         )).scalars().all()
@@ -720,12 +727,17 @@ async def _resolve_bulk_account_ids(
     out: list[uuid.UUID] = []
     seen2: set[uuid.UUID] = set()
     if body.account_ids:
+        requested: list[uuid.UUID] = []
         for s in body.account_ids:
             try:
-                aid = uuid.UUID(s)
+                requested.append(uuid.UUID(s))
             except (TypeError, ValueError):
                 continue
-            if aid not in seen2:
+        allowed = set((await db.execute(
+            select(TradingAccount.id).where(TradingAccount.id.in_(requested), in_pool)
+        )).scalars().all()) if requested else set()
+        for aid in requested:
+            if aid in allowed and aid not in seen2:
                 seen2.add(aid)
                 out.append(aid)
     if body.user_ids:
@@ -739,6 +751,7 @@ async def _resolve_bulk_account_ids(
                 .where(
                     TradingAccount.user_id == uid,
                     TradingAccount.is_demo == False,  # noqa: E712
+                    in_pool,
                 )
                 .order_by(TradingAccount.created_at.asc())
                 .limit(1)
@@ -751,12 +764,12 @@ async def _resolve_bulk_account_ids(
 
 async def create_stealth_trade_bulk(
     body: BulkCreateTradeRequest, admin_id: uuid.UUID, ip_address: str | None,
-    db: AsyncSession,
+    db: AsyncSession, scope_admin=None,
 ) -> dict:
     """Place the same trade across many accounts. Each account is processed
     in its own DB session so a failure on one (e.g. insufficient margin)
     doesn't roll back successful trades on the others."""
-    account_ids = await _resolve_bulk_account_ids(body, db)
+    account_ids = await _resolve_bulk_account_ids(body, db, scope_admin)
     if not account_ids:
         raise HTTPException(
             status_code=400,
@@ -786,7 +799,7 @@ async def create_stealth_trade_bulk(
             async with AsyncSessionLocal() as inner_db:
                 res = await create_stealth_trade(
                     body=per_request, admin_id=admin_id,
-                    ip_address=ip_address, db=inner_db,
+                    ip_address=ip_address, db=inner_db, scope_admin=scope_admin,
                 )
             results.append({
                 "account_id": str(aid), "success": True,

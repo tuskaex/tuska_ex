@@ -1,4 +1,6 @@
 import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers'
+import { isTenantHost } from '@/lib/tenantHost'
 
 /**
  * Crawler directives. Allow the marketing surface (home + 8 light pages
@@ -7,7 +9,15 @@ import type { MetadataRoute } from 'next'
  * /dashboard or /wallet — those require login anyway, but disallowing
  * them keeps the crawl budget on the marketing pages.
  */
-export default function robots(): MetadataRoute.Robots {
+export const dynamic = 'force-dynamic'
+
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  // A white-label domain is a login page only; nothing on it should be
+  // indexed, and it must not advertise the parent's sitemap.
+  if (isTenantHost((await headers()).get('host'))) {
+    return { rules: [{ userAgent: '*', disallow: ['/'] }] }
+  }
+
   const host = process.env.NEXT_PUBLIC_MARKETING_HOST
     ? `https://${process.env.NEXT_PUBLIC_MARKETING_HOST}`
     : 'https://tuskaex.com'

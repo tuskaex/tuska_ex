@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { isTenantHost } from '@/lib/tenantHost'
 import { PopupProvider } from '@/landing/components/PopupContext'
 import ScrollProgress from '@/landing/components/animations/ScrollProgress'
 import CustomCursor from '@/landing/components/CustomCursor'
@@ -104,6 +105,17 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
       : rawPathname.replace(/\/+$/, '')
   const isLight = LIGHT_MARKETING_PATHS.has(pathname)
 
+  /* A white-label domain never shows TuskaEx's marketing. Middleware stops
+   * full page loads; this stops a client-side <Link> navigation, which never
+   * reaches middleware as a navigation. */
+  const [onTenant, setOnTenant] = useState(false)
+  useEffect(() => {
+    if (isTenantHost()) {
+      setOnTenant(true)
+      window.location.replace('/auth/login')
+    }
+  }, [])
+
   /* '/' is the one path where the two halves of "light" disagree.
    *
    * It is on the LIGHT list because its chrome choice belongs there — it
@@ -187,6 +199,8 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
       html.style.color = prevColor
     }
   }, [darkSurface])
+
+  if (onTenant) return null
 
   return (
     <LangProvider defaultLang="en">

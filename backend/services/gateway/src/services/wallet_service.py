@@ -825,6 +825,7 @@ async def create_local_banking_request(
             message=f"{user_row.email} just submitted a request. Open Deposits to attach a payment link.",
             notif_type="deposit",
             action_url="/deposits",
+            about_user_id=user_id,
         )
         await db.commit()
     except Exception as e:  # pragma: no cover
@@ -840,6 +841,7 @@ async def create_local_banking_request(
                 "Stage: awaiting admin review",
                 "Action: open the admin Deposits queue and use Set Link to share payment details.",
             ],
+            about_user_id=user_id,
         )
     except Exception as e:  # pragma: no cover
         logger.warning("admin email notify (request) failed: %s", e)
@@ -858,11 +860,21 @@ async def _email_admins_local_banking_event(
     subject: str,
     heading: str,
     body_lines: list[str],
+    about_user_id=None,
 ) -> None:
     """Fan out a one-line transactional email to every admin / super-admin.
     Used to flag local-banking stage transitions (new request, proof
     submitted) so the queue gets attention without admins having to poll
-    the deposits page."""
+    the deposits page.
+
+    Skipped for a white-label tenant's client: that deposit belongs to the
+    tenant, who is told through their own admin bell, not the platform."""
+    if about_user_id is not None:
+        owner = (await db.execute(
+            select(User.assigned_admin_id).where(User.id == about_user_id)
+        )).scalar_one_or_none()
+        if owner is not None:
+            return
     try:
         from packages.common.src.smtp_mail import (
             send_email, smtp_configured, fire_and_forget,
@@ -1021,6 +1033,7 @@ async def confirm_local_banking_payment(
             ),
             notif_type="deposit",
             action_url="/deposits",
+            about_user_id=user_id,
         )
         await db.commit()
     except Exception as e:  # pragma: no cover
@@ -1037,6 +1050,7 @@ async def confirm_local_banking_payment(
                 f"Reference: {tid}",
                 "Action: open the admin Deposits queue, click the screenshot icon to verify, then Approve.",
             ],
+            about_user_id=user_id,
         )
     except Exception as e:  # pragma: no cover
         logger.warning("admin email notify (proof) failed: %s", e)
@@ -1559,6 +1573,7 @@ async def create_withdrawal(req, user_id: UUID, db: AsyncSession) -> dict:
             notif_type="withdrawal",
             action_url="/deposits",
             commit=False,
+            about_user_id=user_id,
         )
     except Exception:  # pragma: no cover
         pass
@@ -1692,6 +1707,7 @@ async def create_manual_withdrawal(
             notif_type="withdrawal",
             action_url="/deposits",
             commit=False,
+            about_user_id=user_id,
         )
     except Exception:  # pragma: no cover
         pass

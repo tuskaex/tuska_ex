@@ -1,4 +1,6 @@
 import type { MetadataRoute } from 'next'
+import { headers } from 'next/headers'
+import { isTenantHost } from '@/lib/tenantHost'
 
 /**
  * Sitemap for crawlable marketing routes. Keep in sync with the
@@ -27,7 +29,13 @@ const MARKETING_ROUTES = [
   '/company/why-tuskaex',
 ] as const
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const dynamic = 'force-dynamic'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // A white-label domain serves no marketing site, so it lists nothing — and
+  // must never point crawlers at the parent's pages.
+  if (isTenantHost((await headers()).get('host'))) return []
+
   const host = process.env.NEXT_PUBLIC_MARKETING_HOST
     ? `https://${process.env.NEXT_PUBLIC_MARKETING_HOST}`
     : 'https://tuskaex.com'

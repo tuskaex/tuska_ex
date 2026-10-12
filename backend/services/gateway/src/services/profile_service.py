@@ -396,6 +396,7 @@ async def submit_kyc(
                 notif_type="kyc",
                 action_url="/kyc",
                 commit=False,
+                about_user_id=user.id,
             )
         except Exception:  # pragma: no cover
             pass

@@ -347,7 +347,25 @@ async def login_or_register_with_wallet(
     )
     user, created = await resolve_or_create_user(siwe_address, db)
 
-    if created and referral_code:
+    from .tenant_resolver import (
+        apply_signup_owner, assert_login_allowed_on_host, resolve_signup_owner,
+    )
+
+    code_was_tenant = False
+    if created:
+        # Same pool attribution as email and Google signups: a wallet signup on
+        # a broker's domain (or with their ?ref= code) is that broker's client.
+        try:
+            owner_id, origin, code_was_tenant = await resolve_signup_owner(
+                referral_code=referral_code, request=request, db=db,
+            )
+            apply_signup_owner(user, owner_id, origin)
+            await db.commit()
+        except Exception:
+            logger.warning("wallet signup tenant attribution failed", exc_info=True)
+            await db.rollback()
+
+    if created and referral_code and not code_was_tenant:
         try:
             await _consume_referral(db, user.id, referral_code)
             await db.commit()
@@ -355,6 +373,18 @@ async def login_or_register_with_wallet(
             # Referral attribution is best-effort — never block sign-in.
             logger.debug("wallet signup referral attach failed: %s", e)
             await db.rollback()
+
+    if user.status in ("banned", "blocked"):
+        raise AuthServiceError(f"Account has been {user.status}", 403)
+    from .auth_service import STAFF_ROLES
+    if user.role in STAFF_ROLES:
+        raise AuthServiceError("Staff accounts must sign in via the admin portal.", 403)
+    if not await assert_login_allowed_on_host(user, request, db):
+        raise AuthServiceError(
+            "This account belongs to a different broker. Please sign in on your "
+            "own broker's site.",
+            403,
+        )
 
     return await issue_auth_json_response(
         user, request, db,

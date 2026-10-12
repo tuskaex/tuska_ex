@@ -27,20 +27,25 @@ export type TenantBrand = {
   logoUrl: string | null;
 };
 
-/** TuskaEx's own admin hostname. Anything else is a tenant's. */
-function platformAdminHost(): string {
-  return (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_HOST ?? '').trim().toLowerCase();
+/**
+ * TuskaEx's own admin hostnames. Anything else is a tenant's.
+ *
+ * The production host is built in rather than read only from the build-time
+ * env: a build made without NEXT_PUBLIC_PLATFORM_ADMIN_HOST would treat every
+ * tenant's panel as TuskaEx's. Local hosts count as the platform for dev.
+ */
+const BUILT_IN_PLATFORM_ADMIN_HOSTS = ['admin.tuskaex.com', 'localhost', '127.0.0.1'];
+
+function platformAdminHosts(): string[] {
+  const env = (process.env.NEXT_PUBLIC_PLATFORM_ADMIN_HOST ?? '').trim().toLowerCase();
+  return env ? [env, ...BUILT_IN_PLATFORM_ADMIN_HOSTS] : BUILT_IN_PLATFORM_ADMIN_HOSTS;
 }
 
 export function isTenantAdminHost(host?: string | null): boolean {
-  const here = (host ?? (typeof window !== 'undefined' ? window.location.host : ''))
-    .toLowerCase();
+  const raw = (host ?? (typeof window !== 'undefined' ? window.location.host : '')).toLowerCase();
+  const here = raw.split(':')[0] ?? raw;
   if (!here) return false;
-  const platform = platformAdminHost();
-  // Unconfigured (local dev) → treat everything as TuskaEx, otherwise
-  // localhost would render an unbranded panel.
-  if (!platform) return false;
-  return here !== platform;
+  return !platformAdminHosts().includes(here);
 }
 
 /**
