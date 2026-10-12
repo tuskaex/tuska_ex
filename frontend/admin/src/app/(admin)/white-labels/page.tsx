@@ -32,7 +32,7 @@ export default function WhiteLabelsPage() {
     <div className="p-4 md:p-6 space-y-4 max-w-5xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">White Labels List</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Whitelabel-List</h1>
           <p className="text-xxs text-text-tertiary mt-0.5">
             Every white-labelled sub-broker — logo, name, colours, domain, access and account in one place.
           </p>

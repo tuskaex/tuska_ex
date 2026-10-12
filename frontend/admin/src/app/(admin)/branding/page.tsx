@@ -256,7 +256,7 @@ export default function BrandingPage() {
 
       <div className="bg-bg-secondary border border-accent/40 rounded-md p-3 text-xs text-text-secondary">
         Edit each broker&apos;s logo, colours, domain and access under{' '}
-        <Link href="/white-labels" className="text-accent hover:underline">White Labels List</Link>.
+        <Link href="/white-labels" className="text-accent hover:underline">Whitelabel-List</Link>.
       </div>
 
       {/* This screen writes the CALLER's row. On a super-admin that is the
