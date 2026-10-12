@@ -159,7 +159,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
           onChange={(e) => setTenantId(e.target.value)}
           className={cn(inputCls, needsTenant && 'border-warning')}
         >
-          <option value="">Select a sub-admin…</option>
+          <option value="">Select a sub-broker…</option>
           {tenants.map((t) => (
             <option key={t.id} value={t.id}>
               {t.full_name || t.email} ({t.code})
@@ -169,7 +169,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
         </select>
         {tenants.length === 0 && (
           <p className="text-xxs text-text-tertiary mt-1">
-            No sub-admins yet. Create one first — a domain needs an owner.
+            No sub-brokers yet. Create one first — a domain needs an owner.
           </p>
         )}
         {/* A domain and a brand are two separate pieces of work, and finishing
@@ -188,7 +188,7 @@ function AssignToTenant({ onChanged }: { onChanged: () => void }) {
                 href={`/sub-admins/${selected.id}`}
                 className="text-accent hover:underline"
               >
-                Sub-admins → {selected.full_name || selected.email} → Branding
+                Sub-brokers → {selected.full_name || selected.email} → Branding
               </Link>
               . Assigning a domain does not move a brand.
             </span>

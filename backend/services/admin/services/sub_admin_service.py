@@ -464,15 +464,95 @@ async def delete_sub_admin(
     # 'suspended' rather than 'blocked': both stop the login, but suspended is
     # what delete_employee uses for a retired account and reads as final.
     sub.status = "suspended"
+    # A retired broker must stop owning a domain: otherwise it keeps serving
+    # their brand and attributing new signups to a tenant nobody can manage.
+    old_domain = sub.custom_domain
+    sub.custom_domain = None
+    sub.custom_domain_status = None
+    sub.custom_domain_last_error = None
+    sub.app_subdomain = None
+    sub.admin_subdomain = None
 
     await write_audit_log(
         db, admin.id, "delete_sub_admin", "sub_admin", sub_admin_id,
-        old_values={"email": sub.email, "status": "active"},
+        old_values={"email": sub.email, "status": "active", "custom_domain": old_domain},
         new_values={"status": "suspended", "clients_released": len(released)},
         ip_address=ip_address,
     )
     await db.commit()
+    from packages.common.src import tenant_hosts
+    tenant_hosts.invalidate()
     return {"message": "Sub-admin deactivated", "clients_released": len(released)}
+
+
+# Rows that are the sub-admin's own and go with them. Every other reference to
+# their user id (approved_by, reviewed_by, audit admin_id, ...) is nulled, so
+# the history row survives without the name.
+_OWN_ROW_TABLES = {"employees", "notifications", "charge_configs", "spread_configs", "swap_configs"}
+
+
+async def hard_delete_sub_admin(
+    *, sub_admin_id: uuid.UUID, admin: User, ip_address: str | None, db: AsyncSession,
+) -> dict:
+    """Remove a broker completely: login, domain, branding and the row itself.
+
+    Their clients are real traders with balances, so they are never deleted —
+    they move to the platform pool, exactly as on deactivation.
+    """
+    from sqlalchemy import text
+
+    _only_super_admin(admin)
+    sub = await _load_sub_admin(sub_admin_id, db)
+    email, domain = sub.email, sub.custom_domain
+
+    released = (await db.execute(
+        update(User)
+        .where(User.assigned_admin_id == sub.id)
+        .values(assigned_admin_id=None,
+                last_transferred_at=datetime.now(timezone.utc),
+                last_transferred_by=admin.id)
+        .returning(User.id)
+    )).scalars().all()
+
+    # Every single-column FK to users that would block the delete. Read from
+    # the catalog rather than hard-coded, so a table added later is covered.
+    refs = (await db.execute(text("""
+        SELECT cl.relname AS tbl, att.attname AS col, att.attnotnull AS notnull
+          FROM pg_constraint con
+          JOIN pg_class cl ON cl.oid = con.conrelid
+          JOIN pg_namespace ns ON ns.oid = cl.relnamespace AND ns.nspname = 'public'
+          JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = con.conkey[1]
+         WHERE con.contype = 'f'
+           AND con.confrelid = 'public.users'::regclass
+           AND con.confdeltype IN ('a', 'r')
+           AND array_length(con.conkey, 1) = 1
+    """))).all()
+    for tbl, col, notnull in refs:
+        params = {"id": sub.id}
+        if tbl in _OWN_ROW_TABLES:
+            await db.execute(text(f'DELETE FROM "{tbl}" WHERE "{col}" = :id'), params)
+        elif not notnull:
+            await db.execute(text(f'UPDATE "{tbl}" SET "{col}" = NULL WHERE "{col}" = :id'), params)
+        else:
+            n = (await db.execute(text(f'SELECT count(*) FROM "{tbl}" WHERE "{col}" = :id'), params)).scalar()
+            if n:
+                await db.rollback()
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Cannot delete: this broker still has records in {tbl}. Deactivate instead.",
+                )
+
+    await db.execute(text('DELETE FROM users WHERE id = :id'), {"id": sub.id})
+    await write_audit_log(
+        db, admin.id, "hard_delete_sub_admin", "sub_admin", sub_admin_id,
+        old_values={"email": email, "custom_domain": domain},
+        new_values={"deleted": True, "clients_released": len(released)},
+        ip_address=ip_address,
+    )
+    await db.commit()
+    from packages.common.src import tenant_hosts
+    tenant_hosts.invalidate()
+    return {"message": "Sub-broker deleted", "clients_released": len(released)}
 
 
 # ─── Tenant branding, set by the platform owner ──────────────────────────

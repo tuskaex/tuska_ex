@@ -81,7 +81,7 @@ export default function SubAdminDetailPage() {
         setBranding(null);
       }
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load sub-admin');
+      toast.error(e instanceof Error ? e.message : 'Failed to load sub-broker');
     } finally {
       setLoading(false);
     }
@@ -109,7 +109,7 @@ export default function SubAdminDetailPage() {
       const res = await adminApi.post<{ access_token: string }>(
         `/sub-admins/${id}/impersonate`,
       );
-      toast.success(`Acting as ${sub?.email ?? 'sub-admin'}`);
+      toast.success(`Acting as ${sub?.email ?? 'sub-broker'}`);
       if (typeof window !== 'undefined') {
         // Same handoff as the Employees screen: swap the bearer token, drop the
         // cached admin profile so the shell re-reads /auth/me under the new
@@ -135,7 +135,7 @@ export default function SubAdminDetailPage() {
   if (!sub) {
     return (
       <div className="p-6 text-xs text-text-tertiary">
-        Sub-admin not found.{' '}
+        Sub-broker not found.{' '}
         <Link href="/sub-admins" className="text-accent hover:underline">
           Back to list
         </Link>
@@ -230,7 +230,7 @@ export default function SubAdminDetailPage() {
               whose menu entry worked until they pressed a button. Same groups
               the create form uses, so granting and editing read alike. */}
           <p className="text-xxs text-text-tertiary mb-2">
-            Tick the sections this sub-admin should see. White-label is always
+            Tick the sections this sub-broker should see. White-label is always
             available — every tenant manages their own brand.
           </p>
           <div className="border border-border-primary rounded-md max-h-64 overflow-y-auto p-2 space-y-1">
@@ -371,7 +371,7 @@ export default function SubAdminDetailPage() {
               is indistinguishable from a broken feature. */}
           <Panel title="White-label domain">
             <p className="text-xxs text-text-tertiary mb-2">
-              Points the domain at this sub-admin and marks it live. Moves it off
+              Points the domain at this sub-broker and marks it live. Moves it off
               whoever holds it now, including your own account.
             </p>
             <div className="space-y-2">
@@ -642,7 +642,7 @@ export default function SubAdminDetailPage() {
                       void run(async () => {
                         await adminApi.delete(`/sub-admins/${id}`);
                         router.push('/sub-admins');
-                      }, 'Sub-admin deactivated')
+                      }, 'Sub-broker deactivated')
                     }
                     className="px-3 py-1.5 text-xs rounded-md bg-sell text-white disabled:opacity-50"
                   >
@@ -664,7 +664,7 @@ export default function SubAdminDetailPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-sell/40 text-sell"
               >
                 <Trash2 size={13} />
-                Deactivate sub-admin
+                Deactivate sub-broker
               </button>
             )}
           </Panel>

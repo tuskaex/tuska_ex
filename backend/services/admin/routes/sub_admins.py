@@ -290,6 +290,18 @@ async def delete_sub_admin(
     )
 
 
+@router.delete("/{sub_admin_id}/permanent")
+async def hard_delete_sub_admin(
+    sub_admin_id: uuid.UUID,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.hard_delete_sub_admin(
+        sub_admin_id=sub_admin_id, admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
 @router.get("/{sub_admin_id}/users")
 async def list_assigned_users(
     sub_admin_id: uuid.UUID,

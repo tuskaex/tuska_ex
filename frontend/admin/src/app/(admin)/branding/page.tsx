@@ -210,7 +210,7 @@ export default function BrandingPage() {
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-3xl">
       <div>
-        <h1 className="text-lg font-semibold text-text-primary">Platform brand</h1>
+        <h1 className="text-lg font-semibold text-text-primary">Whitelabel</h1>
         <p className="text-xxs text-text-tertiary mt-0.5">
           TuskaEx&apos;s own logo, link and support details — used on
           tuskaex.com, admin.tuskaex.com and trade.tuskaex.com.
@@ -279,7 +279,7 @@ export default function BrandingPage() {
         <p className="mt-1.5">
           To brand a white-label, open{' '}
           <Link href="/sub-admins" className="text-accent hover:underline">
-            Sub-admins
+            Sub-brokers
           </Link>{' '}
           → the tenant → <span className="text-text-primary">Branding</span>.
           That is the row their domain resolves to.

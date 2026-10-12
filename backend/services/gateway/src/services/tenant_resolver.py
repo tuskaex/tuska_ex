@@ -101,6 +101,7 @@ async def find_owner_by_code(code: str | None, db: AsyncSession) -> User | None:
                 select(User).where(
                     func.upper(User.public_code) == c,
                     User.role.in_(POOL_OWNER_ROLES),
+                    User.status == "active",
                 )
             )
         ).scalar_one_or_none()

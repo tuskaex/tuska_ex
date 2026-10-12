@@ -84,7 +84,7 @@ export default function SubAdminsPage() {
       setTotal(res.total || 0);
       setForbidden(false);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Failed to load sub-admins';
+      const msg = e instanceof Error ? e.message : 'Failed to load sub-brokers';
       // A refusal is not an empty list. Without this the page rendered
       // "No sub-admins yet" plus a create button to anyone who typed the URL,
       // which reads as a broken screen rather than one they may not use.
@@ -145,11 +145,11 @@ export default function SubAdminsPage() {
           );
         }
       }
-      toast.success('Sub-admin created');
+      toast.success('Sub-broker created');
       setShowModal(false);
       void fetchData();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Could not create sub-admin');
+      toast.error(e instanceof Error ? e.message : 'Could not create sub-broker');
     } finally {
       setSubmitting(false);
     }
@@ -160,7 +160,7 @@ export default function SubAdminsPage() {
   if (forbidden) {
     return (
       <div className="p-4 md:p-6">
-        <h1 className="text-lg font-semibold text-text-primary">Sub-admins</h1>
+        <h1 className="text-lg font-semibold text-text-primary">Sub-brokers</h1>
         <div className="mt-4 bg-bg-secondary border border-border-primary rounded-md p-6 text-xs text-text-secondary max-w-lg">
           <p className="text-text-primary font-medium mb-1">
             This screen is for super admins.
@@ -178,7 +178,7 @@ export default function SubAdminsPage() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-lg font-semibold text-text-primary">Sub-admins</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Sub-brokers</h1>
           <p className="text-xxs text-text-tertiary mt-0.5">
             White-label tenants. Each one owns a pool of clients and sees only that pool.
           </p>
@@ -198,7 +198,7 @@ export default function SubAdminsPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white hover:opacity-90 transition-fast"
           >
             <Plus size={13} />
-            New sub-admin
+            New sub-broker
           </button>
         </div>
       </div>
@@ -224,7 +224,7 @@ export default function SubAdminsPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="bg-bg-secondary border border-border-primary rounded-md text-center text-xs text-text-tertiary py-12">
-          No sub-admins yet.
+          No sub-brokers yet.
         </div>
       ) : (
         <div className="bg-bg-secondary border border-border-primary rounded-md overflow-x-auto">
@@ -317,7 +317,7 @@ export default function SubAdminsPage() {
           <div className="bg-bg-secondary border border-border-primary rounded-md shadow-modal w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="px-4 py-3 border-b border-border-primary flex items-center gap-2">
               <ShieldCheck size={15} className="text-accent" />
-              <h2 className="text-sm font-semibold text-text-primary">New sub-admin</h2>
+              <h2 className="text-sm font-semibold text-text-primary">New sub-broker</h2>
             </div>
 
             <div className="p-4 space-y-3">
@@ -434,7 +434,7 @@ export default function SubAdminsPage() {
               <div>
                 <div className="flex items-start justify-between gap-3 mb-1.5">
                   <span className="block text-xxs text-text-tertiary">
-                    Permissions — a sub-admin gets exactly what is ticked here.
+                    Permissions — a sub-broker gets exactly what is ticked here.
                     Pre-ticked is what a broker needs to run their own clients;
                     platform-wide sections and irreversible actions are left off.
                   </span>

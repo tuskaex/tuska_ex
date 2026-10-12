@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import {
-  MoreVertical, LogIn, Eye, KeyRound, Ban, CheckCircle2, Archive, Loader2,
+  MoreVertical, LogIn, Eye, KeyRound, Ban, CheckCircle2, Archive, Loader2, Trash2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { SubAdmin } from '@/types';
@@ -22,6 +22,7 @@ export default function RowMenu({
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirmRetire, setConfirmRetire] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -66,10 +67,10 @@ export default function RowMenu({
       // neither contains the other.
       if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
       setOpen(false);
-      setConfirmRetire(false);
+      setConfirmRetire(false); setConfirmDelete(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setOpen(false); setConfirmRetire(false); }
+      if (e.key === 'Escape') { setOpen(false); setConfirmRetire(false); setConfirmDelete(false); }
     };
     // `true` — catch scrolls on the table wrapper, not just the window, or the
     // menu detaches from its row when the table scrolls under it.
@@ -91,7 +92,7 @@ export default function RowMenu({
       await fn();
       toast.success(ok);
       setOpen(false);
-      setConfirmRetire(false);
+      setConfirmRetire(false); setConfirmDelete(false);
       onChanged();
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Action failed');
@@ -152,7 +153,7 @@ export default function RowMenu({
           className={`fixed z-50 w-52 rounded-md border border-border-primary bg-bg-secondary shadow-modal py-1 ${pos ? '' : 'invisible'}`}
         >
           <button type="button" className={item} onClick={() => void impersonate()}>
-            <LogIn size={13} /> Sign in as this tenant
+            <LogIn size={13} /> Sign in as this sub-broker
           </button>
           <button
             type="button"
@@ -203,7 +204,7 @@ export default function RowMenu({
                   onClick={() =>
                     void run(
                       () => adminApi.delete(`/sub-admins/${sub.id}`),
-                      'Tenant deactivated',
+                      'Sub-broker deactivated',
                     )
                   }
                 >
@@ -225,6 +226,45 @@ export default function RowMenu({
               onClick={() => setConfirmRetire(true)}
             >
               <Archive size={13} /> Deactivate
+            </button>
+          )}
+
+          {confirmDelete ? (
+            <div className="px-3 py-2 space-y-1.5">
+              <p className="text-xxs text-text-tertiary leading-relaxed">
+                Permanently deletes this sub-broker — login, domain and branding.
+                Their {sub.user_count} client{sub.user_count === 1 ? '' : 's'} move to the
+                platform pool. This cannot be undone.
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  type="button"
+                  className="px-2 py-1 text-xxs rounded bg-sell text-white"
+                  onClick={() =>
+                    void run(
+                      () => adminApi.delete(`/sub-admins/${sub.id}/permanent`),
+                      'Sub-broker deleted',
+                    )
+                  }
+                >
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  className="px-2 py-1 text-xxs rounded border border-border-primary text-text-secondary"
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={`${item} text-sell hover:text-sell`}
+              onClick={() => setConfirmDelete(true)}
+            >
+              <Trash2 size={13} /> Delete permanently
             </button>
           )}
         </div>,
