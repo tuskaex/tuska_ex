@@ -86,7 +86,6 @@ const NAV_ITEMS: NavItem[] = [
   { tenantSafe: true, label: 'Support', href: '/support', icon: HeadphonesIcon, perm: 'tickets.view' },
   { label: 'Employees', href: '/employees', icon: UserCog, perm: '_super_admin' },
   { label: 'Sub-brokers', href: '/sub-admins', icon: ShieldCheck, perm: '_super_admin' },
-  { label: 'Whitelabel-List', href: '/white-labels', icon: Globe, perm: '_super_admin' },
   // No perm: a sub-admin edits its own brand, a super-admin the platform's.
   // NOT tenantSafe any more. A tenant still OWNS a brand — their row carries it
   // and their clients render it — but the platform owner configures it, from
@@ -99,6 +98,7 @@ const NAV_ITEMS: NavItem[] = [
   // their own domains. The label now says whose brand it is; the tenants' live
   // under Sub-admins → [tenant] → Branding.
   { label: 'Whitelabel', href: '/branding', icon: Palette, perm: '_super_admin' },
+  { label: 'Whitelabel-List', href: '/white-labels', icon: Globe, perm: '_super_admin' },
   { label: 'Settings', href: '/settings', icon: Settings, perm: '_super_admin' },
 ];
 
