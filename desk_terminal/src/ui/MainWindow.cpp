@@ -268,14 +268,15 @@ void MainWindow::buildMenuBar() {
 
     // ── Trade ──
     QMenu* trade = bar->addMenu(tr("&Trade"));
-    QAction* order = trade->addAction(tr("&New order…"));
-    // F9 is the order-window key in MT4/MT5; traders coming from either reach
-    // for it before they look at the menu bar. Ctrl+P stays as the shortcut
-    // that used to open the pending-only dialog, so existing muscle memory
-    // still lands somewhere sensible.
-    order->setShortcuts({QKeySequence(Qt::Key_F9),
-                         QKeySequence(QStringLiteral("Ctrl+P"))});
-    connect(order, &QAction::triggered, this, &MainWindow::openOrderWindow);
+    // The SAME action as File > New Order, not a second one.
+    //
+    // There used to be two QActions here, both carrying F9 and Ctrl+P. Qt
+    // treats one key bound to two actions in a window as ambiguous and fires
+    // NEITHER — so from the release that added File > New Order, F9 (the
+    // MT4/MT5 order key every trader reaches for) and Ctrl+P did nothing at
+    // all. Found by pressing F9 against a running terminal. One action shown in
+    // two menus keeps both entries and gives the keys exactly one owner.
+    trade->addAction(fileOrder);
 
     // ── Accounts — rebuilt each time it opens, so a fresh sign-in shows up ──
     m_accountsMenu = bar->addMenu(tr("&Accounts"));
