@@ -970,23 +970,38 @@ void MainWindow::connectServices() {
             []() { Journal::info(QStringLiteral("Session"), tr("access token renewed")); });
     connect(m_api, &ApiClient::sessionRefreshFailed, this,
             [](const QString& msg) { Journal::error(QStringLiteral("Session"), tr("renewal failed: %1").arg(msg)); });
-    // The feed and the API repeat themselves — a dropped socket reports on
-    // every retry, a failing poll every four seconds. Only a CHANGE is a line
-    // worth keeping; a journal that is ninety percent one repeated message
-    // hides the one line that matters.
+    // The feed and the API repeat themselves. A socket that cannot
+    // authenticate cycles Connecting → Authenticating → Disconnected on every
+    // retry, and the blotter polls fail on three endpoints every four seconds
+    // in rotation — so "drop a line equal to the previous one" let all of it
+    // through, and the journal filled at a dozen lines a minute with nothing
+    // a trader could act on. What is worth a line is a CHANGE OF STATE:
+    //   * the feed: the first status of the session, going live, and going
+    //     from live to down — never the retry loop in between;
+    //   * the API: a new message for an endpoint, not the same one again.
     connect(m_stream, &PriceStream::statusChanged, this, [this](const QString& s) {
-        if (s == m_lastJournalFeed) return;
-        m_lastJournalFeed = s;
-        const bool bad = s.contains("disconnect", Qt::CaseInsensitive) || s.contains("retry", Qt::CaseInsensitive);
-        if (bad) Journal::error(QStringLiteral("Network"), s);
-        else     Journal::info(QStringLiteral("Network"), s);
+        const bool live = s.startsWith("Live");
+        if (live) {
+            if (!m_journalFeedLive) Journal::success(QStringLiteral("Network"), s);
+            m_journalFeedLive = true;
+            m_journalFeedReported = true;
+            return;
+        }
+        if (m_journalFeedLive) {
+            Journal::error(QStringLiteral("Network"), tr("price feed lost — reconnecting"));
+            m_journalFeedLive = false;
+            return;
+        }
+        if (!m_journalFeedReported) {
+            Journal::info(QStringLiteral("Network"), s);
+            m_journalFeedReported = true;
+        }
     });
     connect(m_api, &ApiClient::errorOccurred, this,
             [this](const QString& context, const QString& message, int) {
-        const QString line = tr("%1 — %2").arg(context, message);
-        if (line == m_lastJournalError) return;
-        m_lastJournalError = line;
-        Journal::error(QStringLiteral("Network"), line);
+        if (m_journalErrors.value(context) == message) return;
+        m_journalErrors.insert(context, message);
+        Journal::error(QStringLiteral("Network"), tr("%1 — %2").arg(context, message));
     });
 
     // REST responses
@@ -997,7 +1012,7 @@ void MainWindow::connectServices() {
     connect(m_api, &ApiClient::accountReceived, this, [this](const AccountInfo& a) {
         if (!a.valid) return;
         setStatus(QString());   // a good poll clears any stale transient error
-        m_lastJournalError.clear();
+        m_journalErrors.clear();
         m_lastAccount = a;
         updateIdentity();
     });
