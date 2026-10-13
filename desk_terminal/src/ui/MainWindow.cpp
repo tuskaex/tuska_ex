@@ -1777,7 +1777,7 @@ void MainWindow::openStrategyTester() {
     // Refreshed on every open: the instrument table arrives after the window
     // is built, and a tester opened early would otherwise have an empty picker
     // for the rest of the session.
-    m_tester->setSymbols(m_specs);
+    m_tester->setSymbols(m_specs, m_currentSymbol);
     m_tester->show();
     m_tester->raise();
     m_tester->activateWindow();
@@ -1837,7 +1837,9 @@ void MainWindow::openSymbolsBrowser() {
     m_cfg.watchHiddenSymbols = hidden;
     m_cfg.save();
     m_watch->setHiddenSymbols(hidden);
-    fitWatchlistWidth();
+    // No fitWatchlistWidth(): this changes which ROWS show, not the columns,
+    // and refitting here threw away the trader's own splitter position and
+    // widened the panel to half the window.
     setStatus(tr("Market Watch updated"));
 }
 

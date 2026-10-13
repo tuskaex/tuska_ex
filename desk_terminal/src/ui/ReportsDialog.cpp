@@ -113,7 +113,7 @@ ReportsDialog::ReportsDialog(const QVector<HistoryTrade>& history,
         "               gridline-color:%4; }"
         "QHeaderView::section { background:%5; color:%6; border:none;"
         "                       padding:5px 6px; font-weight:700; }")
-        .arg(p.bg, p.text, p.tableBg, p.border, p.headerBg, p.muted));
+        .arg(p.bg, p.text, p.tableBg, p.border, p.panelAlt, p.muted));
 
     auto* root = new QVBoxLayout(this);
     root->setContentsMargins(14, 12, 14, 12);

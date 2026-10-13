@@ -33,8 +33,11 @@ public:
     StrategyTesterDialog(ApiClient* api, QWidget* parent = nullptr);
 
     // The instrument table, for the symbol picker and its digits / contract
-    // size, which the fill model needs.
-    void setSymbols(const QHash<QString, SymbolSpec>& specs);
+    // size, which the fill model needs. `preferred` is picked when the trader
+    // has not chosen one yet — the active chart's instrument, rather than
+    // whatever sorts first alphabetically.
+    void setSymbols(const QHash<QString, SymbolSpec>& specs,
+                    const QString& preferred = QString());
 
 private:
     void runTest();

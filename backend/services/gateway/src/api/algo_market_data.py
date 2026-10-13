@@ -385,55 +385,56 @@ async def algo_prices_ws(websocket: WebSocket) -> None:
     pubsub = redis_client.pubsub()
     await pubsub.subscribe(PriceChannel.PRICE_CHANNEL)
 
-    try:
-        last_ping = asyncio.get_event_loop().time()
-        while True:
-            # Drain whatever the client sends and throw it away.
-            #
-            # This loop used to never read from the socket after the auth
-            # handshake, and that quietly killed every connection at ~60s with
-            # close 1011 "keepalive ping timeout". Nothing was wrong with the
-            # client: incoming frames pile up unread in the ASGI receive queue,
-            # flow control stalls the protocol reader, and uvicorn's own
-            # keepalive PING never gets its PONG back — so uvicorn drops the
-            # connection. The client reconnects, and 60s later it happens
-            # again, which is what a trader sees as "Disconnected — retrying…"
-            # over and over.
-            #
-            # The client's own {"type":"pong"} replies to our 30s heartbeat made
-            # it worse, since those were exactly the frames going unread.
-            #
-            # The account stream in main.py has always drained its socket; this
-            # one simply never did. Nothing here needs the contents — reading is
-            # the whole point.
-            try:
-                await asyncio.wait_for(websocket.receive_text(), timeout=0.01)
-            except asyncio.TimeoutError:
-                pass
-            except WebSocketDisconnect:
-                break
+    # Drain whatever the client sends and throw it away, on its own task.
+    #
+    # The stream used to never read from the socket after the auth handshake,
+    # and that quietly killed every connection at ~60s with close 1011
+    # "keepalive ping timeout": incoming frames (the client's pongs) piled up
+    # unread, flow control stalled the protocol reader, and uvicorn's own PING
+    # never got its PONG back. Nothing here needs the contents — reading is
+    # the whole point.
+    #
+    # It is a separate task rather than a 10ms wait_for() inside the send loop
+    # because that loop also slept 10ms and handled ONE tick per pass. Every
+    # pass cost far more than the gap between ticks, so the backlog grew
+    # without bound: after a few minutes the desk terminal was showing prices
+    # five minutes old while orders filled at the live price.
+    client_gone = asyncio.Event()
 
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
+    async def _drain_client() -> None:
+        try:
+            while True:
+                await websocket.receive_text()
+        except Exception:
+            pass
+        finally:
+            client_gone.set()
+
+    drain_task = asyncio.create_task(_drain_client())
+
+    try:
+        loop = asyncio.get_event_loop()
+        last_ping = loop.time()
+        while not client_gone.is_set():
+            # Returns as soon as a tick is there; the timeout only bounds how
+            # long a quiet market keeps the heartbeat and disconnect waiting.
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
             if message and message.get("type") == "message":
                 try:
                     tick = json.loads(message["data"])
                     tick["type"] = "tick"
                     await websocket.send_json(tick)
                 except (json.JSONDecodeError, TypeError):
-                    continue
+                    pass
 
-            now = asyncio.get_event_loop().time()
+            now = loop.time()
             if now - last_ping >= WS_HEARTBEAT_INTERVAL:
-                try:
-                    await websocket.send_json({"type": "ping"})
-                except Exception:
-                    break
+                await websocket.send_json({"type": "ping"})
                 last_ping = now
-
-            await asyncio.sleep(0.01)
     except Exception as exc:
         logger.debug("algo_prices_ws stream ended: %s", exc)
     finally:
+        drain_task.cancel()
         try:
             await pubsub.unsubscribe(PriceChannel.PRICE_CHANNEL)
             await pubsub.close()

@@ -243,9 +243,11 @@ void StrategyTesterDialog::reloadScripts() {
     if (i >= 0) m_script->setCurrentIndex(i);
 }
 
-void StrategyTesterDialog::setSymbols(const QHash<QString, SymbolSpec>& specs) {
+void StrategyTesterDialog::setSymbols(const QHash<QString, SymbolSpec>& specs,
+                                      const QString& preferred) {
     m_specs = specs;
-    const QString keep = m_symbol->currentText();
+    QString keep = m_symbol->currentText();
+    if (keep.isEmpty() && specs.contains(preferred)) keep = preferred;
     QStringList names = specs.keys();
     std::sort(names.begin(), names.end());
     m_symbol->clear();
