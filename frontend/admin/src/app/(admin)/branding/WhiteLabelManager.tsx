@@ -247,8 +247,8 @@ function EditBroker({
 
   const saveBranding = () =>
     run(async () => {
-      if (brandColor.trim() && !isValidHex(brandColor)) throw new Error('User panel colour must be a hex colour such as #2563EB');
-      if (adminColor.trim() && !isValidHex(adminColor)) throw new Error('Admin panel colour must be a hex colour such as #2563EB');
+      if (brandColor.trim() && !isValidHex(brandColor)) throw new Error('User panel colour must be a hex colour such as #D60101');
+      if (adminColor.trim() && !isValidHex(adminColor)) throw new Error('Admin panel colour must be a hex colour such as #D60101');
       await adminApi.put(`/sub-admins/${tenant.id}/branding`, {
         brand_name: brandName,
         support_email: supportEmail,
@@ -457,7 +457,7 @@ function EditBroker({
                 </div>
               </div>
 
-              <Field label="Brand name (shown instead of TradesX)">
+              <Field label="Brand name (shown instead of TuskaEx)">
                 <input value={brandName} maxLength={80} onChange={(e) => setBrandName(e.target.value)} className={inputCls} />
               </Field>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
