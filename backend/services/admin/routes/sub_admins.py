@@ -53,6 +53,7 @@ async def create_sub_admin(
         first_name=body.first_name, last_name=body.last_name, phone=body.phone,
         permissions=body.permissions,
         brand_name=body.brand_name, brand_color=body.brand_color,
+        admin_color=body.admin_color,
         admin=admin, ip_address=_ip(request), db=db,
     )
 
@@ -204,7 +205,7 @@ async def update_tenant_branding(
     return await sub_admin_service.update_branding(
         sub_admin_id=sub_admin_id, brand_name=body.brand_name,
         support_email=body.support_email, support_whatsapp=body.support_whatsapp,
-        brand_color=body.brand_color,
+        brand_color=body.brand_color, admin_color=body.admin_color,
         admin=admin, ip_address=_ip(request), db=db,
     )
 

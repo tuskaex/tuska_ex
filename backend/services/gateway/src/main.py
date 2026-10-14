@@ -217,8 +217,27 @@ async def _ensure_ohlc_bars_table():
         logger.warning("ohlc_bars table ensure skipped: %s", e)
 
 
+async def _ensure_tenant_brand_columns():
+    """users.brand_color / client_features / admin_color (migrations 0063-0065).
+    Every User query selects them, so they must exist before anything else runs
+    on a host that has not migrated."""
+    from sqlalchemy import text
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("""
+                ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS brand_color VARCHAR(7),
+                    ADD COLUMN IF NOT EXISTS client_features JSONB,
+                    ADD COLUMN IF NOT EXISTS admin_color VARCHAR(7)
+            """))
+            await session.commit()
+    except Exception as e:
+        logger.warning("tenant brand columns ensure skipped: %s", e)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    await _ensure_tenant_brand_columns()
     await _backfill_close_reasons()
     await _ensure_pamm_units_column()
     await _ensure_push_tokens_table()

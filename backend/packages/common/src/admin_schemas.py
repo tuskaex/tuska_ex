@@ -765,6 +765,8 @@ class CreateSubAdminRequest(BaseModel):
     # separately through POST /sub-admins/{id}/branding/logo once the id exists.
     brand_name: Optional[str] = None
     brand_color: Optional[str] = None
+    # Accent of the broker's own admin panel.
+    admin_color: Optional[str] = None
 
 
 class UpdateSubAdminRequest(BaseModel):
@@ -805,6 +807,8 @@ class UpdateBrandingRequest(BaseModel):
     support_whatsapp: Optional[str] = None
     # `#RRGGBB` or `#RGB`; "" clears back to the platform blue.
     brand_color: Optional[str] = None
+    # Admin panel accent; same format and clearing rule.
+    admin_color: Optional[str] = None
 
 
 class ConnectDomainRequest(BaseModel):

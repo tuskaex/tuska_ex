@@ -192,6 +192,7 @@ def to_profile(row: User) -> dict:
         "support_email": row.support_email,
         "support_whatsapp": row.support_whatsapp,
         "brand_color": row.brand_color,
+        "admin_color": row.admin_color,
         "smtp_host": row.smtp_host,
         "smtp_port": row.smtp_port,
         "smtp_user": row.smtp_user,
@@ -313,13 +314,14 @@ def to_public_payload(owner: User | None) -> dict:
     if owner is None:
         return {"brand_name": None, "logo_url": None,
                 "support_email": None, "support_whatsapp": None,
-                "brand_color": None}
+                "brand_color": None, "admin_color": None}
     return {
         "brand_name": owner.brand_name,
         "logo_url": owner.logo_url,
         "support_email": owner.support_email,
         "support_whatsapp": owner.support_whatsapp,
         "brand_color": owner.brand_color,
+        "admin_color": owner.admin_color,
     }
 
 
@@ -370,6 +372,7 @@ async def update_branding(
     *, admin: User, brand_name: str | None, support_email: str | None,
     support_whatsapp: str | None, db: AsyncSession, owner: User | None = None,
     brand_color: str | None = None,
+    admin_color: str | None = None,
 ) -> dict:
     """`admin` is who is asking; `owner` is whose row is written.
 
@@ -385,7 +388,7 @@ async def update_branding(
         target,
         setting=any(
             v is not None and v.strip()
-            for v in (brand_name, support_email, support_whatsapp, brand_color)
+            for v in (brand_name, support_email, support_whatsapp, brand_color, admin_color)
         ),
     )
 
@@ -398,6 +401,8 @@ async def update_branding(
         target.support_whatsapp = support_whatsapp.strip() or None
     if brand_color is not None:
         target.brand_color = normalize_brand_color(brand_color)
+    if admin_color is not None:
+        target.admin_color = normalize_brand_color(admin_color)
 
     await db.commit()
     return to_profile(target)

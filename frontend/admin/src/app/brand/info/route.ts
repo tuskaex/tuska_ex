@@ -10,6 +10,8 @@ export async function GET(): Promise<NextResponse> {
     {
       brand_name: brand?.brand_name ?? null,
       brand_color: brand?.brand_color ?? null,
+      // This panel's accent: the broker's admin colour, else their brand colour.
+      admin_color: brand?.admin_color ?? brand?.brand_color ?? null,
       logo_url: logoUrlFor(brand?.logo_url),
     },
     { headers: { 'Cache-Control': 'public, max-age=60' } },

@@ -28,6 +28,7 @@ const EMPTY_FORM = {
   phone: '',
   brand_name: '',
   brand_color: DEFAULT_BRAND_COLOR,
+  admin_color: DEFAULT_BRAND_COLOR,
 };
 
 /** Same limits branding_service.upload_logo enforces; checked here so the
@@ -115,7 +116,10 @@ export default function SubAdminsPage() {
       return toast.error('Enter a valid mobile number');
     }
     if (form.brand_color.trim() && !isValidHex(form.brand_color)) {
-      return toast.error('Theme colour must be a hex colour such as #2563EB');
+      return toast.error('User panel colour must be a hex colour such as #D60101');
+    }
+    if (form.admin_color.trim() && !isValidHex(form.admin_color)) {
+      return toast.error('Admin panel colour must be a hex colour such as #D60101');
     }
     setSubmitting(true);
     try {
@@ -128,6 +132,7 @@ export default function SubAdminsPage() {
         permissions: checked,
         brand_name: form.brand_name.trim() || null,
         brand_color: form.brand_color.trim() || null,
+        admin_color: form.admin_color.trim() || null,
       });
       // The logo is a file, so it can only go up once the broker exists. A
       // failure here leaves a valid broker without a logo — say so rather than
@@ -423,7 +428,13 @@ export default function SubAdminsPage() {
                     </div>
                   </div>
                 </div>
-                <Field label="Theme colour (buttons, links and highlights on their site)">
+                <Field label="Admin panel colour (their own admin panel)">
+                  <BrandColorPicker
+                    value={form.admin_color}
+                    onChange={(hex) => setForm((f) => ({ ...f, admin_color: hex }))}
+                  />
+                </Field>
+                <Field label="User panel colour (buttons, links and highlights their clients see)">
                   <BrandColorPicker
                     value={form.brand_color}
                     onChange={(hex) => setForm((f) => ({ ...f, brand_color: hex }))}

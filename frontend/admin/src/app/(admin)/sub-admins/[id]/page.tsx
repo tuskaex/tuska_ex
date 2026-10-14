@@ -41,6 +41,7 @@ export default function SubAdminDetailPage() {
   const [supportEmail, setSupportEmail] = useState('');
   const [supportWa, setSupportWa] = useState('');
   const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR);
+  const [adminColor, setAdminColor] = useState(DEFAULT_BRAND_COLOR);
   const [features, setFeatures] = useState<Record<string, boolean>>({});
 
   const fetchData = useCallback(async () => {
@@ -77,6 +78,7 @@ export default function SubAdminDetailPage() {
         setSupportEmail(b.support_email || '');
         setSupportWa(b.support_whatsapp || '');
         setBrandColor(b.brand_color || DEFAULT_BRAND_COLOR);
+        setAdminColor(b.admin_color || b.brand_color || DEFAULT_BRAND_COLOR);
       } catch {
         setBranding(null);
       }
@@ -552,9 +554,15 @@ export default function SubAdminDetailPage() {
                 </div>
                 <div>
                   <span className="block text-xxs text-text-tertiary mb-1">
-                    Theme colour — buttons, links and highlights on their site
+                    User panel colour — buttons, links and highlights their clients see
                   </span>
                   <BrandColorPicker value={brandColor} onChange={setBrandColor} />
+                </div>
+                <div>
+                  <span className="block text-xxs text-text-tertiary mb-1">
+                    Admin panel colour — their own admin panel
+                  </span>
+                  <BrandColorPicker value={adminColor} onChange={setAdminColor} />
                 </div>
                 <button
                   type="button"
@@ -562,7 +570,10 @@ export default function SubAdminDetailPage() {
                   onClick={() =>
                     void run(async () => {
                       if (brandColor.trim() && !isValidHex(brandColor)) {
-                        throw new Error('Theme colour must be a hex colour such as #2563EB');
+                        throw new Error('User panel colour must be a hex colour such as #D60101');
+                      }
+                      if (adminColor.trim() && !isValidHex(adminColor)) {
+                        throw new Error('Admin panel colour must be a hex colour such as #D60101');
                       }
                       await adminApi.put(`/sub-admins/${id}/branding`, {
                         brand_name: brandName,
@@ -570,6 +581,7 @@ export default function SubAdminDetailPage() {
                         support_whatsapp: supportWa,
                         // "" clears back to the platform blue.
                         brand_color: brandColor.trim(),
+                        admin_color: adminColor.trim(),
                       });
                     }, 'Branding saved')
                   }

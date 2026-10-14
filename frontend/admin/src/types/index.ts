@@ -331,6 +331,7 @@ export interface SubAdmin {
   logo_url?: string | null;
   /** Theme colour `#RRGGBB`; null means the platform blue. */
   brand_color?: string | null;
+  admin_color?: string | null;
   /** Client features in the mobile/trader app, true = enabled. */
   client_features?: Record<string, boolean>;
 }
@@ -348,6 +349,7 @@ export interface TenantBranding {
   support_whatsapp: string | null;
   /** Theme colour `#RRGGBB`; null means the platform blue. */
   brand_color?: string | null;
+  admin_color?: string | null;
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_user: string | null;
@@ -409,6 +411,7 @@ export interface BrandingProfile {
   support_whatsapp: string | null;
   /** Theme colour `#RRGGBB`; null means the platform blue. */
   brand_color?: string | null;
+  admin_color?: string | null;
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_user: string | null;

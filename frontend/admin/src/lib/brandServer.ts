@@ -16,6 +16,7 @@ export type PublicBranding = {
   brand_name: string | null;
   logo_url: string | null;
   brand_color?: string | null;
+  admin_color?: string | null;
 };
 
 const UPSTREAM_TIMEOUT_MS = 3000;

@@ -6,6 +6,7 @@ import './globals.css';
 import ThemeInitScript from '@/components/ThemeInitScript';
 import AppToaster from '@/components/AppToaster';
 import { isTenantAdminHost } from '@/lib/tenantBrand';
+import AdminThemeColor from '@/components/AdminThemeColor';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -64,6 +65,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
       >
         <ThemeInitScript />
+        <AdminThemeColor />
         {children}
         <AppToaster />
       </body>

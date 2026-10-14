@@ -112,6 +112,14 @@ async def _apply_startup_ddl():
                     ADD COLUMN IF NOT EXISTS last_transferred_at TIMESTAMPTZ,
                     ADD COLUMN IF NOT EXISTS last_transferred_by UUID REFERENCES users(id)
             """))
+            # Tenant colour and feature columns (alembic 0063-0065). The User
+            # model selects them, so they must exist before any query runs.
+            await conn.execute(text("""
+                ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS brand_color VARCHAR(7),
+                    ADD COLUMN IF NOT EXISTS client_features JSONB,
+                    ADD COLUMN IF NOT EXISTS admin_color VARCHAR(7)
+            """))
             await conn.execute(text("""
                 CREATE INDEX IF NOT EXISTS ix_users_assigned_admin_role
                     ON users (assigned_admin_id, role)
