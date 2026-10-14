@@ -105,6 +105,9 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         # with the previous holder — which makes this especially easy to miss on
         # a reassignment. The domain form reads this to say so up front.
         "has_brand": bool(row.logo_url or row.brand_name),
+        "brand_name": row.brand_name,
+        "logo_url": row.logo_url,
+        "brand_color": row.brand_color,
     }
 
 
@@ -225,8 +228,15 @@ async def create_sub_admin(
     *, email: str, password: str, first_name: str | None, last_name: str | None,
     phone: str | None, permissions: list[str],
     admin: User, ip_address: str | None, db: AsyncSession,
+    brand_name: str | None = None, brand_color: str | None = None,
 ) -> dict:
+    from services.branding_service import normalize_brand_color
+
     _only_super_admin(admin)
+    # Validate before anything is written, so a bad colour never leaves a
+    # half-created tenant behind.
+    brand_color = normalize_brand_color(brand_color)
+    brand_name = (brand_name or "").strip()[:80] or None
 
     email = (email or "").strip().lower()
     existing = (await db.execute(
@@ -259,6 +269,8 @@ async def create_sub_admin(
         kyc_status="approved",
         email_verified=True,
         created_by=admin.id,
+        brand_name=brand_name,
+        brand_color=brand_color,
     )
     db.add(user)
     await db.flush()
@@ -281,7 +293,8 @@ async def create_sub_admin(
 
     await write_audit_log(
         db, admin.id, "create_sub_admin", "sub_admin", user.id,
-        new_values={"email": email, "permissions": clean},
+        new_values={"email": email, "permissions": clean,
+                    "brand_name": brand_name, "brand_color": brand_color},
         ip_address=ip_address,
     )
     await db.commit()
@@ -457,23 +470,26 @@ async def get_branding(*, sub_admin_id: uuid.UUID, admin: User, db: AsyncSession
 async def update_branding(
     *, sub_admin_id: uuid.UUID, brand_name: str | None, support_email: str | None,
     support_whatsapp: str | None, admin: User, ip_address: str | None,
-    db: AsyncSession,
+    db: AsyncSession, brand_color: str | None = None,
 ) -> dict:
     from services import branding_service as _b
 
     sub = await _brand_target(sub_admin_id, admin, db)
     old = {"brand_name": sub.brand_name, "support_email": sub.support_email,
-           "support_whatsapp": sub.support_whatsapp}
+           "support_whatsapp": sub.support_whatsapp,
+           "brand_color": sub.brand_color}
     out = await _b.update_branding(
         admin=admin, owner=sub, brand_name=brand_name,
-        support_email=support_email, support_whatsapp=support_whatsapp, db=db,
+        support_email=support_email, support_whatsapp=support_whatsapp,
+        brand_color=brand_color, db=db,
     )
     await write_audit_log(
         db, admin.id, "update_sub_admin_branding", "sub_admin", sub.id,
         old_values=old,
         new_values={"brand_name": out["brand_name"],
                     "support_email": out["support_email"],
-                    "support_whatsapp": out["support_whatsapp"]},
+                    "support_whatsapp": out["support_whatsapp"],
+                    "brand_color": out["brand_color"]},
         ip_address=ip_address,
     )
     await db.commit()

@@ -35,12 +35,15 @@ export type TenantBrand = {
   isTenant: boolean;
   brandName: string;
   logoUrl: string | null;
+  /** The tenant's theme colour, `#RRGGBB`; null/absent means platform blue. */
+  brandColor?: string | null;
 };
 
 
 type PublicBranding = {
   brand_name: string | null;
   logo_url: string | null;
+  brand_color?: string | null;
 };
 
 /**

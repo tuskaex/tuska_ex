@@ -9,6 +9,7 @@ import NotificationListener from '@/components/NotificationListener';
 import ProfileCompleteGate from '@/components/profile/ProfileCompleteGate';
 import OnboardingGate from '@/components/auth/OnboardingGate';
 import TopLoader from '@/components/TopLoader';
+import TenantThemeColor from '@/components/providers/TenantThemeColor';
 import { fontVariableClass } from '@/styles/fonts';
 
 /**
@@ -100,6 +101,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <GoogleAuthProvider>
             <NotificationListener />
+            {/* White-label theme colour; a no-op on TuskaEx's own hosts. */}
+            <TenantThemeColor />
             {/* Two-stage onboarding gate. ProfileCompleteGate enforces the
                 profile-fields step (always renders first if profile is
                 incomplete); OnboardingGate then enforces wallet + email

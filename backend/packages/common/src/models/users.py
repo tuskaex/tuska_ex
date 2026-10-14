@@ -103,6 +103,8 @@ class User(Base):
     logo_url = Column(Text, nullable=True)
     support_email = Column(String(255), nullable=True)
     support_whatsapp = Column(String(32), nullable=True)
+    # Theme colour, uppercase `#RRGGBB` (migration 0062). NULL = platform blue.
+    brand_color = Column(String(7), nullable=True)
 
     # Per-tenant outbound SMTP. A tenant that has not configured this sends no
     # client email at all — deliberately, so one broker's mail never leaves

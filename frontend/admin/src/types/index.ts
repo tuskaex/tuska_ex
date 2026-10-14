@@ -327,6 +327,10 @@ export interface SubAdmin {
   /** False when neither a logo nor a brand name is set, so their site would
    *  render a letter tile. Assigning a domain does not move a brand. */
   has_brand?: boolean;
+  brand_name?: string | null;
+  logo_url?: string | null;
+  /** Theme colour `#RRGGBB`; null means the platform blue. */
+  brand_color?: string | null;
 }
 
 /** Mirrors branding_service.to_profile() — the tenant's brand as the platform
@@ -340,6 +344,8 @@ export interface TenantBranding {
   logo_url: string | null;
   support_email: string | null;
   support_whatsapp: string | null;
+  /** Theme colour `#RRGGBB`; null means the platform blue. */
+  brand_color?: string | null;
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_user: string | null;
@@ -399,6 +405,8 @@ export interface BrandingProfile {
   logo_url: string | null;
   support_email: string | null;
   support_whatsapp: string | null;
+  /** Theme colour `#RRGGBB`; null means the platform blue. */
+  brand_color?: string | null;
   smtp_host: string | null;
   smtp_port: number | null;
   smtp_user: string | null;

@@ -41,7 +41,7 @@ const UPSTREAM_TIMEOUT_MS = 2500;
  *  who uploads a new logo sees it the same session. */
 const CACHE = 'public, max-age=300, stale-while-revalidate=3600';
 
-type PublicBranding = { brand_name: string | null; logo_url: string | null };
+type PublicBranding = { brand_name: string | null; logo_url: string | null; brand_color?: string | null };
 
 /**
  * Branding lives on the ADMIN service, which this app does not otherwise talk
@@ -88,10 +88,13 @@ function initial(brandName: string | null | undefined, host: string): string {
   return (label.trim()[0] ?? '').toUpperCase() || '?';
 }
 
-function monogramResponse(letter: string): NextResponse {
+function monogramResponse(letter: string, color?: string | null): NextResponse {
+  // Only a strict hex reaches the SVG; the API stores nothing else, but this
+  // string is interpolated into markup.
+  const fill = color && /^#[0-9A-Fa-f]{6}$/.test(color) ? color : '#E11D2E';
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">` +
-    `<rect width="64" height="64" rx="14" fill="#E11D2E"/>` +
+    `<rect width="64" height="64" rx="14" fill="${fill}"/>` +
     `<text x="32" y="33" fill="#fff" font-family="system-ui,-apple-system,Segoe UI,sans-serif"` +
     ` font-size="38" font-weight="600" text-anchor="middle"` +
     ` dominant-baseline="central">${letter}</text></svg>`;
@@ -158,5 +161,5 @@ export async function GET(): Promise<NextResponse> {
   const served = await serveLogo(brand?.logo_url);
   if (served) return served;
 
-  return monogramResponse(initial(brand?.brand_name, host));
+  return monogramResponse(initial(brand?.brand_name, host), brand?.brand_color);
 }

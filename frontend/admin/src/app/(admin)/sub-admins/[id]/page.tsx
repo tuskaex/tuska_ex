@@ -15,6 +15,7 @@ import type {
   PaginatedResponse, SubAdmin, SubAdminClient, SubAdminReport, TenantBranding,
 } from '@/types';
 import { PERMISSION_GROUPS, groupChecked, toggleGroup, isGrantable } from '../permissions';
+import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../BrandColorPicker';
 
 export default function SubAdminDetailPage() {
   const params = useParams();
@@ -39,6 +40,7 @@ export default function SubAdminDetailPage() {
   const [brandName, setBrandName] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [supportWa, setSupportWa] = useState('');
+  const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR);
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -72,6 +74,7 @@ export default function SubAdminDetailPage() {
         setBrandName(b.brand_name || '');
         setSupportEmail(b.support_email || '');
         setSupportWa(b.support_whatsapp || '');
+        setBrandColor(b.brand_color || DEFAULT_BRAND_COLOR);
       } catch {
         setBranding(null);
       }
@@ -490,15 +493,26 @@ export default function SubAdminDetailPage() {
                     className="w-28 px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary"
                   />
                 </div>
+                <div>
+                  <span className="block text-xxs text-text-tertiary mb-1">
+                    Theme colour — buttons, links and highlights on their site
+                  </span>
+                  <BrandColorPicker value={brandColor} onChange={setBrandColor} />
+                </div>
                 <button
                   type="button"
                   disabled={busy}
                   onClick={() =>
                     void run(async () => {
+                      if (brandColor.trim() && !isValidHex(brandColor)) {
+                        throw new Error('Theme colour must be a hex colour such as #2563EB');
+                      }
                       await adminApi.put(`/sub-admins/${id}/branding`, {
                         brand_name: brandName,
                         support_email: supportEmail,
                         support_whatsapp: supportWa,
+                        // "" clears back to the platform blue.
+                        brand_color: brandColor.trim(),
                       });
                     }, 'Branding saved')
                   }

@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
-  Loader2, Plus, RefreshCw, Search, ShieldCheck,
+  ImagePlus, Loader2, Plus, RefreshCw, Search, ShieldCheck, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { PaginatedResponse, SubAdmin } from '@/types';
 import RowMenu from './RowMenu';
+import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from './BrandColorPicker';
 import {
   PERMISSION_GROUPS,
   DEFAULT_NEW_TENANT_PERMISSIONS,
@@ -25,7 +26,14 @@ const EMPTY_FORM = {
   first_name: '',
   last_name: '',
   phone: '',
+  brand_name: '',
+  brand_color: DEFAULT_BRAND_COLOR,
 };
+
+/** Same limits branding_service.upload_logo enforces; checked here so the
+ *  operator hears about a bad file before the broker is created. */
+const LOGO_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 export default function SubAdminsPage() {
   const [items, setItems] = useState<SubAdmin[]>([]);
@@ -42,6 +50,24 @@ export default function SubAdminsPage() {
   // DEFAULT_NEW_TENANT_PERMISSIONS for why.
   const [checked, setChecked] = useState<string[]>([...DEFAULT_NEW_TENANT_PERMISSIONS]);
   const [submitting, setSubmitting] = useState(false);
+  const [logo, setLogo] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // Revoke the object URL when the preview changes or the page unmounts.
+  useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
+
+  const pickLogo = (file: File | null) => {
+    if (file && !LOGO_TYPES.includes(file.type)) {
+      toast.error('Logo must be a PNG, JPG or WebP image');
+      return;
+    }
+    if (file && file.size > LOGO_MAX_BYTES) {
+      toast.error('Logo must be 2 MB or smaller');
+      return;
+    }
+    setLogo(file);
+    setLogoPreview(file ? URL.createObjectURL(file) : null);
+  };
 
   const perPage = 20;
 
@@ -76,6 +102,7 @@ export default function SubAdminsPage() {
   const openCreate = () => {
     setForm({ ...EMPTY_FORM });
     setChecked([...DEFAULT_NEW_TENANT_PERMISSIONS]);
+    pickLogo(null);
     setShowModal(true);
   };
 
@@ -87,16 +114,37 @@ export default function SubAdminsPage() {
     if (form.phone.trim() && form.phone.replace(/\D/g, '').length < 7) {
       return toast.error('Enter a valid mobile number');
     }
+    if (form.brand_color.trim() && !isValidHex(form.brand_color)) {
+      return toast.error('Theme colour must be a hex colour such as #2563EB');
+    }
     setSubmitting(true);
     try {
-      await adminApi.post('/sub-admins', {
+      const created = await adminApi.post<SubAdmin>('/sub-admins', {
         email: form.email.trim(),
         password: form.password,
         first_name: form.first_name.trim() || null,
         last_name: form.last_name.trim() || null,
         phone: form.phone.trim() || null,
         permissions: checked,
+        brand_name: form.brand_name.trim() || null,
+        brand_color: form.brand_color.trim() || null,
       });
+      // The logo is a file, so it can only go up once the broker exists. A
+      // failure here leaves a valid broker without a logo — say so rather than
+      // reporting the whole create as failed.
+      if (logo) {
+        const fd = new FormData();
+        fd.append('file', logo);
+        try {
+          await adminApi.postForm(`/sub-admins/${created.id}/branding/logo`, fd);
+        } catch (e: unknown) {
+          toast.error(
+            `Broker created, but the logo did not upload: ${
+              e instanceof Error ? e.message : 'unknown error'
+            }. Add it from the broker's Branding panel.`,
+          );
+        }
+      }
       toast.success('Sub-admin created');
       setShowModal(false);
       void fetchData();
@@ -197,6 +245,11 @@ export default function SubAdminsPage() {
                 <tr key={s.id} className="border-b border-border-primary last:border-0">
                   <td className="px-3 py-2 font-mono text-text-secondary">{s.code || '—'}</td>
                   <td className="px-3 py-2">
+                    <span
+                      className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
+                      style={{ backgroundColor: s.brand_color || DEFAULT_BRAND_COLOR }}
+                      title={`Theme colour ${s.brand_color || `${DEFAULT_BRAND_COLOR} (default)`}`}
+                    />
                     <Link
                       href={`/sub-admins/${s.id}`}
                       className="text-text-primary hover:text-accent"
@@ -316,6 +369,64 @@ export default function SubAdminsPage() {
                       inputCls,
                       form.confirm && form.confirm !== form.password && 'border-sell',
                     )}
+                  />
+                </Field>
+              </div>
+
+              <div className="rounded-md border border-border-primary p-3 space-y-3">
+                <span className="block text-xxs font-semibold uppercase tracking-wider text-text-secondary">
+                  Branding
+                </span>
+                <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
+                  <Field label="Brand name (shown on their site)">
+                    <input
+                      value={form.brand_name}
+                      maxLength={80}
+                      onChange={(e) => setForm((f) => ({ ...f, brand_name: e.target.value }))}
+                      placeholder="e.g. Apex Markets"
+                      className={inputCls}
+                    />
+                  </Field>
+                  <div>
+                    <span className="block text-xxs text-text-tertiary mb-1">Logo</span>
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="h-[30px] w-[30px] shrink-0 cursor-pointer overflow-hidden rounded-md border border-dashed border-border-primary bg-bg-tertiary flex items-center justify-center hover:border-accent"
+                        title="Upload logo (PNG, JPG or WebP, max 2 MB)"
+                      >
+                        {logoPreview ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={logoPreview} alt="Logo preview" className="h-full w-full object-contain" />
+                        ) : (
+                          <ImagePlus size={14} className="text-text-tertiary" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="hidden"
+                          onChange={(e) => {
+                            pickLogo(e.target.files?.[0] ?? null);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+                      {logo && (
+                        <button
+                          type="button"
+                          onClick={() => pickLogo(null)}
+                          className="text-text-tertiary hover:text-text-primary"
+                          title="Remove logo"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Field label="Theme colour (buttons, links and highlights on their site)">
+                  <BrandColorPicker
+                    value={form.brand_color}
+                    onChange={(hex) => setForm((f) => ({ ...f, brand_color: hex }))}
                   />
                 </Field>
               </div>

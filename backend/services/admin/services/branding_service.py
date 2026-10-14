@@ -191,6 +191,7 @@ def to_profile(row: User) -> dict:
         "logo_url": row.logo_url,
         "support_email": row.support_email,
         "support_whatsapp": row.support_whatsapp,
+        "brand_color": row.brand_color,
         "smtp_host": row.smtp_host,
         "smtp_port": row.smtp_port,
         "smtp_user": row.smtp_user,
@@ -287,20 +288,48 @@ def to_public_payload(owner: User | None) -> dict:
     """What an unauthenticated caller may see. No SMTP, no email, no ids."""
     if owner is None:
         return {"brand_name": None, "logo_url": None,
-                "support_email": None, "support_whatsapp": None}
+                "support_email": None, "support_whatsapp": None,
+                "brand_color": None}
     return {
         "brand_name": owner.brand_name,
         "logo_url": owner.logo_url,
         "support_email": owner.support_email,
         "support_whatsapp": owner.support_whatsapp,
+        "brand_color": owner.brand_color,
     }
 
 
 # ─── Write ───────────────────────────────────────────────────────────────
 
+_HEX_COLOR = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def normalize_brand_color(value: str | None) -> str | None:
+    """`#RGB` / `#RRGGBB` (hash optional) to uppercase `#RRGGBB`.
+
+    Returns None for an empty string, which callers treat as "clear". Anything
+    else is a 400: the value is injected into CSS on the tenant's domain, so
+    only a strict hex colour may ever be stored.
+    """
+    v = (value or "").strip()
+    if not v:
+        return None
+    m = _HEX_COLOR.match(v)
+    if not m:
+        raise HTTPException(
+            status_code=400,
+            detail="Theme colour must be a hex colour such as #2563EB.",
+        )
+    h = m.group(1)
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    return "#" + h.upper()
+
+
 async def update_branding(
     *, admin: User, brand_name: str | None, support_email: str | None,
     support_whatsapp: str | None, db: AsyncSession, owner: User | None = None,
+    brand_color: str | None = None,
 ) -> dict:
     """`admin` is who is asking; `owner` is whose row is written.
 
@@ -316,7 +345,7 @@ async def update_branding(
         target,
         setting=any(
             v is not None and v.strip()
-            for v in (brand_name, support_email, support_whatsapp)
+            for v in (brand_name, support_email, support_whatsapp, brand_color)
         ),
     )
 
@@ -327,6 +356,8 @@ async def update_branding(
         target.support_email = support_email.strip() or None
     if support_whatsapp is not None:
         target.support_whatsapp = support_whatsapp.strip() or None
+    if brand_color is not None:
+        target.brand_color = normalize_brand_color(brand_color)
 
     await db.commit()
     return to_profile(target)

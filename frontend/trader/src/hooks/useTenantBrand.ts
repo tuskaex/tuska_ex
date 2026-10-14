@@ -50,6 +50,7 @@ export function useTenantBrand(serverHost?: string | null): TenantBrand {
         isTenant: true,
         brandName: data?.brand_name?.trim() || '',
         logoUrl: data?.logo_url || null,
+        brandColor: data?.brand_color || null,
       });
     })();
     return () => { cancelled = true; };

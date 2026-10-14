@@ -45,7 +45,8 @@ async def update_my_branding(
            "support_whatsapp": admin.support_whatsapp}
     out = await branding_service.update_branding(
         admin=admin, brand_name=body.brand_name, support_email=body.support_email,
-        support_whatsapp=body.support_whatsapp, db=db,
+        support_whatsapp=body.support_whatsapp, brand_color=body.brand_color,
+        db=db,
     )
     await write_audit_log(
         db, admin.id, "update_branding", "branding", admin.id,

@@ -761,6 +761,10 @@ class CreateSubAdminRequest(BaseModel):
     # Permission strings from GET /employees/permissions/catalog. Empty means
     # the sub_admin role defaults only.
     permissions: list[str] = []
+    # Optional branding set at creation. The logo is a file, so it goes up
+    # separately through POST /sub-admins/{id}/branding/logo once the id exists.
+    brand_name: Optional[str] = None
+    brand_color: Optional[str] = None
 
 
 class UpdateSubAdminRequest(BaseModel):
@@ -794,6 +798,8 @@ class UpdateBrandingRequest(BaseModel):
     brand_name: Optional[str] = None
     support_email: Optional[str] = None
     support_whatsapp: Optional[str] = None
+    # `#RRGGBB` or `#RGB`; "" clears back to the platform blue.
+    brand_color: Optional[str] = None
 
 
 class ConnectDomainRequest(BaseModel):
