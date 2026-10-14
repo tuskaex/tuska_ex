@@ -280,7 +280,10 @@ async def branding_platform(db: AsyncSession = Depends(get_db)):
     compiled-in assets".
     """
     owner = await branding_service.find_platform_brand(db)
-    return branding_service.to_public_payload(owner)
+    payload = branding_service.to_public_payload(owner)
+    # The colour can live on a different super-admin row from the logo.
+    payload["brand_color"] = await branding_service.find_platform_color(db)
+    return payload
 
 
 @public_router.get("/by-domain")

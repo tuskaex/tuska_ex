@@ -269,6 +269,30 @@ async def find_platform_brand(db: AsyncSession) -> User | None:
     return rows[0]
 
 
+async def find_platform_color(db: AsyncSession) -> str | None:
+    """TuskaEx's own theme colour, or None for the compiled-in red.
+
+    Looked up separately from `find_platform_brand`: that one prefers the row
+    with a logo, and the operator who sets a colour on the Platform brand page
+    may be a different super-admin from whoever uploaded the logo. Of the rows
+    that carry a colour, the most recently updated wins.
+    """
+    rows = (await db.execute(
+        select(User).where(User.role == "super_admin", User.brand_color.isnot(None))
+    )).scalars().all()
+    if not rows:
+        return None
+
+    def _touched(row: User) -> float:
+        d = row.updated_at or row.created_at
+        try:
+            return d.timestamp() if d is not None else 0.0
+        except (AttributeError, OSError, ValueError):
+            return 0.0
+
+    return max(rows, key=_touched).brand_color
+
+
 async def resolve_branding_owner(user: User, db: AsyncSession) -> User | None:
     """Which row carries the brand for this user.
 
@@ -318,7 +342,7 @@ def normalize_brand_color(value: str | None) -> str | None:
     if not m:
         raise HTTPException(
             status_code=400,
-            detail="Theme colour must be a hex colour such as #2563EB.",
+            detail="Theme colour must be a hex colour such as #D60101.",
         )
     h = m.group(1)
     if len(h) == 3:

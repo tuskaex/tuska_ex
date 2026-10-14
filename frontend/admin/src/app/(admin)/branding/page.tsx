@@ -8,6 +8,7 @@ import { adminMediaSrc } from '@/lib/mediaSrc';
 import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
+import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import toast from 'react-hot-toast';
 import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
 
@@ -43,6 +44,7 @@ export default function BrandingPage() {
     brand_name: '',
     support_email: '',
     support_whatsapp: '',
+    brand_color: DEFAULT_BRAND_COLOR,
   });
   const [smtp, setSmtp] = useState({
     smtp_host: '',
@@ -62,6 +64,7 @@ export default function BrandingPage() {
         brand_name: p.brand_name ?? '',
         support_email: p.support_email ?? '',
         support_whatsapp: p.support_whatsapp ?? '',
+        brand_color: p.brand_color ?? DEFAULT_BRAND_COLOR,
       });
       setSmtp({
         smtp_host: p.smtp_host ?? '',
@@ -87,9 +90,13 @@ export default function BrandingPage() {
   }, [fetchData]);
 
   const saveBrand = async () => {
+    if (brand.brand_color.trim() && !isValidHex(brand.brand_color)) {
+      toast.error('Theme colour must be a hex colour such as #D60101');
+      return;
+    }
     setSaving(true);
     try {
-      await adminApi.put('/branding/me', brand);
+      await adminApi.put('/branding/me', { ...brand, brand_color: brand.brand_color.trim() });
       toast.success('Branding saved');
       void fetchData();
     } catch (e: unknown) {
@@ -375,6 +382,16 @@ export default function BrandingPage() {
                 className={inputCls}
               />
             </label>
+          </div>
+
+          <div>
+            <span className="block text-xxs text-text-tertiary mb-1">
+              Theme colour — buttons, links and highlights across the website and trading app
+            </span>
+            <BrandColorPicker
+              value={brand.brand_color}
+              onChange={(hex) => setBrand((b) => ({ ...b, brand_color: hex }))}
+            />
           </div>
 
           {/* Stays enabled when the row is unbrandable: the API refuses a value

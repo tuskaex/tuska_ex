@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 /**
- * Re-colours the app in a white-label tenant's theme colour.
+ * Re-colours the app in the brand's theme colour: a white-label tenant's own
+ * colour on their domain, or the platform colour (Admin → Platform brand) on
+ * TradesX's hosts, fetched through /brand/theme.
  *
  * The platform blue is not one token: it is ~700 literal values across the
  * app (`bg-[#2563EB]`, `hover:bg-[#1D4ED8]`, `text-[#3B82F6]/60`, the Tailwind
@@ -15,8 +17,7 @@ import { useTenantBrand } from '@/hooks/useTenantBrand';
  * later in the document, same !important flag — so it wins exactly where the
  * original applied and nowhere else, opacity variants included.
  *
- * Runs only on a tenant host with a colour set; TradesX's own hosts never
- * mount the effect's work. Inline `style={{ color: '#2563EB' }}` and SVG fill
+ * Does nothing when no colour is set, so the compiled-in blue stays. Inline `style={{ color: '#2563EB' }}` and SVG fill
  * attributes are not stylesheet rules and keep the platform blue.
  */
 
@@ -123,10 +124,25 @@ function collectOverrides(rewrite: (v: string) => string): string {
 }
 
 export default function TenantThemeColor() {
-  const { isTenant, brandColor } = useTenantBrand();
+  const { isTenant, loading, brandColor: tenantColor } = useTenantBrand();
+  const [platformColor, setPlatformColor] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isTenant || !brandColor) return;
+    if (isTenant) return;
+    let cancelled = false;
+    void fetch('/brand/theme')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { brand_color?: string | null } | null) => {
+        if (!cancelled) setPlatformColor(d?.brand_color ?? null);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [isTenant]);
+
+  const brandColor = isTenant ? (loading ? null : tenantColor) : platformColor;
+
+  useEffect(() => {
+    if (!brandColor) return;
     const base = hexToRgb(brandColor);
     if (!base) return;
     const rewrite = buildRewriter(base);
@@ -168,7 +184,7 @@ export default function TenantThemeColor() {
       document.removeEventListener('load', onLoad, true);
       style.remove();
     };
-  }, [isTenant, brandColor]);
+  }, [brandColor]);
 
   return null;
 }
