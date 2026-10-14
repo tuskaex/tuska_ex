@@ -16,13 +16,18 @@
 # touching the DB, and uses ON_ERROR_STOP so a single bad statement
 # aborts the whole script instead of marching past the rollback.
 #
-# Usage:
-#   /opt/tuskaex/deploy/scripts/reset-user-data.sh          # keep admins
-#   /opt/tuskaex/deploy/scripts/reset-user-data.sh --full   # wipe admins too
+# Keep-admins mode also deletes every white-label sub-admin (broker) and its
+# employee row, and clears uploaded KYC documents and payment proofs.
+# Platform deposit banks (bank_accounts) are config and are kept.
+#
+# Usage (needs docker, so run with sudo):
+#   sudo bash deploy/scripts/reset-user-data.sh          # keep admins
+#   sudo bash deploy/scripts/reset-user-data.sh --full   # wipe admins too
 #
 set -euo pipefail
 
-REPO_DIR="${REPO_DIR:-/opt/tuskaex}"
+REPO_DIR="${REPO_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
+export REPO_DIR
 COMPOSE="docker compose -f $REPO_DIR/docker-compose.yml -f $REPO_DIR/docker-compose.prod.yml"
 
 MODE="keep-admins"
@@ -94,7 +99,7 @@ if [ "$MODE" = "full" ]; then
     -- Trading
     'positions', 'orders', 'trade_history', 'shared_trades', 'trading_accounts',
     -- Money movement
-    'deposits', 'withdrawals', 'transactions', 'bank_accounts', 'fund_move_approvals',
+    'deposits', 'withdrawals', 'transactions', 'fund_move_approvals',
     -- Copy / managed
     'copy_trades', 'investor_allocations', 'master_accounts',
     -- IB / referrals
@@ -127,7 +132,7 @@ else
     'webhook_events',
     'wallet_cooldowns',
     'positions', 'orders', 'trade_history', 'shared_trades', 'trading_accounts',
-    'deposits', 'withdrawals', 'transactions', 'bank_accounts', 'fund_move_approvals',
+    'deposits', 'withdrawals', 'transactions', 'fund_move_approvals',
     'copy_trades', 'investor_allocations', 'master_accounts',
     'ib_commissions', 'ib_applications', 'ib_profiles', 'referrals',
     'kyc_documents',
@@ -139,7 +144,38 @@ else
     'staking_reward_accruals', 'staking_positions',
     'vip_passes', 'bids', 'bidding_rounds', 'lifestyle_fulfillments', 'algo_api_keys'
   "
-  DELETE_NON_ADMIN_USERS="DELETE FROM users WHERE role NOT IN ('admin', 'super_admin');"
+  # Sub-admins (brokers) go too. Their employee rows and any back-references
+  # from the kept admin rows must be cleared first, or the FKs refuse.
+  # Kept config tables that point at users: per-client fee overrides are the
+  # deleted clients' own rows (deleted); 'updated by' audit columns are
+  # nulled. Guarded so a column missing on a drifted schema is skipped.
+  DELETE_NON_ADMIN_USERS="
+    CREATE TEMP TABLE doomed_users ON COMMIT DROP AS
+      SELECT id FROM users WHERE role IS NULL OR role NOT IN ('admin', 'super_admin');
+    DO \$\$
+    DECLARE r record;
+    BEGIN
+      FOR r IN SELECT * FROM (VALUES
+          ('charge_configs','user_id','delete'), ('spread_configs','user_id','delete'),
+          ('swap_configs','user_id','delete'), ('employees','user_id','delete'),
+          ('instrument_configs','updated_by','null'), ('instrument_config_audit','changed_by','null'),
+          ('system_settings','updated_by','null'),
+          ('users','assigned_admin_id','null'), ('users','created_by','null'),
+          ('users','last_transferred_by','null')
+        ) AS t(tbl, col, act)
+      LOOP
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_schema='public' AND table_name=r.tbl AND column_name=r.col) THEN
+          IF r.act = 'delete' THEN
+            EXECUTE format('DELETE FROM %I WHERE %I IN (SELECT id FROM doomed_users)', r.tbl, r.col);
+          ELSE
+            EXECUTE format('UPDATE %I SET %I = NULL WHERE %I IN (SELECT id FROM doomed_users)', r.tbl, r.col, r.col);
+          END IF;
+        END IF;
+      END LOOP;
+    END
+    \$\$;
+    DELETE FROM users WHERE id IN (SELECT id FROM doomed_users);"
 fi
 
 echo
@@ -192,6 +228,21 @@ SELECT
   (SELECT count(*) FROM instruments)       AS instruments_kept,
   (SELECT count(*) FROM system_settings)   AS settings_kept;
 SQL
+
+# Uploaded client files (KYC documents, payment proofs) belong to the users
+# just deleted. Branding, banners and bank QR images are config and stay.
+mkdir -p "$REPO_DIR/backups"
+for d in "$REPO_DIR/backend/uploads/kyc" "$REPO_DIR/backend/uploads/wallet"; do
+  if [ -d "$d" ]; then
+    # Delete only what was archived: a failed tar must not cost the files.
+    if tar -czf "$REPO_DIR/backups/uploads-$(basename "$d")-$(date +%Y%m%d-%H%M%S).tgz" -C "$d" . 2>/dev/null; then
+      find "$d" -mindepth 1 -delete
+      echo "  cleared $d (archived under backups/)"
+    else
+      echo "  ! could not archive $d; left it in place"
+    fi
+  fi
+done
 
 echo
 echo "[4/4] Restarting app services..."
