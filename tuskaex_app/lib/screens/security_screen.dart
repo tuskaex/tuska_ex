@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -46,7 +46,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
           child: ListTile(
             leading: Icon(Icons.shield_outlined, color: u?.twoFactorEnabled == true ? AppColors.profit : AppColors.warning),
             title: const Text('Two-factor authentication', style: TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(u?.twoFactorEnabled == true ? 'Enabled â€” a code is required at sign-in.' : 'Add an authenticator app for extra protection.',
+            subtitle: Text(u?.twoFactorEnabled == true ? 'Enabled — a code is required at sign-in.' : 'Add an authenticator app for extra protection.',
                 style: const TextStyle(color: AppColors.textDim)),
             trailing: u?.twoFactorEnabled == true
                 ? const Pill('ON', color: AppColors.profit)
@@ -109,7 +109,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
   String _device(String ua) {
     final l = ua.toLowerCase();
-    if (l.contains('dart') || l.contains('dio')) return 'TuskaEx app';
+    if (l.contains('dart') || l.contains('dio')) return 'SpeedTrader app';
     if (l.contains('android')) return 'Android browser';
     if (l.contains('iphone') || l.contains('ipad')) return 'iOS browser';
     if (l.contains('windows')) return 'Windows';

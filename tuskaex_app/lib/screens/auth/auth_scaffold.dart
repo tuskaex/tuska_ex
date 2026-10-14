@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme.dart';
-import 'package:provider/provider.dart';
 
-import '../../state/brand_state.dart';
 import '../../widgets/broker_picker.dart';
 import '../../widgets/fx.dart';
 
@@ -28,14 +26,7 @@ class AuthScaffold extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 440),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Center(child: FloatingLogo3D(height: showBack ? 64 : 84)),
-                Center(
-                  child: GradientText(context.select<BrandState, String>((b) => b.name), style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-                ),
-                const SizedBox(height: 2),
-                const Center(
-                  child: Text('trade · grow · beyond', style: TextStyle(color: AppColors.textDim, letterSpacing: 3, fontSize: 11.5)),
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 const BrokerChip(),
                 const SizedBox(height: 16),
                 GlassCard(

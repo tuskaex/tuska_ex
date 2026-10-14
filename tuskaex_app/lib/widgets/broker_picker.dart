@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/api.dart';
@@ -7,7 +7,7 @@ import '../core/theme.dart';
 import '../state/brand_state.dart';
 import 'common.dart';
 
-/// "Broker: X Â· Change" above the sign-in form. Change goes back to the list.
+/// "Broker: X · Change" above the sign-in form. Change goes back to the list.
 class BrokerChip extends StatelessWidget {
   const BrokerChip({super.key});
   @override
@@ -29,7 +29,7 @@ class BrokerChip extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.apartment_rounded, size: 16, color: AppColors.textDim),
             const SizedBox(width: 6),
-            Text(b == null ? AppConfig.brandName : '${b.name ?? b.code} Â· ${b.code}',
+            Text(b == null ? AppConfig.brandName : '${b.name ?? b.code} · ${b.code}',
                 style: const TextStyle(fontSize: 12.5, color: AppColors.textDim, fontWeight: FontWeight.w600)),
             const SizedBox(width: 8),
             Text('Change', style: TextStyle(fontSize: 12.5, color: AppColors.brandLight, fontWeight: FontWeight.w700)),

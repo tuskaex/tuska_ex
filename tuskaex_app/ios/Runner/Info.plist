@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>TuskaEx uses the camera to photograph identity documents for verification.</string>
+	<string>SpeedTrader uses the camera to photograph identity documents for verification.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>TuskaEx needs photo access to upload KYC documents and payment receipts.</string>
+	<string>SpeedTrader needs photo access to upload KYC documents and payment receipts.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TuskaEx</string>
+	<string>SpeedTrader</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

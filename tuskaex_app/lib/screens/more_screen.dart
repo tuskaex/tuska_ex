@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -104,7 +104,7 @@ class MoreScreen extends StatelessWidget {
             if (brand.isPlatform)
               _item(
                 Icons.public,
-                'Visit tuskaex.com',
+                'Visit our website',
                 () => launchUrl(Uri.parse(AppConfig.websiteUrl), mode: LaunchMode.externalApplication),
               ),
           ]),
@@ -136,7 +136,7 @@ class MoreScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Center(
-            child: Text('TuskaEx v1.0.0', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
+            child: Text('SpeedTrader v1.0.0', style: TextStyle(color: AppColors.textMute, fontSize: 11)),
           ),
         ],
       ),

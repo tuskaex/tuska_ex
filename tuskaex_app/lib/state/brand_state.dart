@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
@@ -53,7 +53,7 @@ class Broker {
     );
   }
 
-  /// Same broker, same look and same switches â€” nothing to re-apply.
+  /// Same broker, same look and same switches — nothing to re-apply.
   bool sameAs(Broker? o) =>
       o != null &&
       o.code == code &&
@@ -84,8 +84,8 @@ class Broker {
 }
 
 /// One app, many brokers. Which broker the app is dressed as:
-///   * before sign-in â€” the code the user picked on the login/register screen;
-///   * after sign-in  â€” whatever /auth/me says the account belongs to (the
+///   * before sign-in — the code the user picked on the login/register screen;
+///   * after sign-in  — whatever /auth/me says the account belongs to (the
 ///     server is the source of truth, so a wrong pick is corrected on login).
 /// No broker means the TuskaEx platform itself.
 class BrandState extends ChangeNotifier {
@@ -96,7 +96,7 @@ class BrandState extends ChangeNotifier {
 
   Broker? broker;
 
-  /// Has the user picked where they sign in â€” a broker, or TuskaEx itself?
+  /// Has the user picked where they sign in — a broker, or TuskaEx itself?
   /// Until then the login screen shows the broker list first.
   bool chosen = false;
 
@@ -114,7 +114,7 @@ class BrandState extends ChangeNotifier {
   static const features = ['deposits', 'withdrawals', 'transfers', 'copy_trading', 'ib_program'];
 
   /// Is [feature] available to this broker's clients? Default on, so a broker
-  /// the admin never configured â€” or an older server â€” loses nothing.
+  /// the admin never configured — or an older server — loses nothing.
   bool allows(String feature) => broker?.features[feature] ?? true;
 
   Color get color => parseColor(broker?.color) ?? AppColors.platformBrand;

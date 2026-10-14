@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -170,7 +170,7 @@ Widget _gate(BuildContext context, String feature, String label, Widget child) {
   );
 }
 
-// â”€â”€ Deposit â”€â”€
+// ── Deposit ──
 
 class _DepositTab extends StatefulWidget {
   final VoidCallback onDone;
@@ -393,7 +393,7 @@ class _DetailsCard extends StatelessWidget {
   String _abs(String u) => u.startsWith('http') ? u : 'https://api.tuskaex.com${u.startsWith('/') ? '' : '/'}$u';
 }
 
-// â”€â”€ Withdraw â”€â”€
+// ── Withdraw ──
 
 class _WithdrawTab extends StatefulWidget {
   final VoidCallback onDone;
@@ -414,7 +414,7 @@ class _WithdrawTabState extends State<_WithdrawTab> with AutomaticKeepAliveClien
   @override
   bool get wantKeepAlive => true;
 
-  static const _nets = {'tron': 'USDT Â· TRC20', 'bsc': 'USDT Â· BEP20', 'eth': 'USDT Â· ERC20'};
+  static const _nets = {'tron': 'USDT · TRC20', 'bsc': 'USDT · BEP20', 'eth': 'USDT · ERC20'};
 
   String? _addrError() {
     final a = _address.text.trim();
@@ -492,13 +492,13 @@ class _WithdrawTabState extends State<_WithdrawTab> with AutomaticKeepAliveClien
             spacing: 8,
             children: [
               ChoiceChip(
-                label: Text('Wallet account Â· ${fmtMoney(widget.walletAccount!.balance)}'),
+                label: Text('Wallet account · ${fmtMoney(widget.walletAccount!.balance)}'),
                 selected: _source == 'wallet',
                 showCheckmark: false,
                 onSelected: (_) => setState(() => _source = 'wallet'),
               ),
               ChoiceChip(
-                label: Text('Main wallet Â· ${fmtMoney(widget.mainBalance)}'),
+                label: Text('Main wallet · ${fmtMoney(widget.mainBalance)}'),
                 selected: _source == 'main',
                 showCheckmark: false,
                 onSelected: (_) => setState(() => _source = 'main'),
@@ -527,7 +527,7 @@ class _WithdrawTabState extends State<_WithdrawTab> with AutomaticKeepAliveClien
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () => setState(() => _amount.text = (_available < 0 ? 0 : _available).toStringAsFixed(2)),
-            child: Text('Max ${fmtMoney(_available < 0 ? 0 : _available)} Â· min ${fmtMoney(_minWithdraw)}'),
+            child: Text('Max ${fmtMoney(_available < 0 ? 0 : _available)} · min ${fmtMoney(_minWithdraw)}'),
           ),
         ),
         TextField(
@@ -549,7 +549,7 @@ class _WithdrawTabState extends State<_WithdrawTab> with AutomaticKeepAliveClien
   }
 }
 
-// â”€â”€ Transfer â”€â”€
+// ── Transfer ──
 
 class _TransferTab extends StatefulWidget {
   final VoidCallback onDone;
@@ -621,8 +621,8 @@ class _TransferTabState extends State<_TransferTab> with AutomaticKeepAliveClien
       children: [
         SegmentedButton<bool>(
           segments: const [
-            ButtonSegment(value: true, label: Text('Wallet â†’ Account')),
-            ButtonSegment(value: false, label: Text('Account â†’ Wallet')),
+            ButtonSegment(value: true, label: Text('Wallet → Account')),
+            ButtonSegment(value: false, label: Text('Account → Wallet')),
           ],
           selected: {_toAccount},
           showSelectedIcon: false,
@@ -635,7 +635,7 @@ class _TransferTabState extends State<_TransferTab> with AutomaticKeepAliveClien
           decoration: const InputDecoration(labelText: 'Trading account'),
           items: [
             for (final a in live)
-              DropdownMenuItem(value: a.id, child: Text('${a.accountNumber} Â· ${a.groupName} Â· ${fmtMoney(a.balance)}')),
+              DropdownMenuItem(value: a.id, child: Text('${a.accountNumber} · ${a.groupName} · ${fmtMoney(a.balance)}')),
           ],
           onChanged: (v) => setState(() => _accountId = v),
         ),
@@ -655,7 +655,7 @@ class _TransferTabState extends State<_TransferTab> with AutomaticKeepAliveClien
   }
 }
 
-// â”€â”€ History â”€â”€
+// ── History ──
 
 class _HistoryTab extends StatefulWidget {
   const _HistoryTab();
@@ -725,7 +725,7 @@ class _HistoryTabState extends State<_HistoryTab> with AutomaticKeepAliveClientM
               title: Text(
                 t.type.contains('transfer') && (t.description ?? '').isNotEmpty
                     ? t.description!
-                    : '${titleCase(t.type)}${t.method.isNotEmpty ? ' Â· ${titleCase(t.method)}' : ''}',
+                    : '${titleCase(t.type)}${t.method.isNotEmpty ? ' · ${titleCase(t.method)}' : ''}',
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               subtitle: Text(fmtDateTime(t.createdAt), style: const TextStyle(color: AppColors.textMute, fontSize: 12)),

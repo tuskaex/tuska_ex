@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:tuskaex_app/core/format.dart';
 import 'package:tuskaex_app/models/models.dart';
 

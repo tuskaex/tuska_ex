@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
@@ -96,7 +96,7 @@ class _Root extends StatelessWidget {
       return _StatusScreen(
         icon: Icons.construction_rounded,
         title: 'Scheduled maintenance',
-        body: '$brand is being upgraded. Trading will be back shortly â€” your positions and funds are safe.',
+        body: '$brand is being upgraded. Trading will be back shortly — your positions and funds are safe.',
         onRetry: () => context.read<AuthState>().checkPlatformStatus(),
       );
     }
@@ -112,9 +112,6 @@ class _Root extends StatelessWidget {
         return Scaffold(
           body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
             const FloatingLogo3D(height: 120),
-            Text(brand, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
-            const SizedBox(height: 6),
-            const Text('trade Â· grow Â· beyond', style: TextStyle(color: AppColors.textDim, letterSpacing: 3, fontSize: 12.5)),
             const SizedBox(height: 36),
             const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)),
           ])),
