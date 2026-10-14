@@ -20,6 +20,10 @@ class QJsonObject;
 //   1. Details       -> POST /auth/register/start
 //   2. Email code    -> POST /auth/register/verify   (mints the session)
 //   3. Account type  -> GET  /accounts/available-groups, POST /accounts/open
+//                       with the account's own master and investor passwords
+//   4. Account ready -> MT5's closing page: login, server, both passwords,
+//                       with Copy and Save, because this is the only time the
+//                       passwords are shown
 //
 // Step 2 is not optional politeness: register/start does not create a usable
 // user, and /auth/login refuses an address that was never verified. A dialog
@@ -42,6 +46,13 @@ public:
     // before step 3 completed.
     QString accountNumber() const { return m_accountNumber; }
 
+    // A password that passes the platform's policy: 10 characters with
+    // lower, upper, digit and symbol, from the system's secure generator.
+    static QString generatePassword();
+    // The platform's password rule, checked here so a weak one costs no
+    // round trip. Returns an empty string when the password is acceptable.
+    static QString passwordProblem(const QString& pw);
+
 private slots:
     void submitDetails();    // step 1
     void submitOtp();        // step 2
@@ -52,6 +63,12 @@ private:
     QWidget* buildDetailsStep();
     QWidget* buildOtpStep();
     QWidget* buildAccountStep();
+    QWidget* buildDoneStep();
+    // Fills step 4 from the /accounts/open answer.
+    void showDone(const QJsonObject& opened);
+    // The details as plain text, for Copy and Save.
+    QString detailsText() const;
+
 
     QString v1Base() const;
     // Shared reply handling: turns a QNetworkReply into either a JSON object or
@@ -103,7 +120,19 @@ private:
     QWidget*     m_currencyRow;   // hidden unless the server states a currency
     QLabel*      m_currency;
     QSpinBox*    m_leverage;
+    QLineEdit*   m_masterPw;      // trades
+    QLineEdit*   m_investorPw;    // read-only
     QPushButton* m_openBtn;
+
+    // step 4
+    QLabel*      m_doneGrid = nullptr;   // the details, as a two-column table
+    QString      m_doneName;
+    QString      m_doneType;
+    QString      m_doneServer;
+    QString      m_doneMaster;
+    QString      m_doneInvestor;
+    QString      m_doneLeverage;
+    QString      m_doneBalance;
 
     QNetworkAccessManager* m_net;
 };

@@ -27,6 +27,8 @@ from ..services.auth_service import (
 )
 from ..services import wallet_auth_service, email_otp_service, sensitive_action_service
 from ..services import pending_registration_service
+from ..services import account_login_service
+from packages.common.src.schemas import AccountLoginRequest
 
 logger = logging.getLogger("auth_api")
 
@@ -321,6 +323,19 @@ async def impersonate_redeem(
 
 class _HandoffRedeemRequest(BaseModel):
     code: str
+
+
+@router.post("/account-login")
+async def account_login(
+    req: AccountLoginRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """MetaTrader-style sign-in to ONE trading account with its account number
+    and its master (trading) or investor (read-only) password. Answers with an
+    API key bound to that account, never a user session — see
+    services/account_login_service.py for why."""
+    return await account_login_service.account_login(req=req, request=request, db=db)
 
 
 @router.post("/handoff")

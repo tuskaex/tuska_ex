@@ -338,8 +338,8 @@ QWidget* LoginDialog::buildFormPanel() {
     v->addWidget(m_stepTitle);
     v->addSpacing(6);
 
-    m_stepSub = new QLabel(tr("Sign in with your TuskaEx account — the same email and "
-                              "password as the website."));
+    m_stepSub = new QLabel(tr("Sign in with your TuskaEx email and password, or with an "
+                              "account number and its master or investor password."));
     m_stepSub->setWordWrap(true);
     m_stepSub->setStyleSheet(QString("background:transparent; color:%1; font-size:12px;")
                              .arg(Theme::p().muted));
@@ -358,7 +358,7 @@ QWidget* LoginDialog::buildFormPanel() {
     // display name from the login response and never a valid login identifier.
     m_email = new QLineEdit(m_cfg.email);
     m_email->setObjectName("input");
-    m_email->setPlaceholderText(tr("you@example.com"));
+    m_email->setPlaceholderText(tr("you@example.com  or  account number"));
 
     m_password = new QLineEdit;
     m_password->setObjectName("input");
@@ -393,7 +393,10 @@ QWidget* LoginDialog::buildFormPanel() {
     QWidget* serverRow = field(tr("SERVER"), m_profile);
     rows->addWidget(serverRow);
     serverRow->hide();
-    rows->addWidget(field(tr("EMAIL"), m_email));
+    // Either way in, in one box, as MT5 has its Login field: an email signs in
+    // as the owner; an account number signs in to that account with its own
+    // master or investor password.
+    rows->addWidget(field(tr("EMAIL OR ACCOUNT NUMBER"), m_email));
     rows->addWidget(field(tr("PASSWORD"), m_password));
 
     // MT5's "Remember password". Off unless the trader asks for it — see
@@ -613,8 +616,8 @@ void LoginDialog::toggleAuthMode() {
     m_stepSub->setText(m_keyMode
         ? tr("Sign in with an API key and secret generated in your TuskaEx "
              "dashboard. The key already identifies one trading account.")
-        : tr("Sign in with your TuskaEx account — the same email and "
-             "password as the website."));
+        : tr("Sign in with your TuskaEx email and password, or with an "
+             "account number and its master or investor password."));
     adjustSize();
 }
 
@@ -665,6 +668,7 @@ void LoginDialog::doKeyLogin() {
         m_cfg.apiSecret    = secret;
         m_cfg.token.clear();
         m_cfg.refreshToken.clear();   // key auth has no session to refresh
+        m_cfg.readOnly = false;       // a dashboard key trades
         m_cfg.accountId.clear();
         m_cfg.userName.clear();
         m_cfg.accountsJson = "[]";
@@ -679,7 +683,7 @@ void LoginDialog::doPasswordLogin() {
     const QString email = m_email->text().trimmed();
     const QString pass  = m_password->text();
     if (email.isEmpty() || pass.isEmpty()) {
-        setStatus(tr("Enter your email and password."), true);
+        setStatus(tr("Enter your email or account number, and the password."), true);
         return;
     }
     m_status->clear();
@@ -688,11 +692,74 @@ void LoginDialog::doPasswordLogin() {
     m_cfg.restBase = m_rest->text().trimmed();
     m_cfg.wsUrl    = m_ws->text().trimmed();
 
+    // No "@": an account number (PT12345678, or just the digits).
+    if (!email.contains('@')) {
+        doAccountLogin(email, pass);
+        return;
+    }
+
     // Two deployments, two login routes. The platform API exposes
     // POST /api/v1/auth/login; the older algo gateway exposed
     // POST /api/algo/terminal/login. Try the platform route first and fall back
     // on 404, so one build signs in against either host.
     postLogin(v1Base() + "/auth/login", email, pass, /*allowFallback=*/true);
+}
+
+void LoginDialog::doAccountLogin(const QString& login, const QString& pass) {
+    QNetworkRequest req{QUrl(v1Base() + "/auth/account-login")};
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                     QNetworkRequest::NoLessSafeRedirectPolicy);
+    QJsonObject body;
+    body["login"]    = login;
+    body["password"] = pass;
+    body["label"]    = QStringLiteral("Desktop terminal");
+
+    QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(reply, &QNetworkReply::finished, this, [this, reply, login, pass]() {
+        reply->deleteLater();
+        setBusy(false);
+        const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject o = QJsonDocument::fromJson(reply->readAll()).object();
+        if (reply->error() != QNetworkReply::NoError || http >= 400) {
+            setStatus(tr("Sign-in failed: %1").arg(apiDetail(o, reply->errorString())), true);
+            return;
+        }
+        const QString key    = o.value("api_key").toString();
+        const QString secret = o.value("api_secret").toString();
+        const QString id     = o.value("account_id").toString();
+        const QString number = o.value("account_number").toString(login.toUpper());
+        if (key.isEmpty() || secret.isEmpty() || id.isEmpty()) {
+            setStatus(tr("Sign-in failed: the server sent no access key."), true);
+            return;
+        }
+
+        // An account session, not a user one: no JWT and no refresh token, so
+        // nothing of the owner's other accounts, wallet or profile is
+        // reachable from this terminal. Any previous session goes with them.
+        m_cfg.token.clear();
+        m_cfg.refreshToken.clear();
+        m_cfg.apiKey    = key;
+        m_cfg.apiSecret = secret;
+        m_cfg.accountId = id;
+        m_cfg.readOnly  = o.value("read_only").toBool();
+        m_cfg.userName  = number;
+        m_cfg.email     = number;      // prefills the box with the login next time
+
+        QJsonObject a;
+        a["account_id"]     = id;
+        a["account_number"] = number;
+        a["is_demo"]        = o.value("is_demo").toBool();
+        a["currency"]       = o.value("currency").toString("USD");
+        a["balance"]        = o.value("balance").toDouble();
+        m_cfg.accountsJson  = QString::fromUtf8(
+            QJsonDocument(QJsonArray{a}).toJson(QJsonDocument::Compact));
+
+        m_cfg.rememberPassword = m_remember && m_remember->isChecked();
+        m_cfg.savedPassword    = m_cfg.rememberPassword ? pass : QString();
+        m_cfg.save();
+        accept();
+    });
 }
 
 // Swaps the algo prefix for the platform one, the same derivation ApiClient
@@ -851,6 +918,7 @@ void LoginDialog::onConnect() {
         return;
     }
     m_cfg.token        = m_token;
+    m_cfg.readOnly     = false;
     m_cfg.accountId    = m_account->currentData().toString();
     m_cfg.userName     = m_userName;
     m_cfg.email        = m_email->text().trimmed();

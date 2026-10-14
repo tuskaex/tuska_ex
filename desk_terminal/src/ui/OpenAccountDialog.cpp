@@ -19,6 +19,16 @@
 #include <QRegularExpression>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QClipboard>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QGuiApplication>
+#include <QRandomGenerator>
+#include <QRegularExpression>
+#include <QStandardPaths>
+#include <QTextStream>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -104,6 +114,7 @@ OpenAccountDialog::OpenAccountDialog(const Config& cfg, QWidget* parent)
     m_steps->addWidget(buildDetailsStep());
     m_steps->addWidget(buildOtpStep());
     m_steps->addWidget(buildAccountStep());
+    m_steps->addWidget(buildDoneStep());
     root->addWidget(m_steps, 1);
 
     m_status = new QLabel;
@@ -246,6 +257,36 @@ QWidget* OpenAccountDialog::buildAccountStep() {
     m_leverage->setPrefix(tr("1 : "));
     v->addWidget(field(tr("LEVERAGE"), m_leverage));
 
+    // MetaTrader's two account passwords. Shown in clear and pre-filled with a
+    // generated one: the trader has to be able to read them to keep them, and
+    // a generated password is better than the one most people would type.
+    auto pwRow = [this](QLineEdit*& edit) {
+        auto* row = new QWidget;
+        auto* h = new QHBoxLayout(row);
+        h->setContentsMargins(0, 0, 0, 0);
+        h->setSpacing(6);
+        edit = new QLineEdit(generatePassword());
+        edit->setMaxLength(128);
+        edit->setStyleSheet(QStringLiteral("font-family:Consolas,'Courier New',monospace;"));
+        auto* gen = new QPushButton(tr("Generate"));
+        gen->setCursor(Qt::PointingHandCursor);
+        gen->setAutoDefault(false);
+        QLineEdit* e = edit;
+        connect(gen, &QPushButton::clicked, this, [e]() { e->setText(generatePassword()); });
+        h->addWidget(edit, 1);
+        h->addWidget(gen);
+        return row;
+    };
+    v->addWidget(field(tr("MASTER PASSWORD  (TRADING)"), pwRow(m_masterPw)));
+    v->addWidget(field(tr("INVESTOR PASSWORD  (READ-ONLY)"), pwRow(m_investorPw)));
+    auto* pwHint = new QLabel(tr("Sign in to this account with its number and the master "
+                                 "password to trade, or the investor password to view only. "
+                                 "At least 8 characters, mixing 3 of: lowercase, uppercase, "
+                                 "number, symbol; the two must differ."));
+    pwHint->setWordWrap(true);
+    pwHint->setStyleSheet(QString("color:%1; font-size:11px;").arg(Theme::p().muted));
+    v->addWidget(pwHint);
+
     // Re-read the chosen group whenever the pick changes: the leverage ceiling,
     // the minimum deposit and the currency all belong to it.
     connect(m_accountType, &QComboBox::currentIndexChanged, this, [this](int i) {
@@ -314,6 +355,11 @@ void OpenAccountDialog::showStep(int index) {
         m_title->setText(tr("Choose your account type"));
         m_subtitle->setText(tr("This decides your leverage, spread and commission. "
                                "You can open more account types later."));
+        break;
+    case 3:
+        m_title->setText(tr("Your account is ready"));
+        m_subtitle->setText(tr("Keep these details. The passwords are shown only now: "
+                               "copy them or save them to a file before you continue."));
         break;
     default:
         break;
@@ -582,9 +628,29 @@ void OpenAccountDialog::submitOpen() {
     const QJsonObject g = QJsonDocument::fromJson(
         m_accountType->itemData(i).toString().toUtf8()).object();
 
+    const QString master   = m_masterPw->text();
+    const QString investor = m_investorPw->text();
+    if (const QString why = passwordProblem(master); !why.isEmpty()) {
+        setStatus(tr("Master password: %1").arg(why), true);
+        m_masterPw->setFocus();
+        return;
+    }
+    if (const QString why = passwordProblem(investor); !why.isEmpty()) {
+        setStatus(tr("Investor password: %1").arg(why), true);
+        m_investorPw->setFocus();
+        return;
+    }
+    if (master == investor) {
+        setStatus(tr("The investor password must be different from the master password."), true);
+        m_investorPw->setFocus();
+        return;
+    }
+
     QJsonObject body;
-    body["account_group_id"] = g.value("id").toString();
-    body["leverage"]         = m_leverage->value();
+    body["account_group_id"]  = g.value("id").toString();
+    body["leverage"]          = m_leverage->value();
+    body["master_password"]   = master;
+    body["investor_password"] = investor;
 
     setBusy(true);
     setStatus(tr("Opening your account…"), false);
@@ -620,6 +686,138 @@ void OpenAccountDialog::submitOpen() {
         m_cfg.accountsJson = QString::fromUtf8(
             QJsonDocument(QJsonArray{acct}).toJson(QJsonDocument::Compact));
 
-        accept();
+        // Not accept() yet: MT5 ends on a page with the account's details,
+        // and this is the only moment the passwords exist in readable form.
+        showDone(o);
     });
+}
+
+// ── step 4: account ready ───────────────────────────────────────────────────
+
+QWidget* OpenAccountDialog::buildDoneStep() {
+    auto* w = new QWidget;
+    auto* v = new QVBoxLayout(w);
+    v->setContentsMargins(0, 0, 0, 0);
+    v->setSpacing(12);
+
+    m_doneGrid = new QLabel;
+    m_doneGrid->setTextFormat(Qt::RichText);
+    m_doneGrid->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    m_doneGrid->setStyleSheet(QString("background:%1; border:1px solid %2; border-radius:8px;"
+                                      "padding:12px 14px;")
+                              .arg(Theme::p().inputBg, Theme::p().inputBorder));
+    v->addWidget(m_doneGrid);
+
+    v->addStretch(1);
+    auto* btns = new QHBoxLayout;
+    auto* copy = new QPushButton(tr("Copy details"));
+    copy->setAutoDefault(false);
+    copy->setCursor(Qt::PointingHandCursor);
+    connect(copy, &QPushButton::clicked, this, [this]() {
+        QGuiApplication::clipboard()->setText(detailsText());
+        setStatus(tr("Copied. Paste it somewhere safe."), false);
+    });
+    auto* save = new QPushButton(tr("Save to file…"));
+    save->setAutoDefault(false);
+    save->setCursor(Qt::PointingHandCursor);
+    connect(save, &QPushButton::clicked, this, [this]() {
+        const QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+        const QString path = QFileDialog::getSaveFileName(
+            this, tr("Save account details"),
+            dir + QStringLiteral("/TuskaEx-%1.txt").arg(m_accountNumber),
+            tr("Text files (*.txt)"));
+        if (path.isEmpty()) return;
+        QFile f(path);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+            setStatus(tr("Could not save: %1").arg(f.errorString()), true);
+            return;
+        }
+        QTextStream(&f) << detailsText();
+        setStatus(tr("Saved to %1").arg(QDir::toNativeSeparators(path)), false);
+    });
+    auto* done = new QPushButton(tr("Start trading"));
+    done->setDefault(true);
+    done->setCursor(Qt::PointingHandCursor);
+    connect(done, &QPushButton::clicked, this, &QDialog::accept);
+    btns->addWidget(copy);
+    btns->addWidget(save);
+    btns->addStretch(1);
+    btns->addWidget(done);
+    v->addLayout(btns);
+    return w;
+}
+
+void OpenAccountDialog::showDone(const QJsonObject& o) {
+    const bool demo = o.value("is_demo").toBool(false);
+    m_doneName     = m_fullName->text().trimmed();
+    m_doneType     = o.value("account_group_name").toString(m_accountType->currentText());
+    m_doneServer   = demo ? QStringLiteral("TuskaEx-Demo") : QStringLiteral("TuskaEx-Live");
+    m_doneMaster   = m_masterPw->text();
+    m_doneInvestor = m_investorPw->text();
+    m_doneLeverage = QStringLiteral("1:%1").arg(o.value("leverage").toInt(m_leverage->value()));
+    m_doneBalance  = QStringLiteral("%L1 %2").arg(o.value("balance").toDouble(), 0, 'f', 2)
+                                            .arg(o.value("currency").toString("USD"));
+
+    const auto& p = Theme::p();
+    auto row = [&](const QString& k, const QString& val, bool strong = false) {
+        return QString("<tr><td style='color:%1; padding:3px 18px 3px 0;'>%2</td>"
+                       "<td style='color:%3; font-weight:%4; font-family:%5;'>%6</td></tr>")
+            .arg(p.muted, k.toHtmlEscaped(), p.textStrong, strong ? "800" : "600",
+                 strong ? "Consolas,'Courier New',monospace" : "inherit", val.toHtmlEscaped());
+    };
+    m_doneGrid->setText(
+        "<table cellspacing='0'>"
+        + row(tr("Name"), m_doneName)
+        + row(tr("Account type"), m_doneType)
+        + row(tr("Server"), m_doneServer)
+        + row(tr("Login"), m_accountNumber, true)
+        + row(tr("Master password"), m_doneMaster, true)
+        + row(tr("Investor password"), m_doneInvestor, true)
+        + row(tr("Leverage"), m_doneLeverage)
+        + row(tr("Balance"), m_doneBalance)
+        + "</table>");
+    showStep(3);
+}
+
+QString OpenAccountDialog::detailsText() const {
+    return tr("TuskaEx trading account\n"
+              "Name:              %1\n"
+              "Account type:      %2\n"
+              "Server:            %3\n"
+              "Login:             %4\n"
+              "Master password:   %5   (trading)\n"
+              "Investor password: %6   (read-only)\n"
+              "Leverage:          %7\n"
+              "Balance:           %8\n")
+        .arg(m_doneName, m_doneType, m_doneServer, m_accountNumber,
+             m_doneMaster, m_doneInvestor, m_doneLeverage, m_doneBalance);
+}
+
+QString OpenAccountDialog::generatePassword() {
+    // No look-alikes (0/O, 1/l/I), so a password read off the screen is typed
+    // back correctly.
+    static const QString lower  = QStringLiteral("abcdefghijkmnpqrstuvwxyz");
+    static const QString upper  = QStringLiteral("ABCDEFGHJKLMNPQRSTUVWXYZ");
+    static const QString digits = QStringLiteral("23456789");
+    static const QString symbol = QStringLiteral("!@#$%&*?");
+    const QString all = lower + upper + digits + symbol;
+    auto* rng = QRandomGenerator::system();
+    auto pick = [rng](const QString& set) { return set.at(int(rng->bounded(set.size()))); };
+    QString pw;
+    pw += pick(lower); pw += pick(upper); pw += pick(digits); pw += pick(symbol);
+    while (pw.size() < 10) pw += pick(all);
+    for (int i = pw.size() - 1; i > 0; --i)               // Fisher-Yates
+        std::swap(pw[i], pw[int(rng->bounded(i + 1))]);
+    return pw;
+}
+
+QString OpenAccountDialog::passwordProblem(const QString& pw) {
+    if (pw.size() < 8) return tr("use at least 8 characters.");
+    int classes = 0;
+    if (pw.contains(QRegularExpression("[a-z]"))) ++classes;
+    if (pw.contains(QRegularExpression("[A-Z]"))) ++classes;
+    if (pw.contains(QRegularExpression("[0-9]"))) ++classes;
+    if (pw.contains(QRegularExpression("[^a-zA-Z0-9]"))) ++classes;
+    if (classes < 3) return tr("mix at least 3 of lowercase, uppercase, number and symbol.");
+    return QString();
 }

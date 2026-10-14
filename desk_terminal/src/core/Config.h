@@ -22,6 +22,10 @@ public:
     QString userName;      // display name from the login response
     QString email;         // the address signed in with (prefills the login form)
     QString accountsJson = "[]";   // [{account_id, account_number, is_demo, currency}]
+    // Signed in with an account's INVESTOR password: everything is visible and
+    // nothing can be traded. The server enforces it; this is so the terminal
+    // can say so up front instead of letting each click be refused.
+    bool    readOnly = false;
 
     // MT5's "Remember password" on the sign-in card. Off by default, and off
     // means the field below is cleared as well as unused.

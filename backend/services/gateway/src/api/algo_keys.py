@@ -17,6 +17,8 @@ from packages.common.src.database import get_db
 from packages.common.src.auth import get_current_user
 from packages.common.src.models import AlgoApiKey, TradingAccount, MasterAccount, InvestorAllocation
 
+from ..services.account_service import ACCOUNT_LOGIN_LABEL_MASTER, ACCOUNT_LOGIN_LABEL_INVESTOR
+
 logger = logging.getLogger("algo_keys")
 router = APIRouter()
 
@@ -174,12 +176,16 @@ async def generate_key(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found or not yours")
 
-    # Revoke any existing active key for this account
+    # Revoke any existing active key for this account — except the keys that
+    # account-password sign-ins hold. Those are other people's sessions (an
+    # investor watching the account, a manager trading it), and the owner
+    # opening a terminal must not sign them out; changing the password does.
     existing_q = await db.execute(
         select(AlgoApiKey).where(
             AlgoApiKey.user_id == uid,
             AlgoApiKey.account_id == body.account_id,
             AlgoApiKey.is_active == True,
+            AlgoApiKey.label.notin_([ACCOUNT_LOGIN_LABEL_MASTER, ACCOUNT_LOGIN_LABEL_INVESTOR]),
         )
     )
     for old_key in existing_q.scalars().all():

@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QUrlQuery>
 
 ApiClient::ApiClient(const Config& cfg, QObject* parent)
     : QObject(parent), m_cfg(cfg), m_net(new QNetworkAccessManager(this)) {}
@@ -32,7 +33,44 @@ QNetworkRequest ApiClient::makeRequest(const QString& path) const {
     return req;
 }
 
+// A session with an API key and no JWT — an account-password sign-in, or a
+// pasted key — reaches the same operations on the key's own account through
+// /api/algo/terminal (backend api/algo_terminal.py). This maps a /api/v1 path
+// onto it, or returns an empty string for the few that only a user session can
+// do (wallet, share links, the web-trader handoff); the instrument catalogue is
+// public and stays where it is.
+static QString terminalPathFor(const QString& v1Path) {
+    const int q = v1Path.indexOf('?');
+    QString path  = q < 0 ? v1Path : v1Path.left(q);
+    QUrlQuery query(q < 0 ? QString() : v1Path.mid(q + 1));
+    // The account is the key's. The server ignores any other, and sending it
+    // would only suggest otherwise.
+    query.removeAllQueryItems(QStringLiteral("account_id"));
+    while (path.size() > 1 && path.endsWith('/')) path.chop(1);
+
+    QString mapped;
+    if (path == "/positions" || path == "/orders"
+        || (path.startsWith("/orders/") && path.count('/') == 2)
+        || (path.startsWith("/positions/") && path.count('/') == 2)
+        || (path.startsWith("/positions/") && path.endsWith("/close") && path.count('/') == 3))
+        mapped = path;
+    else if (path == "/portfolio/trades")
+        mapped = QStringLiteral("/trades");
+    else if (path == "/wallet/transactions")
+        mapped = QStringLiteral("/transactions");
+    else
+        return QString();
+
+    const QString qs = query.toString(QUrl::FullyEncoded);
+    return QStringLiteral("/terminal") + mapped + (qs.isEmpty() ? QString() : "?" + qs);
+}
+
 QNetworkRequest ApiClient::v1Request(const QString& path) const {
+    if (m_cfg.token.isEmpty() && !m_cfg.apiKey.isEmpty() && !m_cfg.apiSecret.isEmpty()) {
+        const QString t = terminalPathFor(path);
+        if (!t.isEmpty())
+            return makeRequest(t);   // restBase is .../api/algo; key headers
+    }
     // The per-position modify/close endpoints live under /api/v1/positions and
     // authenticate the platform user via the JWT (ownership is derived from the
     // position). Reuse the algo REST base, swapping /api/algo -> /api/v1.
@@ -521,6 +559,25 @@ void ApiClient::requestWebTraderHandoff() {
             return;
         }
         emit webTraderHandoff(true, code, o.value("terminal_url").toString());
+    });
+}
+
+void ApiClient::setAccountPasswords(const QString& master, const QString& investor) {
+    QJsonObject body;
+    if (!master.isEmpty())   body["master_password"]   = master;
+    if (!investor.isEmpty()) body["investor_password"] = investor;
+    QNetworkReply* r = m_net->put(v1Request("/accounts/" + m_cfg.accountId + "/passwords"),
+                                  QJsonDocument(body).toJson(QJsonDocument::Compact));
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        const int http = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
+        if (r->error() != QNetworkReply::NoError || http >= 400) {
+            emit accountPasswordsResult(false, apiDetail(o, r->errorString()));
+            return;
+        }
+        emit accountPasswordsResult(true, tr("Password changed for account %1")
+                                              .arg(o.value("account_number").toString()));
     });
 }
 

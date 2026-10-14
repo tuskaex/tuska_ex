@@ -90,6 +90,14 @@ async def algo_trade(
         if not account or not account.is_active:
             raise HTTPException(status_code=403, detail="Trading account is inactive")
 
+        # An investor-password sign-in may look, never trade.
+        if getattr(key_row, "read_only", False):
+            raise HTTPException(
+                status_code=403,
+                detail="Signed in with the investor password: this account is read-only. "
+                       "Sign in with the master password to trade.",
+            )
+
         # Update last_used_at
         key_row.last_used_at = datetime.now(timezone.utc)
 

@@ -91,6 +91,9 @@ public:
     // own, so the browser opens signed in: no password typed twice, and no
     // token ever put in a URL. Needs the session JWT.
     void requestWebTraderHandoff();
+    // Accounts > Change Password: set or change the active account's master
+    // and/or investor password. An empty string leaves that one as it is.
+    void setAccountPasswords(const QString& master, const QString& investor);
     // lots <= 0 (or >= the position's size) closes it fully; a smaller value is
     // a partial close and leaves the remainder open.
     void closePositionById(const QString& positionId, double lots = 0.0);
@@ -114,6 +117,8 @@ signals:
     // codeOrError. terminalUrl is the platform's separate web-terminal origin,
     // empty when the web terminal lives on the main trader site.
     void webTraderHandoff(bool ok, const QString& codeOrError, const QString& terminalUrl);
+    // Answer to setAccountPasswords(). ok=false carries the reason.
+    void accountPasswordsResult(bool ok, const QString& message);
     // Answer to fetchDailyRange(). Emitted only on success: the columns
     // track the session's own ticks meanwhile, so a failed seed costs a
     // slightly narrow range, not an empty one, and is not worth a message.

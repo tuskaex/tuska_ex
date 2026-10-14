@@ -47,6 +47,13 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <memory>
+#include <QCheckBox>
+#include <QFontMetrics>
+#include <QClipboard>
+#include <QDialogButtonBox>
+#include <QGuiApplication>
+#include <QLineEdit>
+#include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
@@ -859,8 +866,11 @@ void MainWindow::rebuildAccountsMenu() {
         }
     }
     m_accountsMenu->addSeparator();
+    connect(MenuIcons::set(m_accountsMenu->addAction(tr("Change &Password…")), &Icons::key),
+            &QAction::triggered, this, &MainWindow::openChangePassword);
     connect(MenuIcons::set(m_accountsMenu->addAction(tr("&Wallet…")), &Icons::wallet),
             &QAction::triggered, this, [this]() {
+        if (!requireSession(tr("The wallet"))) return;
         WalletDialog dlg(m_cfg, this);
         // The dialog raises its own toast while it is open. Repeat the result
         // here once it closes: the balances on screen have just jumped and the
@@ -931,6 +941,10 @@ void MainWindow::updateIdentity() {
     // number stands alone rather than being labelled "Not signed in".
     QString name = m_cfg.userName.trimmed();
     if (name.isEmpty()) name = m_cfg.email.trimmed();
+    // An account-number sign-in has no name: what it would show is the account
+    // number, which the line already carries.
+    if (m_lastAccount.valid && name.compare(m_lastAccount.account, Qt::CaseInsensitive) == 0)
+        name.clear();
 
     const QString acct = m_lastAccount.valid
         ? (m_cfg.privacy ? QString::fromUtf8(MASK) : m_lastAccount.account)
@@ -944,13 +958,24 @@ void MainWindow::updateIdentity() {
         m_identity->setText(QString("<span style='color:%1;font-weight:600;'>%2</span>%3"
                                     "<span style='color:%4;'>%5</span>")
                             .arg(c.textStrong, name, sep, c.text, acct));
+    // An investor-password sign-in can see everything and trade nothing; the
+    // trader should know that before reaching for BUY, not after.
+    const QString roTag = tr("INVESTOR · READ-ONLY");
+    if (m_cfg.readOnly)
+        m_identity->setText(m_identity->text() + sep
+            + QString("<span style='color:%1;font-weight:700;'>%2</span>").arg(c.warn, roTag));
     m_identity->setStyleSheet("background:transparent; font-size:11px;");
     // A menu-bar corner widget gets exactly its sizeHint, and a QLabel's hint
     // for rich text is unreliable right after setText, so the line used to get
     // clipped. Size it from the plain equivalent's font metrics, with real
     // headroom — the bold segment renders wider than those metrics suggest.
-    const QString plain = name.isEmpty() ? acct : QString("%1  |  %2").arg(name, acct);
-    m_identity->setFixedWidth(m_identity->fontMetrics().horizontalAdvance(plain) + 52);
+    QString plain = name.isEmpty() ? acct : QString("%1  |  %2").arg(name, acct);
+    if (m_cfg.readOnly) plain += QStringLiteral("  |  ") + roTag;
+    // Measured in bold: most of the line is bold, and measuring it in the
+    // regular face is what clipped the read-only tag.
+    QFont bold = m_identity->font();
+    bold.setBold(true);
+    m_identity->setFixedWidth(QFontMetrics(bold).horizontalAdvance(plain) + 52);
 }
 
 // --- wiring -----------------------------------------------------------------
@@ -1154,10 +1179,12 @@ void MainWindow::connectServices() {
     // One-click strip -> trade endpoints
     connect(m_ticket, &OrderTicket::buy, this,
             [this](const QString& s, double v, double sl, double tp) {
+        if (!requireTrading(tr("Buying"))) return;
         m_api->placeOrder("BUY", s, v, sl, tp, "terminal");
     });
     connect(m_ticket, &OrderTicket::sell, this,
             [this](const QString& s, double v, double sl, double tp) {
+        if (!requireTrading(tr("Selling"))) return;
         m_api->placeOrder("SELL", s, v, sl, tp, "terminal");
     });
     // The strip refuses an order whose bracket sits on the wrong side of the
@@ -1174,6 +1201,7 @@ void MainWindow::connectServices() {
     connect(m_ticket, &OrderTicket::rejected, this,
             [this](const QString& why) { setStatus(why, true); });
     connect(m_ticket, &OrderTicket::closeAll, this, [this](const QString& s) {
+        if (!requireTrading(tr("Closing positions"))) return;
         if (QMessageBox::question(this, tr("Close positions"),
                 tr("Close ALL open %1 positions?").arg(s)) == QMessageBox::Yes)
             m_api->closePositions(s);
@@ -1240,7 +1268,7 @@ void MainWindow::connectServices() {
         const QString sym = pos.symbol;
         // Never silently falls back to the symbol-wide close — that was the
         // bug this replaced.
-        if (!requireSession(tr("Closing a single position"))) return;
+        if (!requireTrading(tr("Closing a single position"))) return;
         // Lot step / minimum come from the instrument spec so the dialog cannot
         // offer a slice the venue would reject.
         const SymbolSpec spec = m_specs.value(sym);
@@ -1255,7 +1283,7 @@ void MainWindow::connectServices() {
     // "S/L and T/P not changing" report was about.
     connect(m_positions, &PositionsPanel::modifyBrackets, this,
             [this](const OpenPosition& pos) {
-        if (!requireSession(tr("Modifying stop loss / take profit"))) return;
+        if (!requireTrading(tr("Modifying stop loss / take profit"))) return;
         const SymbolSpec spec = m_specs.value(pos.symbol);
         ModifyBracketsDialog dlg(pos, spec.digits > 0 ? spec.digits : 5, this);
         if (dlg.exec() != QDialog::Accepted) return;
@@ -1270,7 +1298,7 @@ void MainWindow::connectServices() {
     // the dialog, and it is one call for the one leg that changed.
     connect(m_positions, &PositionsPanel::bracketEdited, this,
             [this](const QString& id, const QString& kind, double level) {
-        if (!requireSession(tr("Modifying stop loss / take profit"))) {
+        if (!requireTrading(tr("Modifying stop loss / take profit"))) {
             m_api->fetchPositions();   // put the cell back to the server's value
             return;
         }
@@ -1291,7 +1319,7 @@ void MainWindow::connectServices() {
     // server's answer decides what the cell ends up showing.
     connect(m_positions, &PositionsPanel::commentEdited, this,
             [this](const QString& id, const QString& text) {
-        if (!requireSession(tr("Editing a position comment"))) {
+        if (!requireTrading(tr("Editing a position comment"))) {
             m_api->fetchPositions();   // put the cell back to the server's value
             return;
         }
@@ -1316,7 +1344,7 @@ void MainWindow::connectServices() {
 
     connect(m_positions, &PositionsPanel::cancelOrder, this,
             [this](const PendingOrder& o) {
-        if (!requireSession(tr("Cancelling a pending order"))) return;
+        if (!requireTrading(tr("Cancelling a pending order"))) return;
         if (QMessageBox::question(this, tr("Cancel order"),
                 tr("Cancel this pending %1 order (%2 lots at %3)?")
                     .arg(o.symbol, QString::number(o.lots, 'f', 2),
@@ -1327,7 +1355,7 @@ void MainWindow::connectServices() {
 
     connect(m_positions, &PositionsPanel::modifyOrder, this,
             [this](const PendingOrder& o) {
-        if (!requireSession(tr("Modifying a pending order"))) return;
+        if (!requireTrading(tr("Modifying a pending order"))) return;
         const SymbolSpec spec = m_specs.value(o.symbol);
         const Quote q = m_lastQuotes.value(o.symbol);
         EditOrderDialog dlg(o, spec, q.bid, q.ask, this);
@@ -1661,10 +1689,24 @@ void MainWindow::setStatus(const QString& text, bool error) {
 bool MainWindow::requireSession(const QString& what) {
     if (!m_cfg.token.trimmed().isEmpty()) return true;
     QMessageBox::information(this, what,
-        tr("%1 needs an email/password sign-in. This session is authenticated "
-           "with an API key, which can place and close market orders but cannot "
-           "reach the account endpoints. Sign in from File > Settings to use it.")
-            .arg(what));
+        tr("%1 needs a sign-in with your email and password. This terminal is "
+           "signed in to one trading account only, which reaches that account's "
+           "trading but not your wallet or profile. Use File > Login to Trade "
+           "Account with your email to use it.").arg(what));
+    return false;
+}
+
+bool MainWindow::requireTrading(const QString& what) {
+    if (m_cfg.readOnly) {
+        QMessageBox::information(this, what,
+            tr("%1 is not available: this terminal is signed in with the account's "
+               "investor password, which is read-only. Sign in with the master "
+               "password to trade (File > Login to Trade Account).").arg(what));
+        return false;
+    }
+    if (!m_cfg.token.trimmed().isEmpty()) return true;
+    if (!m_cfg.apiKey.isEmpty() && !m_cfg.apiSecret.isEmpty()) return true;
+    QMessageBox::information(this, what, tr("%1 needs a sign-in first.").arg(what));
     return false;
 }
 
@@ -1767,6 +1809,130 @@ void MainWindow::loginTradeAccount() {
     Journal::success(QStringLiteral("Account"), tr("signed in to trade account %1").arg(number));
 }
 
+void MainWindow::openChangePassword() {
+    if (!requireSession(tr("Changing an account password"))) return;
+    if (m_cfg.accountId.isEmpty()) return;
+
+    QString number = m_cfg.accountId;
+    for (const QJsonValue& v : QJsonDocument::fromJson(m_cfg.accountsJson.toUtf8()).array()) {
+        const QJsonObject a = v.toObject();
+        if (a.value("account_id").toString() == m_cfg.accountId) {
+            number = a.value("account_number").toString(number);
+            break;
+        }
+    }
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Change Password"));
+    dlg.setMinimumWidth(460);
+    auto* v = new QVBoxLayout(&dlg);
+    v->setSpacing(10);
+    auto* intro = new QLabel(tr("Account <b>%1</b>. Set a new password for one or both. "
+                                "Leave a box empty to keep that password as it is. "
+                                "Anyone signed in with a password you replace is signed out.")
+                                 .arg(number.toHtmlEscaped()));
+    intro->setWordWrap(true);
+    v->addWidget(intro);
+
+    auto pwRow = [&dlg](const QString& caption, QCheckBox*& use) {
+        auto* box = new QWidget;
+        auto* col = new QVBoxLayout(box);
+        col->setContentsMargins(0, 0, 0, 0);
+        use = new QCheckBox(caption);
+        col->addWidget(use);
+        auto* row = new QHBoxLayout;
+        auto* edit = new QLineEdit;
+        edit->setEnabled(false);
+        edit->setMaxLength(128);
+        edit->setStyleSheet(QStringLiteral("font-family:Consolas,'Courier New',monospace;"));
+        auto* gen = new QPushButton(QObject::tr("Generate"));
+        gen->setEnabled(false);
+        gen->setAutoDefault(false);
+        QObject::connect(use, &QCheckBox::toggled, edit, &QLineEdit::setEnabled);
+        QObject::connect(use, &QCheckBox::toggled, gen, &QPushButton::setEnabled);
+        QObject::connect(use, &QCheckBox::toggled, &dlg, [edit](bool on) {
+            if (on && edit->text().isEmpty()) edit->setText(OpenAccountDialog::generatePassword());
+        });
+        QObject::connect(gen, &QPushButton::clicked, edit,
+                         [edit]() { edit->setText(OpenAccountDialog::generatePassword()); });
+        row->addWidget(edit, 1);
+        row->addWidget(gen);
+        col->addLayout(row);
+        return std::make_pair(box, edit);
+    };
+    QCheckBox* useMaster = nullptr;
+    QCheckBox* useInvestor = nullptr;
+    auto [masterBox, masterEdit]     = pwRow(tr("Change the master password (trading)"), useMaster);
+    auto [investorBox, investorEdit] = pwRow(tr("Change the investor password (read-only)"), useInvestor);
+    v->addWidget(masterBox);
+    v->addWidget(investorBox);
+
+    auto* status = new QLabel;
+    status->setWordWrap(true);
+    status->setStyleSheet(QString("color:%1; font-weight:600;").arg(Theme::p().down));
+    v->addWidget(status);
+
+    auto* btns = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    btns->button(QDialogButtonBox::Ok)->setText(tr("Change"));
+    v->addWidget(btns);
+    connect(btns, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(btns, &QDialogButtonBox::accepted, &dlg, [&]() {
+        const QString m = useMaster->isChecked() ? masterEdit->text() : QString();
+        const QString i = useInvestor->isChecked() ? investorEdit->text() : QString();
+        if (m.isEmpty() && i.isEmpty()) {
+            status->setText(tr("Tick at least one password to change."));
+            return;
+        }
+        if (!m.isEmpty()) {
+            if (const QString why = OpenAccountDialog::passwordProblem(m); !why.isEmpty()) {
+                status->setText(tr("Master password: %1").arg(why));
+                return;
+            }
+        }
+        if (!i.isEmpty()) {
+            if (const QString why = OpenAccountDialog::passwordProblem(i); !why.isEmpty()) {
+                status->setText(tr("Investor password: %1").arg(why));
+                return;
+            }
+        }
+        if (!m.isEmpty() && m == i) {
+            status->setText(tr("The investor password must be different from the master password."));
+            return;
+        }
+        btns->setEnabled(false);
+        status->setStyleSheet(QString("color:%1; font-weight:600;").arg(Theme::p().muted));
+        status->setText(tr("Saving…"));
+        auto conn = std::make_shared<QMetaObject::Connection>();
+        *conn = connect(m_api, &ApiClient::accountPasswordsResult, &dlg,
+            [&dlg, status, btns, conn, m, i, number, this](bool ok, const QString& msg) {
+            disconnect(*conn);
+            btns->setEnabled(true);
+            if (!ok) {
+                status->setStyleSheet(QString("color:%1; font-weight:600;").arg(Theme::p().down));
+                status->setText(msg);
+                return;
+            }
+            // Shown once more, the way MT5 confirms a change: the trader is
+            // about to need these somewhere else.
+            QString text = tr("Account %1\n").arg(number);
+            if (!m.isEmpty()) text += tr("Master password: %1\n").arg(m);
+            if (!i.isEmpty()) text += tr("Investor password: %1\n").arg(i);
+            QMessageBox box(QMessageBox::Information, tr("Password changed"),
+                            tr("Saved. Keep the new password safe; it is not shown again.")
+                                + "\n\n" + text, QMessageBox::Ok, &dlg);
+            QPushButton* copy = box.addButton(tr("Copy"), QMessageBox::ActionRole);
+            box.exec();
+            if (box.clickedButton() == copy)
+                QGuiApplication::clipboard()->setText(text);
+            Journal::success(QStringLiteral("Account"), msg);
+            setStatus(msg);
+            dlg.accept();
+        });
+        m_api->setAccountPasswords(m, i);
+    });
+    dlg.exec();
+}
+
 QString MainWindow::webTraderUrl(const QString& origin, const QString& query) const {
     // The platform names its web-terminal origin when the terminal has been
     // split onto a domain of its own. Otherwise it is the trader site: the
@@ -1824,7 +1990,7 @@ void MainWindow::openOrderWindow() {
     // people did not find. The blotter listed pending orders the UI had no
     // obvious way to create; "we can't find the pending order window" was
     // literally true.
-    if (!requireSession(tr("Placing an order"))) return;
+    if (!requireTrading(tr("Placing an order"))) return;
     if (m_currentSymbol.isEmpty()) {
         setStatus(tr("Pick a symbol in Market Watch first."), true);
         return;

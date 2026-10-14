@@ -24,7 +24,7 @@ from .api import (
     auth, orders, positions, accounts, instruments, deposits, webhooks,
     websocket_manager, social, business, portfolio, profile, support,
     notifications, banners, trading_catalog, followers, lp_receiver,
-    share, algo_connector, algo_keys, algo_market_data,
+    share, algo_connector, algo_keys, algo_market_data, algo_terminal,
 )
 from .engines.sltp_engine import sltp_engine
 from .engines.copy_engine import copy_engine
@@ -333,6 +333,7 @@ app.include_router(share.public_router, prefix="/api/v1/public", tags=["Public S
 app.include_router(algo_keys.router, prefix="/api/v1/algo", tags=["Algo Keys"])
 app.include_router(algo_connector.router, prefix="/api/algo", tags=["Algo Connector"])
 app.include_router(algo_market_data.router, prefix="/api/algo", tags=["Algo Market Data"])
+app.include_router(algo_terminal.router, prefix="/api/algo/terminal", tags=["Algo Terminal"])
 
 
 @app.get("/health")

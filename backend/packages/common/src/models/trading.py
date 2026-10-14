@@ -64,6 +64,11 @@ class TradingAccount(Base):
     # account per user via partial unique index
     # ux_one_wallet_account_per_user (migration 0047).
     is_wallet_account = Column(Boolean, default=False, server_default="false", nullable=False)
+    # MetaTrader-style account passwords (migration 0061). bcrypt; NULL until
+    # the owner sets one. Master signs in to this account with trading;
+    # investor signs in read-only. Never returned by any endpoint.
+    master_password_hash = Column(String(255), nullable=True)
+    investor_password_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -177,6 +182,8 @@ class AlgoApiKey(Base):
     is_active = Column(Boolean, default=True)
     last_used_at = Column(DateTime(timezone=True), nullable=True)
     trades_count = Column(Integer, default=0)
+    # Issued to an investor-password sign-in: may read, may not trade.
+    read_only = Column(Boolean, default=False, server_default="false", nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
     user = relationship("User", lazy="selectin")

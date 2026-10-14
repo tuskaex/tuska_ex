@@ -42,6 +42,7 @@ Config Config::load() {
     if (o.contains("theme"))     c.theme     = o.value("theme").toString("dark");
     if (o.contains("privacy"))   c.privacy   = o.value("privacy").toBool();
     if (o.contains("accountsJson")) c.accountsJson = o.value("accountsJson").toString();
+    if (o.contains("readOnly"))  c.readOnly  = o.value("readOnly").toBool();
     if (o.contains("apiKey"))    c.apiKey    = o.value("apiKey").toString();
     if (o.contains("apiSecret")) c.apiSecret = o.value("apiSecret").toString();
     // Clamped on the way in: a hand-edited or corrupt file must not put the
@@ -122,6 +123,7 @@ bool Config::save() const {
     o["theme"]        = theme;
     o["privacy"]      = privacy;
     o["accountsJson"] = accountsJson;
+    o["readOnly"]     = readOnly;
     o["apiKey"]       = apiKey;
     o["apiSecret"]    = apiSecret;
     o["restBase"]     = restBase;

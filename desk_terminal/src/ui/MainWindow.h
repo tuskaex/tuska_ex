@@ -94,6 +94,10 @@ private slots:
     // Opens the web terminal in the browser on the account this terminal is
     // using, already signed in (see ApiClient::requestWebTraderHandoff).
     void openWebTrader();
+    // ── Accounts > Change Password ──
+    // MT5's dialog: a new master password, a new investor password, or both,
+    // for the account this terminal is on. Needs the owner's email sign-in.
+    void openChangePassword();
 
 protected:
     // Remembers where the window was and whether it was maximized.
@@ -145,6 +149,11 @@ private:
     // of each call site firing a request that 401s with a message no trader can
     // act on. `what` names the action in the message.
     bool requireSession(const QString& what);
+    // True when this session may trade. False, with the reason said once, for
+    // an investor-password sign-in (read-only) or a session with no
+    // credentials at all. Every entry that places, changes or closes anything
+    // asks this first; the server refuses a read-only key regardless.
+    bool requireTrading(const QString& what);
     void updateIdentity();      // the "name | type | account no." line by the logo
     // Money as text, or a mask when privacy mode is on.
     QString money(double v, const QString& currency = QString()) const;

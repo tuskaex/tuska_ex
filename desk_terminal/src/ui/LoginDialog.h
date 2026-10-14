@@ -52,6 +52,10 @@ private slots:
 
 private:
     void doPasswordLogin();
+    // MT5's sign-in: an account number and that account's master (trading) or
+    // investor (read-only) password. Answered with an API key for that one
+    // account, so there is no account step and no user session.
+    void doAccountLogin(const QString& login, const QString& pass);
     void doKeyLogin();
     QString v1Base() const;               // restBase with /api/algo -> /api/v1
     void postLogin(const QString& url, const QString& email,

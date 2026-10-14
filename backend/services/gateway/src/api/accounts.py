@@ -1,7 +1,7 @@
 """Trading Accounts API."""
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.database import get_db
@@ -9,8 +9,10 @@ from packages.common.src.schemas import (
     AccountSummary,
     MessageResponse,
     OpenLiveAccountRequest,
+    SetAccountPasswordsRequest,
     TradingAccountResponse,
 )
+from packages.common.src.rate_limit import rate_limit_http
 from packages.common.src.auth import get_current_user
 from ..services import account_service
 
@@ -42,6 +44,22 @@ async def open_live_account(
     """Create a live trading account from an admin-defined type. Optional internal funding from existing live balances."""
     return await account_service.open_live_account(
         user_id=current_user["user_id"], req=req, db=db,
+    )
+
+
+@router.put("/{account_id}/passwords")
+async def set_account_passwords(
+    account_id: UUID,
+    req: SetAccountPasswordsRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set or change the MetaTrader-style master and/or investor password of
+    one of the caller's own trading accounts."""
+    rate_limit_http(request, "account-passwords", 10, 60.0)
+    return await account_service.set_account_passwords(
+        user_id=current_user["user_id"], account_id=account_id, req=req, db=db,
     )
 
 

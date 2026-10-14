@@ -97,6 +97,51 @@ class OpenLiveAccountRequest(BaseModel):
     # Real users can additionally open practice / demo accounts. Demo users
     # are still locked to demo regardless of what they send here.
     is_demo: Optional[bool] = None
+    # MetaTrader-style account passwords (see migration 0061). Optional: the
+    # web opens accounts without them, and the owner can set them later.
+    master_password: Optional[str] = Field(default=None, max_length=128)
+    investor_password: Optional[str] = Field(default=None, max_length=128)
+
+    @field_validator("master_password", "investor_password")
+    @classmethod
+    def _strong(cls, v: Optional[str]) -> Optional[str]:
+        return validate_password_strength(v) if v else None
+
+    @field_validator("investor_password")
+    @classmethod
+    def _differs(cls, v: Optional[str], info) -> Optional[str]:
+        # The same string for both would make the read-only password a trading
+        # password, which is the one thing it must never be.
+        if v and v == info.data.get("master_password"):
+            raise ValueError("The investor password must be different from the master password.")
+        return v
+
+
+class SetAccountPasswordsRequest(BaseModel):
+    """Set or change one or both passwords of a trading account. A field left
+    out is left as it is."""
+    master_password: Optional[str] = Field(default=None, max_length=128)
+    investor_password: Optional[str] = Field(default=None, max_length=128)
+
+    @field_validator("master_password", "investor_password")
+    @classmethod
+    def _strong(cls, v: Optional[str]) -> Optional[str]:
+        return validate_password_strength(v) if v else None
+
+    @field_validator("investor_password")
+    @classmethod
+    def _differs(cls, v: Optional[str], info) -> Optional[str]:
+        if v and v == info.data.get("master_password"):
+            raise ValueError("The investor password must be different from the master password.")
+        return v
+
+
+class AccountLoginRequest(BaseModel):
+    """Sign in to ONE trading account with its account number and its master
+    or investor password, as in MetaTrader."""
+    login: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=1, max_length=128)
+    label: Optional[str] = Field(default=None, max_length=60)
 
 
 class TokenResponse(BaseModel):

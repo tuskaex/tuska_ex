@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from packages.common.src.models import (
     AccountGroup,
+    AlgoApiKey,
     CopyTrade,
     InvestorAllocation,
     MasterAccount,
@@ -22,7 +23,16 @@ from packages.common.src.models import (
     Transaction,
     User,
 )
-from packages.common.src.schemas import AccountSummary, MessageResponse, OpenLiveAccountRequest
+from packages.common.src.schemas import (
+    AccountSummary, MessageResponse, OpenLiveAccountRequest, SetAccountPasswordsRequest,
+)
+from packages.common.src.auth import hash_password, verify_password
+
+# Labels on the algo keys an account-password sign-in is issued. Used to find
+# and revoke exactly those keys when a password changes, without touching the
+# keys the owner generated for their own bots.
+ACCOUNT_LOGIN_LABEL_MASTER = "Account login (master)"
+ACCOUNT_LOGIN_LABEL_INVESTOR = "Account login (investor)"
 from packages.common.src.redis_client import redis_client, PriceChannel
 from packages.common.src.price_cache import price_cache
 from packages.common.src.trading_service import calc_position_pnl, cross_rate_for
@@ -235,6 +245,8 @@ async def open_live_account(
         currency="USD",
         is_demo=user_is_demo,
         is_active=True,
+        master_password_hash=hash_password(req.master_password) if req.master_password else None,
+        investor_password_hash=hash_password(req.investor_password) if req.investor_password else None,
     )
     db.add(new_acc)
     await db.commit()
@@ -245,6 +257,62 @@ async def open_live_account(
         "balance": float(new_acc.balance or 0),
         "account_group_id": str(group.id),
         "account_group_name": group.name,
+        # The desktop's "account opened" card reads these. They were missing,
+        # so it fell back to defaults that could be wrong for a demo account.
+        "is_demo": bool(new_acc.is_demo),
+        "currency": new_acc.currency or "USD",
+        "leverage": int(new_acc.leverage or 0),
+        "has_master_password": new_acc.master_password_hash is not None,
+        "has_investor_password": new_acc.investor_password_hash is not None,
+    }
+
+
+async def set_account_passwords(
+    user_id: UUID, account_id: UUID, req: SetAccountPasswordsRequest, db: AsyncSession,
+) -> dict:
+    """Set or change the master and/or investor password of one of the
+    caller's own accounts. Changing either revokes the keys that password
+    signed in, so an old password stops working everywhere at once."""
+    if not req.master_password and not req.investor_password:
+        raise HTTPException(status_code=400, detail="Give a master password, an investor password, or both.")
+    acc = (await db.execute(
+        select(TradingAccount).where(TradingAccount.id == account_id, TradingAccount.user_id == user_id)
+    )).scalar_one_or_none()
+    if not acc:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # The two must never match, including against the one not being changed.
+    new_master = req.master_password
+    new_investor = req.investor_password
+    if new_master and acc.investor_password_hash and not new_investor             and verify_password(new_master, acc.investor_password_hash):
+        raise HTTPException(status_code=400, detail="The master password must be different from the investor password.")
+    if new_investor and acc.master_password_hash and not new_master             and verify_password(new_investor, acc.master_password_hash):
+        raise HTTPException(status_code=400, detail="The investor password must be different from the master password.")
+
+    if new_master:
+        acc.master_password_hash = hash_password(new_master)
+    if new_investor:
+        acc.investor_password_hash = hash_password(new_investor)
+
+    # Sessions that the replaced password opened are keys with the account
+    # password labels; revoke them. Keys the owner made for bots are left.
+    labels = []
+    if new_master:
+        labels.append(ACCOUNT_LOGIN_LABEL_MASTER)
+    if new_investor:
+        labels.append(ACCOUNT_LOGIN_LABEL_INVESTOR)
+    await db.execute(
+        update(AlgoApiKey)
+        .where(AlgoApiKey.account_id == acc.id, AlgoApiKey.is_active == True,
+               AlgoApiKey.label.in_(labels))
+        .values(is_active=False)
+    )
+    await db.commit()
+    return {
+        "account_id": str(acc.id),
+        "account_number": acc.account_number,
+        "has_master_password": acc.master_password_hash is not None,
+        "has_investor_password": acc.investor_password_hash is not None,
     }
 
 
