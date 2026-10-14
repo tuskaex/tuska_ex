@@ -501,7 +501,40 @@ function EditBroker({
                   </p>
                   {domainInfo.app_url && <p>User panel: {domainInfo.app_url}</p>}
                   {domainInfo.admin_url && <p>Admin panel: {domainInfo.admin_url}</p>}
-                  {domainInfo.last_error && <p className="text-sell">{domainInfo.last_error}</p>}
+                  {domainInfo.last_error ? (
+                    <p className="text-warning">{domainInfo.last_error}</p>
+                  ) : domainInfo.status === 'READY' ? (
+                    <p className="text-success">Live — DNS, SSL and the site are set up automatically.</p>
+                  ) : null}
+                </div>
+              )}
+              {domainInfo?.custom_domain && (domainInfo.dns_records?.length ?? 0) > 0 && (
+                <div className="rounded-md border border-border-primary p-3 text-xxs">
+                  <p className="text-text-primary font-medium mb-1.5">
+                    DNS records the broker adds at their domain provider
+                  </p>
+                  <table className="w-full font-mono">
+                    <thead>
+                      <tr className="text-text-tertiary text-left">
+                        <th className="py-1 pr-3 font-normal">Type</th>
+                        <th className="py-1 pr-3 font-normal">Host</th>
+                        <th className="py-1 font-normal">Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {domainInfo.dns_records.map((r) => (
+                        <tr key={`${r.type}-${r.host}`} className="text-text-secondary">
+                          <td className="py-1 pr-3">{r.type}</td>
+                          <td className="py-1 pr-3">{r.host}</td>
+                          <td className="py-1">{r.value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <p className="text-text-tertiary mt-1.5 font-sans">
+                    Nothing else is needed: once these resolve, the site and its SSL
+                    certificate go live automatically within a few minutes.
+                  </p>
                 </div>
               )}
               <div className="flex items-center gap-2">
