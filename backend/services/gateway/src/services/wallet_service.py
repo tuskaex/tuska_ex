@@ -301,6 +301,16 @@ def _wallet_upload_root() -> Path:
     return p
 
 
+async def _brand_name_for_user_id(user_id, db: AsyncSession) -> str:
+    """Name shown on third-party payment pages. "TuskaEx" for platform users;
+    the broker's name for a white-label broker's client. Never raises."""
+    try:
+        from packages.common.src.tenant_brand import brand_name_for_id
+        return await brand_name_for_id(user_id, db)
+    except Exception:
+        return "TuskaEx"
+
+
 async def _get_user_account_ids(user_id, db: AsyncSession) -> list[UUID]:
     result = await db.execute(
         select(TradingAccount.id).where(TradingAccount.user_id == user_id)
@@ -393,7 +403,7 @@ async def create_deposit(req, user_id: UUID, db: AsyncSession) -> dict:
                 amount=req.amount,
                 crypto_currency=crypto_currency,
                 order_id=str(deposit.id),
-                description=f"TuskaEx deposit ${float(req.amount):,.2f}",
+                description=f"{await _brand_name_for_user_id(user_id, db)} deposit ${float(req.amount):,.2f}",
             )
             deposit.transaction_id = ox["track_id"]
             payment_url = ox["payment_url"]
@@ -1154,7 +1164,9 @@ async def create_razorpay_deposit(
         "amount_paise": order["amount_paise"],
         "amount_inr": order["amount_inr"],
         "currency": order["currency"],
-        "name": "TuskaEx",
+        # Shown in the Razorpay checkout header: the broker's name for a
+        # white-label broker's client, "TuskaEx" otherwise (unchanged).
+        "name": await _brand_name_for_user_id(user_id, db),
         "description": "Wallet deposit",
     }
 

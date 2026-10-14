@@ -40,3 +40,20 @@ export function isMarketingPath(pathname: string | null | undefined): boolean {
   if (MARKETING_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   return MARKETING_EXACT_PATHS.has(pathname);
 }
+
+/**
+ * TuskaEx-only pages that are NOT public marketing. On TuskaEx's hosts they
+ * keep their current auth behaviour (so they stay off MARKETING_EXACT_PATHS,
+ * which AuthProvider treats as public); a white-label domain must never serve
+ * them, so middleware sends tenant visitors to login like any marketing page.
+ *
+ * /account-deletion names TuskaEx and its support address throughout.
+ * /education* is already covered by the '/education' marketing prefix.
+ */
+const TENANT_BLOCKED_EXACT_PATHS = new Set<string>(['/account-deletion']);
+
+/** A path a white-label tenant's domain must never serve. */
+export function isTenantBlockedPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  return isMarketingPath(pathname) || TENANT_BLOCKED_EXACT_PATHS.has(pathname);
+}

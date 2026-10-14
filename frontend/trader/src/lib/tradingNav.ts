@@ -1,4 +1,5 @@
 import { isExternalTerminalEnabled } from './terminalHandoff';
+import { isTenantHost } from './tenantHost';
 
 const STORAGE_KEY = 'pt_active_trading_account';
 
@@ -29,6 +30,9 @@ export function getPersistedTradingAccountId(): string | null {
 export function tradingTerminalUrl(accountId: string | null | undefined, extra?: Record<string, string>) {
   if (!accountId) return '/trading';
   const q = new URLSearchParams({ account: accountId, ...extra });
-  if (isExternalTerminalEnabled()) return `/terminal?${q.toString()}`;
+  /* A white-label domain never hands off to the platform's terminal domain, so
+   * it skips the /terminal staging route (and its splash) altogether. Only
+   * true in the browser on a tenant host; the platform branch is unchanged. */
+  if (isExternalTerminalEnabled() && !isTenantHost()) return `/terminal?${q.toString()}`;
   return `/trading/terminal?${q.toString()}`;
 }

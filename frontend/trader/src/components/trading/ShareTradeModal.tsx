@@ -7,6 +7,7 @@ import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
 import api from '@/lib/api/client';
 import ShareTradeCard from './ShareTradeCard';
+import { isTenantHost } from '@/lib/tenantHost';
 
 type DisplayMode = 'pnl' | 'roi' | 'ticks';
 
@@ -88,7 +89,7 @@ export default function ShareTradeModal({ open, onClose, position, leverage = 10
     try {
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement('a');
-      link.download = `tuskaex-${position.symbol}-${position.side}.png`;
+      link.download = `${isTenantHost() ? 'trade' : 'tuskaex'}-${position.symbol}-${position.side}.png`;
       link.href = dataUrl;
       link.click();
       toast.success('Image downloaded');
@@ -124,7 +125,7 @@ export default function ShareTradeModal({ open, onClose, position, leverage = 10
                 displayMode={displayMode}
                 pipSize={pipSize}
                 status="active"
-                shortUrl={shareUrl ?? 'tuskaex.com/s/xxxxxx'}
+                shortUrl={shareUrl ?? (isTenantHost() ? `${window.location.host}/s/xxxxxx` : 'tuskaex.com/s/xxxxxx')}
               />
             </div>
           </div>

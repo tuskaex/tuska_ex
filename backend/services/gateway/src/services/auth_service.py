@@ -1222,7 +1222,11 @@ async def setup_2fa(user_id: UUID, db: AsyncSession) -> dict:
     user = result.scalar_one_or_none()
     secret = pyotp.random_base32()
     totp = pyotp.TOTP(secret)
-    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="TuskaEx")
+    # Issuer is the label the authenticator app shows: the broker's name for a
+    # white-label broker's client, "TuskaEx" for everyone else (unchanged).
+    from packages.common.src.tenant_brand import brand_name_for
+    issuer = await brand_name_for(user, db)
+    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name=issuer)
     user.two_factor_secret = secret
     await db.commit()
     return {"secret": secret, "qr_uri": provisioning_uri}

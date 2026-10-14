@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { isMarketingPath } from '@/config/marketingPaths';
+import { isTenantBlockedPath } from '@/config/marketingPaths';
 import { isTenantHost } from '@/lib/tenantHost';
 
 /**
@@ -250,7 +250,7 @@ export function middleware(req: NextRequest) {
     const signedIn = Boolean(
       req.cookies.get(ACCESS_COOKIE)?.value || req.cookies.get(REFRESH_COOKIE)?.value,
     );
-    if (isMarketingPath(pathname) || !signedIn) {
+    if (isTenantBlockedPath(pathname) || !signedIn) {
       if (!isTopLevelNavigation(req)) return NextResponse.next();
       return noCacheRedirect(new URL('/auth/login', req.url).toString());
     }

@@ -30,6 +30,13 @@ export async function appMetadata(title: string, description?: string) {
   const tenant = isTenantHost(host);
   return {
     title: tenant ? { absolute: title } : title,
-    ...(description ? { description } : {}),
+    // A page that names no description inherits the root layout's, which
+    // names TuskaEx. On a tenant host give it a neutral one instead; the
+    // platform keeps inheriting exactly as before.
+    ...(description
+      ? { description }
+      : tenant
+        ? { description: 'Your online trading account.' }
+        : {}),
   };
 }

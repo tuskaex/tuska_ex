@@ -143,7 +143,7 @@ export function TuskaExWordmark({
   return (
     <Link
       href={href}
-      aria-label={`${brand().name} home`}
+      aria-label={isPlatformBrandHost() ? `${brand().name} home` : 'Home'}
       className={cn(
         'inline-flex items-center min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D60101]/60 focus-visible:rounded-md',
         className,

@@ -55,6 +55,17 @@ ALLOWED_CHAIN_IDS = {1, 56, 137, 42161}  # mainnet, bsc, polygon, arbitrum
 SIWE_STATEMENT = (
     "Sign in to TuskaEx. This signature does not authorise any transaction."
 )
+# Issued instead of SIWE_STATEMENT when the request arrives on a white-label
+# broker's domain, so the broker's clients never see the platform name in
+# their wallet prompt. Platform hosts keep SIWE_STATEMENT, unchanged.
+SIWE_STATEMENT_NEUTRAL = (
+    "Sign in with your wallet. This signature does not authorise any transaction."
+)
+# verify accepts either: both are server-defined constants, so this does not
+# loosen anything (nonce, domain, uri, chain and signature are what bind the
+# message), and it means a tenant-host detection that differs between nonce
+# issue and verify can never fail a legitimate sign-in.
+_ACCEPTED_STATEMENTS = frozenset({SIWE_STATEMENT, SIWE_STATEMENT_NEUTRAL})
 WALLET_PLACEHOLDER_EMAIL_DOMAIN = "wallet.tuskaex.local"
 
 
@@ -98,6 +109,27 @@ def _allowed_hosts() -> set[str]:
         o.split("//", 1)[-1].split(":")[0].lower()
         for o in _allowed_origins()
     }
+
+
+async def _statement_for(request: Request) -> str:
+    """Neutral statement on a tenant's (READY) domain, platform one otherwise.
+    Any error ⇒ the platform statement, i.e. today's behaviour."""
+    try:
+        from packages.common.src import tenant_hosts
+        from urllib.parse import urlsplit
+
+        await tenant_hosts.refresh()
+        candidates = [
+            (request.headers.get("x-forwarded-host") or "").split(",")[0],
+            request.headers.get("host") or "",
+            urlsplit(request.headers.get("origin") or "").hostname or "",
+            request.url.hostname or "",
+        ]
+        if any(c and tenant_hosts.is_tenant_host(c) for c in candidates):
+            return SIWE_STATEMENT_NEUTRAL
+    except Exception:
+        pass
+    return SIWE_STATEMENT
 
 
 # ─── Nonce issuance ───────────────────────────────────────────────────────
@@ -175,7 +207,7 @@ async def issue_nonce(
         issued_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         expires_at=expires.strftime("%Y-%m-%dT%H:%M:%SZ"),
         domain=_request_host(request),
-        statement=SIWE_STATEMENT,
+        statement=await _statement_for(request),
     )
 
 
@@ -239,7 +271,7 @@ async def verify_message(
     if chain_id not in ALLOWED_CHAIN_IDS:
         raise AuthServiceError("Unsupported chain", 401)
 
-    if (getattr(siwe_msg, "statement", None) or "") != SIWE_STATEMENT:
+    if (getattr(siwe_msg, "statement", None) or "") not in _ACCEPTED_STATEMENTS:
         raise AuthServiceError("SIWE statement mismatch", 401)
 
     issued_at_raw = getattr(siwe_msg, "issued_at", None)

@@ -28,6 +28,7 @@ import { getDigits } from '@/lib/utils';
 import { FileDown } from 'lucide-react';
 
 import { downloadTradeStatementPdf } from '@/lib/pdf/tradeStatementPdf';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 
 
@@ -193,6 +194,8 @@ interface AccountOption {
 
 function PortfolioPageContent() {
   const searchParams = useSearchParams();
+  // Statement PDF brand: TuskaEx on its own hosts, the tenant's on theirs.
+  const tenantBrand = useTenantBrand();
   const router = useRouter();
   const queryKey = searchParams.toString();
 
@@ -446,6 +449,12 @@ function PortfolioPageContent() {
           swap: t.swap,
 
         })),
+        undefined,
+        {
+          isTenant: tenantBrand.isTenant,
+          brandName: tenantBrand.isTenant && !tenantBrand.loading ? tenantBrand.brandName : null,
+          logoUrl: tenantBrand.isTenant && !tenantBrand.loading ? tenantBrand.logoUrl : null,
+        },
 
       );
 
@@ -461,7 +470,7 @@ function PortfolioPageContent() {
 
     }
 
-  }, [validAccountId]);
+  }, [validAccountId, tenantBrand]);
 
 
 

@@ -27,6 +27,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { downloadWalletStatementPdf } from '@/lib/pdf/walletStatementPdf';
+import { useTenantBrand, useBrandName } from '@/hooks/useTenantBrand';
 
 // Razorpay popup integration removed — local-banking flow replaces it.
 // Admin can still attach Razorpay payment-links per request from the
@@ -213,6 +214,11 @@ const MAIN_WALLET_OPTION_ID = '__MAIN_WALLET__';
 
 function WalletPageContent() {
   const isDemo = useAuthStore((s) => s.user?.is_demo);
+  /* Brand shown in Razorpay Checkout and on the statement PDF: TuskaEx on its
+   * own hosts, the tenant's on a white-label domain. */
+  const tenantBrand = useTenantBrand();
+  const brandName = useBrandName();
+  const rzpName = brandName || 'Deposit';
   // Wallet-integration purged: the SIWE link flow that populated this
   // field is gone, so `user.wallet_address` is always undefined now.
   const linkedWalletAddress = useAuthStore((s) => s.user?.wallet_address || '');
@@ -612,7 +618,7 @@ function WalletPageContent() {
       order_id: order.order_id,
       amount: Math.round(order.amount_inr * 100),
       currency: 'INR',
-      name: 'TuskaEx',
+      name: rzpName,
       description: `Deposit ${deposit.id.slice(0, 8)}`,
       theme: { color: '#D60101' },
       handler: async (resp: Record<string, string>) => {
@@ -631,7 +637,7 @@ function WalletPageContent() {
     });
     rzp.open();
     setRzpCreatingForId(null);
-  }, [rzpPayAmountByDeposit]);
+  }, [rzpPayAmountByDeposit, rzpName]);
 
   /** Open the Razorpay Checkout popup for an approved local-banking
    *  deposit. The order is already created server-side (deposit's
@@ -701,7 +707,7 @@ function WalletPageContent() {
       order_id: orderId,
       amount: amountInr ? Math.round(amountInr * 100) : undefined,
       currency: 'INR',
-      name: 'TuskaEx',
+      name: rzpName,
       description: `Deposit ${deposit.id.slice(0, 8)}`,
       prefill: {},
       theme: { color: '#D60101' },
@@ -729,7 +735,7 @@ function WalletPageContent() {
       },
     });
     rzp.open();
-  }, []);
+  }, [rzpName]);
 
   const loadLocalBankingRequests = useCallback(async () => {
     try {
@@ -2096,6 +2102,11 @@ function WalletPageContent() {
                   totalDeposited: wallet?.total_deposited,
                   totalWithdrawn: wallet?.total_withdrawn,
                   currentBalance: wallet?.balance,
+                },
+                {
+                  isTenant: tenantBrand.isTenant,
+                  brandName: tenantBrand.isTenant && !tenantBrand.loading ? tenantBrand.brandName : null,
+                  logoUrl: tenantBrand.isTenant && !tenantBrand.loading ? tenantBrand.logoUrl : null,
                 },
               );
             }}

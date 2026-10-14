@@ -89,6 +89,68 @@ async def _email_already_registered(db: AsyncSession, email_lower: str) -> bool:
     return res.scalar_one_or_none() is not None
 
 
+async def _otp_mail_identity(owner_id_raw, db: Optional[AsyncSession] = None):
+    """Who the pre-registration OTP mail comes from: (smtp, brand, is_tenant).
+
+    The recipient has no `users` row yet, so send_email's recipient lookup
+    cannot find their broker — the staged `tenant_owner_id` is the only signal.
+    Platform signups (no owner, flag off, bad id, any error) get
+    (None, None, False): send_email's defaults, i.e. exactly today's mail.
+    A tenant signup gets the tenant's own account and brand; either being None
+    means the tenant cannot send and the mail must be skipped, never sent as
+    the platform.
+    """
+    if not owner_id_raw:
+        return None, None, False
+    try:
+        from packages.common.src.config import get_settings
+        from packages.common.src import tenant_brand
+        from packages.common.src.smtp_mail import tenant_brand_from_owner, tenant_smtp
+
+        if not get_settings().BRANDING_ENABLED:
+            return None, None, False
+        owner_id = uuid.UUID(str(owner_id_raw))
+
+        async def _load(session):
+            return (
+                await session.execute(select(User).where(User.id == owner_id))
+            ).scalar_one_or_none()
+
+        if db is not None:
+            owner = await _load(db)
+        else:
+            from packages.common.src.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as session:
+                owner = await _load(session)
+        if not tenant_brand.is_tenant_owner(owner):
+            return None, None, False
+        return tenant_smtp(owner), tenant_brand_from_owner(owner), True
+    except Exception as e:
+        logger.warning("OTP mail identity lookup failed for owner %r: %s", owner_id_raw, e)
+        return None, None, False
+
+
+async def _send_otp_mail(email_lower: str, subject: str, html: str, text: str,
+                         owner_id_raw, db: Optional[AsyncSession] = None) -> bool:
+    """Send the OTP mail as the right brand. Raises 503 when the platform has
+    no SMTP at all (unchanged behaviour); returns False when the send failed or
+    was skipped."""
+    from packages.common.src.smtp_mail import send_email, smtp_configured
+
+    smtp, brand, is_tenant = await _otp_mail_identity(owner_id_raw, db)
+    if is_tenant and brand is None:
+        logger.warning("tenant %s has no brand — not sending OTP to %s", owner_id_raw, email_lower)
+        return False
+    # A broker without their own mail account still sends signup codes —
+    # through the platform account, rebranded — or nobody could join them.
+    if smtp is None and not smtp_configured():
+        raise HTTPException(status_code=503, detail="Email service unavailable. Try again shortly.")
+    # send_email's first positional arg is `to_email`, NOT `to`. Calling
+    # it as `to=...` raised TypeError on every request and surfaced as a
+    # 502 to the user — the v1 of this service got that wrong.
+    return await send_email(email_lower, subject, html, text=text, smtp=smtp, brand=brand)
+
+
 async def start_pending_registration(
     *,
     email: str,
@@ -226,23 +288,21 @@ async def start_pending_registration(
     # /auth/email/start-verification flow uses, so the email looks
     # identical to the existing system.
     try:
-        from packages.common.src.smtp_mail import send_email, smtp_configured
         from packages.common.src.email_templates import render_email_otp
     except Exception as e:
         logger.error("smtp/template import failed: %s", e)
-        raise HTTPException(status_code=503, detail="Email service unavailable. Try again shortly.")
-    if not smtp_configured():
         raise HTTPException(status_code=503, detail="Email service unavailable. Try again shortly.")
     subject, html, text = render_email_otp(
         first_name=payload["first_name"],
         code=otp,
         ttl_minutes=PENDING_TTL_SECONDS // 60,
     )
-    # send_email's first positional arg is `to_email`, NOT `to`. Calling
-    # it as `to=...` raised TypeError on every request and surfaced as a
-    # 502 to the user — the v1 of this service got that wrong.
     try:
-        ok = await send_email(email_lower, subject, html, text=text)
+        ok = await _send_otp_mail(
+            email_lower, subject, html, text, payload.get("tenant_owner_id"), db,
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to send pending-registration OTP to %s", email_lower)
         raise HTTPException(status_code=502, detail="Could not send verification email.") from e
@@ -399,12 +459,9 @@ async def resend_pending_otp(
     await redis_client.setex(_redis_key(email_lower), PENDING_TTL_SECONDS, json.dumps(payload))
 
     try:
-        from packages.common.src.smtp_mail import send_email, smtp_configured
         from packages.common.src.email_templates import render_email_otp
     except Exception as e:
         logger.error("smtp/template import failed: %s", e)
-        raise HTTPException(status_code=503, detail="Email service unavailable. Try again shortly.")
-    if not smtp_configured():
         raise HTTPException(status_code=503, detail="Email service unavailable. Try again shortly.")
     subject, html, text = render_email_otp(
         first_name=payload.get("first_name"),
@@ -412,7 +469,11 @@ async def resend_pending_otp(
         ttl_minutes=PENDING_TTL_SECONDS // 60,
     )
     try:
-        ok = await send_email(email_lower, subject, html, text=text)
+        ok = await _send_otp_mail(
+            email_lower, subject, html, text, payload.get("tenant_owner_id"),
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.exception("Failed to resend pending-registration OTP to %s", email_lower)
         raise HTTPException(status_code=502, detail="Could not send verification email.") from e

@@ -3,6 +3,8 @@
  * Uses dynamic import so jspdf is not loaded until export.
  */
 
+import type { PdfBrand } from './pdfLogo';
+
 export type TradeStatementRow = {
   close_time?: string | null;
   open_time?: string | null;
@@ -80,7 +82,10 @@ export type TradeStatementMeta = {
 export async function downloadTradeStatementPdf(
   trades: TradeStatementRow[],
   meta?: TradeStatementMeta,
+  brand?: PdfBrand,
 ): Promise<void> {
+  const { resolvePdfBrand, loadPdfLogo, stampPdfLogo } = await import('./pdfLogo');
+  const b = resolvePdfBrand(brand);
   const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
     import('jspdf'),
     import('jspdf-autotable'),
@@ -101,11 +106,10 @@ export async function downloadTradeStatementPdf(
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('TuskaEx', margin, 7);
+  if (b.name) doc.text(b.name, margin, 7);
 
   // Brand logo, top-right under the band (best-effort — never blocks export).
-  const { loadPdfLogo, stampPdfLogo } = await import('./pdfLogo');
-  stampPdfLogo(doc, await loadPdfLogo(), margin);
+  stampPdfLogo(doc, await loadPdfLogo(b.logoSrc), margin);
 
   doc.setTextColor(30, 30, 30);
   doc.setFontSize(16);
@@ -230,7 +234,7 @@ export async function downloadTradeStatementPdf(
         doc.internal.pageSize.getHeight() - 6,
       );
       doc.text(
-        'TuskaEx — for information only. Not tax or legal advice.',
+        b.footer,
         margin,
         doc.internal.pageSize.getHeight() - 6,
       );
@@ -238,5 +242,5 @@ export async function downloadTradeStatementPdf(
   });
 
   const safeDate = new Date().toISOString().slice(0, 10);
-  doc.save(`tuskaex-trade-statement-${safeDate}.pdf`);
+  doc.save(`${b.filePrefix}trade-statement-${safeDate}.pdf`);
 }

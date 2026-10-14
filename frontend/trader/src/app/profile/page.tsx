@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import DashboardShell from '@/components/layout/DashboardShell';
 import EmailVerificationCard from '@/components/profile/EmailVerificationCard';
 import api from '@/lib/api/client';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 interface Profile {
   id: string;
@@ -68,6 +69,7 @@ function fmt(n: number) {
 const TWO_FA_ENABLED = false;
 
 export default function ProfilePage() {
+  const brandName = useBrandName();
   const [tab, setTab] = useState<TabId>('profile');
   const [profile, setProfile] = useState<Profile | null>(null);
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
@@ -267,7 +269,7 @@ export default function ProfilePage() {
             <div className="relative z-10 px-4 sm:px-6 py-5 sm:py-7">
               <h1 className="text-xl sm:text-2xl font-bold text-text-primary tracking-tight">Settings</h1>
               <p className="text-sm text-text-secondary mt-1 max-w-2xl">
-                Profile, security, notifications, and active sessions — aligned with TuskaEx.
+                Profile, security, notifications, and active sessions{brandName ? ` — aligned with ${brandName}` : ''}.
               </p>
             </div>
           </section>

@@ -104,6 +104,10 @@ const ALL_NAV: readonly NavItem[] = [
   ...MORE_ITEMS,
 ];
 
+/** Entries that point at TuskaEx's own assets/marketing (its Android APK, its
+ *  Terms page). A white-label tenant's clients must not be offered them. */
+const PLATFORM_ONLY_HREFS = new Set<string>([APK_DOWNLOAD_PATH, '/terms']);
+
 function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   // For root paths like /dashboard, treat sub-routes as active.
@@ -124,6 +128,9 @@ export default function AppNavbar() {
   const { user, logout } = useAuthStore();
   const brand = useTenantBrand();
   const { sidebarOpen, setSidebarOpen } = useShellStore();
+  /* Platform hosts get the lists unchanged; tenant hosts drop TuskaEx-only entries. */
+  const moreItems = brand.isTenant ? MORE_ITEMS.filter((i) => !PLATFORM_ONLY_HREFS.has(i.href)) : MORE_ITEMS;
+  const allNav = brand.isTenant ? ALL_NAV.filter((i) => !PLATFORM_ONLY_HREFS.has(i.href)) : ALL_NAV;
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -308,7 +315,7 @@ export default function AppNavbar() {
               onClick={() => setMoreOpen((v) => !v)}
               className={cn(
                 'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13.5px] font-medium transition-colors',
-                MORE_ITEMS.some((i) => isActive(pathname, i.href))
+                moreItems.some((i) => isActive(pathname, i.href))
                   ? 'bg-[#FDE3E3] dark:bg-[#D60101]/15 text-[#D60101]'
                   : 'text-text-primary hover:bg-bg-hover',
               )}
@@ -324,7 +331,7 @@ export default function AppNavbar() {
                 className="absolute right-0 top-full mt-2 w-[520px] rounded-2xl border border-border-primary bg-bg-primary p-3 shadow-xl ring-1 ring-black/5 dark:ring-white/10"
               >
                 <div className="grid grid-cols-2 gap-1">
-                  {MORE_ITEMS.map((item) => {
+                  {moreItems.map((item) => {
                     const active = isActive(pathname, item.href);
                     const Icon = item.icon;
                     const rowCls = cn(
@@ -506,7 +513,7 @@ export default function AppNavbar() {
           />
           <div className="fixed left-0 right-0 top-[60px] z-50 max-h-[calc(100dvh-60px)] overflow-y-auto border-b border-border-primary bg-bg-primary lg:hidden">
             <nav className="px-3 py-3">
-              {ALL_NAV.map((item) => {
+              {allNav.map((item) => {
                 const active = isActive(pathname, item.href);
                 const Icon = item.icon;
                 const rowCls = cn(

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useTradingStore } from '@/stores/tradingStore';
-import { BRAND_NAME } from '@/lib/brand';
+import { useBrandName } from '@/hooks/useTenantBrand';
 
 /**
  * Updates the browser tab title with the selected symbol and live price,
@@ -11,12 +11,16 @@ export function useDocumentTitle() {
   const tick = useTradingStore((s) => s.prices[s.selectedSymbol]);
   const prevBid = useTradingStore((s) => s.prevPrices[s.selectedSymbol]);
   const instruments = useTradingStore((s) => s.instruments);
+  /* TuskaEx on its own hosts; the tenant's name (or '' while it resolves) on a
+   * white-label domain, so a broker's client never sees "| TuskaEx". */
+  const brandName = useBrandName();
 
   useEffect(() => {
-    const original = BRAND_NAME;
+    const original = brandName;
+    const suffix = original ? ` | ${original}` : '';
 
     if (!selectedSymbol) {
-      document.title = original;
+      if (original) document.title = original;
       return;
     }
 
@@ -24,7 +28,7 @@ export function useDocumentTitle() {
     const digits = inst?.digits ?? 2;
 
     if (!tick) {
-      document.title = `${selectedSymbol} | ${original}`;
+      document.title = `${selectedSymbol}${suffix}`;
       return;
     }
 
@@ -35,10 +39,10 @@ export function useDocumentTitle() {
       else if (tick.bid < prevBid) arrow = '▼ ';
     }
 
-    document.title = `${arrow}${selectedSymbol} ${price} | ${original}`;
+    document.title = `${arrow}${selectedSymbol} ${price}${suffix}`;
 
     return () => {
-      document.title = original;
+      if (original) document.title = original;
     };
-  }, [selectedSymbol, tick, prevBid, instruments]);
+  }, [selectedSymbol, tick, prevBid, instruments, brandName]);
 }

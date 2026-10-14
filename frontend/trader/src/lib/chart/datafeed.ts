@@ -18,6 +18,7 @@
  */
 
 import { barsSocket } from '@/lib/ws/barsSocket';
+import { isTenantHost } from '@/lib/tenantHost';
 
 type Bar = { time: number; open: number; high: number; low: number; close: number; volume: number };
 
@@ -70,7 +71,8 @@ export function createDatafeed(opts: {
   getExchangeName?: () => string;
 }) {
   const apiBase = (opts.apiBase || '/api/v1').replace(/\/$/, '');
-  const exchangeName = () => (opts.getExchangeName?.() || 'TuskaEx');
+  // A white-label host never falls back to the parent platform's name.
+  const exchangeName = () => (opts.getExchangeName?.() || (isTenantHost() ? '' : 'TuskaEx'));
   let instruments = opts.instruments || [];
   const getHalfSpread = opts.getHalfSpread;
 

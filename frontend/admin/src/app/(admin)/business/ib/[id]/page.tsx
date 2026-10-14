@@ -57,7 +57,13 @@ function fmtDateTime(s: string | null) {
 }
 
 export default function IBDetailPage() {
-  const brandName = useTenantBrand().brandName;
+  const tenantBrand = useTenantBrand();
+  const brandName = tenantBrand.brandName;
+  // Logo for the PDF header: the platform keeps its bundled mark; a tenant gets
+  // their own uploaded logo, or none at all (never TuskaEx's) while loading.
+  const pdfLogoUrl: string | null = tenantBrand.isTenant
+    ? (tenantBrand.loading ? null : tenantBrand.logoUrl)
+    : '/tuskaex-logo.png';
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const ibId = params?.id;
@@ -122,7 +128,9 @@ export default function IBDetailPage() {
 
       // ── Row 1: Logo only (centered, nothing on its left or right) ──
       try {
-        const res = await fetch('/tuskaex-logo.png');
+        if (!pdfLogoUrl) throw new Error('no logo');
+        const res = await fetch(pdfLogoUrl);
+        if (!res.ok) throw new Error('logo fetch failed');
         const blob = await res.blob();
         const logoData: string = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -132,7 +140,10 @@ export default function IBDetailPage() {
         });
         const props = doc.getImageProperties(logoData);
         const logoH = LOGO_W * (props.height / props.width);
-        doc.addImage(logoData, 'PNG', (pageW - LOGO_W) / 2, cursorY, LOGO_W, logoH);
+        // A tenant's uploaded logo may be JPEG/WEBP, not PNG.
+        const mime = /^data:image\/([a-z0-9+.-]+)/i.exec(logoData)?.[1]?.toUpperCase() ?? 'PNG';
+        const fmt = mime === 'JPG' ? 'JPEG' : mime;
+        doc.addImage(logoData, fmt, (pageW - LOGO_W) / 2, cursorY, LOGO_W, logoH);
         cursorY += logoH + GAP_AFTER_LOGO;
       } catch {
         // Logo failed to load — keep going without it, but still advance the
@@ -208,7 +219,7 @@ export default function IBDetailPage() {
     } finally {
       setPdfGenerating(false);
     }
-  }, [ibId, data?.ib, statusFilter]);
+  }, [ibId, data?.ib, statusFilter, brandName, pdfLogoUrl]);
 
   const rows = data?.items || [];
   // Per-level breakdown for the summary cards. Cheap to compute client-side

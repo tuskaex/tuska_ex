@@ -31,6 +31,25 @@ def _get_frontend_url() -> str:
     return origins[0] if origins else "http://localhost:3010"
 
 
+async def _referral_base_url(user_id: UUID, db: AsyncSession) -> str:
+    """Base URL for this IB's referral link.
+
+    A white-label broker's client (or the broker) gets the broker's own live
+    site, so the link neither shows the platform's domain nor lands the signup
+    in the platform pool (tenant_resolver attributes by Host). Platform users,
+    and tenants without a READY domain, get _get_frontend_url() unchanged.
+    """
+    try:
+        from packages.common.src import tenant_brand
+        owner = await tenant_brand.tenant_owner_for_id(user_id, db)
+        url = tenant_brand.site_url(owner)
+        if url:
+            return url
+    except Exception:
+        pass
+    return _get_frontend_url()
+
+
 async def ib_status(user_id: UUID, db: AsyncSession) -> dict:
     profile_result = await db.execute(
         select(IBProfile).where(IBProfile.user_id == user_id)
@@ -156,7 +175,7 @@ async def ib_dashboard(user_id: UUID, db: AsyncSession) -> dict:
     )
     pending = pending_comm.scalar()
 
-    base_url = _get_frontend_url()
+    base_url = await _referral_base_url(user_id, db)
 
     return {
         "referral_code": profile.referral_code,
@@ -347,7 +366,7 @@ async def generate_referral_link(
     if not profile:
         raise HTTPException(status_code=404, detail="IB profile not found")
 
-    base_url = _get_frontend_url()
+    base_url = await _referral_base_url(user_id, db)
     link = f"{base_url}/auth/register?ref={profile.referral_code}"
     params = []
     if utm_source:

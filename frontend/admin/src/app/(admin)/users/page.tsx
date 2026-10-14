@@ -8,6 +8,7 @@ import { adminApi } from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { usePermission } from '@/hooks/usePermission';
+import { isTenantAdminHost } from '@/lib/tenantBrand';
 import {
   ArrowDown,
   ArrowUp,
@@ -399,8 +400,18 @@ export default function UsersPage() {
       if (!data?.code) throw new Error('No redemption code returned');
       const host = typeof window !== 'undefined' ? window.location.hostname : '';
       const proto = typeof window !== 'undefined' ? window.location.protocol : 'https:';
-      const traderUrl = process.env.NEXT_PUBLIC_TRADER_URL
-        || (host.startsWith('admin.') ? `${proto}//${host.replace(/^admin\./, '')}` : 'http://localhost:3000');
+      // On a sub-broker's admin host the build-time NEXT_PUBLIC_TRADER_URL is
+      // TuskaEx's trader app — sending their staff there would leak the parent
+      // brand. Their trader app lives on the same domain minus the admin label.
+      const tenantHost = isTenantAdminHost();
+      const fullHost = typeof window !== 'undefined' ? window.location.host : '';
+      const tenantTraderHost = fullHost.startsWith('admin.')
+        ? fullHost.replace(/^admin\./, '')
+        : fullHost.split('.').length > 2 ? fullHost.split('.').slice(1).join('.') : fullHost;
+      const traderUrl = tenantHost
+        ? `${proto}//${tenantTraderHost}`
+        : process.env.NEXT_PUBLIC_TRADER_URL
+          || (host.startsWith('admin.') ? `${proto}//${host.replace(/^admin\./, '')}` : 'http://localhost:3000');
       const url = `${traderUrl}/auth/impersonate?code=${encodeURIComponent(data.code)}`;
       if (popup && !popup.closed) {
         popup.location.href = url;

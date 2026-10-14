@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 type DisplayMode = 'pnl' | 'roi' | 'ticks';
 
@@ -58,6 +59,12 @@ export default function ShareTradeCard({
   roiPct,
   ticks,
 }: ShareTradeCardProps) {
+  /* TuskaEx's mark on its own hosts; the tenant's logo/name on a white-label
+   * domain (nothing while it resolves) — this card is shared off-platform. */
+  const brand = useTenantBrand();
+  const headerLogo = brand.isTenant ? (brand.loading ? null : brand.logoUrl) : '/marketing/tuskaex_fevicon.png';
+  const headerAlt = brand.isTenant ? brand.brandName : 'TuskaEx';
+  const headerText = brand.isTenant ? (brand.loading ? '' : brand.brandName.toUpperCase()) : 'TUSKAEX';
   const isBuy = side.toLowerCase() === 'buy';
   const positive = pnl >= 0;
   const digits = getDigits(symbol, pipSize);
@@ -111,15 +118,19 @@ export default function ShareTradeCard({
             layout (icon over wordmark) gives the brand more visual
             weight on the share card than the previous inline pill. */}
         <div className="flex flex-col items-center justify-center pt-1 pb-3 gap-1.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/marketing/tuskaex_fevicon.png"
-            alt="TuskaEx"
-            width={40}
-            height={40}
-            style={{ height: 40, width: 40, objectFit: 'contain', borderRadius: 8 }}
-          />
-          <span className="text-white text-[11px] font-bold tracking-[0.32em]">TUSKAEX</span>
+          {headerLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={headerLogo}
+              alt={headerAlt}
+              width={40}
+              height={40}
+              style={{ height: 40, width: 40, objectFit: 'contain', borderRadius: 8 }}
+            />
+          )}
+          {headerText && (
+            <span className="text-white text-[11px] font-bold tracking-[0.32em]">{headerText}</span>
+          )}
         </div>
 
         {/* Status + value */}

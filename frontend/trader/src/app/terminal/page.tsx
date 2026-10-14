@@ -21,6 +21,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 import {
   buildTerminalUrl,
   createHandoffCode,
@@ -74,11 +75,12 @@ const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
  * retuned later cannot break it.
  */
 function Splash({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="theme-light flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-white px-6 text-center"
-      data-theme="light"
-    >
+  /* On a white-label domain the splash wears the tenant's logo (or name as
+   * text), and nothing at all while it resolves — never TuskaEx's mark. */
+  const brand = useTenantBrand();
+  let mark: React.ReactNode = null;
+  if (!brand.isTenant) {
+    mark = (
       <Image
         src={SPEEDTRADE_LOGO}
         alt="SpeedTrade"
@@ -87,6 +89,21 @@ function Splash({ children }: { children: React.ReactNode }) {
         priority
         className="h-8 w-auto sm:h-10"
       />
+    );
+  } else if (!brand.loading && brand.logoUrl) {
+    mark = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={brand.logoUrl} alt={brand.brandName} className="h-8 w-auto sm:h-10" />
+    );
+  } else if (!brand.loading && brand.brandName) {
+    mark = <span className="text-xl font-bold text-neutral-900">{brand.brandName}</span>;
+  }
+  return (
+    <div
+      className="theme-light flex min-h-[100dvh] flex-col items-center justify-center gap-6 bg-white px-6 text-center"
+      data-theme="light"
+    >
+      {mark}
       {children}
     </div>
   );

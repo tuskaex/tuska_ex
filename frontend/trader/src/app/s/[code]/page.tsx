@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import ShareTradeCard from '@/components/trading/ShareTradeCard';
 import { getApiBase } from '@/lib/api/client';
+import { useTenantBrand } from '@/hooks/useTenantBrand';
 
 interface SharedTradeData {
   short_code: string;
@@ -35,6 +36,11 @@ export default function SharedTradePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  /* A white-label tenant's share link must carry the tenant's brand, never
+   * TuskaEx's; empty while it resolves. Platform output is unchanged. */
+  const brand = useTenantBrand();
+  const headerName = brand.isTenant ? (brand.loading ? '' : brand.brandName.toUpperCase()) : 'TUSKAEX';
+  const footerName = brand.isTenant ? (brand.loading ? '' : brand.brandName) : 'TuskaEx';
 
   useEffect(() => {
     if (!code) return;
@@ -78,13 +84,25 @@ export default function SharedTradePage() {
       }}
     >
       {/* Header logo */}
+      {brand.isTenant ? (
+        <div className="flex items-center gap-2 mb-8 min-h-[28px]">
+          {!brand.loading && brand.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={brand.logoUrl} alt={brand.brandName} style={{ height: 28, width: 'auto' }} />
+          )}
+          {headerName && (
+            <span className="text-white text-sm font-bold tracking-[0.25em]">{headerName}</span>
+          )}
+        </div>
+      ) : (
       <div className="flex items-center gap-2 mb-8">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 2L3 6V12C3 17.5 6.8 22.3 12 23C17.2 22.3 21 17.5 21 12V6L12 2Z" stroke="white" strokeWidth="1.6" fill="none" />
           <path d="M9 12L11 14L15 10" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-        <span className="text-white text-sm font-bold tracking-[0.25em]">TUSKAEX</span>
+        <span className="text-white text-sm font-bold tracking-[0.25em]">{headerName}</span>
       </div>
+      )}
 
       {loading ? (
         <div className="flex items-center gap-2 text-white/70">
@@ -131,7 +149,9 @@ export default function SharedTradePage() {
             </div>
           )}
 
-          <p className="text-white/40 text-xs mt-10">TuskaEx © {new Date().getFullYear()}. All rights reserved.</p>
+          <p className="text-white/40 text-xs mt-10">
+            {footerName ? `${footerName} © ` : '© '}{new Date().getFullYear()}. All rights reserved.
+          </p>
         </>
       )}
     </div>

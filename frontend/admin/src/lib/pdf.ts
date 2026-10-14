@@ -6,6 +6,7 @@
  */
 
 import { BRAND_NAME } from '@/config/brand';
+import { isTenantAdminHost, tenantHostLabel } from '@/lib/tenantBrand';
 
 export type PdfColumn = {
   header: string;
@@ -76,7 +77,10 @@ export async function downloadReportPdf(opts: ReportPdfOptions): Promise<void> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  const brand = (opts.brandName || '').trim() || BRAND_NAME;
+  // On a tenant's host never fall back to the parent platform's name — a brand
+  // still loading (or unset) prints their own hostname instead.
+  const brand =
+    (opts.brandName || '').trim() || (isTenantAdminHost() ? tenantHostLabel() : BRAND_NAME);
   doc.text(brand, margin, 7);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');

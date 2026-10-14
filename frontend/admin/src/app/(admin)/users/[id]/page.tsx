@@ -1,5 +1,6 @@
 'use client';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
+import { exportFilePrefix } from '@/lib/tenantBrand';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -310,7 +311,7 @@ export default function UserDetailPage() {
         a.account_number, fmtMoney(a.balance), fmtMoney(a.credit), fmtMoney(a.equity),
         fmtMoney(a.margin_used), fmtMoney(a.free_margin), `1:${a.leverage}`, a.is_demo ? 'Demo' : 'Real',
       ]),
-      filename: `tuskaex-statement-${name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`,
+      filename: `${exportFilePrefix()}statement-${name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.pdf`,
     });
   };
 

@@ -68,6 +68,14 @@ export function tenantHostLabel(host?: string | null): string {
   return here.split(':')[0].replace(/^admin\./, '');
 }
 
+/**
+ * Prefix for downloaded export filenames. TuskaEx's own staff keep the
+ * `tuskaex-` prefix; on a tenant's host the file carries no vendor name.
+ */
+export function exportFilePrefix(): string {
+  return isTenantAdminHost() ? '' : 'tuskaex-';
+}
+
 /** First letter of a label, for the collapsed rail and the tab icon. */
 export function monogram(label: string): string {
   return (label.trim()[0] || '').toUpperCase();

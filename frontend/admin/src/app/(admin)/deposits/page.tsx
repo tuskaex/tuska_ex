@@ -1,5 +1,6 @@
 'use client';
 import { useTenantBrand } from '@/hooks/useTenantBrand';
+import { exportFilePrefix } from '@/lib/tenantBrand';
 
 import { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -441,7 +442,7 @@ export default function DepositsPage() {
           { header: 'Method' }, { header: 'Transaction ID', mono: true }, { header: 'Status' }, { header: 'Date', mono: true },
         ],
         rows: deposits.map((d) => [d.id, d.user_name || d.user_email || '—', fmtMoney(d.amount), d.method, d.transaction_id || '—', statusLabel(d.status), fmtWhen(d.created_at)]),
-        filename: `tuskaex-deposits-${stamp}.pdf`,
+        filename: `${exportFilePrefix()}deposits-${stamp}.pdf`,
       });
     } else if (activeTab === 'withdrawals') {
       void downloadReportPdf({
@@ -453,7 +454,7 @@ export default function DepositsPage() {
           { header: 'Method' }, { header: 'Status' }, { header: 'Date', mono: true },
         ],
         rows: withdrawals.map((w) => [w.id, w.user_name || w.user_email || '—', fmtMoney(w.amount), w.method, statusLabel(w.status), fmtWhen(w.created_at)]),
-        filename: `tuskaex-withdrawals-${stamp}.pdf`,
+        filename: `${exportFilePrefix()}withdrawals-${stamp}.pdf`,
       });
     } else {
       void downloadReportPdf({
@@ -464,7 +465,7 @@ export default function DepositsPage() {
           { header: 'Description' }, { header: 'Date', mono: true },
         ],
         rows: transactions.map((t) => [t.type, t.user_name || t.user_email || '—', fmtMoney(t.amount), t.description || '—', fmtWhen(t.created_at)]),
-        filename: `tuskaex-money-history-${stamp}.pdf`,
+        filename: `${exportFilePrefix()}money-history-${stamp}.pdf`,
       });
     }
   };
