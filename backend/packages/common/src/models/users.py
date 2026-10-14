@@ -134,6 +134,15 @@ class User(Base):
     # How this user arrived: PLATFORM | BRANDED_REFERRAL | CUSTOM_DOMAIN.
     signup_origin = Column(String(20), nullable=True)
 
+    # ── Tenant colour & feature switches (migrations 0063–0065) ─────────
+    # Hex accent colour for the client-facing app (#RRGGBB). NULL = platform default.
+    brand_color = Column(String(7), nullable=True)
+    # Per-broker feature flags: {"deposits": false, "ib_program": false, ...}.
+    # Missing key or NULL means enabled. Enforced by require_client_feature().
+    client_features = Column(JSONB, nullable=True)
+    # Separate hex accent for the broker's own admin panel. NULL = platform default.
+    admin_color = Column(String(7), nullable=True)
+
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 

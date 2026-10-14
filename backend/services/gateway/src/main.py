@@ -25,6 +25,7 @@ from .api import (
     websocket_manager, social, business, portfolio, profile, support,
     notifications, banners, trading_catalog, followers, lp_receiver,
     share, algo_connector, algo_keys, algo_market_data, algo_terminal,
+    brokers,
 )
 from .engines.sltp_engine import sltp_engine
 from .engines.copy_engine import copy_engine
@@ -327,6 +328,7 @@ app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]
 app.include_router(lp_receiver.router, prefix="/api/lp", tags=["LP Receiver"])
 app.include_router(share.router, prefix="/api/v1", tags=["Share Trade"])
 app.include_router(share.public_router, prefix="/api/v1/public", tags=["Public Share"])
+app.include_router(brokers.router, prefix="/api/v1/public", tags=["Brokers"])
 # Algo Connector. Key management is JWT/cookie-auth and rides the /api/v1 proxy;
 # the bot-facing trade + market-data API is X-Api-Key/X-Api-Secret authed and lives
 # under a separate /api/algo namespace (no v1) — bots never send a JWT.
