@@ -34,6 +34,47 @@
  */
 
 (function () {
+  // Icons for the entries, the same glyphs the terminal's own menus and
+  // toolbar use (src/ui/Icons.h), so the chart menu reads as part of the same
+  // program. currentColor lets the library's light and dark menus colour them.
+  function svg(body) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" ' +
+      'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+      'stroke-linejoin="round">' + body + "</svg>";
+  }
+  // The "on" look of a toggle. The library draws iconChecked INSTEAD of a tick
+  // once an entry has an icon, so without this Grid and Volumes stopped
+  // showing whether they were on. Same glyph, smaller, in a highlighted box:
+  // what a checked toolbar button looks like in the terminal.
+  function svgOn(body) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" ' +
+      'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+      'stroke-linejoin="round">' +
+      '<rect x="0.5" y="0.5" width="23" height="23" rx="4" fill="currentColor" ' +
+      'fill-opacity="0.16" stroke-opacity="0.7" stroke-width="1"/>' +
+      '<g transform="translate(3.5 3.5) scale(0.71)">' + body + "</g></svg>";
+  }
+  var GRID_BODY = '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>';
+  var VOL_BODY = '<path d="M4 20V14M9 20V8M14 20v-9M19 20V4"/>';
+  var ICON = {
+    indicators: svg('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
+    timeframes: svg('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
+    template:   svg('<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>'),
+    refresh:    svg('<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>'),
+    arrange:    svg('<path d="M12 3v18"/><path d="M3 12h6M6 9l3 3-3 3M21 12h-6M18 9l-3 3 3 3"/>'),
+    grid:       svg(GRID_BODY),
+    gridOn:     svgOn(GRID_BODY),
+    volumes:    svg(VOL_BODY),
+    volumesOn:  svgOn(VOL_BODY),
+    zoomIn:     svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/>'),
+    zoomOut:    svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M8 11h6"/>'),
+    picture:    svg('<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>'),
+    preview:    svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><circle cx="11.5" cy="14.5" r="2.5"/><path d="M13.5 16.5L16 19"/>'),
+    print:      svg('<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>'),
+    properties: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    save:       svg('<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>'),
+    trash:      svg('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>'),
+  };
   // MetaTrader's label on the left, the charting library's resolution string on
   // the right. The datafeed maps those to the server's own timeframes, so
   // nothing here needs to know about either.
@@ -218,6 +259,7 @@
       items.push(f.createAction({
         actionId: "tx-tpl-save",
         label: "Save Template…",
+        icon: ICON.save,
         onExecute: function () {
           var c = chart();
           if (!c) return;
@@ -248,6 +290,7 @@
         items.push(f.createAction({
           actionId: "tx-tpl-delete",
           label: "Delete Template",
+          icon: ICON.trash,
           subItems: names.map(function (name) {
             return f.createAction({
               actionId: "tx-tpl-del-" + name,
@@ -276,6 +319,7 @@
       add({
         actionId: "tx-indicators",
         label: "Indicators List",
+        icon: ICON.indicators,
         shortcutHint: "Ctrl+I",
         onExecute: act(function (ch) { ch.executeActionById("insertIndicator"); }),
       });
@@ -285,18 +329,21 @@
       add({
         actionId: "tx-timeframes",
         label: "Timeframes",
+        icon: ICON.timeframes,
         subItems: buildTimeframes(f, c),
         onExecute: function () {},
       });
       add({
         actionId: "tx-template",
         label: "Template",
+        icon: ICON.template,
         subItems: buildTemplates(f, templateNames),
         onExecute: function () {},
       });
       add({
         actionId: "tx-refresh",
         label: "Refresh",
+        icon: ICON.refresh,
         onExecute: act(function (ch) { ch.resetData(); }),
       });
 
@@ -307,11 +354,14 @@
       add({
         actionId: "tx-autoarrange",
         label: "Auto Arrange",
+        icon: ICON.arrange,
         onExecute: act(function (ch) { ch.executeActionById("chartReset"); }),
       });
       add({
         actionId: "tx-grid",
         label: "Grid",
+        icon: ICON.grid,
+        iconChecked: ICON.gridOn,
         shortcutHint: "Ctrl+G",
         checkable: true,
         checked: gridOn,
@@ -320,6 +370,8 @@
       add({
         actionId: "tx-volumes",
         label: "Volumes",
+        icon: ICON.volumes,
+        iconChecked: ICON.volumesOn,
         shortcutHint: "Ctrl+L",
         checkable: true,
         checked: !!vol,
@@ -332,9 +384,9 @@
 
       sep();
 
-      add({ actionId: "tx-zoomin",  label: "Zoom In",  shortcutHint: "+",
+      add({ actionId: "tx-zoomin",  label: "Zoom In",  shortcutHint: "+", icon: ICON.zoomIn,
             onExecute: function () { zoom(1.25); } });
-      add({ actionId: "tx-zoomout", label: "Zoom Out", shortcutHint: "−",
+      add({ actionId: "tx-zoomout", label: "Zoom Out", shortcutHint: "−", icon: ICON.zoomOut,
             onExecute: function () { zoom(1 / 1.25); } });
 
       sep();
@@ -342,16 +394,19 @@
       add({
         actionId: "tx-savepic",
         label: "Save As Picture…",
+        icon: ICON.picture,
         onExecute: function () { try { bridge.requestSaveImage(); } catch (e) {} },
       });
       add({
         actionId: "tx-printpreview",
         label: "Print Preview",
+        icon: ICON.preview,
         onExecute: function () { try { bridge.requestPrint(true); } catch (e) {} },
       });
       add({
         actionId: "tx-print",
         label: "Print…",
+        icon: ICON.print,
         onExecute: function () { try { bridge.requestPrint(false); } catch (e) {} },
       });
 
@@ -360,6 +415,7 @@
       add({
         actionId: "tx-properties",
         label: "Properties…",
+        icon: ICON.properties,
         shortcutHint: "F8",
         onExecute: act(function (ch) { ch.executeActionById("chartProperties"); }),
       });

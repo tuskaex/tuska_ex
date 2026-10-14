@@ -317,4 +317,215 @@ inline QIcon eraser(const QColor& c, int px = 18) {
         "<path d='M9 20l7.8-7.8'/>"), c, px);
 }
 
+// Show trade panel — a window with its bottom band picked out.
+inline QIcon panelBottom(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/>"
+        "<path d='M3 15h18'/>"), c, px);
+}
+
+// ── Menu entries ──
+
+// Save — a floppy disk, still the one symbol everyone reads as "save".
+inline QIcon save(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z'/>"
+        "<path d='M17 21v-8H7v8M7 3v5h8'/>"), c, px);
+}
+
+// Delete — a bin.
+inline QIcon trash(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/>"
+        "<path d='M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6'/>"), c, px);
+}
+
+// Favourites — a star.
+inline QIcon star(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25"
+        "L7 14.14 2 9.27l6.91-1.01L12 2z'/>"), c, px);
+}
+
+// Specification / properties — an "i" in a circle.
+inline QIcon info(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='12' cy='12' r='10'/><path d='M12 16v-4M12 8h.01'/>"), c, px);
+}
+
+// Chart window — three candles.
+inline QIcon candles(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M6 3v3M6 15v6M12 2v5M12 14v8M18 5v3M18 16v5'/>"
+        "<rect x='4' y='6' width='4' height='9' rx='0.5'/>"
+        "<rect x='10' y='7' width='4' height='7' rx='0.5'/>"
+        "<rect x='16' y='8' width='4' height='8' rx='0.5'/>"), c, px);
+}
+
+// Risk report — a shield.
+inline QIcon shield(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z'/>"), c, px);
+}
+
+// Long & Short — an arrow up beside an arrow down.
+inline QIcon longShort(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M7 20V4M3 8l4-4 4 4'/>"
+        "<path d='M17 4v16M13 16l4 4 4-4'/>"), c, px);
+}
+
+// Per-symbol report — a price tag.
+inline QIcon tag(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59"
+        "a2 2 0 0 1 0 2.82z'/><path d='M7 7h.01'/>"), c, px);
+}
+
+// Export a statement — a sheet with an arrow coming down out of it.
+inline QIcon fileDown(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
+        "<path d='M14 2v6h6M12 12v6M9 15l3 3 3-3'/>"), c, px);
+}
+
+// Indicators — a pulse line.
+inline QIcon activity(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M22 12h-4l-3 9L9 3l-3 9H2'/>"), c, px);
+}
+
+// Expert Advisors — a chip: a program that trades.
+inline QIcon cpu(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='4' y='4' width='16' height='16' rx='2'/>"
+        "<rect x='9' y='9' width='6' height='6'/>"
+        "<path d='M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3'/>"), c, px);
+}
+
+// Copying positions from another terminal — two screens with an arrow.
+inline QIcon mirror(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='2' y='4' width='8' height='12' rx='1'/>"
+        "<rect x='14' y='4' width='8' height='12' rx='1'/>"
+        "<path d='M10 10h4M12 8l2 2-2 2M6 20h12'/>"), c, px);
+}
+
+// A table's grid lines.
+inline QIcon gridLines(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/>"
+        "<path d='M3 9h18M3 15h18M9 3v18M15 3v18'/>"), c, px);
+}
+
+// Auto Arrange — columns with arrows pushing them apart to fit.
+inline QIcon arrange(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 3v18'/>"
+        "<path d='M3 12h6M6 9l3 3-3 3M21 12h-6M18 9l-3 3 3 3'/>"), c, px);
+}
+
+// Colour — a palette.
+inline QIcon palette(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M12 22a10 10 0 1 1 10-10c0 2.5-2 3.5-4 3.5h-2a2 2 0 0 0-1.5 3.3"
+        "A1.5 1.5 0 0 1 12 22z'/>"
+        "<circle cx='7.5' cy='10.5' r='1'/><circle cx='12' cy='7' r='1'/>"
+        "<circle cx='16.5' cy='10.5' r='1'/>"), c, px);
+}
+
+// Columns submenu — vertical bars of a table.
+inline QIcon columns(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M9 3v18M15 3v18'/>"), c, px);
+}
+
+// Time column — a clock.
+inline QIcon clock(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='12' cy='12' r='10'/><path d='M12 6v6l4 2'/>"), c, px);
+}
+
+// Crypto market group — a coin.
+inline QIcon coin(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='12' cy='12' r='10'/>"
+        "<path d='M15 9.5a3 3 0 0 0-3-1.5c-1.7 0-3 .8-3 2s1.3 1.6 3 2 3 .8 3 2-1.3 2-3 2"
+        "a3 3 0 0 1-3-1.5M12 6v2M12 16v2'/>"), c, px);
+}
+
+// Commodities market group — a cut gem.
+inline QIcon diamond(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M6 3h12l4 6-10 12L2 9z'/><path d='M2 9h20M12 21L8 9l4-6 4 6z'/>"), c, px);
+}
+
+// Chart layouts: one pane, and two side by side. Four is gridFour.
+inline QIcon layoutOne(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/>"), c, px);
+}
+inline QIcon layoutTwo(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<rect x='3' y='3' width='18' height='18' rx='2'/><path d='M12 3v18'/>"), c, px);
+}
+
+// A filled colour sample for the row-colour menu. Not a glyph: the colour IS
+// the content, so it is drawn rather than tinted.
+inline QIcon swatch(const QColor& fill, const QColor& border, int px = 18) {
+    const qreal dpr = qApp ? qApp->devicePixelRatio() : 1.0;
+    QPixmap pm(int(px * dpr), int(px * dpr));
+    pm.fill(Qt::transparent);
+    pm.setDevicePixelRatio(dpr);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(border, 1.0));
+    p.setBrush(fill.isValid() ? fill : QColor(Qt::transparent));
+    p.drawRoundedRect(QRectF(2.5, 2.5, px - 5, px - 5), 3, 3);
+    if (!fill.isValid())   // "none": a slash through an empty box
+        p.drawLine(QPointF(4, px - 4), QPointF(px - 4, 4));
+    p.end();
+    return QIcon(pm);
+}
+
+// ── File menu ──
+
+// Open an Account — a person with a plus beside them.
+inline QIcon userPlus(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/>"
+        "<circle cx='9' cy='7' r='4'/>"
+        "<path d='M19 8v6M22 11h-6'/>"), c, px);
+}
+
+// Login to Trade Account — an arrow going in through a door.
+inline QIcon logIn(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4'/>"
+        "<path d='M10 17l5-5-5-5M15 12H3'/>"), c, px);
+}
+
+// Log out — the same door, the arrow leaving.
+inline QIcon logOut(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<path d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/>"
+        "<path d='M16 17l5-5-5-5M21 12H9'/>"), c, px);
+}
+
+// Login to Web Trader — a globe: it opens the web terminal in the browser.
+inline QIcon globe(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='12' cy='12' r='10'/>"
+        "<path d='M2 12h20'/>"
+        "<path d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"
+        " 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/>"), c, px);
+}
+
+// Login to Web Service — a key: it signs in with an API key and secret.
+inline QIcon key(const QColor& c, int px = 18) {
+    return detail::render(detail::wrap(
+        "<circle cx='7.5' cy='15.5' r='4.5'/>"
+        "<path d='M10.7 12.3L21 2M16 7l3 3M18.5 4.5l2 2'/>"), c, px);
+}
+
 } // namespace Icons

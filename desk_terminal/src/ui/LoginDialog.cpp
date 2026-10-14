@@ -498,13 +498,13 @@ QWidget* LoginDialog::buildFormPanel() {
 
     // Explicit way out, next to the ✕ and Escape.
     v->addSpacing(9);
-    auto* cancelBtn = new QPushButton(tr("Cancel"));
-    cancelBtn->setAutoDefault(false);
-    cancelBtn->setObjectName("ghost");
-    cancelBtn->setMinimumHeight(36);
-    cancelBtn->setCursor(Qt::PointingHandCursor);
-    connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
-    v->addWidget(cancelBtn);
+    m_cancelBtn = new QPushButton(tr("Cancel"));
+    m_cancelBtn->setAutoDefault(false);
+    m_cancelBtn->setObjectName("ghost");
+    m_cancelBtn->setMinimumHeight(36);
+    m_cancelBtn->setCursor(Qt::PointingHandCursor);
+    connect(m_cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+    v->addWidget(m_cancelBtn);
 
     // ── step 2: trading-account picker (revealed after sign-in) ──
     m_accountLabel = new QLabel(tr("TRADING ACCOUNT"));
@@ -584,6 +584,16 @@ void LoginDialog::showAccountStep() {
     m_accountLabel->show();
     m_account->show();
     m_connectBtn->show();
+    // Cancel was laid out under Sign in, so with Sign in hidden it ended up
+    // ABOVE the account picker, the first thing under the heading. Move it
+    // under Connect, where it sits on the first step too.
+    auto* lay = qobject_cast<QBoxLayout*>(m_connectBtn->parentWidget()->layout());
+    if (lay && lay->indexOf(m_connectBtn) >= 0 && lay->indexOf(m_cancelBtn) >= 0) {
+        lay->removeWidget(m_cancelBtn);
+        const int at = lay->indexOf(m_connectBtn) + 1;
+        lay->insertSpacing(at, 9);
+        lay->insertWidget(at + 1, m_cancelBtn);
+    }
     // Hand Return over with the step. A hidden default button still answers
     // Return, so without this Enter on the account picker would re-run a
     // sign-in that has already happened.

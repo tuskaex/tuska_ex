@@ -12,6 +12,7 @@
 #include <QUrl>
 #include <algorithm>
 #include "ui/Icons.h"
+#include "ui/MenuIcons.h"
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QHeaderView>
@@ -391,7 +392,8 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
 
     // ── the statement ──
     if (tab == 2) {
-        connect(menu.addAction(tr("Save as Report…")), &QAction::triggered,
+        connect(MenuIcons::set(menu.addAction(tr("Save as Report…")), &Icons::fileDown),
+                &QAction::triggered,
                 this, &PositionsPanel::exportHistoryReport);
         menu.addSeparator();
     }
@@ -401,6 +403,9 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
     // switches and this tab has thirteen columns, which flat would turn into a
     // menu taller than the blotter it drops out of.
     QMenu* cols = menu.addMenu(tr("Columns"));
+    // The columns themselves keep their ticks: thirteen entries with the same
+    // icon would say nothing, and the tick is the point of the list.
+    MenuIcons::set(cols->menuAction(), &Icons::columns);
     // How many columns of this tab share each header, worked out first so an
     // entry can say WHICH one it is while it is being created.
     QHash<QString, int> total;
@@ -440,6 +445,7 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
     QAction* arrange = menu.addAction(tr("Auto Arrange"));
     arrange->setCheckable(true);
     arrange->setChecked(m_autoArrange);
+    MenuIcons::set(arrange, &Icons::arrange);
     connect(arrange, &QAction::triggered, this, [this](bool on) {
         setAutoArrange(on);
         emit viewPrefsChanged(m_autoArrange, m_gridOn);
@@ -448,6 +454,7 @@ void PositionsPanel::openTableMenu(int tab, const QPoint& globalPos) {
     QAction* grid = menu.addAction(tr("Grid"));
     grid->setCheckable(true);
     grid->setChecked(m_gridOn);
+    MenuIcons::set(grid, &Icons::gridLines);
     connect(grid, &QAction::triggered, this, [this](bool on) {
         setGridVisible(on);
         emit viewPrefsChanged(m_autoArrange, m_gridOn);

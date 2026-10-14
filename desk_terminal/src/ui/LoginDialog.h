@@ -77,6 +77,7 @@ private:
     // that storage is and is not.
     QCheckBox*   m_remember;
     Mode         m_mode;
+    QPushButton* m_cancelBtn = nullptr;
     QLineEdit*   m_rest;
     QLineEdit*   m_ws;
     QPushButton* m_loginBtn;

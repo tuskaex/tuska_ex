@@ -86,6 +86,11 @@ public:
     // again after editing the text.
     void createShareLink(const QString& positionId, const QString& description,
                          const QString& linkDescription, const QString& mode);
+    // File > Login to Web Trader. Asks the platform for a single-use code
+    // (POST /auth/handoff) that the web terminal trades for a session of its
+    // own, so the browser opens signed in: no password typed twice, and no
+    // token ever put in a URL. Needs the session JWT.
+    void requestWebTraderHandoff();
     // lots <= 0 (or >= the position's size) closes it fully; a smaller value is
     // a partial close and leaves the remainder open.
     void closePositionById(const QString& positionId, double lots = 0.0);
@@ -105,6 +110,10 @@ signals:
     void instrumentSpecReceived(const InstrumentSpec& spec);
     // Answer to createShareLink(). ok=false carries the reason in .
     void shareLinkCreated(bool ok, const QString& code);
+    // Answer to requestWebTraderHandoff(). ok=false carries the reason in
+    // codeOrError. terminalUrl is the platform's separate web-terminal origin,
+    // empty when the web terminal lives on the main trader site.
+    void webTraderHandoff(bool ok, const QString& codeOrError, const QString& terminalUrl);
     // Answer to fetchDailyRange(). Emitted only on success: the columns
     // track the session's own ticks meanwhile, so a failed seed costs a
     // slightly narrow range, not an empty one, and is not worth a message.

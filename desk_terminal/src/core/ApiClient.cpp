@@ -505,6 +505,25 @@ void ApiClient::createShareLink(const QString& positionId, const QString& descri
     });
 }
 
+void ApiClient::requestWebTraderHandoff() {
+    QNetworkReply* r = m_net->post(v1Request("/auth/handoff"), QByteArray("{}"));
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        const int http = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QJsonObject o = QJsonDocument::fromJson(r->readAll()).object();
+        if (r->error() != QNetworkReply::NoError || http >= 400) {
+            emit webTraderHandoff(false, apiDetail(o, r->errorString()), QString());
+            return;
+        }
+        const QString code = o.value("code").toString();
+        if (code.isEmpty()) {
+            emit webTraderHandoff(false, tr("No sign-in code returned."), QString());
+            return;
+        }
+        emit webTraderHandoff(true, code, o.value("terminal_url").toString());
+    });
+}
+
 void ApiClient::modifyComment(const QString& positionId, const QString& comment) {
     QJsonObject body;
     // Always present, so the server sees the field as "set" and applies it —

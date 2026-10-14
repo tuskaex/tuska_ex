@@ -104,6 +104,7 @@ set(HEADERS
     src/ui/Theme.h
     src/ui/Toast.h
     src/ui/Icons.h
+    src/ui/MenuIcons.h
     src/ui/LoginDialog.h
     src/ui/OpenAccountDialog.h
     src/ui/SymbolsDialog.h

@@ -1,5 +1,6 @@
 #include "ui/WatchlistWidget.h"
 #include "ui/Theme.h"
+#include "ui/MenuIcons.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -440,36 +441,38 @@ void WatchlistWidget::openRowMenu(const QPoint& pos) {
     // rather than added as items that open nothing.
 
     // ── act on this instrument ──
-    QAction* order = menu.addAction(tr("New Order"));
+    QAction* order = MenuIcons::set(menu.addAction(tr("New Order")), &Icons::plusBox);
     order->setShortcut(QKeySequence(Qt::Key_F9));
     connect(order, &QAction::triggered, this, [this, sym]() { emit symbolDoubleClicked(sym); });
 
-    connect(menu.addAction(tr("Chart Window")), &QAction::triggered,
+    connect(MenuIcons::set(menu.addAction(tr("Chart Window")), &Icons::candles), &QAction::triggered,
             this, [this, sym]() { emit symbolActivated(sym); });
 
-    connect(menu.addAction(tr("Specification…")), &QAction::triggered,
+    connect(MenuIcons::set(menu.addAction(tr("Specification…")), &Icons::info), &QAction::triggered,
             this, [this, sym]() { emit specificationRequested(sym); });
     menu.addSeparator();
 
     // ── what the list shows ──
     const bool starred = m_favourites.contains(sym);
-    connect(menu.addAction(starred ? tr("Remove from Favourites")
-                                   : tr("Add to Favourites")),
+    connect(MenuIcons::set(menu.addAction(starred ? tr("Remove from Favourites")
+                                                  : tr("Add to Favourites")),
+                           &Icons::star),
             &QAction::triggered, this, [this, sym]() { toggleFavourite(sym); });
 
-    QAction* hide = menu.addAction(tr("Hide"));
+    QAction* hide = MenuIcons::set(menu.addAction(tr("Hide")), &Icons::eyeOff);
     hide->setShortcut(QKeySequence(Qt::Key_Delete));
     connect(hide, &QAction::triggered, this, [this, sym]() { hideSymbol(sym); });
 
-    connect(menu.addAction(tr("Hide All")), &QAction::triggered,
+    connect(MenuIcons::set(menu.addAction(tr("Hide All")), &Icons::eyeOff), &QAction::triggered,
             this, [this]() { hideAllSymbols(); });
-    QAction* showAll = menu.addAction(tr("Show All"));
+    QAction* showAll = MenuIcons::set(menu.addAction(tr("Show All")), &Icons::eye);
     showAll->setEnabled(!m_hiddenSymbols.isEmpty());
     connect(showAll, &QAction::triggered, this, [this]() { showAllSymbols(); });
     menu.addSeparator();
 
     // ── colour this row ──
     QMenu* colours = menu.addMenu(tr("Colour"));
+    MenuIcons::set(colours->menuAction(), &Icons::palette);
     colours->setStyleSheet(menu.styleSheet());
     struct { const char* key; const char* label; } kColours[] = {
         {"none",   QT_TR_NOOP("None")},
@@ -520,17 +523,18 @@ void WatchlistWidget::openRowMenu(const QPoint& pos) {
     //
     // High and Low are ONE entry there, and a trader who wants the day's range
     // wants both halves of it, so they are toggled together here too.
-    struct { const char* keys; const char* label; } kCols[] = {
-        {"change",   QT_TR_NOOP("Change")},
-        {"spread",   QT_TR_NOOP("Spread")},
-        {"high,low", QT_TR_NOOP("High/Low")},
-        {"time",     QT_TR_NOOP("Time")},
+    struct { const char* keys; const char* label; MenuIcons::Fn icon; } kCols[] = {
+        {"change",   QT_TR_NOOP("Change"),   &Icons::activity},
+        {"spread",   QT_TR_NOOP("Spread"),   &Icons::arrange},
+        {"high,low", QT_TR_NOOP("High/Low"), &Icons::longShort},
+        {"time",     QT_TR_NOOP("Time"),     &Icons::clock},
     };
     for (const auto& oc : kCols) {
         QAction* a = menu.addAction(tr(oc.label));
         a->setCheckable(true);
         const QStringList keys = QString::fromLatin1(oc.keys).split(QLatin1Char(','));
         a->setChecked(!m_hidden.contains(keys.first()));
+        MenuIcons::set(a, oc.icon);
         connect(a, &QAction::triggered, this, [this, keys](bool on) {
             for (const QString& k : keys) {
                 if (on) m_hidden.removeAll(k);
@@ -544,13 +548,14 @@ void WatchlistWidget::openRowMenu(const QPoint& pos) {
     QAction* grid = menu.addAction(tr("Grid"));
     grid->setCheckable(true);
     grid->setChecked(m_grid);
+    MenuIcons::set(grid, &Icons::gridLines);
     connect(grid, &QAction::triggered, this, [this](bool on) {
         setGridVisible(on);
         emit gridChanged(on);
     });
 
-    connect(menu.addAction(tr("Auto Arrange")), &QAction::triggered,
-            this, [this]() { autoArrangeColumns(); });
+    connect(MenuIcons::set(menu.addAction(tr("Auto Arrange")), &Icons::arrange),
+            &QAction::triggered, this, [this]() { autoArrangeColumns(); });
 
     menu.exec(m_table->viewport()->mapToGlobal(pos));
 }
@@ -588,15 +593,16 @@ void WatchlistWidget::openMarketMenu() {
         "QMenu::item:selected{background:%4; color:%5;}")
         .arg(c.menuBg, c.menuBorder, c.text, c.menuSel, c.textStrong));
 
-    QAction* all = menu.addAction(tr("All Markets   (%1)").arg(m_all.size()));
+    QAction* all = MenuIcons::set(menu.addAction(tr("All Markets   (%1)").arg(m_all.size())),
+                                  &Icons::layers);
     connect(all, &QAction::triggered, this, [this]() { setMarket(QString()); });
 
     // Favourites is a filter like any market group, so it belongs on the same
     // menu rather than in a control of its own. Listed even when empty, or the
     // way to use the feature would be invisible until it was already in use.
-    QAction* fav = menu.addAction(tr("%1 Favourites   (%2)")
-                                      .arg(QString::fromUtf8(STAR))
-                                      .arg(m_favourites.size()));
+    QAction* fav = MenuIcons::set(menu.addAction(tr("Favourites   (%1)")
+                                                     .arg(m_favourites.size())),
+                                  &Icons::star);
     connect(fav, &QAction::triggered, this, [this]() {
         m_favOnly = true;
         m_activeGroup.clear();
@@ -609,6 +615,13 @@ void WatchlistWidget::openMarketMenu() {
     for (const QString& g : order) {
         if (!counts.contains(g)) continue;
         QAction* a = menu.addAction(QString("%1   (%2)").arg(g).arg(counts[g]));
+        const MenuIcons::Fn icon = g == "Forex"       ? &Icons::globe
+                                 : g == "Crypto"      ? &Icons::coin
+                                 : g == "Commodities" ? &Icons::diamond
+                                 : g == "Indices"     ? &Icons::activity
+                                 : g == "Stocks"      ? &Icons::candles
+                                                      : &Icons::layers;
+        MenuIcons::set(a, icon);
         connect(a, &QAction::triggered, this, [this, g]() { setMarket(g); });
     }
     menu.exec(m_marketBtn->mapToGlobal(QPoint(0, m_marketBtn->height() + 2)));

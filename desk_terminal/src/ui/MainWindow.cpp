@@ -33,12 +33,20 @@
 #include <QToolBar>
 #include <QToolButton>
 #include "ui/Icons.h"
+#include "ui/MenuIcons.h"
 #include <QLabel>
 #include <QTimer>
 #include <QMessageBox>
 #include <QInputDialog>
 #include <algorithm>
 #include <QApplication>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QUrlQuery>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <memory>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QFrame>
@@ -238,33 +246,50 @@ void MainWindow::buildMenuBar() {
     // coming from MetaTrader looks for under File, and the Trade menu is where
     // this terminal has always kept it.
     QMenu* file = bar->addMenu(tr("&File"));
+    // Every entry carries an icon, as MT5's menus do. Registered with the
+    // toolbar icons so a theme switch repaints these too; drawn in one colour
+    // here, they would vanish on the dark theme. setIconVisibleInMenu because
+    // macOS hides menu icons by default, and the .dmg must match the .exe.
+    auto menuIcon = [this](QAction* a, IconFn fn) {
+        a->setIcon(MenuIcons::build(a, fn));
+        a->setIconVisibleInMenu(true);
+        m_menuIcons.append({a, fn});
+        return a;
+    };
     QAction* fileOrder = file->addAction(tr("&New Order…"));
+    menuIcon(fileOrder, &Icons::plusBox);
     fileOrder->setShortcuts({QKeySequence(Qt::Key_F9),
                              QKeySequence(QStringLiteral("Ctrl+P"))});
     connect(fileOrder, &QAction::triggered, this, &MainWindow::openOrderWindow);
 
     file->addSeparator();
     m_profileMenu = file->addMenu(tr("&Profile"));
+    menuIcon(m_profileMenu->menuAction(), &Icons::folder);
     connect(m_profileMenu, &QMenu::aboutToShow, this, &MainWindow::rebuildProfileMenu);
 
     file->addSeparator();
-    connect(file->addAction(tr("&Open an Account…")), &QAction::triggered,
-            this, &MainWindow::openAccountSignup);
-    connect(file->addAction(tr("Login to &Trade Account…")), &QAction::triggered,
-            this, &MainWindow::openSettings);
-    connect(file->addAction(tr("Login to &Web Service…")), &QAction::triggered,
-            this, &MainWindow::openWebServiceLogin);
+    connect(menuIcon(file->addAction(tr("&Open an Account…")), &Icons::userPlus),
+            &QAction::triggered, this, &MainWindow::openAccountSignup);
+    // This used to open Settings, which signs nobody in.
+    connect(menuIcon(file->addAction(tr("Login to &Trade Account…")), &Icons::logIn),
+            &QAction::triggered, this, &MainWindow::loginTradeAccount);
+    connect(menuIcon(file->addAction(tr("Login to Web T&rader")), &Icons::globe),
+            &QAction::triggered, this, &MainWindow::openWebTrader);
+    // Not in MT5. Kept because it is the only way in with a pasted API key and
+    // secret: the sign-in card's own toggle for that is hidden.
+    connect(menuIcon(file->addAction(tr("Login to &Web Service…")), &Icons::key),
+            &QAction::triggered, this, &MainWindow::openWebServiceLogin);
 
     file->addSeparator();
-    connect(file->addAction(tr("&Settings…")), &QAction::triggered,
-            this, &MainWindow::openSettings);
-    connect(file->addAction(tr("&Refresh")), &QAction::triggered,
-            this, &MainWindow::refreshAll);
+    connect(menuIcon(file->addAction(tr("&Settings…")), &Icons::settings),
+            &QAction::triggered, this, &MainWindow::openSettings);
+    connect(menuIcon(file->addAction(tr("&Refresh")), &Icons::refresh),
+            &QAction::triggered, this, &MainWindow::refreshAll);
     file->addSeparator();
-    connect(file->addAction(tr("&Log out")), &QAction::triggered,
-            this, &MainWindow::logout);
-    connect(file->addAction(tr("E&xit")), &QAction::triggered,
-            qApp, &QApplication::quit);
+    connect(menuIcon(file->addAction(tr("&Log out")), &Icons::logOut),
+            &QAction::triggered, this, &MainWindow::logout);
+    connect(menuIcon(file->addAction(tr("E&xit")), &Icons::power),
+            &QAction::triggered, qApp, &QApplication::quit);
 
     // ── Trade ──
     QMenu* trade = bar->addMenu(tr("&Trade"));
@@ -289,10 +314,12 @@ void MainWindow::buildMenuBar() {
     // terminal's own appearance settings, which have always lived here.
     QMenu* view = bar->addMenu(tr("&View"));
 
-    connect(view->addAction(tr("&Symbols…")), &QAction::triggered,
-            this, &MainWindow::openSymbolsBrowser);
+    // Same icons as the toolbar buttons that do the same thing, so a trader
+    // who learnt one finds it in the other.
+    connect(menuIcon(view->addAction(tr("&Symbols…")), &Icons::checklist),
+            &QAction::triggered, this, &MainWindow::openSymbolsBrowser);
 
-    m_marketWatchAction = view->addAction(tr("&Market Watch"));
+    m_marketWatchAction = menuIcon(view->addAction(tr("&Market Watch")), &Icons::table);
     m_marketWatchAction->setCheckable(true);
     m_marketWatchAction->setChecked(m_cfg.marketWatchVisible);
     connect(m_marketWatchAction, &QAction::triggered, this, [this](bool on) {
@@ -302,7 +329,7 @@ void MainWindow::buildMenuBar() {
         if (on) fitWatchlistWidth();
     });
 
-    m_dataWindowAction = view->addAction(tr("&Data Window"));
+    m_dataWindowAction = menuIcon(view->addAction(tr("&Data Window")), &Icons::sidePanel);
     m_dataWindowAction->setCheckable(true);
     m_dataWindowAction->setChecked(m_cfg.dataWindow);
     connect(m_dataWindowAction, &QAction::triggered, this, [this](bool on) {
@@ -316,39 +343,40 @@ void MainWindow::buildMenuBar() {
                      : tr("Data Window off"));
     });
 
-    connect(view->addAction(tr("&Navigation")), &QAction::triggered,
-            this, &MainWindow::openNavigation);
+    connect(menuIcon(view->addAction(tr("&Navigation")), &Icons::compass),
+            &QAction::triggered, this, &MainWindow::openNavigation);
 
-    connect(view->addAction(tr("Strategy &Tester…")), &QAction::triggered,
+    connect(menuIcon(view->addAction(tr("Strategy &Tester…")), &Icons::play), &QAction::triggered,
             this, &MainWindow::openStrategyTester);
 
     QMenu* reports = view->addMenu(tr("&Reports"));
+    menuIcon(reports->menuAction(), &Icons::report);
     // One dialog, opened on the tab the trader picked. The four entries exist
     // because the desk specified four, and a menu that opened the same window
     // from every one of them would make the specification look ignored.
-    struct { const char* label; ReportsDialog::Tab tab; } kReports[] = {
-        {QT_TR_NOOP("&Summary"),      ReportsDialog::Summary},
-        {QT_TR_NOOP("&Risk"),         ReportsDialog::Risk},
-        {QT_TR_NOOP("&Long && Short"), ReportsDialog::LongShort},
-        {QT_TR_NOOP("S&ymbols"),      ReportsDialog::Symbols},
+    struct { const char* label; ReportsDialog::Tab tab; IconFn icon; } kReports[] = {
+        {QT_TR_NOOP("&Summary"),      ReportsDialog::Summary,   &Icons::report},
+        {QT_TR_NOOP("&Risk"),         ReportsDialog::Risk,      &Icons::shield},
+        {QT_TR_NOOP("&Long && Short"), ReportsDialog::LongShort, &Icons::longShort},
+        {QT_TR_NOOP("S&ymbols"),      ReportsDialog::Symbols,   &Icons::tag},
     };
     for (const auto& r : kReports) {
-        connect(reports->addAction(tr(r.label)), &QAction::triggered, this,
+        connect(menuIcon(reports->addAction(tr(r.label)), r.icon), &QAction::triggered, this,
                 [this, tab = r.tab]() { openReports(tab); });
     }
     reports->addSeparator();
     // The HTML statement the panel has always been able to save — the document
     // form of the same figures, for an accountant or a broker.
-    connect(reports->addAction(tr("Save &statement…")), &QAction::triggered,
+    connect(menuIcon(reports->addAction(tr("Save &statement…")), &Icons::fileDown), &QAction::triggered,
             this, [this]() { m_positions->exportHistoryReport(); });
 
     view->addSeparator();
-    m_darkAction = view->addAction(tr("&Dark theme"));
+    m_darkAction = menuIcon(view->addAction(tr("&Dark theme")), &Icons::moon);
     m_darkAction->setCheckable(true);
     m_darkAction->setChecked(Theme::isDark());
     connect(m_darkAction, &QAction::triggered, this, &MainWindow::toggleTheme);
 
-    m_privacyAction = view->addAction(tr("&Hide balances"));
+    m_privacyAction = menuIcon(view->addAction(tr("&Hide balances")), &Icons::eyeOff);
     m_privacyAction->setCheckable(true);
     m_privacyAction->setChecked(m_cfg.privacy);
     connect(m_privacyAction, &QAction::triggered, this, &MainWindow::togglePrivacy);
@@ -356,16 +384,18 @@ void MainWindow::buildMenuBar() {
     // ── chart layout: 1 / 2 / 4 panes ──
     view->addSeparator();
     QMenu* layout = view->addMenu(tr("&Chart layout"));
+    menuIcon(layout->menuAction(), &Icons::gridFour);
     m_layoutGroup = new QActionGroup(this);
     m_layoutGroup->setExclusive(true);
-    struct { const char* text; int count; } modes[] = {
-        {QT_TR_NOOP("&1 chart"),           1},
-        {QT_TR_NOOP("&2 charts (side by side)"), 2},
-        {QT_TR_NOOP("&4 charts (2 x 2)"),  4},
+    struct { const char* text; int count; IconFn icon; } modes[] = {
+        {QT_TR_NOOP("&1 chart"),                 1, &Icons::layoutOne},
+        {QT_TR_NOOP("&2 charts (side by side)"), 2, &Icons::layoutTwo},
+        {QT_TR_NOOP("&4 charts (2 x 2)"),        4, &Icons::gridFour},
     };
     for (const auto& m : modes) {
         QAction* a = layout->addAction(tr(m.text));
         a->setCheckable(true);
+        menuIcon(a, m.icon);
         a->setChecked(m.count == 1);
         a->setData(m.count);
         m_layoutGroup->addAction(a);
@@ -400,6 +430,7 @@ void MainWindow::buildMenuBar() {
     // pick a display face that renders a blotter unreadable.
     view->addSeparator();
     QMenu* fontMenu = view->addMenu(tr("&Font"));
+    menuIcon(fontMenu->menuAction(), &Icons::textTool);
 
     auto* familyGroup = new QActionGroup(this);
     familyGroup->setExclusive(true);
@@ -453,7 +484,7 @@ void MainWindow::buildMenuBar() {
     }
 
     view->addSeparator();
-    m_bloterAction = view->addAction(tr("Show &trade panel"));
+    m_bloterAction = menuIcon(view->addAction(tr("Show &trade panel")), &Icons::panelBottom);
     m_bloterAction->setCheckable(true);
     m_bloterAction->setChecked(true);
     connect(m_bloterAction, &QAction::triggered, this, [this](bool on) {
@@ -473,40 +504,42 @@ void MainWindow::buildMenuBar() {
     QMenu* insert = bar->addMenu(tr("&Insert"));
 
     QMenu* indicator = insert->addMenu(tr("&Indicator"));
+    menuIcon(indicator->menuAction(), &Icons::activity);
     // Opens the chart's own Indicators dialog on the ACTIVE pane. It used to
     // print a line in the status bar telling the trader to go and find the
     // button themselves, which is a menu entry that does not do its job.
-    connect(indicator->addAction(tr("&Add an indicator…")), &QAction::triggered,
+    connect(menuIcon(indicator->addAction(tr("&Add an indicator…")), &Icons::plusBox), &QAction::triggered,
             this, [this]() { m_charts->runChartAction(QStringLiteral("insertIndicator")); });
     // The list of what is already ON the chart, which is the other half of
     // MetaTrader's Indicators List and reachable from the same place.
-    connect(indicator->addAction(tr("&Indicators on this chart…")), &QAction::triggered,
+    connect(menuIcon(indicator->addAction(tr("&Indicators on this chart…")), &Icons::layers), &QAction::triggered,
             this, [this]() { m_charts->runChartAction(QStringLiteral("paneObjectTree")); });
 
+    struct MenuItem { const char* label; IconFn icon; };
     QMenu* ea = insert->addMenu(tr("&Expert Advisor (EA)"));
-    for (const char* item : {QT_TR_NOOP("&Import MT5 EA code…"),
-                             QT_TR_NOOP("&Convert to Desktop code"),
-                             QT_TR_NOOP("&Validate / Compile"),
-                             QT_TR_NOOP("&Run EA")}) {
-        const QString label = tr(item);
-        connect(ea->addAction(label), &QAction::triggered, this,
+    menuIcon(ea->menuAction(), &Icons::cpu);
+    for (const MenuItem& item : {MenuItem{QT_TR_NOOP("&Import MT5 EA code…"),  &Icons::fileDown},
+                                 MenuItem{QT_TR_NOOP("&Convert to Desktop code"), &Icons::code},
+                                 MenuItem{QT_TR_NOOP("&Validate / Compile"),    &Icons::checklist},
+                                 MenuItem{QT_TR_NOOP("&Run EA"),                &Icons::play}}) {
+        connect(menuIcon(ea->addAction(tr(item.label)), item.icon), &QAction::triggered, this,
                 [this]() { comingSoon(tr("Expert Advisors")); });
     }
 
     QMenu* mirror = insert->addMenu(tr("Any Terminal → Our &Desktop"));
-    for (const char* item : {QT_TR_NOOP("&Connect terminal…"),
-                             QT_TR_NOOP("&Live position copy"),
-                             QT_TR_NOOP("Position &synchronization"),
-                             QT_TR_NOOP("&Manage copy settings")}) {
-        const QString label = tr(item);
-        connect(mirror->addAction(label), &QAction::triggered, this,
+    menuIcon(mirror->menuAction(), &Icons::mirror);
+    for (const MenuItem& item : {MenuItem{QT_TR_NOOP("&Connect terminal…"),        &Icons::logIn},
+                                 MenuItem{QT_TR_NOOP("&Live position copy"),        &Icons::activity},
+                                 MenuItem{QT_TR_NOOP("Position &synchronization"),  &Icons::refresh},
+                                 MenuItem{QT_TR_NOOP("&Manage copy settings"),      &Icons::settings}}) {
+        connect(menuIcon(mirror->addAction(tr(item.label)), item.icon), &QAction::triggered, this,
                 [this]() { comingSoon(tr("Live position copy")); });
     }
 
     // Scripts is real: one window holds the list, the editor, Compile, Run and
     // Stop, so the specification's six entries are six buttons rather than six
     // menu items that each open the same thing.
-    connect(insert->addAction(tr("&Scripts…")), &QAction::triggered,
+    connect(menuIcon(insert->addAction(tr("&Scripts…")), &Icons::code), &QAction::triggered,
             this, &MainWindow::openScripts);
 
     // ── who you are trading as, at the far left of the menu row ──
@@ -659,15 +692,17 @@ void MainWindow::buildToolBars() {
     connect(tester, &QAction::triggered, this, &MainWindow::openStrategyTester);
 
     QMenu* reportsMenu = new QMenu(this);
-    struct { const char* label; ReportsDialog::Tab tab; } kBarReports[] = {
-        {QT_TR_NOOP("Summary"),      ReportsDialog::Summary},
-        {QT_TR_NOOP("Risk"),         ReportsDialog::Risk},
-        {QT_TR_NOOP("Long && Short"), ReportsDialog::LongShort},
-        {QT_TR_NOOP("Symbols"),      ReportsDialog::Symbols},
+    struct { const char* label; ReportsDialog::Tab tab; IconFn icon; } kBarReports[] = {
+        {QT_TR_NOOP("Summary"),      ReportsDialog::Summary,   &Icons::report},
+        {QT_TR_NOOP("Risk"),         ReportsDialog::Risk,      &Icons::shield},
+        {QT_TR_NOOP("Long && Short"), ReportsDialog::LongShort, &Icons::longShort},
+        {QT_TR_NOOP("Symbols"),      ReportsDialog::Symbols,   &Icons::tag},
     };
     for (const auto& r : kBarReports) {
-        connect(reportsMenu->addAction(tr(r.label)), &QAction::triggered, this,
-                [this, tab = r.tab]() { openReports(tab); });
+        QAction* a = reportsMenu->addAction(tr(r.label));
+        MenuIcons::set(a, r.icon);
+        m_menuIcons.append({a, r.icon});
+        connect(a, &QAction::triggered, this, [this, tab = r.tab]() { openReports(tab); });
     }
     dropdown(m_stdBar->addAction(tr("Reports")), &Icons::report, reportsMenu,
              tr("Reports"));
@@ -773,6 +808,11 @@ void MainWindow::restyleToolBars() {
     const QColor ink(c.text);
     for (const auto& pair : m_barIcons)
         if (pair.first && pair.second) pair.first->setIcon(pair.second(ink, 18));
+    // Also the first time this runs, after the menus are built: most toggles
+    // are made checkable only after their icon was set, so their "on" state
+    // is drawn here.
+    for (const auto& pair : m_menuIcons)
+        if (pair.first && pair.second) pair.first->setIcon(MenuIcons::build(pair.first, pair.second));
 
     // Toolbars are not covered by the global sheet, and a QToolBar with no rule
     // of its own paints in the Fusion style's grey — which on the dark theme is
@@ -800,8 +840,10 @@ void MainWindow::rebuildAccountsMenu() {
     m_accountsMenu->clear();
     const QJsonArray accts = QJsonDocument::fromJson(m_cfg.accountsJson.toUtf8()).array();
     if (accts.isEmpty()) {
-        connect(m_accountsMenu->addAction(tr("Sign in to switch accounts…")),
-                &QAction::triggered, this, &MainWindow::openSettings);
+        // Was Settings, which signs nobody in.
+        connect(MenuIcons::set(m_accountsMenu->addAction(tr("Sign in to switch accounts…")),
+                               &Icons::logIn),
+                &QAction::triggered, this, &MainWindow::loginTradeAccount);
     } else {
         for (const QJsonValue& v : accts) {
             const QJsonObject o = v.toObject();
@@ -817,7 +859,8 @@ void MainWindow::rebuildAccountsMenu() {
         }
     }
     m_accountsMenu->addSeparator();
-    connect(m_accountsMenu->addAction(tr("&Wallet…")), &QAction::triggered, this, [this]() {
+    connect(MenuIcons::set(m_accountsMenu->addAction(tr("&Wallet…")), &Icons::wallet),
+            &QAction::triggered, this, [this]() {
         WalletDialog dlg(m_cfg, this);
         // The dialog raises its own toast while it is open. Repeat the result
         // here once it closes: the balances on screen have just jumped and the
@@ -1653,11 +1696,7 @@ void MainWindow::logout() {
     m_api->setConfig(m_cfg);
 
     // Clear anything on screen that belonged to the account.
-    m_lastAccount = AccountInfo{};
-    m_account->clear();
-    m_positions->setPositions({});
-    m_positions->setOrders({});
-    m_positions->setHistory({});
+    clearAccountView();
     updateIdentity();
     setStatus(QString());
 
@@ -1666,18 +1705,116 @@ void MainWindow::logout() {
         close();
         return;
     }
+    startSession(dlg.config());
+    setStatus(tr("Signed in"));
+}
 
-    m_cfg = dlg.config();
+void MainWindow::clearAccountView() {
+    m_lastAccount = AccountInfo{};
+    m_account->clear();
+    m_positions->setPositions({});
+    m_positions->setOrders({});
+    m_positions->setHistory({});
+}
+
+void MainWindow::startSession(const Config& cfg) {
+    m_cfg = cfg;
     m_api->setConfig(m_cfg);
     m_positions->setTraderName(m_cfg.userName.isEmpty() ? m_cfg.email : m_cfg.userName);
     m_stream->setConfig(m_cfg);
+    // A reconnect we asked for is not a lost feed. Without this the Journal
+    // greeted every successful sign-in with a red "price feed lost". The next
+    // "Live" still logs, because the feed is no longer marked live.
+    m_journalFeedLive = false;
+    m_journalFeedReported = true;
+    m_stream->stop();          // a no-op after Log out; a reconnect otherwise
     m_stream->start();
     m_accountTimer->start();
-    applySessionRenewal();   // a fresh sign-in brings a fresh refresh token
+    applySessionRenewal();     // a fresh sign-in brings a fresh refresh token
+    m_authRecoveryTried = false;
     m_api->fetchSymbols();
     refreshAll();
     updateIdentity();
-    setStatus(tr("Signed in"));
+}
+
+void MainWindow::loginTradeAccount() {
+    // The card goes up over the LIVE terminal. Nothing is torn down until a
+    // sign-in has actually succeeded, so Cancel (or a wrong password and then
+    // Cancel) leaves the trader connected to the account they had, which is
+    // what MT5 does.
+    LoginDialog dlg(m_cfg, this, LoginDialog::Mode::TradeAccount);
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+
+    const Config next = dlg.config();
+    // A different account: what is on screen belongs to the old one, and
+    // waiting for the first poll would show its positions under the new
+    // account number for a few seconds.
+    if (next.accountId != m_cfg.accountId || next.email != m_cfg.email)
+        clearAccountView();
+    startSession(next);
+
+    QString number = next.accountId;
+    const QJsonArray accounts = QJsonDocument::fromJson(next.accountsJson.toUtf8()).array();
+    for (const QJsonValue& v : accounts) {
+        const QJsonObject a = v.toObject();
+        if (a.value("account_id").toString() == next.accountId) {
+            number = a.value("account_number").toString(number);
+            break;
+        }
+    }
+    setStatus(tr("Signed in to trade account %1").arg(number));
+    Journal::success(QStringLiteral("Account"), tr("signed in to trade account %1").arg(number));
+}
+
+QString MainWindow::webTraderUrl(const QString& origin, const QString& query) const {
+    // The platform names its web-terminal origin when the terminal has been
+    // split onto a domain of its own. Otherwise it is the trader site: the
+    // api. host with trade. in front, the same mapping share links use.
+    QString base = origin.trimmed();
+    while (base.endsWith('/')) base.chop(1);
+    if (base.isEmpty()) base = ShareTradeDialog::shareSiteFor(m_cfg.restBase);
+    return base + QStringLiteral("/trading/terminal")
+         + (query.isEmpty() ? QString() : QStringLiteral("?") + query);
+}
+
+void MainWindow::openWebTrader() {
+    QUrlQuery query;
+    if (!m_cfg.accountId.isEmpty())
+        query.addQueryItem(QStringLiteral("account"), m_cfg.accountId);
+
+    // Signed in with a pasted API key there is no session to hand across, so
+    // the browser opens on the web terminal and asks for the password there,
+    // as MT5's Web Trader does without saved credentials.
+    if (m_cfg.token.trimmed().isEmpty()) {
+        QDesktopServices::openUrl(QUrl(webTraderUrl(QString(), query.toString(QUrl::FullyEncoded))));
+        setStatus(tr("Web Trader opened. Sign in there with your email and password."));
+        return;
+    }
+
+    setStatus(tr("Opening Web Trader…"));
+    // One-shot: the connection drops itself on the first answer, so it cannot
+    // fire again for a later click and open a second page.
+    auto conn = std::make_shared<QMetaObject::Connection>();
+    *conn = connect(m_api, &ApiClient::webTraderHandoff, this,
+        [this, query, conn](bool ok, const QString& codeOrError, const QString& terminalUrl) mutable {
+        disconnect(*conn);
+        if (!ok) {
+            // Still open it: the trader can sign in on the page. Say why
+            // they have to.
+            QDesktopServices::openUrl(QUrl(webTraderUrl(QString(), query.toString(QUrl::FullyEncoded))));
+            setStatus(tr("Web Trader opened, but automatic sign-in failed: %1").arg(codeOrError), true);
+            Journal::error(QStringLiteral("Account"), tr("Web Trader sign-in failed: %1").arg(codeOrError));
+            return;
+        }
+        // The code is single-use and dies within about a minute. The page
+        // trades it for its own session and strips it from the address bar.
+        query.addQueryItem(QStringLiteral("handoff"), codeOrError);
+        QDesktopServices::openUrl(QUrl(webTraderUrl(terminalUrl, query.toString(QUrl::FullyEncoded))));
+        setStatus(tr("Web Trader opened in your browser"));
+        Journal::info(QStringLiteral("Account"), tr("Web Trader opened"));
+    });
+    m_api->requestWebTraderHandoff();
 }
 
 void MainWindow::openOrderWindow() {
@@ -2069,13 +2206,15 @@ void MainWindow::loadProfile(const QString& name) {
 void MainWindow::rebuildProfileMenu() {
     m_profileMenu->clear();
 
-    connect(m_profileMenu->addAction(tr("&Save Profile…")), &QAction::triggered,
+    connect(MenuIcons::set(m_profileMenu->addAction(tr("&Save Profile…")), &Icons::save),
+            &QAction::triggered,
             this, &MainWindow::saveProfileAs);
 
     const QStringList saved = Profiles::names();
     const QString current = Profiles::lastUsed();
 
     QMenu* loadMenu = m_profileMenu->addMenu(tr("&Load Profile"));
+    MenuIcons::set(loadMenu->menuAction(), &Icons::folder);
     if (saved.isEmpty()) {
         QAction* none = loadMenu->addAction(tr("No saved profiles"));
         none->setEnabled(false);
@@ -2090,6 +2229,7 @@ void MainWindow::rebuildProfileMenu() {
 
     m_profileMenu->addSeparator();
     QMenu* delMenu = m_profileMenu->addMenu(tr("&Delete Profile"));
+    MenuIcons::set(delMenu->menuAction(), &Icons::trash);
     delMenu->setEnabled(!saved.isEmpty());
     for (const QString& n : saved) {
         connect(delMenu->addAction(n), &QAction::triggered, this, [this, n]() {

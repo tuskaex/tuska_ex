@@ -85,6 +85,15 @@ private slots:
     // reached with the API key and secret the dashboard issues. Same dialog,
     // opened on its other mode.
     void openWebServiceLogin();
+    // ── File > Login to Trade Account ──
+    // MT5's entry of the same name: the sign-in card, opened over the running
+    // terminal. Cancel leaves the current connection exactly as it was; a
+    // successful sign-in switches the whole terminal to the new account.
+    void loginTradeAccount();
+    // ── File > Login to Web Trader ──
+    // Opens the web terminal in the browser on the account this terminal is
+    // using, already signed in (see ApiClient::requestWebTraderHandoff).
+    void openWebTrader();
 
 protected:
     // Remembers where the window was and whether it was maximized.
@@ -120,6 +129,16 @@ private:
     // and a session that never renews takes the wallet and per-position close
     // down with it.
     void applySessionRenewal();
+    // Points every service at `cfg` and reloads the account onto the screen.
+    // The second half of a sign-in, shared by Log out and Login to Trade
+    // Account so the two cannot drift apart.
+    void startSession(const Config& cfg);
+    // Clears what is on screen for the account being left: balances,
+    // positions, orders, history.
+    void clearAccountView();
+    // The web terminal's address for this deployment, with `query` appended.
+    // `origin` is the platform's own answer; empty falls back to the trader site.
+    QString webTraderUrl(const QString& origin, const QString& query) const;
     // True when this session holds a JWT. Everything on /api/v1 — per-position
     // close, S/L and T/P, pending orders, the wallet — needs one, and a session
     // signed in with a pasted API key never has it. Says so once, here, instead
@@ -192,6 +211,11 @@ private:
     // theme switch can re-render all of them at the new colour.
     using IconFn = QIcon (*)(const QColor&, int);
     QVector<QPair<QAction*, IconFn>> m_barIcons;
+    // The same for menu entries, kept apart because a menu draws an on/off
+    // entry's state INSIDE its icon: once an entry has an icon, Qt stops
+    // drawing the tick. See menuIconFor().
+    QVector<QPair<QAction*, IconFn>> m_menuIcons;
+
     // The saved grid is restored once, from the first symbols payload — panes
     // cannot be pointed at an instrument before its metadata exists. Symbols
     // can be re-fetched mid-session, hence the latch.
