@@ -805,7 +805,7 @@ class UpdateBrandingRequest(BaseModel):
     brand_name: Optional[str] = None
     support_email: Optional[str] = None
     support_whatsapp: Optional[str] = None
-    # `#RRGGBB` or `#RGB`; "" clears back to the platform blue.
+    # `#RRGGBB` or `#RGB`; "" clears back to the platform default.
     brand_color: Optional[str] = None
     # Admin panel accent; same format and clearing rule.
     admin_color: Optional[str] = None
