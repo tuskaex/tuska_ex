@@ -5,7 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.common.src.database import get_db
 from packages.common.src.auth import get_current_user
 from ..services import business_service
-from .brokers import require_client_feature
 
 router = APIRouter()
 
@@ -18,7 +17,7 @@ async def ib_status(
     return await business_service.ib_status(user_id=current_user["user_id"], db=db)
 
 
-@router.post("/apply", status_code=201, dependencies=[Depends(require_client_feature("ib_program"))])
+@router.post("/apply", status_code=201)
 async def apply_ib(
     application_data: dict = None,
     referral_code: str = Query(None),
@@ -30,7 +29,7 @@ async def apply_ib(
     )
 
 
-@router.post("/apply-sub-broker", status_code=201, dependencies=[Depends(require_client_feature("ib_program"))])
+@router.post("/apply-sub-broker", status_code=201)
 async def apply_sub_broker(
     application_data: dict = None,
     current_user: dict = Depends(get_current_user),
