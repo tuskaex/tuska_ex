@@ -38,8 +38,10 @@ set -euo pipefail
 
 NGINX_AVAILABLE=/etc/nginx/sites-available
 NGINX_ENABLED=/etc/nginx/sites-enabled
-CERT=/etc/ssl/cloudflare/origin.pem
-CERT_KEY=/etc/ssl/cloudflare/origin-key.pem
+# Overridable, for a server that keeps its Cloudflare origin cert elsewhere:
+#   CERT=/path/origin.pem CERT_KEY=/path/origin-key.pem ./connect-tenant-domain.sh broker.com --admin admin
+CERT="${CERT:-/etc/ssl/cloudflare/origin.pem}"
+CERT_KEY="${CERT_KEY:-/etc/ssl/cloudflare/origin-key.pem}"
 
 die() { echo "✗ $*" >&2; exit 1; }
 
