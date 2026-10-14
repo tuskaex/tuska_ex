@@ -185,6 +185,12 @@ server {
     proxy_set_header Upgrade           \$http_upgrade;
     proxy_set_header Connection        \$conn_upgrade_${SLUG};
 
+    # Reachability probe for tenant-provisioner.sh behind Cloudflare.
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        default_type "text/plain";
+    }
+
     # Same-origin sockets. A tenant's cookie is scoped to its own domain and is
     # never sent to api.tuskaex.com, so /ws/trades would close 4003 there and
     # the terminal would silently stop receiving fills.

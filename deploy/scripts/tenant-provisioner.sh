@@ -89,6 +89,17 @@ while IFS='|' read -r DOMAIN APP ADMIN; do
   LIVE=()
   for n in "${NAMES[@]}"; do reaches_us "$n" && LIVE+=("$n"); done
   if [ "${#LIVE[@]}" -eq 0 ]; then
+    # Behind Cloudflare with "Always Use HTTPS", plain HTTP never reaches us
+    # but the site already works on the origin certificate (Cloudflare Full).
+    token="tx-probe-$(date +%s%N)"
+    echo "$token" > "$WEBROOT/.well-known/acme-challenge/$token"
+    got=$(curl -sk -m 8 "https://${NAMES[0]}/.well-known/acme-challenge/$token" 2>/dev/null || true)
+    rm -f "$WEBROOT/.well-known/acme-challenge/$token"
+    if [ "$got" = "$token" ]; then
+      set_note "$DOMAIN" ""
+      printf 'sig=%s\ncertnames=%s\nlastfail=%s\n' "$SIG" "$CERT_NAMES" "$LAST_FAIL" > "$STATE"
+      continue
+    fi
     IP=$(sed -n 's/^PLATFORM_PUBLIC_IP=//p' "$DIR/.env" 2>/dev/null | tr -d "\"' ")
     [ -n "$IP" ] || IP="the platform IP"
     set_note "$DOMAIN" "Waiting for DNS: add A records for ${NAMES[*]} pointing to $IP."
