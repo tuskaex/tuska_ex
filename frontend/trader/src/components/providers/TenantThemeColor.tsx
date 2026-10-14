@@ -6,36 +6,34 @@ import { useTenantBrand } from '@/hooks/useTenantBrand';
 /**
  * Re-colours the app in the brand's theme colour: a white-label tenant's own
  * colour on their domain, or the platform colour (Admin → Platform brand) on
- * TradesX's hosts, fetched through /brand/theme.
+ * TuskaEx's hosts, fetched through /brand/theme.
  *
- * The platform blue is not one token: it is ~700 literal values across the
- * app (`bg-[#2563EB]`, `hover:bg-[#1D4ED8]`, `text-[#3B82F6]/60`, the Tailwind
- * `accent` palette, the `--accent` CSS variables…). Rather than thread a
- * variable through all of them, this reads the stylesheets the page actually
- * loaded, finds every declaration that uses one of the platform blues, and
+ * The platform red is not one token: it is hundreds of literal values across
+ * the app (`bg-[#D60101]`, `hover:bg-[#A30000]`, `text-[#D60101]/60`, the
+ * Tailwind `accent` palette…). Rather than thread a variable through all of
+ * them, this reads the stylesheets the page actually loaded, finds every
+ * declaration that uses one of the platform's accent shades, and
  * appends the same selector with the tenant's shade of it. Same selector,
  * later in the document, same !important flag — so it wins exactly where the
  * original applied and nowhere else, opacity variants included.
  *
- * Does nothing when no colour is set, so the compiled-in blue stays. Inline `style={{ color: '#2563EB' }}` and SVG fill
- * attributes are not stylesheet rules and keep the platform blue.
+ * Does nothing when no colour is set, so the compiled-in red stays. Inline
+ * `style={{ color: '#D60101' }}` and SVG fill attributes are not stylesheet
+ * rules and keep the platform red.
  */
 
 type RGB = [number, number, number];
 
-/** Each platform blue, and how far to move the tenant colour to play its role:
- *  positive mixes toward white (tints), negative toward black (hover/pressed). */
-const PLATFORM_BLUES: { rgb: RGB; mix: number }[] = [
-  { rgb: [37, 99, 235], mix: 0 }, //    #2563EB  base
-  { rgb: [29, 78, 216], mix: -0.15 }, // #1D4ED8  hover
-  { rgb: [30, 64, 175], mix: -0.3 }, //  #1E40AF
-  { rgb: [30, 58, 138], mix: -0.42 }, // #1E3A8A
-  { rgb: [59, 130, 246], mix: 0.12 }, // #3B82F6
-  { rgb: [96, 165, 250], mix: 0.3 }, //  #60A5FA
-  { rgb: [147, 197, 253], mix: 0.5 }, // #93C5FD
-  { rgb: [191, 219, 254], mix: 0.7 }, // #BFDBFE
-  { rgb: [219, 234, 254], mix: 0.82 }, // #DBEAFE
-  { rgb: [239, 246, 255], mix: 0.92 }, // #EFF6FF
+/** Each shade of the platform's brand red, and how far to move the tenant
+ *  colour to play its role: positive mixes toward white (tints), negative
+ *  toward black (hover/pressed). Only the accent family is listed; the
+ *  sell / danger reds (#DC2626, #EF4444, …) convey trade direction and
+ *  status, so they keep their colour under every brand. */
+const PLATFORM_ACCENTS: { rgb: RGB; mix: number }[] = [
+  { rgb: [214, 1, 1], mix: 0 }, //      #D60101  base
+  { rgb: [163, 0, 0], mix: -0.24 }, //  #A30000  hover / dark
+  { rgb: [241, 74, 74], mix: 0.29 }, // #F14A4A  light
+  { rgb: [253, 227, 227], mix: 0.89 }, // #FDE3E3  soft background
 ];
 
 const STYLE_ID = 'tenant-theme-color';
@@ -60,7 +58,7 @@ function toHex(rgb: RGB): string {
 function buildRewriter(base: RGB) {
   const byTriplet = new Map<string, RGB>();
   const byHex = new Map<string, string>();
-  for (const { rgb, mix } of PLATFORM_BLUES) {
+  for (const { rgb, mix } of PLATFORM_ACCENTS) {
     const to = shade(base, mix);
     byTriplet.set(rgb.join(','), to);
     byHex.set(toHex(rgb).toLowerCase(), toHex(to));
@@ -78,7 +76,7 @@ function buildRewriter(base: RGB) {
       .replace(hexRe, (all, h: string) => byHex.get(`#${h.toLowerCase()}`) ?? all);
 }
 
-/** Override CSS for every rule that uses a platform blue, keeping the at-rule
+/** Override CSS for every rule that uses a platform accent shade, keeping the at-rule
  *  (media / supports) context the original sat in. */
 function collectOverrides(rewrite: (v: string) => string): string {
   const out: string[] = [];
