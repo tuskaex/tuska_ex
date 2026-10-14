@@ -55,6 +55,35 @@ def _normalise_login(raw: str) -> str:
     return login
 
 
+async def issue_account_key(db: AsyncSession, acc: TradingAccount, read_only: bool) -> tuple[str, str]:
+    """A new key for one account-password sign-in. Flushes, does not commit.
+    Returns (api_key, api_secret); the secret is never stored."""
+    label = ACCOUNT_LOGIN_LABEL_INVESTOR if read_only else ACCOUNT_LOGIN_LABEL_MASTER
+    api_key = "ak_" + secrets.token_hex(24)
+    raw_secret = "as_" + secrets.token_hex(32)
+    db.add(AlgoApiKey(
+        user_id=acc.user_id,
+        account_id=acc.id,
+        api_key=api_key,
+        secret_hash=_hash_secret(raw_secret),
+        label=label,
+        read_only=read_only,
+        last_used_at=datetime.now(timezone.utc),
+    ))
+    await db.flush()
+
+    # Keep the newest few sign-ins for this password, retire the rest.
+    live = (await db.execute(
+        select(AlgoApiKey)
+        .where(AlgoApiKey.account_id == acc.id, AlgoApiKey.label == label,
+               AlgoApiKey.is_active == True)
+        .order_by(AlgoApiKey.created_at.desc())
+    )).scalars().all()
+    for old in live[_KEEP_PER_LABEL:]:
+        old.is_active = False
+    return api_key, raw_secret
+
+
 async def account_login(req: AccountLoginRequest, request: Request, db: AsyncSession) -> dict:
     # Per IP, and per account so a distributed guess at one account is slowed
     # too. Tight on purpose: a person types a password a few times a minute.
@@ -87,29 +116,7 @@ async def account_login(req: AccountLoginRequest, request: Request, db: AsyncSes
         if await get_bool_setting("maintenance_mode", False):
             raise HTTPException(status_code=503, detail="Platform is under maintenance. Please try again later.")
 
-    label = ACCOUNT_LOGIN_LABEL_INVESTOR if read_only else ACCOUNT_LOGIN_LABEL_MASTER
-    api_key = "ak_" + secrets.token_hex(24)
-    raw_secret = "as_" + secrets.token_hex(32)
-    db.add(AlgoApiKey(
-        user_id=acc.user_id,
-        account_id=acc.id,
-        api_key=api_key,
-        secret_hash=_hash_secret(raw_secret),
-        label=label,
-        read_only=read_only,
-        last_used_at=datetime.now(timezone.utc),
-    ))
-    await db.flush()
-
-    # Keep the newest few sign-ins for this password, retire the rest.
-    live = (await db.execute(
-        select(AlgoApiKey)
-        .where(AlgoApiKey.account_id == acc.id, AlgoApiKey.label == label,
-               AlgoApiKey.is_active == True)
-        .order_by(AlgoApiKey.created_at.desc())
-    )).scalars().all()
-    for old in live[_KEEP_PER_LABEL:]:
-        old.is_active = False
+    api_key, raw_secret = await issue_account_key(db, acc, read_only)
     await db.commit()
 
     logger.info("[ACCOUNT-LOGIN] %s signed in (%s)", acc.account_number,

@@ -188,3 +188,25 @@ class AlgoApiKey(Base):
 
     user = relationship("User", lazy="selectin")
     account = relationship("TradingAccount", lazy="selectin")
+
+
+class DemoRegistration(Base):
+    """What a trader entered when opening a demo account from the desktop's
+    "New demo account" (migration 0062). See that migration for why these
+    details are not on a user row."""
+    __tablename__ = "demo_registrations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    account_id = Column(UUID(as_uuid=True), ForeignKey("trading_accounts.id", ondelete="CASCADE"),
+                        nullable=False)
+    full_name = Column(String(200), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone = Column(String(40))
+    country = Column(String(100))
+    state = Column(String(100))
+    city = Column(String(100))
+    postal_code = Column(String(20))
+    address = Column(Text)
+    newsletter = Column(Boolean, default=False, nullable=False)
+    ip_address = Column(String(64))
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)

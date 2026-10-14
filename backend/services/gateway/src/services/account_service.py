@@ -33,6 +33,28 @@ from packages.common.src.auth import hash_password, verify_password
 # keys the owner generated for their own bots.
 ACCOUNT_LOGIN_LABEL_MASTER = "Account login (master)"
 ACCOUNT_LOGIN_LABEL_INVESTOR = "Account login (investor)"
+
+
+def generate_account_password(length: int = 10) -> str:
+    """A password the server makes for a new account, as MetaTrader does.
+    Passes the platform policy (lower, upper, digit and symbol all present)
+    and leaves out look-alike characters, because the trader copies it off
+    the screen."""
+    import secrets as _secrets
+    lower, upper, digits, symbol = "abcdefghijkmnpqrstuvwxyz", "ABCDEFGHJKLMNPQRSTUVWXYZ", "23456789", "!@#$%&*?"
+    every = lower + upper + digits + symbol
+    chars = [_secrets.choice(lower), _secrets.choice(upper), _secrets.choice(digits), _secrets.choice(symbol)]
+    chars += [_secrets.choice(every) for _ in range(length - len(chars))]
+    _secrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
+
+
+def generate_password_pair() -> tuple[str, str]:
+    master = generate_account_password()
+    investor = generate_account_password()
+    while investor == master:
+        investor = generate_account_password()
+    return master, investor
 from packages.common.src.redis_client import redis_client, PriceChannel
 from packages.common.src.price_cache import price_cache
 from packages.common.src.trading_service import calc_position_pnl, cross_rate_for
@@ -245,9 +267,15 @@ async def open_live_account(
         currency="USD",
         is_demo=user_is_demo,
         is_active=True,
-        master_password_hash=hash_password(req.master_password) if req.master_password else None,
-        investor_password_hash=hash_password(req.investor_password) if req.investor_password else None,
     )
+    # Passwords given win; otherwise the server makes them when asked to.
+    gen_master, gen_investor = generate_password_pair() if req.generate_passwords else (None, None)
+    master_pw = req.master_password or gen_master
+    investor_pw = req.investor_password or gen_investor
+    if master_pw and investor_pw and master_pw == investor_pw:
+        raise HTTPException(status_code=400, detail="The investor password must be different from the master password.")
+    new_acc.master_password_hash = hash_password(master_pw) if master_pw else None
+    new_acc.investor_password_hash = hash_password(investor_pw) if investor_pw else None
     db.add(new_acc)
     await db.commit()
     await db.refresh(new_acc)
@@ -264,6 +292,11 @@ async def open_live_account(
         "leverage": int(new_acc.leverage or 0),
         "has_master_password": new_acc.master_password_hash is not None,
         "has_investor_password": new_acc.investor_password_hash is not None,
+        "server": "TuskaEx-Demo" if new_acc.is_demo else "TuskaEx-Live",
+        # Only the ones the server made — shown to the trader once, never
+        # retrievable again. Passwords the caller chose are not echoed.
+        **({"master_password": gen_master} if gen_master and not req.master_password else {}),
+        **({"investor_password": gen_investor} if gen_investor and not req.investor_password else {}),
     }
 
 

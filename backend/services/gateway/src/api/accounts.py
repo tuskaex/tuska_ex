@@ -10,13 +10,33 @@ from packages.common.src.schemas import (
     MessageResponse,
     OpenLiveAccountRequest,
     SetAccountPasswordsRequest,
+    DemoAccountRequest,
     TradingAccountResponse,
 )
 from packages.common.src.rate_limit import rate_limit_http
 from packages.common.src.auth import get_current_user
-from ..services import account_service
+from ..services import account_service, demo_account_service
 
 router = APIRouter()
+
+
+@router.get("/demo-groups")
+async def list_demo_groups(type: str | None = None, db: AsyncSession = Depends(get_db)):
+    """Account types for the desktop's "Open an Account" details page, public
+    because it is shown before there is any session. ?type=live for the real
+    ones; demo by default."""
+    return await demo_account_service.list_demo_groups(db, live=(type or "").lower() == "live")
+
+
+@router.post("/demo", status_code=status.HTTP_201_CREATED)
+async def open_demo_account(
+    req: DemoAccountRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """MetaTrader's "New demo account": details in, login plus master and
+    investor passwords out, no sign-up. See services/demo_account_service.py."""
+    return await demo_account_service.open_demo_account(req=req, request=request, db=db)
 
 
 @router.get("/available-groups")

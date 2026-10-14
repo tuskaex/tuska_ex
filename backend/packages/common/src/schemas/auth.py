@@ -101,6 +101,9 @@ class OpenLiveAccountRequest(BaseModel):
     # web opens accounts without them, and the owner can set them later.
     master_password: Optional[str] = Field(default=None, max_length=128)
     investor_password: Optional[str] = Field(default=None, max_length=128)
+    # MetaTrader's way: the SERVER makes both passwords and returns them once,
+    # in the answer to this call. Ignored for a password that is also given.
+    generate_passwords: bool = False
 
     @field_validator("master_password", "investor_password")
     @classmethod
@@ -115,6 +118,23 @@ class OpenLiveAccountRequest(BaseModel):
         if v and v == info.data.get("master_password"):
             raise ValueError("The investor password must be different from the master password.")
         return v
+
+
+class DemoAccountRequest(BaseModel):
+    """The desktop's "New demo account" — MT5's Personal details page. No
+    sign-up: the account is reached with the passwords this returns."""
+    full_name: str = Field(min_length=2, max_length=200)
+    email: EmailStr
+    phone: Optional[str] = Field(default=None, max_length=40)
+    country: Optional[str] = Field(default=None, max_length=100)
+    state: Optional[str] = Field(default=None, max_length=100)
+    city: Optional[str] = Field(default=None, max_length=100)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+    address: Optional[str] = Field(default=None, max_length=500)
+    account_group_id: Optional[UUID] = None
+    leverage: Optional[int] = Field(default=None, ge=1, le=2000)
+    deposit: float = Field(default=10000, ge=100, le=1_000_000)
+    newsletter: bool = False
 
 
 class SetAccountPasswordsRequest(BaseModel):
