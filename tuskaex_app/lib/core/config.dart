@@ -6,4 +6,8 @@ class AppConfig {
   static const brandName = 'TuskaEx';
   static const supportEmail = 'support@tuskaex.com';
   static const websiteUrl = 'https://tuskaex.com';
+  /// Session cookie names; must match the gateway's ACCESS_TOKEN_COOKIE_NAME /
+  /// REFRESH_TOKEN_COOKIE_NAME (backend/packages/common/src/config.py).
+  static const accessCookie = 'pt_access';
+  static const refreshCookie = 'pt_refresh';
 }

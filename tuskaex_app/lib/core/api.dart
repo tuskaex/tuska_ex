@@ -101,7 +101,7 @@ class Api {
         out = RefreshOutcome.rejected;
       } else {
         final r = await _dio.post('/auth/refresh',
-            options: Options(headers: {'Cookie': 'tx_refresh=$rt'}, extra: {'noAuth': true}));
+            options: Options(headers: {'Cookie': '${AppConfig.refreshCookie}=$rt'}, extra: {'noAuth': true}));
         await applyTokenResponse(r.data);
         out = RefreshOutcome.ok;
       }
@@ -134,9 +134,9 @@ class Api {
     final cookies = r.headers.map['set-cookie'];
     if (cookies == null) return;
     for (final c in cookies) {
-      final m = RegExp(r'^\s*(tx_access|tx_refresh)=([^;]*)').firstMatch(c);
+      final m = RegExp(r'^\s*(' '${AppConfig.accessCookie}|${AppConfig.refreshCookie}' r')=([^;]*)').firstMatch(c);
       if (m == null || m.group(2)!.isEmpty) continue;
-      if (m.group(1) == 'tx_refresh') {
+      if (m.group(1) == AppConfig.refreshCookie) {
         session.save(refresh: m.group(2));
       } else if ((session.access ?? '').isEmpty) {
         session.save(access: m.group(2));

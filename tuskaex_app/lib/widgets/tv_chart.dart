@@ -72,8 +72,9 @@ class _TvChartState extends State<TvChart> {
   Completer<void>? _pageDone;
 
   /// The web app treats a visitor as signed in only when (a) localStorage has
-  /// its `tx_session` hint and (b) /auth/me succeeds with the `tx_access`
-  /// cookie; otherwise it bounces to /auth/login. Seed both for the WebView.
+  /// its `tx_session` hint and (b) /auth/me succeeds with the access-token
+  /// cookie (AppConfig.accessCookie); otherwise it bounces to /auth/login. Seed
+  /// both for the WebView.
   ///
   /// Only the ACCESS token is shared. The refresh token rotates on use — if the
   /// web page refreshed with it, the app's stored copy would be revoked and the
@@ -83,7 +84,7 @@ class _TvChartState extends State<TvChart> {
     final origin = Uri.parse(AppConfig.chartUrl);
     final access = Api.I.session.access ?? '';
     if (access.isNotEmpty) {
-      await WebViewCookieManager().setCookie(WebViewCookie(name: 'tx_access', value: access, domain: origin.host, path: '/'));
+      await WebViewCookieManager().setCookie(WebViewCookie(name: AppConfig.accessCookie, value: access, domain: origin.host, path: '/'));
     }
     // WebView localStorage survives app restarts, so the hint only ever needs
     // writing once per install — skip the extra page load after that.
