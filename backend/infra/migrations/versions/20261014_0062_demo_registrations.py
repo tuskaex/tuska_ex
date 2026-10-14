@@ -38,10 +38,13 @@ def upgrade() -> None:
             newsletter    BOOLEAN NOT NULL DEFAULT FALSE,
             ip_address    VARCHAR(64),
             created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-        );
-        CREATE INDEX IF NOT EXISTS ix_demo_registrations_email
-            ON demo_registrations (lower(email));
+        )
         """
+    )
+    # One statement per execute: asyncpg runs each as a prepared statement and
+    # refuses several in one ("cannot insert multiple commands").
+    op.execute(
+        "CREATE INDEX IF NOT EXISTS ix_demo_registrations_email ON demo_registrations (lower(email))"
     )
 
 

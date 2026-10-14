@@ -28,22 +28,21 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # One statement per execute: asyncpg runs each as a prepared statement and
+    # refuses several in one ("cannot insert multiple commands").
     op.execute(
         """
         ALTER TABLE trading_accounts
             ADD COLUMN IF NOT EXISTS master_password_hash   VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS investor_password_hash VARCHAR(255);
-        ALTER TABLE algo_api_keys
-            ADD COLUMN IF NOT EXISTS read_only BOOLEAN NOT NULL DEFAULT FALSE;
+            ADD COLUMN IF NOT EXISTS investor_password_hash VARCHAR(255)
         """
+    )
+    op.execute(
+        "ALTER TABLE algo_api_keys ADD COLUMN IF NOT EXISTS read_only BOOLEAN NOT NULL DEFAULT FALSE"
     )
 
 
 def downgrade() -> None:
-    op.execute(
-        """
-        ALTER TABLE algo_api_keys    DROP COLUMN IF EXISTS read_only;
-        ALTER TABLE trading_accounts DROP COLUMN IF EXISTS investor_password_hash;
-        ALTER TABLE trading_accounts DROP COLUMN IF EXISTS master_password_hash;
-        """
-    )
+    op.execute("ALTER TABLE algo_api_keys DROP COLUMN IF EXISTS read_only")
+    op.execute("ALTER TABLE trading_accounts DROP COLUMN IF EXISTS investor_password_hash")
+    op.execute("ALTER TABLE trading_accounts DROP COLUMN IF EXISTS master_password_hash")

@@ -75,6 +75,12 @@ DEFAULTS = [
 
 
 def upgrade() -> None:
+    # No migration creates this column; the admin service adds it at startup.
+    # A fresh database migrated before the admin service has ever run would
+    # otherwise fail here. Same DDL as admin/main.py, so a no-op where it exists.
+    op.execute(
+        "ALTER TABLE employees ADD COLUMN IF NOT EXISTS extra_permissions JSONB DEFAULT '[]'::jsonb"
+    )
     array_literal = ", ".join("'%s'" % p for p in DEFAULTS)
     op.execute(
         f"""
