@@ -75,6 +75,28 @@ def broker_payload(owner: User | None) -> dict | None:
     }
 
 
+async def with_logo_fallback(payload: dict | None, db: AsyncSession) -> dict | None:
+    """Fill a broker without a logo with the Platform brand logo.
+
+    Mirrors the admin service's tenant_public_payload: the platform owner asked
+    that a broker who has not uploaded a logo shows the one set on Admin →
+    Platform brand, rather than the app falling back to the TuskaEx mark. A
+    broker's own logo always wins.
+    """
+    if payload is None or payload.get("logo_url"):
+        return payload
+    rows = (
+        await db.execute(
+            select(User).where(User.role == "super_admin", User.logo_url.isnot(None))
+        )
+    ).scalars().all()
+    if rows:
+        newest = max(rows, key=lambda r: (r.updated_at or r.created_at).timestamp()
+                     if (r.updated_at or r.created_at) else 0.0)
+        payload["logo_url"] = _logo_path(newest.logo_url)
+    return payload
+
+
 @router.get("/brokers")
 async def list_brokers(request: Request, db: AsyncSession = Depends(get_db)):
     """Every active broker, for the app's "choose your broker" list.
@@ -90,7 +112,7 @@ async def list_brokers(request: Request, db: AsyncSession = Depends(get_db)):
     ).scalars().all()
     items = []
     for owner in rows:
-        p = broker_payload(owner)
+        p = await with_logo_fallback(broker_payload(owner), db)
         if p and p["code"]:
             items.append({k: p[k] for k in ("code", "brand_name", "logo_url", "brand_color")})
     items.sort(key=lambda b: (b["brand_name"] or b["code"]).lower())
@@ -104,7 +126,7 @@ async def lookup_broker(code: str, request: Request, db: AsyncSession = Depends(
     c = (code or "").strip().upper()
     if not c or len(c) > 20 or not c.isalnum():
         raise HTTPException(status_code=404, detail="Broker not found")
-    payload = broker_payload(await find_owner_by_code(c, db))
+    payload = await with_logo_fallback(broker_payload(await find_owner_by_code(c, db)), db)
     if payload is None:
         raise HTTPException(status_code=404, detail="Broker not found")
     return payload

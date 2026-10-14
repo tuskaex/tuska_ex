@@ -1472,12 +1472,12 @@ async def _broker_for(user: User, db: AsyncSession) -> dict | None:
     Lets the multi-broker mobile app re-brand itself after sign-in.
     """
     try:
-        from ..api.brokers import broker_payload
+        from ..api.brokers import broker_payload, with_logo_fallback
         owner_id = user.id if user.role == "sub_admin" else user.assigned_admin_id
         if not owner_id:
             return None
         owner = (await db.execute(select(User).where(User.id == owner_id))).scalar_one_or_none()
-        return broker_payload(owner)
+        return await with_logo_fallback(broker_payload(owner), db)
     except Exception:
         logger.warning("broker lookup for /me failed", exc_info=True)
         return None
