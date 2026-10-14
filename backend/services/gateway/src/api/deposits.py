@@ -21,6 +21,7 @@ from packages.common.src.schemas import (
 )
 from packages.common.src.auth import get_current_user
 from ..services import wallet_service, onchain_deposit_service, onchain_withdraw_service
+from .brokers import require_client_feature
 
 router = APIRouter()
 
@@ -53,7 +54,7 @@ async def fetch_deposit_bank_details(
     return await wallet_service.get_deposit_bank_details(amount=amount, db=db)
 
 
-@router.post("/deposit", status_code=201)
+@router.post("/deposit", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_deposit(
     req: DepositRequest,
     request: Request,
@@ -71,7 +72,7 @@ async def create_deposit(
 # ─── Manual bank / UPI deposit (multipart with proof file) ──────────────────
 
 
-@router.post("/deposit/manual", status_code=201)
+@router.post("/deposit/manual", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_manual_deposit(
     request: Request,
     amount: Decimal = Form(...),
@@ -95,7 +96,7 @@ async def create_manual_deposit(
     )
 
 
-@router.post("/withdraw/manual", status_code=201)
+@router.post("/withdraw/manual", status_code=201, dependencies=[Depends(require_client_feature("withdrawals"))])
 async def create_manual_withdrawal(
     request: Request,
     amount: Decimal = Form(...),
@@ -121,7 +122,7 @@ async def create_manual_withdrawal(
 # ─── Local Banking request (admin-mediated, KYC-gated) ────────────────────
 
 
-@router.post("/deposit/local-banking", status_code=201)
+@router.post("/deposit/local-banking", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_local_banking_request(
     request: Request,
     amount: Decimal = Form(...),
@@ -178,7 +179,7 @@ async def get_razorpay_rate(
     return {"rate": float(rate), "currency": "INR"}
 
 
-@router.post("/deposit/{deposit_id}/razorpay-order", status_code=201)
+@router.post("/deposit/{deposit_id}/razorpay-order", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_razorpay_order_on_lb_deposit(
     deposit_id: UUID,
     body: dict,
@@ -242,7 +243,7 @@ async def get_razorpay_order_meta(
     }
 
 
-@router.post("/deposit/razorpay/order", status_code=201)
+@router.post("/deposit/razorpay/order", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_razorpay_order(
     req: RazorpayOrderRequest,
     request: Request,
@@ -302,7 +303,7 @@ async def verify_razorpay_deposit(
 # tx hash. The chain_verifier_engine confirms on-chain and credits.
 
 
-@router.post("/deposit/onchain", status_code=201)
+@router.post("/deposit/onchain", status_code=201, dependencies=[Depends(require_client_feature("deposits"))])
 async def create_onchain_deposit(
     req: OnchainDepositRequest,
     request: Request,
@@ -352,7 +353,7 @@ async def get_onchain_deposit_status(
     )
 
 
-@router.post("/withdraw", status_code=201)
+@router.post("/withdraw", status_code=201, dependencies=[Depends(require_client_feature("withdrawals"))])
 async def create_withdrawal(
     req: WithdrawalRequest,
     request: Request,
@@ -371,7 +372,7 @@ async def create_withdrawal(
 # ─── Decentralized USDT withdraw flow (mirror of /deposit/onchain) ─────────
 
 
-@router.post("/withdraw/onchain", status_code=201)
+@router.post("/withdraw/onchain", status_code=201, dependencies=[Depends(require_client_feature("withdrawals"))])
 async def create_onchain_withdrawal(
     req: OnchainWithdrawRequest,
     request: Request,
@@ -407,7 +408,7 @@ async def get_onchain_withdrawal_status(
     )
 
 
-@router.post("/transfer-internal", status_code=200)
+@router.post("/transfer-internal", status_code=200, dependencies=[Depends(require_client_feature("transfers"))])
 async def internal_wallet_transfer(
     req: InternalWalletTransferRequest,
     current_user: dict = Depends(get_current_user),
@@ -431,7 +432,7 @@ async def transfer_trading_to_main(
     )
 
 
-@router.post("/transfer-main-to-trading", status_code=200)
+@router.post("/transfer-main-to-trading", status_code=200, dependencies=[Depends(require_client_feature("transfers"))])
 async def transfer_main_to_trading(
     req: TransferMainToTradingRequest,
     current_user: dict = Depends(get_current_user),

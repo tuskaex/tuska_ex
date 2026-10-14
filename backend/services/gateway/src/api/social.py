@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from packages.common.src.database import get_db
 from packages.common.src.auth import get_current_user
 from ..services import social_service
+from .brokers import require_client_feature
 
 router = APIRouter()
 
@@ -49,7 +50,7 @@ async def get_provider_activity(
     )
 
 
-@router.post("/copy", status_code=201)
+@router.post("/copy", status_code=201, dependencies=[Depends(require_client_feature("copy_trading"))])
 async def start_copy(
     master_id: UUID = Query(...),
     account_id: UUID | None = Query(None),
@@ -114,7 +115,7 @@ async def stop_copy(
     )
 
 
-@router.post("/become-provider", status_code=201)
+@router.post("/become-provider", status_code=201, dependencies=[Depends(require_client_feature("copy_trading"))])
 async def become_provider(
     master_type: str = Query("signal_provider"),
     description: str = Query(None),
@@ -162,7 +163,7 @@ async def master_eligibility(
     )
 
 
-@router.post("/masters/apply", status_code=201)
+@router.post("/masters/apply", status_code=201, dependencies=[Depends(require_client_feature("copy_trading"))])
 async def apply_as_master(
     master_type: str = Query("signal_provider"),
     description: str = Body(None),
@@ -223,7 +224,7 @@ async def list_managed_accounts(
     )
 
 
-@router.post("/mamm-pamm/{master_id}/invest", status_code=201)
+@router.post("/mamm-pamm/{master_id}/invest", status_code=201, dependencies=[Depends(require_client_feature("copy_trading"))])
 async def invest_managed_account(
     master_id: UUID,
     amount: Decimal = Query(..., gt=0),

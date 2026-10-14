@@ -105,6 +105,10 @@ class User(Base):
     support_whatsapp = Column(String(32), nullable=True)
     # Theme colour, uppercase `#RRGGBB` (migration 0062). NULL = platform blue.
     brand_color = Column(String(7), nullable=True)
+    # Client features switched off for this broker's clients (migration 0063),
+    # e.g. {"deposits": false}. Missing key / NULL = enabled. Read by the
+    # gateway (api/brokers.py) for the mobile app and for enforcement.
+    client_features = Column(JSONB, nullable=True)
 
     # Per-tenant outbound SMTP. A tenant that has not configured this sends no
     # client email at all — deliberately, so one broker's mail never leaves

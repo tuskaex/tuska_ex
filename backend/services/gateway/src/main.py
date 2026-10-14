@@ -25,6 +25,7 @@ from .api import (
     websocket_manager, social, business, portfolio, profile, support,
     notifications, banners, trading_catalog, followers, lp_receiver,
     share, algo_connector, algo_keys, algo_market_data, algo_terminal,
+    brokers,
 )
 from .engines.sltp_engine import sltp_engine
 from .engines.copy_engine import copy_engine
@@ -327,6 +328,7 @@ app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"]
 app.include_router(lp_receiver.router, prefix="/api/lp", tags=["LP Receiver"])
 app.include_router(share.router, prefix="/api/v1", tags=["Share Trade"])
 app.include_router(share.public_router, prefix="/api/v1/public", tags=["Public Share"])
+app.include_router(brokers.router, prefix="/api/v1/public", tags=["Brokers"])
 # Algo Connector. Key management is JWT/cookie-auth and rides the /api/v1 proxy;
 # the bot-facing trade + market-data API is X-Api-Key/X-Api-Secret authed and lives
 # under a separate /api/algo namespace (no v1) — bots never send a JWT.
@@ -471,21 +473,50 @@ async def price_stream(websocket: WebSocket, token: str | None = Query(default=N
         ping_interval = 30
         last_ping = asyncio.get_event_loop().time()
         while True:
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
-            if message and message["type"] == "message":
-                await websocket.send_text(message["data"])
+            # Drain everything queued since the last pass and keep only the
+            # newest tick per symbol. Relaying one message per pass (+ a sleep)
+            # could not keep up with the feed, so the socket fell further and
+            # further behind — tens of seconds after a minute — while clients
+            # showed it as "live".
+            latest = await _drain_latest(pubsub, _price_key)
+            for data in latest.values():
+                await websocket.send_text(data)
 
             now = asyncio.get_event_loop().time()
             if now - last_ping >= ping_interval:
                 await websocket.send_json({"type": "ping"})
                 last_ping = now
 
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0 if latest else 0.03)
     except WebSocketDisconnect:
         pass
     finally:
         await pubsub.unsubscribe(PriceChannel.PRICE_CHANNEL)
         await pubsub.close()
+
+
+_DRAIN_MAX = 5000
+
+
+def _price_key(data):
+    try:
+        return json.loads(data).get("symbol") or data
+    except (ValueError, TypeError, AttributeError):
+        return data
+
+
+async def _drain_latest(pubsub, key_fn) -> dict:
+    """Read every message currently queued on `pubsub` without blocking and
+    return {key: newest raw payload}. Bounded so one pass can't starve the loop."""
+    latest: dict = {}
+    for _ in range(_DRAIN_MAX):
+        message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.0)
+        if message is None:
+            break
+        if message.get("type") == "message":
+            data = message["data"]
+            latest[key_fn(data)] = data
+    return latest
 
 
 # TradingView resolution string → aggregator timeframe name. Mirrors
@@ -495,6 +526,14 @@ _BARS_RES_TO_TF = {
     "1": "1m", "5": "5m", "15": "15m", "30": "30m",
     "60": "1h", "240": "4h", "1D": "1d", "D": "1d", "1d": "1d",
 }
+
+
+def _bar_key(data):
+    try:
+        bar = json.loads(data)
+        return (str(bar.get("symbol") or "").upper(), str(bar.get("timeframe") or ""))
+    except (ValueError, TypeError, AttributeError):
+        return ("", "")
 
 
 @app.websocket("/ws/bars")
@@ -551,26 +590,20 @@ async def bars_stream(websocket: WebSocket, token: str | None = Query(default=No
                             else:
                                 subs.discard((sym, tf))
 
-            # 2) Relay matching bar updates.
-            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
-            if message and message["type"] == "message" and subs:
-                try:
-                    bar = json.loads(message["data"])
-                    key = (
-                        str(bar.get("symbol") or "").upper(),
-                        str(bar.get("timeframe") or ""),
-                    )
-                    if key in subs:
-                        await websocket.send_text(message["data"])
-                except (ValueError, TypeError):
-                    pass
+            # 2) Relay matching bar updates: drain the whole backlog (every
+            #    symbol × timeframe is published on this one channel) and send
+            #    only the newest bar per subscribed (symbol, timeframe).
+            latest = await _drain_latest(pubsub, _bar_key)
+            for key, data in latest.items():
+                if key in subs:
+                    await websocket.send_text(data)
 
             now = asyncio.get_event_loop().time()
             if now - last_ping >= ping_interval:
                 await websocket.send_json({"type": "ping"})
                 last_ping = now
 
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0 if latest else 0.02)
     except WebSocketDisconnect:
         pass
     finally:

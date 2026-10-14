@@ -108,7 +108,40 @@ async def _to_dto(row: User, db: AsyncSession) -> dict:
         "brand_name": row.brand_name,
         "logo_url": row.logo_url,
         "brand_color": row.brand_color,
+        "client_features": _client_features(row),
     }
+
+
+# Client-facing features a broker's clients can have switched off. Must match
+# gateway/src/api/brokers.py CLIENT_FEATURES (the gateway enforces them).
+CLIENT_FEATURES = ("deposits", "withdrawals", "transfers", "copy_trading", "ib_program")
+
+
+def _client_features(row: User) -> dict[str, bool]:
+    raw = row.client_features if isinstance(row.client_features, dict) else {}
+    return {f: raw.get(f) is not False for f in CLIENT_FEATURES}
+
+
+async def update_client_features(
+    *, sub_admin_id: uuid.UUID, features: dict[str, bool],
+    admin: User, ip_address: str | None, db: AsyncSession,
+) -> dict:
+    _only_super_admin(admin)
+    unknown = sorted(set(features) - set(CLIENT_FEATURES))
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown feature(s): {', '.join(unknown)}")
+    sub = await _load_sub_admin(sub_admin_id, db)
+    old = _client_features(sub)
+    new = {**old, **{k: bool(v) for k, v in features.items()}}
+    # Store only what is OFF, so a feature added later defaults to on.
+    sub.client_features = {k: False for k, v in new.items() if not v} or None
+    await write_audit_log(
+        db, admin.id, "update_sub_admin_client_features", "sub_admin", sub.id,
+        old_values={"client_features": old}, new_values={"client_features": new},
+        ip_address=ip_address,
+    )
+    await db.commit()
+    return await _to_dto(sub, db)
 
 
 # ─── Read ────────────────────────────────────────────────────────────────
@@ -285,6 +318,10 @@ async def create_sub_admin(
         if clash is None:
             user.public_code = candidate
             break
+    else:
+        # Every broker needs its code: it is how the mobile app lists them and
+        # how signups are attributed. Fail loudly instead of saving one without.
+        raise HTTPException(status_code=500, detail="Could not allocate a broker code; please retry.")
 
     clean = sorted({str(p).strip() for p in (permissions or []) if str(p).strip()})
     db.add(Employee(user_id=user.id, role=SUB_ADMIN_ROLE, is_active=True,

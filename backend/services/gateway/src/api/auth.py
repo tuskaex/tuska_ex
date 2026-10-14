@@ -145,6 +145,7 @@ async def login(req: LoginRequest, request: Request, db: AsyncSession = Depends(
         return await login_user(
             email=req.email, password=req.password,
             totp_code=req.totp_code, request=request, db=db,
+            broker_code=req.broker_code,
         )
     except AuthServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

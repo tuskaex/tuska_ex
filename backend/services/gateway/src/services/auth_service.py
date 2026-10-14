@@ -573,6 +573,7 @@ async def login_user(
     totp_code: str | None,
     request: Request,
     db: AsyncSession,
+    broker_code: str | None = None,
 ) -> JSONResponse:
     assert_same_origin(request)
     rate_limit_http(request, "login", 40, 60.0)
@@ -624,6 +625,16 @@ async def login_user(
         raise AuthServiceError(
             "This account belongs to a different broker. Please sign in on your "
             "own broker's site.",
+            403,
+        )
+
+    # Same isolation for the multi-broker mobile app, where the broker is
+    # picked from a list instead of implied by the host. Also after the
+    # password check, for the same no-probing reason.
+    if broker_code is not None and not await _account_in_broker(user, broker_code, db):
+        raise AuthServiceError(
+            "This account is not registered with the selected broker. "
+            "Please choose your own broker and try again.",
             403,
         )
 
@@ -1419,7 +1430,43 @@ async def get_me(user_id: UUID, db: AsyncSession) -> dict:
         "has_password": bool(user.password_hash),
         "has_google": bool(user.google_id),
         "created_at": user.created_at,
+        "broker": await _broker_for(user, db),
     }
+
+
+async def _account_in_broker(user: User, broker_code: str, db: AsyncSession) -> bool:
+    """Does `user` belong to the broker with public code `broker_code`?
+
+    An empty code means the platform pool (no assigned broker).
+    """
+    from .tenant_resolver import find_owner_by_code
+
+    code = (broker_code or "").strip()
+    if not code:
+        return user.assigned_admin_id is None
+    owner = await find_owner_by_code(code, db)
+    if owner is None:
+        return False
+    if owner.role == "super_admin":
+        return user.assigned_admin_id is None
+    return user.assigned_admin_id == owner.id
+
+
+async def _broker_for(user: User, db: AsyncSession) -> dict | None:
+    """The white-label broker this user belongs to; None for the platform pool.
+
+    Lets the multi-broker mobile app re-brand itself after sign-in.
+    """
+    try:
+        from ..api.brokers import broker_payload
+        owner_id = user.id if user.role == "sub_admin" else user.assigned_admin_id
+        if not owner_id:
+            return None
+        owner = (await db.execute(select(User).where(User.id == owner_id))).scalar_one_or_none()
+        return broker_payload(owner)
+    except Exception:
+        logger.warning("broker lookup for /me failed", exc_info=True)
+        return None
 
 
 # ─── Logout ───────────────────────────────────────────────────────────────

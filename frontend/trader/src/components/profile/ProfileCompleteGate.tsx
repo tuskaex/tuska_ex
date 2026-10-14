@@ -17,6 +17,7 @@
  *    the modal unmounts itself.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { Loader2, ShieldCheck, UserCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/stores/authStore';
@@ -85,12 +86,16 @@ export default function ProfileCompleteGate() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isInitialized = useAuthStore((s) => s.isInitialized);
   const refreshUser = useAuthStore((s) => s.refreshUser);
+  // The /chart page is embedded chrome-free in the mobile app's WebView; the
+  // app runs its own profile flow, so a modal here would cover the chart.
+  const embedded = usePathname()?.startsWith('/chart') ?? false;
 
   // Email verification runs FIRST. If the user just signed up and hasn't
   // verified their email yet, OnboardingGate owns the screen with the OTP
   // step. We defer until email_verified flips true so the order is:
   //   register → verify email → fill profile → welcome.
   const shouldRender =
+    !embedded &&
     isInitialized &&
     isAuthenticated &&
     !!user &&

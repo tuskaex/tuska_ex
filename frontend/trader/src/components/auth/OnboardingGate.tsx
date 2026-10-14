@@ -26,6 +26,7 @@
  * Demo accounts and staff (admin / super_admin / employee) are exempt.
  */
 import { useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { ShieldCheck, Mail, LogOut, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import EmailOtpStep from './EmailOtpStep';
@@ -60,7 +61,11 @@ export default function OnboardingGate() {
   // server-side require_onboarded check so a UI bug can't accidentally
   // open access; if the server says onboarding_complete=false the user
   // sees the modal regardless of what the FE state thinks.
+  // Embedded mobile-app chart (WebView): the app owns onboarding.
+  const embedded = usePathname()?.startsWith('/chart') ?? false;
+
   const decision = useMemo(() => {
+    if (embedded) return 'hidden' as const;
     if (!isInitialized || !isAuthenticated || !user) return 'hidden' as const;
     if (user.is_demo) return 'hidden' as const;
     if (STAFF_ROLES.has(user.role)) return 'hidden' as const;

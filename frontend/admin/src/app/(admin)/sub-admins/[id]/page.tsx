@@ -8,7 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { adminMediaSrc } from '@/lib/mediaSrc';
 import {
-  Loader2, ArrowLeft, Save, Ban, CheckCircle2, KeyRound, Trash2, LogIn,
+  Loader2, ArrowLeft, Save, Ban, CheckCircle2, KeyRound, Trash2, LogIn, Copy,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type {
@@ -41,6 +41,7 @@ export default function SubAdminDetailPage() {
   const [supportEmail, setSupportEmail] = useState('');
   const [supportWa, setSupportWa] = useState('');
   const [brandColor, setBrandColor] = useState(DEFAULT_BRAND_COLOR);
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -58,6 +59,7 @@ export default function SubAdminDetailPage() {
       setReport(rep);
       setClients(cl.items || []);
       setChecked(s.permissions || []);
+      setFeatures(s.client_features || {});
       // Show what this tenant already holds instead of a blank form — an empty
       // field next to a live domain reads as "not assigned". Runs on mount and
       // after each completed action, never while the operator is typing.
@@ -156,6 +158,20 @@ export default function SubAdminDetailPage() {
               {sub.full_name || sub.email}
             </h1>
             <p className="text-xxs text-text-tertiary">{sub.email}</p>
+            {sub.code && (
+              <button
+                type="button"
+                title="Copy broker ID"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(sub.code || '');
+                  toast.success('Broker ID copied');
+                }}
+                className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border-primary font-mono text-xxs text-text-secondary hover:text-text-primary"
+              >
+                Broker ID: {sub.code}
+                <Copy size={11} />
+              </button>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -306,6 +322,47 @@ export default function SubAdminDetailPage() {
         </Panel>
 
         <div className="space-y-4">
+          {/* What this broker's clients can use in the mobile app. The app
+              hides a switched-off feature and the gateway refuses it, so this
+              is enforcement, not just a menu. */}
+          <Panel title="Mobile app — client features">
+            <p className="text-xxs text-text-tertiary mb-2">
+              Clients sign in by choosing this broker (ID {sub.code || '—'}) in the app. Switch off
+              anything their clients should not see or use.
+            </p>
+            <div className="space-y-1.5">
+              {CLIENT_FEATURES.map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-xs text-text-primary">
+                  <input
+                    type="checkbox"
+                    checked={features[key] !== false}
+                    onChange={(e) => setFeatures((f) => ({ ...f, [key]: e.target.checked }))}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void run(
+                  () =>
+                    adminApi.put(`/sub-admins/${id}/client-features`, {
+                      features: Object.fromEntries(
+                        CLIENT_FEATURES.map(([k]) => [k, features[k] !== false]),
+                      ),
+                    }),
+                  'Client features saved',
+                )
+              }
+              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
+            >
+              <Save size={13} />
+              Save features
+            </button>
+          </Panel>
+
           {/* Attaching a domain used to be possible only from the tenant's own
               White-label page, because /admin/branding/domain acts on the
               caller's row. So a super-admin had to hand over a login — and a
@@ -675,6 +732,15 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+// Keep in step with CLIENT_FEATURES in sub_admin_service.py and gateway api/brokers.py.
+const CLIENT_FEATURES: [string, string][] = [
+  ['deposits', 'Deposits'],
+  ['withdrawals', 'Withdrawals'],
+  ['transfers', 'Transfers to trading accounts'],
+  ['copy_trading', 'Copy trading & PAMM'],
+  ['ib_program', 'Partner program (IB)'],
+];
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (

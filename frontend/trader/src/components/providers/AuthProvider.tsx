@@ -32,6 +32,11 @@ function isPublicPath(pathname: string | null | undefined): boolean {
    * /auth/login itself, since being on this list opts it out of the redirect
    * effect below. */
   if (pathname === '/terminal') return true;
+  /* The embedded chart (mobile app WebView). It authenticates its own API and
+   * WS calls from the ?token= query param (see app/chart/page.tsx), so the
+   * cookie-session guard must not bounce it: a client-side push to
+   * /auth/login rendered the web sign-in form inside the app's chart. */
+  if (pathname.startsWith('/chart')) return true;
   return isMarketingPath(pathname);
 }
 

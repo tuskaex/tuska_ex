@@ -14,7 +14,7 @@ from packages.common.src.models import User
 from packages.common.src.admin_schemas import (
     CreateSubAdminRequest, UpdateSubAdminRequest,
     UpdateSubAdminPermissionsRequest,     ResetSubAdminPasswordRequest, AssignUserRequest, BulkAssignRequest,
-    UpdateBrandingRequest, UpdateSmtpRequest,
+    UpdateBrandingRequest, UpdateSmtpRequest, UpdateClientFeaturesRequest,
 )
 from dependencies import get_current_admin, write_audit_log
 from services import sub_admin_service
@@ -124,6 +124,20 @@ async def update_permissions(
 ):
     return await sub_admin_service.update_permissions(
         sub_admin_id=sub_admin_id, permissions=body.permissions,
+        admin=admin, ip_address=_ip(request), db=db,
+    )
+
+
+@router.put("/{sub_admin_id}/client-features")
+async def update_client_features(
+    sub_admin_id: uuid.UUID,
+    body: UpdateClientFeaturesRequest,
+    request: Request,
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    return await sub_admin_service.update_client_features(
+        sub_admin_id=sub_admin_id, features=body.features,
         admin=admin, ip_address=_ip(request), db=db,
     )
 

@@ -331,6 +331,8 @@ export interface SubAdmin {
   logo_url?: string | null;
   /** Theme colour `#RRGGBB`; null means the platform blue. */
   brand_color?: string | null;
+  /** Client features in the mobile/trader app, true = enabled. */
+  client_features?: Record<string, boolean>;
 }
 
 /** Mirrors branding_service.to_profile() — the tenant's brand as the platform

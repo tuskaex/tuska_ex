@@ -777,6 +777,11 @@ class UpdateSubAdminPermissionsRequest(BaseModel):
     permissions: list[str] = []
 
 
+class UpdateClientFeaturesRequest(BaseModel):
+    # {"deposits": true, "withdrawals": false, ...}; unknown keys are rejected.
+    features: dict[str, bool] = {}
+
+
 class ResetSubAdminPasswordRequest(BaseModel):
     new_password: str = Field(min_length=8)
 

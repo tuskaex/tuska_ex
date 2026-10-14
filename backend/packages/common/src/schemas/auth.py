@@ -27,6 +27,10 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
     totp_code: Optional[str] = None
+    # Multi-broker mobile app: the broker the user picked before signing in.
+    # None = no check (web). "" = the platform's own pool. Anything else must
+    # be the public code of the broker this account belongs to.
+    broker_code: Optional[str] = None
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -214,6 +218,9 @@ class UserResponse(BaseModel):
     has_password: bool = False
     has_google: bool = False
     created_at: datetime
+    # White-label broker the user belongs to (None = platform pool). Read by
+    # the multi-broker mobile app to apply that broker's name/logo.
+    broker: Optional[dict] = None
 
     class Config:
         from_attributes = True
