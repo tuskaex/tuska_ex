@@ -1,10 +1,16 @@
 #include "ui/OpenAccountDialog.h"
 #include "ui/Theme.h"
+#include "core/ApiError.h"
 
 #include <QCheckBox>
+#include <QClipboard>
 #include <QComboBox>
-#include <QDialogButtonBox>
-#include <QFormLayout>
+#include <QDir>
+#include <QFile>
+#include <QFileDialog>
+#include <QFrame>
+#include <QGridLayout>
+#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -13,21 +19,18 @@
 #include <QLineEdit>
 #include <QLocale>
 #include <QNetworkAccessManager>
+#include <QNetworkCookie>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QProgressBar>
 #include <QPushButton>
-#include <QRegularExpression>
-#include <QSpinBox>
-#include <QStackedWidget>
-#include <QClipboard>
-#include <QDir>
-#include <QFile>
-#include <QFileDialog>
-#include <QGuiApplication>
+#include <QRadioButton>
 #include <QRandomGenerator>
 #include <QRegularExpression>
+#include <QStackedWidget>
 #include <QStandardPaths>
 #include <QTextStream>
+#include <QTimer>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -62,18 +65,16 @@ QVector<CountryEntry> countries() {
     return out;
 }
 
-// One labelled row, matching the sign-in card's caption-above-input shape.
-QWidget* field(const QString& caption, QWidget* input) {
-    auto* w = new QWidget;
-    auto* v = new QVBoxLayout(w);
-    v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(6);
-    auto* l = new QLabel(caption);
-    l->setObjectName("fieldLabel");
-    v->addWidget(l);
-    v->addWidget(input);
-    return w;
+// MT5's form layout: the caption to the left of its box, right-aligned.
+QLabel* caption(const QString& text) {
+    auto* l = new QLabel(text);
+    l->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    return l;
 }
+
+// The leverages a trader can pick, capped at what the account type allows.
+const int kLeverages[] = {1, 2, 5, 10, 20, 25, 30, 33, 50, 66, 100, 125, 200,
+                          300, 400, 500, 1000, 2000};
 
 }  // namespace
 
@@ -81,251 +82,766 @@ OpenAccountDialog::OpenAccountDialog(const Config& cfg, QWidget* parent)
     : QDialog(parent), m_cfg(cfg), m_net(new QNetworkAccessManager(this)) {
     setWindowTitle(tr("Open an Account"));
     setModal(true);
-    setMinimumWidth(520);
+    setMinimumSize(760, 560);
 
     const auto& p = Theme::p();
     setStyleSheet(QString(
         "QDialog { background:%1; }"
-        "QLabel { color:%2; }"
-        "QLabel#fieldLabel { color:%3; font-size:11px; font-weight:700;"
-        "                    letter-spacing:0.6px; }"
-        "QLineEdit, QComboBox, QSpinBox {"
-        "  background:%4; color:%2; border:1px solid %5; border-radius:6px;"
-        "  padding:7px 9px; }"
-        "QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border-color:%6; }")
-        .arg(p.bg, p.text, p.muted, p.inputBg, p.inputBorder, p.accent));
+        "QLabel, QRadioButton, QCheckBox { color:%2; }"
+        "QLineEdit, QComboBox {"
+        "  background:%3; color:%2; border:1px solid %4; border-radius:4px; padding:5px 7px; }"
+        "QLineEdit:focus, QComboBox:focus { border-color:%5; }"
+        "QLineEdit:disabled { color:%6; }"
+        "QFrame#band { background:%7; border-bottom:1px solid %4; }")
+        .arg(p.bg, p.text, p.inputBg, p.inputBorder, p.accent, p.muted, p.panel));
 
     auto* root = new QVBoxLayout(this);
-    root->setContentsMargins(22, 20, 22, 18);
-    root->setSpacing(10);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
 
+    // ── header band: page title and what it is for, as MT5 has it ──
+    auto* band = new QFrame;
+    band->setObjectName("band");
+    auto* bandLay = new QVBoxLayout(band);
+    bandLay->setContentsMargins(20, 12, 20, 12);
+    bandLay->setSpacing(2);
     m_title = new QLabel;
-    m_title->setStyleSheet(QString("color:%1; font-size:18px; font-weight:800;")
-                           .arg(p.textStrong));
-    root->addWidget(m_title);
-
+    m_title->setStyleSheet(QString("color:%1; font-size:14px; font-weight:700;").arg(p.textStrong));
     m_subtitle = new QLabel;
-    m_subtitle->setWordWrap(true);
-    m_subtitle->setStyleSheet(QString("color:%1; font-size:12px;").arg(p.muted));
-    root->addWidget(m_subtitle);
-    root->addSpacing(8);
+    m_subtitle->setStyleSheet(QString("color:%1; padding-left:14px;").arg(p.text));
+    bandLay->addWidget(m_title);
+    bandLay->addWidget(m_subtitle);
+    root->addWidget(band);
 
-    m_steps = new QStackedWidget;
-    m_steps->addWidget(buildDetailsStep());
-    m_steps->addWidget(buildOtpStep());
-    m_steps->addWidget(buildAccountStep());
-    m_steps->addWidget(buildDoneStep());
-    root->addWidget(m_steps, 1);
-
+    auto* body = new QVBoxLayout;
+    body->setContentsMargins(28, 18, 28, 10);
+    m_pages = new QStackedWidget;
+    m_pages->addWidget(buildTypePage());
+    m_pages->addWidget(buildDetailsPage());
+    m_pages->addWidget(buildOtpPage());
+    m_pages->addWidget(buildDonePage());
+    body->addWidget(m_pages, 1);
     m_status = new QLabel;
     m_status->setWordWrap(true);
-    m_status->setStyleSheet("font-size:12px; font-weight:600;");
-    root->addWidget(m_status);
+    body->addWidget(m_status);
+    root->addLayout(body, 1);
 
-    showStep(0);
+    // ── < Back   Next >   Cancel ──
+    auto* line = new QFrame;
+    line->setFrameShape(QFrame::HLine);
+    line->setStyleSheet(QString("color:%1;").arg(p.border));
+    root->addWidget(line);
+    auto* btns = new QHBoxLayout;
+    btns->setContentsMargins(20, 10, 20, 14);
+    btns->addStretch(1);
+    m_backBtn = new QPushButton(tr("< Back"));
+    m_nextBtn = new QPushButton(tr("Next >"));
+    m_cancelBtn = new QPushButton(tr("Cancel"));
+    for (QPushButton* b : {m_backBtn, m_nextBtn, m_cancelBtn}) {
+        b->setMinimumWidth(110);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setAutoDefault(false);
+    }
+    m_nextBtn->setDefault(true);
+    btns->addWidget(m_backBtn);
+    btns->addWidget(m_nextBtn);
+    btns->addSpacing(10);
+    btns->addWidget(m_cancelBtn);
+    root->addLayout(btns);
+
+    connect(m_backBtn, &QPushButton::clicked, this, &OpenAccountDialog::goBack);
+    connect(m_nextBtn, &QPushButton::clicked, this, &OpenAccountDialog::goNext);
+    connect(m_cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
+
+    showPage(PageType);
 }
 
-// ── step 1: details ─────────────────────────────────────────────────────────
+// ── page 0: select account type ─────────────────────────────────────────────
 
-QWidget* OpenAccountDialog::buildDetailsStep() {
+QWidget* OpenAccountDialog::buildTypePage() {
     auto* w = new QWidget;
     auto* v = new QVBoxLayout(w);
     v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(12);
+    v->setSpacing(14);
 
-    m_fullName = new QLineEdit;
-    m_fullName->setPlaceholderText(tr("As it appears on your ID"));
-    v->addWidget(field(tr("FULL NAME"), m_fullName));
+    auto* intro = new QLabel(tr("To start working, you need a valid trade account. If you "
+                                "don't have it, you can create a demo or real account by "
+                                "selecting the corresponding option below and pressing 'Next':"));
+    intro->setWordWrap(true);
+    v->addWidget(intro);
+    v->addSpacing(8);
 
-    m_emailIn = new QLineEdit;
-    m_emailIn->setPlaceholderText(tr("you@example.com"));
-    v->addWidget(field(tr("EMAIL ADDRESS"), m_emailIn));
+    m_rExisting = new QRadioButton(tr("Existing trade account"));
+    m_rDemo     = new QRadioButton(tr("New demo account"));
+    m_rReal     = new QRadioButton(tr("New real account"));
 
-    m_mobile = new QLineEdit;
-    m_mobile->setPlaceholderText(tr("+91 98765 43210"));
-    v->addWidget(field(tr("MOBILE NUMBER"), m_mobile));
+    auto* opts = new QVBoxLayout;
+    opts->setContentsMargins(90, 0, 0, 0);
+    opts->setSpacing(12);
+    opts->addWidget(m_rExisting);
 
+    m_existingBox = new QWidget;
+    auto* g = new QGridLayout(m_existingBox);
+    g->setContentsMargins(28, 0, 0, 0);
+    g->setHorizontalSpacing(12);
+    g->setVerticalSpacing(8);
+    m_login = new QLineEdit(m_cfg.email.contains('@') ? QString() : m_cfg.email);
+    m_login->setPlaceholderText(tr("Account number, e.g. PT12345678"));
+    m_loginPw = new QLineEdit;
+    m_loginPw->setEchoMode(QLineEdit::Password);
+    m_loginPw->setPlaceholderText(tr("Master or investor password"));
+    m_savePw = new QCheckBox(tr("Save password"));
+    m_savePw->setChecked(m_cfg.rememberPassword);
+    auto* server = new QLabel(QStringLiteral("TuskaEx"));
+    server->setStyleSheet("font-weight:600;");
+    g->addWidget(caption(tr("Login:")), 0, 0);
+    g->addWidget(m_login, 0, 1);
+    g->addWidget(caption(tr("Password:")), 1, 0);
+    g->addWidget(m_loginPw, 1, 1);
+    g->addWidget(m_savePw, 1, 2);
+    g->addWidget(caption(tr("Server:")), 2, 0);
+    g->addWidget(server, 2, 1);
+    g->setColumnStretch(1, 1);
+    opts->addWidget(m_existingBox);
+
+    opts->addSpacing(6);
+    opts->addWidget(m_rDemo);
+    opts->addWidget(m_rReal);
+    v->addLayout(opts);
+    v->addStretch(1);
+
+    auto sync = [this]() { m_existingBox->setEnabled(m_rExisting->isChecked()); };
+    for (QRadioButton* r : {m_rExisting, m_rDemo, m_rReal})
+        connect(r, &QRadioButton::toggled, this, sync);
+    m_rDemo->setChecked(true);     // MT5's default
+    sync();
+    connect(m_loginPw, &QLineEdit::returnPressed, this, &OpenAccountDialog::goNext);
+    return w;
+}
+
+// ── page 1: personal details ────────────────────────────────────────────────
+
+QWidget* OpenAccountDialog::buildDetailsPage() {
+    auto* w = new QWidget;
+    auto* g = new QGridLayout(w);
+    g->setContentsMargins(0, 0, 0, 0);
+    g->setHorizontalSpacing(12);
+    g->setVerticalSpacing(9);
+
+    m_name = new QLineEdit;
+    m_name->setPlaceholderText(tr("First and last name"));
     m_country = new QComboBox;
     for (const CountryEntry& c : countries())
         m_country->addItem(c.name, c.code);
-    // Default to the machine's own country rather than the alphabetical first,
-    // which would otherwise sign every new trader up in Afghanistan.
     const int here = m_country->findData(QLocale::territoryToCode(QLocale::system().territory()));
     if (here >= 0) m_country->setCurrentIndex(here);
-    v->addWidget(field(tr("COUNTRY"), m_country));
-
-    auto* pwRow = new QHBoxLayout;
-    pwRow->setSpacing(12);
-    m_password = new QLineEdit;
-    m_password->setEchoMode(QLineEdit::Password);
-    m_password->setPlaceholderText(tr("At least 8 characters"));
-    m_confirm = new QLineEdit;
-    m_confirm->setEchoMode(QLineEdit::Password);
-    m_confirm->setPlaceholderText(tr("Repeat it"));
-    pwRow->addWidget(field(tr("PASSWORD"), m_password), 1);
-    pwRow->addWidget(field(tr("CONFIRM PASSWORD"), m_confirm), 1);
-    v->addLayout(pwRow);
-
-    auto* hint = new QLabel(tr("Mix at least three of: lowercase, uppercase, "
-                               "number, symbol."));
-    hint->setStyleSheet(QString("color:%1; font-size:11px;").arg(Theme::p().muted));
-    v->addWidget(hint);
-
-    m_referral = new QLineEdit;
-    m_referral->setPlaceholderText(tr("Optional"));
-    v->addWidget(field(tr("REFERRAL CODE"), m_referral));
-
-    m_terms = new QCheckBox(tr("I accept the Terms and Conditions and the "
-                               "Risk Disclosure."));
-    m_terms->setCursor(Qt::PointingHandCursor);
-    v->addWidget(m_terms);
-
-    v->addStretch(1);
-    m_continueBtn = new QPushButton(tr("Continue"));
-    m_continueBtn->setDefault(true);
-    m_continueBtn->setCursor(Qt::PointingHandCursor);
-    connect(m_continueBtn, &QPushButton::clicked, this, &OpenAccountDialog::submitDetails);
-
-    auto* btns = new QHBoxLayout;
-    btns->addStretch(1);
-    auto* cancel = new QPushButton(tr("Cancel"));
-    cancel->setCursor(Qt::PointingHandCursor);
-    connect(cancel, &QPushButton::clicked, this, &QDialog::reject);
-    btns->addWidget(cancel);
-    btns->addWidget(m_continueBtn);
-    v->addLayout(btns);
-    return w;
-}
-
-// ── step 2: email code ──────────────────────────────────────────────────────
-
-QWidget* OpenAccountDialog::buildOtpStep() {
-    auto* w = new QWidget;
-    auto* v = new QVBoxLayout(w);
-    v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(12);
-
-    m_otp = new QLineEdit;
-    m_otp->setPlaceholderText(tr("6-digit code"));
-    m_otp->setMaxLength(6);
-    connect(m_otp, &QLineEdit::returnPressed, this, &OpenAccountDialog::submitOtp);
-    v->addWidget(field(tr("VERIFICATION CODE"), m_otp));
-    v->addStretch(1);
-
-    auto* btns = new QHBoxLayout;
-    m_resendBtn = new QPushButton(tr("Resend code"));
-    m_resendBtn->setCursor(Qt::PointingHandCursor);
-    connect(m_resendBtn, &QPushButton::clicked, this, &OpenAccountDialog::resendOtp);
-    btns->addWidget(m_resendBtn);
-    btns->addStretch(1);
-    m_verifyBtn = new QPushButton(tr("Verify"));
-    m_verifyBtn->setDefault(true);
-    m_verifyBtn->setCursor(Qt::PointingHandCursor);
-    connect(m_verifyBtn, &QPushButton::clicked, this, &OpenAccountDialog::submitOtp);
-    btns->addWidget(m_verifyBtn);
-    v->addLayout(btns);
-    return w;
-}
-
-// ── step 3: account type ────────────────────────────────────────────────────
-
-QWidget* OpenAccountDialog::buildAccountStep() {
-    auto* w = new QWidget;
-    auto* v = new QVBoxLayout(w);
-    v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(12);
-
+    m_state = new QLineEdit;
+    m_city = new QLineEdit;
+    m_zip = new QLineEdit;
+    m_zip->setMaxLength(20);
+    m_address = new QLineEdit;
+    m_phone = new QLineEdit;
+    m_phone->setPlaceholderText(tr("+91 9876543210"));
+    m_emailIn = new QLineEdit;
+    m_emailIn->setPlaceholderText(tr("you@example.com"));
     m_accountType = new QComboBox;
-    v->addWidget(field(tr("ACCOUNT TYPE"), m_accountType));
+    m_deposit = new QComboBox;
+    m_deposit->setEditable(true);
+    for (int d : {1000, 3000, 5000, 10000, 25000, 50000, 100000})
+        m_deposit->addItem(QString::number(d));
+    m_deposit->setCurrentText(QStringLiteral("10000"));
+    m_leverage = new QComboBox;
+    m_newsletter = new QCheckBox(tr("I agree to subscribe to your newsletters"));
 
-    m_typeDetail = new QLabel;
-    m_typeDetail->setWordWrap(true);
-    m_typeDetail->setStyleSheet(QString("color:%1; font-size:11px;").arg(Theme::p().muted));
-    v->addWidget(m_typeDetail);
+    int r = 0;
+    g->addWidget(caption(tr("Name:")), r, 0);       g->addWidget(m_name, r, 1, 1, 3); ++r;
+    g->addWidget(caption(tr("Country:")), r, 0);    g->addWidget(m_country, r, 1);
+    g->addWidget(caption(tr("State:")), r, 2);      g->addWidget(m_state, r, 3); ++r;
+    g->addWidget(caption(tr("City:")), r, 0);       g->addWidget(m_city, r, 1);
+    g->addWidget(caption(tr("Zip code:")), r, 2);   g->addWidget(m_zip, r, 3); ++r;
+    g->addWidget(caption(tr("Address:")), r, 0);    g->addWidget(m_address, r, 1, 1, 3); ++r;
+    g->addWidget(caption(tr("Phone:")), r, 0);      g->addWidget(m_phone, r, 1);
+    g->addWidget(caption(tr("Email:")), r, 2);      g->addWidget(m_emailIn, r, 3); ++r;
+    g->addWidget(caption(tr("Account Type:")), r, 0); g->addWidget(m_accountType, r, 1); ++r;
 
-    // Base currency is a property of the account type, not a separate choice,
-    // and the groups endpoint does not always state it. Shown when it does,
-    // hidden when it does not, rather than guessing at "USD".
-    m_currency = new QLabel;
-    m_currency->setStyleSheet(QString("color:%1; font-weight:700;").arg(Theme::p().text));
-    m_currencyRow = field(tr("BASE CURRENCY"), m_currency);
-    m_currencyRow->hide();
-    v->addWidget(m_currencyRow);
+    m_depositRow = new QWidget;
+    auto* dr = new QHBoxLayout(m_depositRow);
+    dr->setContentsMargins(0, 0, 0, 0);
+    dr->addWidget(m_deposit);
+    auto* usd = new QLabel(QStringLiteral("USD"));
+    dr->addWidget(usd);
+    dr->addStretch(1);
+    auto* depCap = caption(tr("Deposit:"));
+    g->addWidget(depCap, r, 0);  g->addWidget(m_depositRow, r, 1); ++r;
+    // The row and its caption hide together (showPage reads this back).
+    m_depositRow->setProperty("caption", QVariant::fromValue<QObject*>(depCap));
 
-    m_leverage = new QSpinBox;
-    m_leverage->setRange(1, 2000);
-    m_leverage->setPrefix(tr("1 : "));
-    v->addWidget(field(tr("LEVERAGE"), m_leverage));
+    g->addWidget(caption(tr("Leverage:")), r, 0);   g->addWidget(m_leverage, r, 1); ++r;
 
-    // MetaTrader's two account passwords. Shown in clear and pre-filled with a
-    // generated one: the trader has to be able to read them to keep them, and
-    // a generated password is better than the one most people would type.
-    auto pwRow = [this](QLineEdit*& edit) {
-        auto* row = new QWidget;
-        auto* h = new QHBoxLayout(row);
-        h->setContentsMargins(0, 0, 0, 0);
-        h->setSpacing(6);
-        edit = new QLineEdit(generatePassword());
-        edit->setMaxLength(128);
-        edit->setStyleSheet(QStringLiteral("font-family:Consolas,'Courier New',monospace;"));
-        auto* gen = new QPushButton(tr("Generate"));
-        gen->setCursor(Qt::PointingHandCursor);
-        gen->setAutoDefault(false);
-        QLineEdit* e = edit;
-        connect(gen, &QPushButton::clicked, this, [e]() { e->setText(generatePassword()); });
-        h->addWidget(edit, 1);
-        h->addWidget(gen);
-        return row;
-    };
-    v->addWidget(field(tr("MASTER PASSWORD  (TRADING)"), pwRow(m_masterPw)));
-    v->addWidget(field(tr("INVESTOR PASSWORD  (READ-ONLY)"), pwRow(m_investorPw)));
-    auto* pwHint = new QLabel(tr("Sign in to this account with its number and the master "
-                                 "password to trade, or the investor password to view only. "
-                                 "At least 8 characters, mixing 3 of: lowercase, uppercase, "
-                                 "number, symbol; the two must differ."));
-    pwHint->setWordWrap(true);
-    pwHint->setStyleSheet(QString("color:%1; font-size:11px;").arg(Theme::p().muted));
-    v->addWidget(pwHint);
+    // Real account without a session: the platform user needs a website
+    // password and has to accept the terms. MT5 has no such rows because its
+    // real accounts are made by the broker's back office afterwards.
+    m_webBox = new QWidget;
+    auto* wg = new QGridLayout(m_webBox);
+    wg->setContentsMargins(0, 6, 0, 0);
+    wg->setHorizontalSpacing(12);
+    wg->setVerticalSpacing(9);
+    m_webPw = new QLineEdit;
+    m_webPw->setEchoMode(QLineEdit::Password);
+    m_webPw->setPlaceholderText(tr("For the TuskaEx website"));
+    m_webPw2 = new QLineEdit;
+    m_webPw2->setEchoMode(QLineEdit::Password);
+    m_webPw2->setPlaceholderText(tr("Repeat it"));
+    m_terms = new QCheckBox(tr("I accept the Terms and Conditions and the Risk Disclosure"));
+    wg->addWidget(caption(tr("Website password:")), 0, 0); wg->addWidget(m_webPw, 0, 1);
+    wg->addWidget(caption(tr("Confirm:")), 0, 2);           wg->addWidget(m_webPw2, 0, 3);
+    wg->addWidget(m_terms, 1, 1, 1, 3);
+    wg->setColumnMinimumWidth(0, 110);
+    g->addWidget(m_webBox, r, 0, 1, 4); ++r;
 
-    // Re-read the chosen group whenever the pick changes: the leverage ceiling,
-    // the minimum deposit and the currency all belong to it.
+    g->addWidget(m_newsletter, r, 1, 1, 3); ++r;
+    g->setRowStretch(r, 1);
+    g->setColumnStretch(1, 1);
+    g->setColumnStretch(3, 1);
+    g->setColumnMinimumWidth(0, 110);
+
+    // Leverage choices and the type's description follow the pick.
     connect(m_accountType, &QComboBox::currentIndexChanged, this, [this](int i) {
         if (i < 0) return;
-        const QJsonObject g = QJsonDocument::fromJson(
+        const QJsonObject t = QJsonDocument::fromJson(
             m_accountType->itemData(i).toString().toUtf8()).object();
-        const int maxLev = g.value("effective_max_leverage").toInt(
-            g.value("max_leverage").toInt(100));
-        m_leverage->setMaximum(qMax(1, maxLev));
-        m_leverage->setValue(qBound(1, g.value("leverage_default").toInt(100), qMax(1, maxLev)));
-
-        QStringList bits;
-        const QString desc = g.value("description").toString();
-        if (!desc.isEmpty()) bits << desc;
-        bits << tr("Maximum leverage 1:%1").arg(maxLev);
-        const double minDep = g.value("minimum_deposit").toDouble();
-        if (minDep > 0)
-            bits << tr("Minimum deposit $%L1").arg(minDep, 0, 'f', 2);
-        if (g.value("kyc_unlock_required").toBool())
-            bits << tr("Higher leverage unlocks after KYC");
-        if (g.value("swap_free").toBool())
-            bits << tr("Swap-free");
-        m_typeDetail->setText(bits.join(QStringLiteral(" · ")));
-
-        const QString ccy = g.value("currency").toString();
-        m_currency->setText(ccy);
-        m_currencyRow->setVisible(!ccy.isEmpty());
+        const int maxLev = qMax(1, t.value("max_leverage").toInt(100));
+        const int want = t.value("leverage_default").toInt(100);
+        m_leverage->clear();
+        for (int l : kLeverages)
+            if (l <= maxLev) m_leverage->addItem(QStringLiteral("1:%1").arg(l), l);
+        int idx = m_leverage->findData(qMin(want, maxLev));
+        m_leverage->setCurrentIndex(idx >= 0 ? idx : m_leverage->count() - 1);
+        QStringList tip;
+        if (!t.value("description").toString().isEmpty()) tip << t.value("description").toString();
+        if (t.value("minimum_deposit").toDouble() > 0)
+            tip << tr("Minimum deposit $%L1").arg(t.value("minimum_deposit").toDouble(), 0, 'f', 2);
+        m_accountType->setToolTip(tip.join(QStringLiteral("\n")));
     });
-
-    v->addStretch(1);
-    auto* btns = new QHBoxLayout;
-    btns->addStretch(1);
-    m_openBtn = new QPushButton(tr("Open account"));
-    m_openBtn->setDefault(true);
-    m_openBtn->setCursor(Qt::PointingHandCursor);
-    connect(m_openBtn, &QPushButton::clicked, this, &OpenAccountDialog::submitOpen);
-    btns->addWidget(m_openBtn);
-    v->addLayout(btns);
     return w;
+}
+
+// ── page 2: email code (real account) ───────────────────────────────────────
+
+QWidget* OpenAccountDialog::buildOtpPage() {
+    auto* w = new QWidget;
+    auto* g = new QGridLayout(w);
+    g->setContentsMargins(0, 0, 0, 0);
+    g->setHorizontalSpacing(12);
+    g->setVerticalSpacing(12);
+    m_otp = new QLineEdit;
+    m_otp->setMaxLength(6);
+    m_otp->setPlaceholderText(tr("6-digit code"));
+    m_resendBtn = new QPushButton(tr("Resend code"));
+    m_resendBtn->setAutoDefault(false);
+    m_resendBtn->setCursor(Qt::PointingHandCursor);
+    g->addWidget(caption(tr("Code:")), 0, 0);
+    g->addWidget(m_otp, 0, 1);
+    g->addWidget(m_resendBtn, 0, 2);
+    g->setColumnStretch(1, 1);
+    g->setRowStretch(1, 1);
+    g->setColumnMinimumWidth(0, 110);
+    connect(m_resendBtn, &QPushButton::clicked, this, &OpenAccountDialog::resendOtp);
+    connect(m_otp, &QLineEdit::returnPressed, this, &OpenAccountDialog::goNext);
+    return w;
+}
+
+// ── page 3: registration ────────────────────────────────────────────────────
+
+QWidget* OpenAccountDialog::buildDonePage() {
+    auto* w = new QWidget;
+    auto* v = new QVBoxLayout(w);
+    v->setContentsMargins(0, 0, 0, 0);
+    v->setSpacing(12);
+
+    m_regGrid = new QLabel;
+    m_regGrid->setTextFormat(Qt::RichText);
+    m_regGrid->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    v->addWidget(m_regGrid);
+
+    m_progress = new QProgressBar;
+    m_progress->setRange(0, 100);
+    m_progress->setTextVisible(false);
+    m_progress->setFixedHeight(18);
+    m_progress->setStyleSheet(QString(
+        "QProgressBar { border:1px solid %1; background:%2; border-radius:2px; }"
+        "QProgressBar::chunk { background:#1f9d3a; }")
+        .arg(Theme::p().border, Theme::p().inputBg));
+    v->addWidget(m_progress);
+
+    m_keepNote = new QLabel;
+    m_keepNote->setTextFormat(Qt::RichText);
+    m_keepNote->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    v->addWidget(m_keepNote);
+
+    m_regActions = new QWidget;
+    auto* h = new QHBoxLayout(m_regActions);
+    h->setContentsMargins(0, 0, 0, 0);
+    auto* copy = new QPushButton(tr("Copy details"));
+    auto* save = new QPushButton(tr("Save to file…"));
+    for (QPushButton* b : {copy, save}) {
+        b->setAutoDefault(false);
+        b->setCursor(Qt::PointingHandCursor);
+        h->addWidget(b);
+    }
+    h->addStretch(1);
+    connect(copy, &QPushButton::clicked, this, [this]() {
+        QGuiApplication::clipboard()->setText(detailsText());
+        setStatus(tr("Copied. Paste it somewhere safe."), false);
+    });
+    connect(save, &QPushButton::clicked, this, [this]() {
+        const QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+        const QString file = QFileDialog::getSaveFileName(
+            this, tr("Save account details"),
+            dir + QStringLiteral("/TuskaEx-%1.txt").arg(m_accountNumber), tr("Text files (*.txt)"));
+        if (file.isEmpty()) return;
+        QFile f(file);
+        if (!f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
+            setStatus(tr("Could not save: %1").arg(f.errorString()), true);
+            return;
+        }
+        QTextStream(&f) << detailsText();
+        setStatus(tr("Saved to %1").arg(QDir::toNativeSeparators(file)), false);
+    });
+    m_regActions->hide();
+    v->addWidget(m_regActions);
+    v->addStretch(1);
+    return w;
+}
+
+// ── navigation ──────────────────────────────────────────────────────────────
+
+OpenAccountDialog::Path OpenAccountDialog::path() const {
+    if (m_rExisting->isChecked()) return Path::Existing;
+    if (m_rReal->isChecked())     return Path::Real;
+    return Path::Demo;
+}
+
+bool OpenAccountDialog::haveSession() const {
+    return !m_cfg.token.trimmed().isEmpty();
+}
+
+void OpenAccountDialog::showPage(Page p) {
+    m_pages->setCurrentIndex(p);
+    m_status->clear();
+    switch (p) {
+    case PageType:
+        m_title->setText(tr("Select account type"));
+        m_subtitle->setText(tr("To start working an account is required:"));
+        break;
+    case PageDetails: {
+        const bool real = path() == Path::Real;
+        m_title->setText(tr("Personal details"));
+        m_subtitle->setText(tr("To open an account, please fill out all the following fields:"));
+        m_depositRow->setVisible(!real);
+        if (auto* c = qobject_cast<QWidget*>(m_depositRow->property("caption").value<QObject*>()))
+            c->setVisible(!real);
+        m_webBox->setVisible(real && !haveSession());
+        // Signed in already: the account opens for that person, so their
+        // email is the one on the session.
+        if (real && haveSession() && m_emailIn->text().isEmpty()) m_emailIn->setText(m_cfg.email);
+        if (!m_groupsLoaded || m_groupsLive != real) fetchGroups();
+        m_name->setFocus();
+        break;
+    }
+    case PageOtp:
+        m_title->setText(tr("Confirm your email"));
+        m_subtitle->setText(tr("We sent a 6-digit code to %1. Enter it to continue:").arg(m_email));
+        m_otp->setFocus();
+        break;
+    case PageDone:
+        m_title->setText(tr("Registration"));
+        m_subtitle->setText(tr("Wait a little, please"));
+        break;
+    }
+    m_backBtn->setEnabled(p != PageType && p != PageDone);
+    m_nextBtn->setText(p == PageDone ? tr("Finish") : tr("Next >"));
+    m_nextBtn->setEnabled(p != PageDone || m_finished);
+}
+
+void OpenAccountDialog::goBack() {
+    if (m_busy) return;
+    const int p = m_pages->currentIndex();
+    if (p == PageDetails) showPage(PageType);
+    else if (p == PageOtp) showPage(PageDetails);
+}
+
+void OpenAccountDialog::goNext() {
+    if (m_busy) return;
+    switch (m_pages->currentIndex()) {
+    case PageType:
+        if (path() == Path::Existing) loginExisting();
+        else showPage(PageDetails);
+        break;
+    case PageDetails: {
+        QString err;
+        if (!validateDetails(&err)) { setStatus(err, true); return; }
+        if (path() == Path::Demo) openDemo();
+        else if (haveSession()) openReal();
+        else startRealSignup();
+        break;
+    }
+    case PageOtp:
+        verifyOtp();
+        break;
+    case PageDone:
+        if (m_finished) accept();
+        break;
+    }
+}
+
+// ── existing trade account ──────────────────────────────────────────────────
+
+void OpenAccountDialog::loginExisting() {
+    const QString login = m_login->text().trimmed();
+    const QString pass  = m_loginPw->text();
+    if (login.isEmpty() || pass.isEmpty()) {
+        setStatus(tr("Enter the account number and its password."), true);
+        return;
+    }
+    QJsonObject body;
+    body["login"] = login;
+    body["password"] = pass;
+    body["label"] = QStringLiteral("Desktop terminal");
+    setBusy(true);
+    setStatus(tr("Connecting…"), false);
+    QNetworkReply* r = post("/auth/account-login", body);
+    connect(r, &QNetworkReply::finished, this, [this, r, login, pass]() {
+        r->deleteLater();
+        setBusy(false);
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) { setStatus(err, true); return; }
+        m_accountNumber = o.value("account_number").toString(login.toUpper());
+        m_cfg.token.clear();
+        m_cfg.refreshToken.clear();
+        m_cfg.apiKey    = o.value("api_key").toString();
+        m_cfg.apiSecret = o.value("api_secret").toString();
+        m_cfg.accountId = o.value("account_id").toString();
+        m_cfg.readOnly  = o.value("read_only").toBool();
+        m_cfg.userName  = m_accountNumber;
+        m_cfg.email     = m_accountNumber;
+        QJsonObject a;
+        a["account_id"] = m_cfg.accountId;
+        a["account_number"] = m_accountNumber;
+        a["is_demo"] = o.value("is_demo").toBool();
+        a["currency"] = o.value("currency").toString("USD");
+        a["balance"] = o.value("balance").toDouble();
+        m_cfg.accountsJson = QString::fromUtf8(QJsonDocument(QJsonArray{a}).toJson(QJsonDocument::Compact));
+        m_cfg.rememberPassword = m_savePw->isChecked();
+        m_cfg.savedPassword    = m_savePw->isChecked() ? pass : QString();
+        accept();
+    });
+}
+
+// ── personal details ────────────────────────────────────────────────────────
+
+void OpenAccountDialog::fetchGroups() {
+    const bool live = path() == Path::Real;
+    m_accountType->clear();
+    m_leverage->clear();
+    m_groupsLoaded = false;
+    m_groupsLive = live;
+    setStatus(tr("Loading account types…"), false);
+
+    QNetworkRequest req{QUrl(v1Base() + (live ? "/accounts/demo-groups?type=live"
+                                              : "/accounts/demo-groups"))};
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                     QNetworkRequest::NoLessSafeRedirectPolicy);
+    QNetworkReply* r = m_net->get(req);
+    connect(r, &QNetworkReply::finished, this, [this, r, live]() {
+        r->deleteLater();
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) { setStatus(err, true); return; }
+        if (live != (path() == Path::Real)) return;    // the trader went back and switched
+        const QJsonArray items = o.value("items").toArray();
+        if (items.isEmpty()) {
+            setStatus(tr("No account types are open for this right now."), true);
+            return;
+        }
+        for (const QJsonValue& v : items) {
+            const QJsonObject t = v.toObject();
+            m_accountType->addItem(t.value("name").toString(),
+                                   QString::fromUtf8(QJsonDocument(t).toJson(QJsonDocument::Compact)));
+        }
+        m_accountType->setCurrentIndex(0);
+        m_groupsLoaded = true;
+        m_status->clear();
+    });
+}
+
+bool OpenAccountDialog::validateDetails(QString* error) {
+    auto fail = [error](const QString& m) { if (error) *error = m; return false; };
+    const bool real = path() == Path::Real;
+
+    const QString name = m_name->text().simplified();
+    if (name.isEmpty()) return fail(tr("Enter your name."));
+    if (real && !haveSession() && !name.contains(' '))
+        return fail(tr("Enter your first and last name."));
+
+    static const QRegularExpression emailRe(R"(^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$)");
+    if (!emailRe.match(m_emailIn->text().trimmed()).hasMatch())
+        return fail(tr("That email address does not look right."));
+
+    const QString phone = m_phone->text().trimmed();
+    if (!phone.isEmpty()) {
+        static const QRegularExpression phoneRe(R"(^\+?[0-9 ()\-]{7,20}$)");
+        if (!phoneRe.match(phone).hasMatch() || phone.count(QRegularExpression("[0-9]")) < 7)
+            return fail(tr("That phone number does not look right."));
+    }
+    if (m_accountType->currentIndex() < 0) return fail(tr("Choose an account type."));
+    if (m_leverage->currentIndex() < 0)    return fail(tr("Choose a leverage."));
+
+    if (!real) {
+        bool ok = false;
+        const double dep = m_deposit->currentText().trimmed().toDouble(&ok);
+        if (!ok || dep < 100 || dep > 1000000)
+            return fail(tr("Deposit must be a number between 100 and 1,000,000."));
+    }
+    if (real && !haveSession()) {
+        if (const QString why = passwordProblem(m_webPw->text()); !why.isEmpty())
+            return fail(tr("Website password: %1").arg(why));
+        if (m_webPw2->text() != m_webPw->text())
+            return fail(tr("The two website passwords do not match."));
+        if (!m_terms->isChecked())
+            return fail(tr("You must accept the Terms and Conditions to open a real account."));
+    }
+    return true;
+}
+
+// ── demo ────────────────────────────────────────────────────────────────────
+
+void OpenAccountDialog::openDemo() {
+    const QJsonObject t = QJsonDocument::fromJson(
+        m_accountType->currentData().toString().toUtf8()).object();
+    QJsonObject body;
+    body["full_name"]   = m_name->text().simplified();
+    body["email"]       = m_emailIn->text().trimmed();
+    body["phone"]       = m_phone->text().trimmed();
+    body["country"]     = m_country->currentData().toString();
+    body["state"]       = m_state->text().trimmed();
+    body["city"]        = m_city->text().trimmed();
+    body["postal_code"] = m_zip->text().trimmed();
+    body["address"]     = m_address->text().trimmed();
+    body["account_group_id"] = t.value("id").toString();
+    body["leverage"]    = m_leverage->currentData().toInt();
+    body["deposit"]     = m_deposit->currentText().trimmed().toDouble();
+    body["newsletter"]  = m_newsletter->isChecked();
+
+    setBusy(true);
+    showPage(PageDone);
+    m_progress->setValue(30);
+    QNetworkReply* r = post("/accounts/demo", body);
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        setBusy(false);
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) {
+            showPage(PageDetails);
+            setStatus(err, true);
+            return;
+        }
+        // Signed straight in on the master password, as MT5 is after Finish.
+        m_cfg.token.clear();
+        m_cfg.refreshToken.clear();
+        m_cfg.apiKey    = o.value("api_key").toString();
+        m_cfg.apiSecret = o.value("api_secret").toString();
+        m_cfg.accountId = o.value("account_id").toString();
+        m_cfg.readOnly  = false;
+        m_cfg.userName  = m_name->text().simplified();
+        m_cfg.email     = o.value("account_number").toString();
+        m_cfg.rememberPassword = false;
+        m_cfg.savedPassword.clear();
+        showRegistration(o);
+    });
+}
+
+// ── real ────────────────────────────────────────────────────────────────────
+
+void OpenAccountDialog::startRealSignup() {
+    const QString full = m_name->text().simplified();
+    const int cut = full.indexOf(' ');
+    m_email = m_emailIn->text().trimmed();
+    QJsonObject body;
+    body["email"]      = m_email;
+    body["password"]   = m_webPw->text();
+    body["first_name"] = full.left(cut);
+    body["last_name"]  = full.mid(cut + 1);
+    if (!m_phone->text().trimmed().isEmpty()) body["phone"] = m_phone->text().trimmed();
+    body["country"]    = m_country->currentData().toString();
+
+    setBusy(true);
+    setStatus(tr("Sending a code to %1…").arg(m_email), false);
+    QNetworkReply* r = post("/auth/register/start", body);
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        setBusy(false);
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) { setStatus(err, true); return; }
+        showPage(PageOtp);
+    });
+}
+
+void OpenAccountDialog::verifyOtp() {
+    const QString code = m_otp->text().trimmed();
+    if (code.size() != 6) { setStatus(tr("Enter the 6-digit code from your email."), true); return; }
+    QJsonObject body;
+    body["email"] = m_email;
+    body["otp"]   = code;
+    setBusy(true);
+    setStatus(tr("Verifying…"), false);
+    QNetworkReply* r = post("/auth/register/verify", body);
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        setBusy(false);
+        // The refresh credential only ever comes as a cookie. Kept, or the
+        // new session would die 45 minutes after the account opened.
+        const QVariant sc = r->header(QNetworkRequest::SetCookieHeader);
+        for (const QNetworkCookie& ck : sc.value<QList<QNetworkCookie>>())
+            if (ck.name() == "pt_refresh") m_refresh = QString::fromUtf8(ck.value());
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) { setStatus(err, true); return; }
+        m_token = o.value("access_token").toString();
+        if (m_token.isEmpty()) {
+            setStatus(tr("Your login was created, but no session came back. Sign in from "
+                         "File > Login to Trade Account and open the account from there."), true);
+            return;
+        }
+        m_cfg.token        = m_token;
+        m_cfg.refreshToken = m_refresh;
+        m_cfg.email        = m_email;
+        m_cfg.userName     = m_name->text().simplified();
+        openReal();
+    });
+}
+
+void OpenAccountDialog::resendOtp() {
+    QJsonObject body;
+    body["email"] = m_email;
+    setBusy(true);
+    QNetworkReply* r = post("/auth/register/resend", body);
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        setBusy(false);
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) { setStatus(err, true); return; }
+        setStatus(tr("A new code is on its way to %1.").arg(m_email), false);
+    });
+}
+
+void OpenAccountDialog::openReal() {
+    const QJsonObject t = QJsonDocument::fromJson(
+        m_accountType->currentData().toString().toUtf8()).object();
+    QJsonObject body;
+    body["account_group_id"]   = t.value("id").toString();
+    body["leverage"]           = m_leverage->currentData().toInt();
+    body["is_demo"]            = false;
+    body["generate_passwords"] = true;     // the server makes them, as MT5's does
+
+    setBusy(true);
+    const int from = m_pages->currentIndex();
+    showPage(PageDone);
+    m_progress->setValue(30);
+    QNetworkReply* r = post("/accounts/open", body, /*auth=*/true);
+    connect(r, &QNetworkReply::finished, this, [this, r, from]() {
+        r->deleteLater();
+        setBusy(false);
+        QJsonObject o;
+        QString err;
+        if (!readReply(r, &o, &err)) {
+            // A login made just now is kept: it works for the next try, and
+            // the session is handed back so the trader is signed in either way.
+            showPage(from == PageOtp ? PageDetails : Page(from));
+            m_webBox->setVisible(false);
+            setStatus(err, true);
+            return;
+        }
+        m_cfg.accountId = o.value("id").toString();
+        m_cfg.readOnly  = false;
+        // On a user session: the Accounts menu lists every account of the
+        // owner and refreshes on its own; this seeds it with the new one.
+        QJsonArray accts = QJsonDocument::fromJson(m_cfg.accountsJson.toUtf8()).array();
+        QJsonObject a;
+        a["account_id"] = m_cfg.accountId;
+        a["account_number"] = o.value("account_number").toString();
+        a["is_demo"] = o.value("is_demo").toBool();
+        a["currency"] = o.value("currency").toString("USD");
+        a["balance"] = o.value("balance").toDouble();
+        accts.append(a);
+        m_cfg.accountsJson = QString::fromUtf8(QJsonDocument(accts).toJson(QJsonDocument::Compact));
+        showRegistration(o);
+    });
+}
+
+// ── registration page ───────────────────────────────────────────────────────
+
+void OpenAccountDialog::showRegistration(const QJsonObject& o) {
+    m_reg = o;
+    m_reg["full_name"] = m_name->text().simplified();
+    if (!m_reg.contains("server"))
+        m_reg["server"] = o.value("is_demo").toBool() ? "TuskaEx-Demo" : "TuskaEx-Live";
+    m_accountNumber = o.value("account_number").toString();
+    m_finished = true;
+
+    const auto& p = Theme::p();
+    auto row = [&](const QString& k, const QString& v, const QString& note = QString(), bool mono = false) {
+        return QString("<tr><td align='right' style='color:%1; padding:4px 16px 4px 0;'>%2</td>"
+                       "<td style='color:%3; font-weight:700; %4'>%5</td>"
+                       "<td style='color:%1; padding-left:24px;'>%6</td></tr>")
+            .arg(p.muted, k.toHtmlEscaped(), p.textStrong,
+                 mono ? "font-family:Consolas,\"Courier New\",monospace; font-size:14px;" : "",
+                 v.toHtmlEscaped(), note.toHtmlEscaped());
+    };
+    const QString type = QStringLiteral("%1 (1:%2)").arg(o.value("account_group_name").toString(m_accountType->currentText()))
+                                                    .arg(o.value("leverage").toInt(m_leverage->currentData().toInt()));
+    m_regGrid->setText("<table cellspacing='0'>"
+        + row(tr("Name:"), m_reg.value("full_name").toString())
+        + row(tr("Account Type:"), type)
+        + row(tr("Deposit:"), QStringLiteral("%L1 %2").arg(o.value("balance").toDouble(), 0, 'f', 2)
+                                                     .arg(o.value("currency").toString("USD")))
+        + row(tr("Server:"), m_reg.value("server").toString())
+        + "</table>");
+
+    m_progress->setValue(100);
+    const bool havePw = o.contains("master_password");
+    QString creds = "<table cellspacing='0'>"
+        + row(tr("Login:"), m_accountNumber, QString(), true);
+    if (havePw) {
+        creds += row(tr("Password:"), o.value("master_password").toString(), QString(), true)
+               + row(tr("Investor:"), o.value("investor_password").toString(), tr("(read only password)"), true);
+    }
+    creds += "</table>";
+    m_keepNote->setText(creds + QString("<p style='color:%1; margin-left:110px;'>%2</p>")
+        .arg(p.text, tr("Please keep your username and passwords in a safe place.").toHtmlEscaped()));
+    m_regActions->setVisible(true);
+    m_subtitle->setText(tr("Your account is ready"));
+    showPage(PageDone);
+    m_subtitle->setText(tr("Your account is ready"));
+    m_nextBtn->setFocus();
+}
+
+QString OpenAccountDialog::detailsText() const {
+    QString t = tr("TuskaEx trading account\n");
+    t += tr("Name:      %1\n").arg(m_reg.value("full_name").toString());
+    t += tr("Type:      %1 (1:%2)\n").arg(m_reg.value("account_group_name").toString())
+                                     .arg(m_reg.value("leverage").toInt());
+    t += tr("Server:    %1\n").arg(m_reg.value("server").toString());
+    t += tr("Login:     %1\n").arg(m_accountNumber);
+    if (m_reg.contains("master_password")) {
+        t += tr("Password:  %1\n").arg(m_reg.value("master_password").toString());
+        t += tr("Investor:  %1   (read only password)\n").arg(m_reg.value("investor_password").toString());
+    }
+    return t;
 }
 
 // ── plumbing ────────────────────────────────────────────────────────────────
@@ -336,34 +852,13 @@ QString OpenAccountDialog::v1Base() const {
     return base;
 }
 
-void OpenAccountDialog::showStep(int index) {
-    m_steps->setCurrentIndex(index);
-    m_status->clear();
-    switch (index) {
-    case 0:
-        m_title->setText(tr("Open an Account"));
-        m_subtitle->setText(tr("Create a TuskaEx account and your first trading "
-                               "account, without leaving the terminal."));
-        break;
-    case 1:
-        m_title->setText(tr("Confirm your email"));
-        m_subtitle->setText(tr("We sent a 6-digit code to %1. Enter it to finish "
-                               "creating your account.").arg(m_email));
-        m_otp->setFocus();
-        break;
-    case 2:
-        m_title->setText(tr("Choose your account type"));
-        m_subtitle->setText(tr("This decides your leverage, spread and commission. "
-                               "You can open more account types later."));
-        break;
-    case 3:
-        m_title->setText(tr("Your account is ready"));
-        m_subtitle->setText(tr("Keep these details. The passwords are shown only now: "
-                               "copy them or save them to a file before you continue."));
-        break;
-    default:
-        break;
-    }
+QNetworkReply* OpenAccountDialog::post(const QString& path, const QJsonObject& body, bool auth) {
+    QNetworkRequest req{QUrl(v1Base() + path)};
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                     QNetworkRequest::NoLessSafeRedirectPolicy);
+    if (auth) req.setRawHeader("Authorization", ("Bearer " + m_cfg.token).toUtf8());
+    return m_net->post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
 }
 
 void OpenAccountDialog::setStatus(const QString& text, bool error) {
@@ -373,17 +868,17 @@ void OpenAccountDialog::setStatus(const QString& text, bool error) {
 }
 
 void OpenAccountDialog::setBusy(bool busy) {
-    m_continueBtn->setEnabled(!busy);
-    m_verifyBtn->setEnabled(!busy);
+    m_busy = busy;
+    m_nextBtn->setEnabled(!busy && (m_pages->currentIndex() != PageDone || m_finished));
+    m_backBtn->setEnabled(!busy && m_pages->currentIndex() != PageType
+                          && m_pages->currentIndex() != PageDone);
     m_resendBtn->setEnabled(!busy);
-    m_openBtn->setEnabled(!busy);
 }
 
 bool OpenAccountDialog::readReply(QNetworkReply* reply, QJsonObject* out, QString* error) {
     const QByteArray body = reply->readAll();
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const QJsonDocument doc = QJsonDocument::fromJson(body);
-
     if (reply->error() != QNetworkReply::NoError || status >= 400) {
         QString msg;
         if (doc.isObject()) {
@@ -391,16 +886,15 @@ bool OpenAccountDialog::readReply(QNetworkReply* reply, QJsonObject* out, QStrin
             if (detail.isString()) {
                 msg = detail.toString();
             } else if (detail.isArray()) {
-                // FastAPI field errors: [{"loc":[…,"password"],"msg":"…"}, …].
-                // Reported as "password: …" so the trader knows which box.
+                // FastAPI field errors, named by field so the trader knows which box.
                 QStringList parts;
                 for (const QJsonValue& v : detail.toArray()) {
                     const QJsonObject e = v.toObject();
                     const QJsonArray loc = e.value("loc").toArray();
-                    const QString fieldName = loc.isEmpty() ? QString()
-                                                            : loc.last().toString();
-                    const QString m = e.value("msg").toString();
-                    parts << (fieldName.isEmpty() ? m : QString("%1: %2").arg(fieldName, m));
+                    const QString f = loc.isEmpty() ? QString() : loc.last().toString();
+                    QString m = e.value("msg").toString();
+                    m.remove(QStringLiteral("Value error, "));
+                    parts << (f.isEmpty() ? m : QString("%1: %2").arg(f, m));
                 }
                 msg = parts.join("\n");
             }
@@ -413,389 +907,7 @@ bool OpenAccountDialog::readReply(QNetworkReply* reply, QJsonObject* out, QStrin
     return true;
 }
 
-// ── step 1 ──────────────────────────────────────────────────────────────────
-
-bool OpenAccountDialog::validateDetails(QString* error) {
-    auto fail = [error](const QString& m) { if (error) *error = m; return false; };
-
-    if (m_fullName->text().trimmed().isEmpty())
-        return fail(tr("Enter your full name."));
-    // The platform stores a first and a last name, so a single word cannot be
-    // split into one. Asked for here rather than guessed at.
-    if (!m_fullName->text().trimmed().contains(QRegularExpression("\\s")))
-        return fail(tr("Enter your first and last name."));
-
-    const QString email = m_emailIn->text().trimmed();
-    static const QRegularExpression emailRe(
-        R"(^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$)");
-    if (!emailRe.match(email).hasMatch())
-        return fail(tr("That email address does not look right."));
-
-    const QString mobile = m_mobile->text().trimmed();
-    // Digits, spaces, dashes, brackets and a leading +; at least 7 digits. Kept
-    // deliberately loose — numbering plans differ by country and a stricter
-    // rule here would reject valid numbers the server accepts.
-    if (!mobile.isEmpty()) {
-        static const QRegularExpression phoneRe(R"(^\+?[0-9 ()\-]{7,20}$)");
-        if (!phoneRe.match(mobile).hasMatch() ||
-            mobile.count(QRegularExpression("[0-9]")) < 7)
-            return fail(tr("That mobile number does not look right."));
-    }
-
-    const QString pw = m_password->text();
-    if (pw.length() < 8)
-        return fail(tr("Password must be at least 8 characters."));
-    // Mirrors the server's rule so the trader is told before the round trip.
-    const int classes = (pw.contains(QRegularExpression("[a-z]")) ? 1 : 0) +
-                        (pw.contains(QRegularExpression("[A-Z]")) ? 1 : 0) +
-                        (pw.contains(QRegularExpression("[0-9]")) ? 1 : 0) +
-                        (pw.contains(QRegularExpression("[^a-zA-Z0-9]")) ? 1 : 0);
-    if (classes < 3)
-        return fail(tr("Password must mix at least 3 of: lowercase, uppercase, "
-                       "number, symbol."));
-    if (m_confirm->text() != pw)
-        return fail(tr("The two passwords do not match."));
-    if (!m_terms->isChecked())
-        return fail(tr("You must accept the Terms and Conditions to continue."));
-    return true;
-}
-
-void OpenAccountDialog::submitDetails() {
-    QString error;
-    if (!validateDetails(&error)) {
-        setStatus(error, true);
-        return;
-    }
-
-    const QString full = m_fullName->text().trimmed().simplified();
-    const int cut = full.indexOf(QLatin1Char(' '));
-    m_email = m_emailIn->text().trimmed();
-
-    QJsonObject body;
-    body["email"]      = m_email;
-    body["password"]   = m_password->text();
-    body["first_name"] = full.left(cut);
-    body["last_name"]  = full.mid(cut + 1);
-    if (!m_mobile->text().trimmed().isEmpty())
-        body["phone"] = m_mobile->text().trimmed();
-    body["country"] = m_country->currentData().toString();
-    if (!m_referral->text().trimmed().isEmpty())
-        body["referral_code"] = m_referral->text().trimmed();
-
-    setBusy(true);
-    setStatus(tr("Creating your account…"), false);
-
-    QNetworkRequest req{QUrl(v1Base() + "/auth/register/start")};
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson());
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        setBusy(false);
-        QJsonObject o;
-        QString err;
-        if (!readReply(reply, &o, &err)) {
-            setStatus(err, true);
-            return;
-        }
-        showStep(1);
-    });
-}
-
-// ── step 2 ──────────────────────────────────────────────────────────────────
-
-void OpenAccountDialog::submitOtp() {
-    const QString code = m_otp->text().trimmed();
-    if (code.isEmpty()) {
-        setStatus(tr("Enter the code from your email."), true);
-        return;
-    }
-
-    QJsonObject body;
-    body["email"] = m_email;
-    body["otp"]   = code;
-
-    setBusy(true);
-    setStatus(tr("Verifying…"), false);
-
-    QNetworkRequest req{QUrl(v1Base() + "/auth/register/verify")};
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson());
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        setBusy(false);
-        QJsonObject o;
-        QString err;
-        if (!readReply(reply, &o, &err)) {
-            setStatus(err, true);
-            return;
-        }
-        // Verification mints the session, which is what lets step 3 reach the
-        // authenticated /accounts endpoints without a second sign-in.
-        m_token = o.value("access_token").toString();
-        if (m_token.isEmpty()) {
-            setStatus(tr("Your account was created, but the terminal did not "
-                         "receive a session. Sign in from File > Login to Trade "
-                         "Account."), true);
-            return;
-        }
-        m_cfg.token    = m_token;
-        m_cfg.email    = m_email;
-        m_cfg.userName = o.value("user").toObject().value("first_name").toString();
-        showStep(2);
-        fetchGroups();
-    });
-}
-
-void OpenAccountDialog::resendOtp() {
-    QJsonObject body;
-    body["email"] = m_email;
-
-    setBusy(true);
-    QNetworkRequest req{QUrl(v1Base() + "/auth/register/resend")};
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson());
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        setBusy(false);
-        QJsonObject o;
-        QString err;
-        if (!readReply(reply, &o, &err)) {
-            setStatus(err, true);
-            return;
-        }
-        setStatus(tr("A new code is on its way to %1.").arg(m_email), false);
-    });
-}
-
-// ── step 3 ──────────────────────────────────────────────────────────────────
-
-void OpenAccountDialog::fetchGroups() {
-    setBusy(true);
-    setStatus(tr("Loading account types…"), false);
-
-    QNetworkRequest req{QUrl(v1Base() + "/accounts/available-groups")};
-    req.setRawHeader("Authorization", ("Bearer " + m_token).toUtf8());
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = m_net->get(req);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        setBusy(false);
-        QJsonObject o;
-        QString err;
-        if (!readReply(reply, &o, &err)) {
-            setStatus(err, true);
-            return;
-        }
-        const QJsonArray items = o.value("items").toArray();
-        if (items.isEmpty()) {
-            setStatus(tr("Your broker has no account types open for self-service "
-                         "right now. Your login is ready — contact support to have "
-                         "a trading account added."), true);
-            m_openBtn->setEnabled(false);
-            return;
-        }
-        // The whole group object rides in the item's data so the detail line,
-        // the leverage ceiling and the currency can all be read back without a
-        // parallel list to keep in step with the combo.
-        for (const QJsonValue& v : items) {
-            const QJsonObject g = v.toObject();
-            m_accountType->addItem(
-                g.value("name").toString(),
-                QString::fromUtf8(QJsonDocument(g).toJson(QJsonDocument::Compact)));
-        }
-        m_accountType->setCurrentIndex(0);
-        m_status->clear();
-    });
-}
-
-void OpenAccountDialog::submitOpen() {
-    const int i = m_accountType->currentIndex();
-    if (i < 0) {
-        setStatus(tr("Choose an account type."), true);
-        return;
-    }
-    const QJsonObject g = QJsonDocument::fromJson(
-        m_accountType->itemData(i).toString().toUtf8()).object();
-
-    const QString master   = m_masterPw->text();
-    const QString investor = m_investorPw->text();
-    if (const QString why = passwordProblem(master); !why.isEmpty()) {
-        setStatus(tr("Master password: %1").arg(why), true);
-        m_masterPw->setFocus();
-        return;
-    }
-    if (const QString why = passwordProblem(investor); !why.isEmpty()) {
-        setStatus(tr("Investor password: %1").arg(why), true);
-        m_investorPw->setFocus();
-        return;
-    }
-    if (master == investor) {
-        setStatus(tr("The investor password must be different from the master password."), true);
-        m_investorPw->setFocus();
-        return;
-    }
-
-    QJsonObject body;
-    body["account_group_id"]  = g.value("id").toString();
-    body["leverage"]          = m_leverage->value();
-    body["master_password"]   = master;
-    body["investor_password"] = investor;
-
-    setBusy(true);
-    setStatus(tr("Opening your account…"), false);
-
-    QNetworkRequest req{QUrl(v1Base() + "/accounts/open")};
-    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    req.setRawHeader("Authorization", ("Bearer " + m_token).toUtf8());
-    req.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
-                     QNetworkRequest::NoLessSafeRedirectPolicy);
-
-    QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson());
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        setBusy(false);
-        QJsonObject o;
-        QString err;
-        if (!readReply(reply, &o, &err)) {
-            setStatus(err, true);
-            return;
-        }
-        m_accountNumber = o.value("account_number").toString();
-        m_cfg.accountId = o.value("id").toString();
-        if (m_cfg.accountId.isEmpty())
-            m_cfg.accountId = o.value("account_id").toString();
-
-        // Hand the caller a one-account list so the Accounts menu and the
-        // identity line have something to show before the first poll returns.
-        QJsonObject acct;
-        acct["account_id"]     = m_cfg.accountId;
-        acct["account_number"] = m_accountNumber;
-        acct["is_demo"]        = o.value("is_demo").toBool(false);
-        acct["currency"]       = o.value("currency").toString();
-        m_cfg.accountsJson = QString::fromUtf8(
-            QJsonDocument(QJsonArray{acct}).toJson(QJsonDocument::Compact));
-
-        // Not accept() yet: MT5 ends on a page with the account's details,
-        // and this is the only moment the passwords exist in readable form.
-        showDone(o);
-    });
-}
-
-// ── step 4: account ready ───────────────────────────────────────────────────
-
-QWidget* OpenAccountDialog::buildDoneStep() {
-    auto* w = new QWidget;
-    auto* v = new QVBoxLayout(w);
-    v->setContentsMargins(0, 0, 0, 0);
-    v->setSpacing(12);
-
-    m_doneGrid = new QLabel;
-    m_doneGrid->setTextFormat(Qt::RichText);
-    m_doneGrid->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    m_doneGrid->setStyleSheet(QString("background:%1; border:1px solid %2; border-radius:8px;"
-                                      "padding:12px 14px;")
-                              .arg(Theme::p().inputBg, Theme::p().inputBorder));
-    v->addWidget(m_doneGrid);
-
-    v->addStretch(1);
-    auto* btns = new QHBoxLayout;
-    auto* copy = new QPushButton(tr("Copy details"));
-    copy->setAutoDefault(false);
-    copy->setCursor(Qt::PointingHandCursor);
-    connect(copy, &QPushButton::clicked, this, [this]() {
-        QGuiApplication::clipboard()->setText(detailsText());
-        setStatus(tr("Copied. Paste it somewhere safe."), false);
-    });
-    auto* save = new QPushButton(tr("Save to file…"));
-    save->setAutoDefault(false);
-    save->setCursor(Qt::PointingHandCursor);
-    connect(save, &QPushButton::clicked, this, [this]() {
-        const QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-        const QString path = QFileDialog::getSaveFileName(
-            this, tr("Save account details"),
-            dir + QStringLiteral("/TuskaEx-%1.txt").arg(m_accountNumber),
-            tr("Text files (*.txt)"));
-        if (path.isEmpty()) return;
-        QFile f(path);
-        if (!f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
-            setStatus(tr("Could not save: %1").arg(f.errorString()), true);
-            return;
-        }
-        QTextStream(&f) << detailsText();
-        setStatus(tr("Saved to %1").arg(QDir::toNativeSeparators(path)), false);
-    });
-    auto* done = new QPushButton(tr("Start trading"));
-    done->setDefault(true);
-    done->setCursor(Qt::PointingHandCursor);
-    connect(done, &QPushButton::clicked, this, &QDialog::accept);
-    btns->addWidget(copy);
-    btns->addWidget(save);
-    btns->addStretch(1);
-    btns->addWidget(done);
-    v->addLayout(btns);
-    return w;
-}
-
-void OpenAccountDialog::showDone(const QJsonObject& o) {
-    const bool demo = o.value("is_demo").toBool(false);
-    m_doneName     = m_fullName->text().trimmed();
-    m_doneType     = o.value("account_group_name").toString(m_accountType->currentText());
-    m_doneServer   = demo ? QStringLiteral("TuskaEx-Demo") : QStringLiteral("TuskaEx-Live");
-    m_doneMaster   = m_masterPw->text();
-    m_doneInvestor = m_investorPw->text();
-    m_doneLeverage = QStringLiteral("1:%1").arg(o.value("leverage").toInt(m_leverage->value()));
-    m_doneBalance  = QStringLiteral("%L1 %2").arg(o.value("balance").toDouble(), 0, 'f', 2)
-                                            .arg(o.value("currency").toString("USD"));
-
-    const auto& p = Theme::p();
-    auto row = [&](const QString& k, const QString& val, bool strong = false) {
-        return QString("<tr><td style='color:%1; padding:3px 18px 3px 0;'>%2</td>"
-                       "<td style='color:%3; font-weight:%4; font-family:%5;'>%6</td></tr>")
-            .arg(p.muted, k.toHtmlEscaped(), p.textStrong, strong ? "800" : "600",
-                 strong ? "Consolas,'Courier New',monospace" : "inherit", val.toHtmlEscaped());
-    };
-    m_doneGrid->setText(
-        "<table cellspacing='0'>"
-        + row(tr("Name"), m_doneName)
-        + row(tr("Account type"), m_doneType)
-        + row(tr("Server"), m_doneServer)
-        + row(tr("Login"), m_accountNumber, true)
-        + row(tr("Master password"), m_doneMaster, true)
-        + row(tr("Investor password"), m_doneInvestor, true)
-        + row(tr("Leverage"), m_doneLeverage)
-        + row(tr("Balance"), m_doneBalance)
-        + "</table>");
-    showStep(3);
-}
-
-QString OpenAccountDialog::detailsText() const {
-    return tr("TuskaEx trading account\n"
-              "Name:              %1\n"
-              "Account type:      %2\n"
-              "Server:            %3\n"
-              "Login:             %4\n"
-              "Master password:   %5   (trading)\n"
-              "Investor password: %6   (read-only)\n"
-              "Leverage:          %7\n"
-              "Balance:           %8\n")
-        .arg(m_doneName, m_doneType, m_doneServer, m_accountNumber,
-             m_doneMaster, m_doneInvestor, m_doneLeverage, m_doneBalance);
-}
-
 QString OpenAccountDialog::generatePassword() {
-    // No look-alikes (0/O, 1/l/I), so a password read off the screen is typed
-    // back correctly.
     static const QString lower  = QStringLiteral("abcdefghijkmnpqrstuvwxyz");
     static const QString upper  = QStringLiteral("ABCDEFGHJKLMNPQRSTUVWXYZ");
     static const QString digits = QStringLiteral("23456789");
@@ -806,7 +918,7 @@ QString OpenAccountDialog::generatePassword() {
     QString pw;
     pw += pick(lower); pw += pick(upper); pw += pick(digits); pw += pick(symbol);
     while (pw.size() < 10) pw += pick(all);
-    for (int i = pw.size() - 1; i > 0; --i)               // Fisher-Yates
+    for (int i = pw.size() - 1; i > 0; --i)
         std::swap(pw[i], pw[int(rng->bounded(i + 1))]);
     return pw;
 }

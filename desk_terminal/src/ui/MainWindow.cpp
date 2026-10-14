@@ -2176,25 +2176,18 @@ void MainWindow::openAccountSignup() {
     if (dlg.exec() != QDialog::Accepted)
         return;
 
-    // The dialog finishes holding a live session for the account it just
-    // opened, so the terminal can connect to it straight away rather than
-    // sending the trader back to the sign-in card.
-    m_cfg = dlg.config();
-    m_cfg.save();
-    m_api->setConfig(m_cfg);
-    applySessionRenewal();
-    m_stream->setConfig(m_cfg);
-    m_stream->stop();
-    m_stream->start();
-    m_api->fetchSymbols();
-    m_api->fetchAccount();
-    updateIdentity();
+    // The dialog finishes holding a live session for the account it opened
+    // or signed in to: an account key (existing account, new demo) or the
+    // owner's session (new real account). Either way the terminal switches
+    // to it now, as MT5 does after Finish.
+    const Config next = dlg.config();
+    next.save();
+    clearAccountView();
+    startSession(next);
 
     const QString number = dlg.accountNumber();
-    setStatus(tr("Account %1 is open — you are signed in").arg(number));
-    Toast::success(this, tr("Account opened"),
-                   tr("Your login ID is %1. Use it with the password you just "
-                      "chose to sign in anywhere.").arg(number));
+    setStatus(tr("Signed in to account %1").arg(number));
+    Journal::success(QStringLiteral("Account"), tr("signed in to account %1").arg(number));
 }
 
 void MainWindow::openWebServiceLogin() {
