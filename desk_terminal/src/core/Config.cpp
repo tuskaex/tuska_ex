@@ -110,7 +110,27 @@ Config Config::load() {
         c.restBase = o.value("restBase").toString();
     if (o.contains("wsUrl") && !o.value("wsUrl").toString().isEmpty())
         c.wsUrl = o.value("wsUrl").toString();
+    if (o.contains("installId")) c.installId = o.value("installId").toString();
     return c;
+}
+
+void Config::forgetLogin() {
+    const Config defaults;
+    token            = defaults.token;
+    refreshToken     = defaults.refreshToken;
+    accountId        = defaults.accountId;
+    userName         = defaults.userName;
+    email            = defaults.email;
+    accountsJson     = defaults.accountsJson;
+    readOnly         = defaults.readOnly;
+    apiKey           = defaults.apiKey;
+    apiSecret        = defaults.apiSecret;
+    rememberPassword = defaults.rememberPassword;
+    savedPassword    = defaults.savedPassword;
+    // The sign-in card has no SERVER box, so an endpoint left over from a
+    // developer build would strand the trader on a server they cannot change.
+    restBase         = defaults.restBase;
+    wsUrl            = defaults.wsUrl;
 }
 
 bool Config::save() const {
@@ -149,6 +169,7 @@ bool Config::save() const {
     // Written only while the box is ticked, so unticking it erases what was
     // there rather than leaving the password behind in the file.
     o["savedPassword"]      = rememberPassword ? savedPassword : QString();
+    o["installId"]          = installId;
 
     QFile f(filePath());
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate))

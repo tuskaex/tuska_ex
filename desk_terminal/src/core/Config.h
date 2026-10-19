@@ -151,6 +151,19 @@ public:
                (!apiKey.trimmed().isEmpty() && !apiSecret.trimmed().isEmpty());
     }
 
+    // Which install wrote this file. main.cpp compares it against the running
+    // install's id and, when they differ, calls forgetLogin(): a freshly
+    // installed terminal opens on an empty sign-in card instead of the
+    // previous install's email, saved password and session. The config
+    // directory outlives an uninstall, so without this a reinstall — or the
+    // next person to install on that machine — saw the last user's details.
+    QString installId;
+
+    // Drops everything that identifies or signs in a user — session, account,
+    // email, saved password, API key — and points the terminal back at TuskaEx
+    // Live. Layout, theme and watchlist preferences are kept.
+    void forgetLogin();
+
     static QString filePath();   // resolved config file location
     static Config  load();       // load from disk (defaults if missing)
     bool           save() const; // write to disk; returns success

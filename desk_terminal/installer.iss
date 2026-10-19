@@ -21,14 +21,14 @@ AppName={#MyApp}
 ; website's download button already links to
 ; (frontend/trader/src/landing/marketing/Navbar.tsx). Bump both together, and
 ; the site's href with them, or the link 404s.
-AppVersion=2.2
+AppVersion=2.3
 AppPublisher=TuskaEx
 DefaultDirName={autopf}\TuskaEx Terminal
 DefaultGroupName=TuskaEx Terminal
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyExe}
 OutputDir={#SourcePath}dist
-OutputBaseFilename=TuskaExTerminal-Setup-2.2
+OutputBaseFilename=TuskaExTerminal-Setup-2.3
 SetupIconFile={#SourcePath}resources\tuskaex.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -85,7 +85,7 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 ; brace — a build where someone forgets to bump still ships, because the file
 ; is replaced on every install regardless of what its version claims.
 Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; \
-  Excludes: "CMakeFiles\*,terminal_autogen\*,*.obj,*.pdb,*.ilk,*.cmake,CMakeCache.txt,build.ninja,.ninja_deps,.ninja_log,*.ninja_deps,*.ninja_log,chart-diag.log"
+  Excludes: "CMakeFiles\*,terminal_autogen\*,*.obj,*.pdb,*.ilk,*.cmake,CMakeCache.txt,build.ninja,.ninja_deps,.ninja_log,*.ninja_deps,*.ninja_log,chart-diag.log,install-id.txt"
 
 [Icons]
 Name: "{group}\TuskaEx Terminal"; Filename: "{app}\{#MyExe}"
@@ -93,3 +93,24 @@ Name: "{autodesktop}\TuskaEx Terminal"; Filename: "{app}\{#MyExe}"; Tasks: deskt
 
 [Run]
 Filename: "{app}\{#MyExe}"; Description: "Launch TuskaEx Terminal"; Flags: nowait postinstall skipifsilent
+
+[UninstallDelete]
+; install-id.txt is written by [Code] below, so the uninstaller does not know
+; about it on its own.
+Type: files; Name: "{app}\install-id.txt"
+; The terminal's settings folder (QStandardPaths::AppConfigLocation for org
+; "TuskaEx", app "TuskaEx Terminal"). It holds the session tokens, the API
+; secret and, if "Remember password" was ticked, the password, all in
+; plaintext. Uninstalling must not leave them behind for the next person.
+Type: filesandordirs; Name: "{localappdata}\TuskaEx\TuskaEx Terminal"
+
+[Code]
+// Every install, re-install and upgrade gets a new id. The terminal compares it
+// with the one in its config (src/main.cpp) and, when they differ, opens on an
+// empty sign-in card instead of the previous install's email and password.
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    SaveStringToFile(ExpandConstant('{app}\install-id.txt'),
+      GetDateTimeString('yyyymmddhhnnss', #0, #0), False);
+end;

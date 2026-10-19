@@ -140,7 +140,7 @@ set(HEADERS
 # package-macos.sh reads that back to name the .dmg. It had drifted to 1.0.1
 # while Windows shipped 1.0.6, so the Mac build carried the same code under a
 # five-releases-old version number — the exact bug this comment warns about.
-set(TX_VERSION "2.2")
+set(TX_VERSION "2.3")
 
 # App icon + version info. The .rc gives the EXE its icon (Explorer, desktop
 # shortcut, taskbar); the .qrc carries the same artwork for setWindowIcon();
@@ -210,7 +210,8 @@ endif()
 
 # Lets WebChartWidget find web/index.html when running from the build tree.
 target_compile_definitions(terminal PRIVATE
-    TX_SOURCE_WEB_DIR="${CMAKE_SOURCE_DIR}/web")
+    TX_SOURCE_WEB_DIR="${CMAKE_SOURCE_DIR}/web"
+    TX_VERSION_STR="${TX_VERSION}")
 
 target_link_libraries(terminal PRIVATE
     Qt6::Widgets

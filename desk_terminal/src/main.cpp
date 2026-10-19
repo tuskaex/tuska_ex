@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QStyleFactory>
 #include <QIcon>
+#include <QFile>
 #include "core/Config.h"
 #include "core/Models.h"
 #include "ui/LoginDialog.h"
@@ -38,6 +39,21 @@ static void holdInstallerMutex() {
 }
 #endif
 
+// Identifies the install this process is running from. The Windows installer
+// writes a fresh install-id.txt next to the exe on every install (installer.iss,
+// [Code]), so each install — first, re-install or upgrade — is a new id. The
+// macOS .app has no install step, so there the id is the build itself: a new
+// version is a new id, re-copying the same .dmg is not. Developer builds
+// without the file get the build stamp too, so every rebuild signs out.
+static QString currentInstallId() {
+    QFile f(QCoreApplication::applicationDirPath() + "/install-id.txt");
+    if (f.open(QIODevice::ReadOnly)) {
+        const QString id = QString::fromUtf8(f.readAll()).trimmed();
+        if (!id.isEmpty()) return "install " + id;
+    }
+    return QStringLiteral("build " TX_VERSION_STR " " __DATE__ " " __TIME__);
+}
+
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
 #ifdef Q_OS_WIN
@@ -57,6 +73,13 @@ int main(int argc, char* argv[]) {
     qRegisterMetaType<TradeResult>("TradeResult");
 
     Config cfg = Config::load();
+    // A new install starts signed out with an empty sign-in card, even though
+    // the config directory survived from the previous one.
+    if (const QString install = currentInstallId(); cfg.installId != install) {
+        cfg.forgetLogin();
+        cfg.installId = install;
+        cfg.save();
+    }
     Theme::setMode(Theme::fromName(cfg.theme));
     Theme::setTableFont(cfg.tableFontFamily, cfg.tableFontSize);
     applyTheme(app);
