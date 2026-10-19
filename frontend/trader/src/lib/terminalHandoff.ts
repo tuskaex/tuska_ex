@@ -76,10 +76,10 @@ export function shouldHandOffToTerminal(): boolean {
  *
  * The terminal domain serves ONLY the terminal. nginx routes `/trading/`,
  * `/terminal`, `/api/`, `/ws/` and the chart asset trees to the trader app and
- * sends everything else to the SpeedTrade landing site, so `/accounts`,
- * `/support`, `/profile` and `/wallet` all 404 there and `/dashboard` bounces
- * to the landing home page. A `router.push('/accounts')` from the terminal is
- * therefore a dead link — which is exactly what shipped in the menu bar.
+ * answers everything else with a 404 page, so `/accounts`, `/support`,
+ * `/profile`, `/wallet` and `/dashboard` all 404 there. A
+ * `router.push('/accounts')` from the terminal is therefore a dead link —
+ * which is exactly what shipped in the menu bar.
  *
  * Everywhere else the same app owns those routes and a relative path is right:
  * on trade.tuskaex.com it is the CRM itself, and on a white-label tenant's

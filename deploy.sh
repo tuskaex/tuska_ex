@@ -139,11 +139,9 @@ if [ $NEEDS_NGINX -eq 1 ]; then
   if [ -f deploy/nginx/cloudflare-real-ip.conf ]; then
     sudo cp deploy/nginx/cloudflare-real-ip.conf /etc/nginx/conf.d/cloudflare-real-ip.conf
   fi
-  # speedtrade.tech — the landing site AND the trading terminal share this
-  # hostname, so this vhost routes TuskaEx traffic and belongs to this repo.
-  # It used to live in speedtrade_landing/deploy/nginx/, which is gitignored
-  # here: nothing there could ever reach the server through a deploy, and the
-  # old `if [ -f ]` guard skipped it without a word. Unconditional now.
+  # speedtrade.tech — serves the trading terminal only. Installed
+  # unconditionally: an `if [ -f ]` guard once skipped a missing vhost
+  # without a word, which looks exactly like a successful deploy.
   sudo cp deploy/nginx/speedtrade.conf /etc/nginx/sites-available/speedtrade.conf
   sudo ln -sf /etc/nginx/sites-available/speedtrade.conf /etc/nginx/sites-enabled/speedtrade.conf
   # Every white-label tenant domain, without a per-domain vhost. Connecting a

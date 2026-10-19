@@ -14,7 +14,7 @@ written from memory — 151 REST routes and 5 WebSocket endpoints.
 |------|--------|
 | `https://api.tuskaex.com` | Gateway — REST **and** all WebSockets |
 | `https://speedtrade.tech/trading/terminal` | **The trading terminal.** Same Next.js app as the CRM, reached on this host; own `/ws/` upgrade block |
-| `https://speedtrade.tech/` | SpeedTrade marketing site — a *different* Next app (`speedtrade_landing/`) on the same hostname, split by path in nginx |
+| `https://speedtrade.tech/` | Nothing — every path outside the terminal answers a plain 404 "can't be reached" page |
 | `https://tuskaex.com` | CRM: dashboard, wallet, KYC, deposits, IB, support, auth |
 | `https://trade.tuskaex.com` | Same app on a subdomain; kept working, no longer where the terminal lives |
 

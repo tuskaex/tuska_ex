@@ -37,11 +37,7 @@ import {
  * moment the user most needs to see something. Same-origin, it paints with the
  * rest of the page.
  *
- * The copy is checked into this repo, so it does NOT follow the landing site
- * automatically the way the terminal's own logo does (that one is proxied live
- * in deploy/nginx/speedtrade.conf). Re-download it if the brand changes:
- *   curl -o frontend/trader/public/marketing/speedtrade-logo.png \
- *        https://speedtrade.tech/images/logo.png
+ * The copy is checked into this repo; replace the file if the brand changes.
  */
 const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
 

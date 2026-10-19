@@ -28,24 +28,9 @@ support, auth. The **trading terminal** is served from
 container; only the hostname differs, and the app branches on it at
 runtime.
 
-**Two apps on one hostname.** `speedtrade.tech/` is the SpeedTrade
-marketing site (`speedtrade_landing/`, a separate Next app); the terminal
-lives under `/trading/`. nginx splits them by path.
-
-That split has one genuine conflict: both apps serve their bundles from
-`/_next/static/`, and a shared prefix can only proxy to one of them — the
-other boots with no CSS or JS. The textbook fix is an `assetPrefix` on one
-app. We do it in nginx instead: try the landing, fall back to the trader
-on 404. Next content-hashes every chunk filename, so a name that exists in
-one build never exists in the other and the fallback cannot serve the
-wrong file.
-
-The reason is deployment, not elegance. `/opt/speedtrade` is **not** a git
-checkout — it was copied there by hand. An `assetPrefix` in its
-`next.config.ts` would be silently lost the next time anyone re-copies
-that tree, and the symptom would be a terminal that renders unstyled with
-nothing in any log. Keeping the whole fix in a file `deploy.sh` owns means
-a landing redeploy cannot break the terminal.
+**The terminal only.** `speedtrade.tech` serves the terminal under
+`/trading/` and the routes it needs. Every other path, `/` included,
+answers a plain 404 "can't be reached" page.
 
 **Why the session needs a handoff.** `tuskaex.com` and `speedtrade.tech`
 are different *registrable* domains, so a `.tuskaex.com` cookie is never
@@ -68,11 +53,8 @@ and rebuilding: `tradingTerminalUrl()` goes back to returning
 `/trading/terminal` and the old apex → `trade.tuskaex.com` middleware
 bounce takes over again. Nothing else has to be reverted.
 
-The vhost is [`deploy/nginx/speedtrade.conf`](deploy/nginx/speedtrade.conf)
-— in **this** repo, not next to the landing site's own config, because
-`speedtrade_landing/` is gitignored here: a server block placed there can
-never reach the server through `deploy.sh`, and the old `if [ -f ]` guard
-skipped it without a word, which looks exactly like a successful deploy.
+The vhost is [`deploy/nginx/speedtrade.conf`](deploy/nginx/speedtrade.conf),
+installed by `deploy.sh`.
 
 It includes a `/ws/` upgrade block. This host needs one and
 `trade.tuskaex.com` does not, for the same cookie-domain reason: the
