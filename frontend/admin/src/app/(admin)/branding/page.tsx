@@ -1,14 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
-import { adminMediaSrc } from '@/lib/mediaSrc';
-import { Loader2, Upload, Save, Mail, Send, Link2, Globe, Trash2 } from 'lucide-react';
+import { Loader2, Save, Mail, Send, Link2, Globe } from 'lucide-react';
 import { CopyField } from './ReferralLink';
 import DomainSection from './DomainSection';
-import BrandColorPicker, { DEFAULT_BRAND_COLOR, isValidHex } from '../sub-admins/BrandColorPicker';
 import toast from 'react-hot-toast';
 import type { BrandingProfile, PaginatedResponse, SubAdmin } from '@/types';
 
@@ -17,10 +15,7 @@ export default function BrandingPage() {
   const [loading, setLoading] = useState(true);
   const [disabled, setDisabled] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // Every tenant, for the picker at the top of the page. A 403 means the
@@ -41,12 +36,6 @@ export default function BrandingPage() {
     void loadTenants();
   }, [loadTenants]);
 
-  const [brand, setBrand] = useState({
-    brand_name: '',
-    support_email: '',
-    support_whatsapp: '',
-    brand_color: DEFAULT_BRAND_COLOR,
-  });
   const [smtp, setSmtp] = useState({
     smtp_host: '',
     smtp_port: '587',
@@ -61,12 +50,6 @@ export default function BrandingPage() {
     try {
       const p = await adminApi.get<BrandingProfile>('/branding/me');
       setProfile(p);
-      setBrand({
-        brand_name: p.brand_name ?? '',
-        support_email: p.support_email ?? '',
-        support_whatsapp: p.support_whatsapp ?? '',
-        brand_color: p.brand_color ?? DEFAULT_BRAND_COLOR,
-      });
       setSmtp({
         smtp_host: p.smtp_host ?? '',
         smtp_port: p.smtp_port ? String(p.smtp_port) : '587',
@@ -89,38 +72,6 @@ export default function BrandingPage() {
   useEffect(() => {
     void fetchData();
   }, [fetchData]);
-
-  const saveBrand = async () => {
-    if (brand.brand_color.trim() && !isValidHex(brand.brand_color)) {
-      toast.error('Theme colour must be a hex colour such as #D60101');
-      return;
-    }
-    setSaving(true);
-    try {
-      await adminApi.put('/branding/me', { ...brand, brand_color: brand.brand_color.trim() });
-      toast.success('Branding saved');
-      void fetchData();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Could not save');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Uploading replaces, so this exists to go back to no logo at all — on the
-  // platform row that means the mark compiled into the apps.
-  const clearLogo = async () => {
-    setClearing(true);
-    try {
-      await adminApi.delete('/branding/logo');
-      toast.success('Logo removed');
-      void fetchData();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Could not remove the logo');
-    } finally {
-      setClearing(false);
-    }
-  };
 
   const saveSmtp = async () => {
     setSaving(true);
@@ -160,25 +111,6 @@ export default function BrandingPage() {
     }
   };
 
-  const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return toast.error('Please choose an image');
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      await adminApi.postForm<BrandingProfile>('/branding/logo', fd);
-      toast.success('Logo uploaded');
-      void fetchData();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -211,8 +143,7 @@ export default function BrandingPage() {
       <div>
         <h1 className="text-lg font-semibold text-text-primary">Whitelabel</h1>
         <p className="text-xxs text-text-tertiary mt-0.5">
-          TuskaEx&apos;s own logo, link and support details — used on
-          tuskaex.com, admin.tuskaex.com and trade.tuskaex.com.
+          Sub-broker logos, the referral link, domain and outbound email.
         </p>
       </div>
 
@@ -272,10 +203,6 @@ export default function BrandingPage() {
         <p className="text-text-primary font-medium">
           This is TuskaEx&apos;s own brand.
         </p>
-        <p className="mt-1">
-          A logo set here is used on the platform&apos;s own hostnames. Leave it
-          empty to keep the mark compiled into the apps.
-        </p>
         <p className="mt-1.5">
           To brand a white-label, open{' '}
           <Link href="/sub-admins" className="text-accent hover:underline">
@@ -287,139 +214,10 @@ export default function BrandingPage() {
       </div>
 
       <section className="bg-bg-secondary border border-border-primary rounded-md">
-        <div className="px-3 py-2 border-b border-border-primary">
-          <h2 className="text-xs font-semibold text-text-primary">
-            <span className="text-accent">1.</span> Brand identity
-          </h2>
-          <p className="text-xxs text-text-tertiary mt-0.5">
-            TuskaEx&apos;s own logo and display name — browser tab and sidebar on
-            the platform&apos;s hostnames. NOT used on any tenant domain.
-          </p>
-        </div>
-        <div className="p-3 space-y-3">
-          <div className="flex items-center gap-4">
-            <div className="w-28 h-14 rounded-md border border-border-primary bg-bg-tertiary flex items-center justify-center overflow-hidden shrink-0">
-              {profile?.logo_url ? (
-                <img
-                  src={adminMediaSrc(profile.logo_url)}
-                  alt="Logo"
-                  className="max-w-full max-h-full object-contain"
-                />
-              ) : (
-                <span className="text-xxs text-text-tertiary">No logo</span>
-              )}
-            </div>
-            <div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={onPickFile}
-              />
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  disabled={uploading}
-                  onClick={() => fileRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
-                >
-                  {uploading ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <Upload size={13} />
-                  )}
-                  {profile?.logo_url ? 'Replace logo' : 'Upload logo'}
-                </button>
-                {/* Uploading replaces, so Remove exists only to go BACK to the
-                    mark compiled into the apps. Hidden when there is nothing
-                    to remove. */}
-                {profile?.logo_url && (
-                  <button
-                    type="button"
-                    disabled={clearing}
-                    onClick={() => void clearLogo()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md border border-border-primary text-text-secondary hover:text-text-primary disabled:opacity-50"
-                  >
-                    {clearing ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={13} />
-                    )}
-                    Remove
-                  </button>
-                )}
-              </div>
-              <p className="text-xxs text-text-tertiary mt-1">
-                PNG, JPG or WebP. Up to 2 MB.
-              </p>
-            </div>
-          </div>
-
-          <label className="block">
-            <span className="block text-xxs text-text-tertiary mb-1">Brand name</span>
-            <input
-              value={brand.brand_name}
-              onChange={(e) => setBrand((b) => ({ ...b, brand_name: e.target.value }))}
-              placeholder="Shown to your clients instead of the platform name"
-              className={inputCls}
-            />
-          </label>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="block">
-              <span className="block text-xxs text-text-tertiary mb-1">Support email</span>
-              <input
-                value={brand.support_email}
-                onChange={(e) => setBrand((b) => ({ ...b, support_email: e.target.value }))}
-                className={inputCls}
-              />
-            </label>
-            <label className="block">
-              <span className="block text-xxs text-text-tertiary mb-1">
-                Support WhatsApp
-              </span>
-              <input
-                value={brand.support_whatsapp}
-                onChange={(e) =>
-                  setBrand((b) => ({ ...b, support_whatsapp: e.target.value }))
-                }
-                placeholder="+91…"
-                className={inputCls}
-              />
-            </label>
-          </div>
-
-          <div>
-            <span className="block text-xxs text-text-tertiary mb-1">
-              Theme colour — buttons, links and highlights across the website and trading app
-            </span>
-            <BrandColorPicker
-              value={brand.brand_color}
-              onChange={(hex) => setBrand((b) => ({ ...b, brand_color: hex }))}
-            />
-          </div>
-
-          {/* Stays enabled when the row is unbrandable: the API refuses a value
-              but still accepts a clear, and rows branded before that guard
-              existed have to be emptiable from somewhere. */}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void saveBrand()}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md bg-accent text-white disabled:opacity-50"
-          >
-            <Save size={13} />
-            Save identity
-          </button>
-        </div>
-      </section>
-
-      <section className="bg-bg-secondary border border-border-primary rounded-md">
         <div className="px-3 py-2 border-b border-border-primary flex items-center gap-2">
           <Link2 size={13} className="text-text-tertiary" />
           <h2 className="text-xs font-semibold text-text-primary">
-            <span className="text-accent">2.</span> Branded referral link
+            <span className="text-accent">1.</span> Branded referral link
           </h2>
         </div>
         <div className="p-3 space-y-2">
@@ -445,7 +243,7 @@ export default function BrandingPage() {
         <div className="px-3 py-2 border-b border-border-primary flex items-center gap-2">
           <Globe size={13} className="text-text-tertiary" />
           <h2 className="text-xs font-semibold text-text-primary">
-            <span className="text-accent">3.</span> Connect your own domain
+            <span className="text-accent">2.</span> Connect your own domain
             <span className="text-text-tertiary font-normal"> (optional)</span>
           </h2>
         </div>
@@ -460,7 +258,7 @@ export default function BrandingPage() {
         <div className="px-3 py-2 border-b border-border-primary flex items-center gap-2">
           <Mail size={13} className="text-text-tertiary" />
           <h2 className="text-xs font-semibold text-text-primary">
-            <span className="text-accent">4.</span> Outbound email
+            <span className="text-accent">3.</span> Outbound email
           </h2>
         </div>
         <div className="p-3 space-y-3">
