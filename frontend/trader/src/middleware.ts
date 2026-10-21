@@ -51,8 +51,13 @@ import { siteNotAvailable, tenantHostIsLive } from '@/lib/tenantLiveness';
 
 const TRADE_PREFIXES = ['/trading/terminal'];
 const NEUTRAL_PREFIXES = ['/api/', '/_next/', '/s/', '/static/', '/images/', '/brand/'];
-const ACCESS_COOKIE = 'tx_access';
-const REFRESH_COOKIE = 'tx_refresh';
+// The gateway's session cookie names (ACCESS_TOKEN_COOKIE_NAME /
+// REFRESH_TOKEN_COOKIE_NAME in backend/packages/common/src/config.py). These
+// read `tx_*` once, a name the backend never sets, so on a broker's domain every
+// full page load (a refresh, a new tab, "Trade" opened in a new tab) looked
+// signed-out and was bounced to /auth/login.
+const ACCESS_COOKIE = 'pt_access';
+const REFRESH_COOKIE = 'pt_refresh';
 const NEUTRAL_EXACT = new Set<string>(['/favicon.ico', '/robots.txt', '/sitemap.xml']);
 
 /* ── Rate-limit configuration ──────────────────────────────────
