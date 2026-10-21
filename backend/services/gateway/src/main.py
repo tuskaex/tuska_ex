@@ -18,6 +18,7 @@ from packages.common.src.kafka_client import close_producer
 from packages.common.src.auth import decode_token, require_onboarded
 from packages.common.src.models import TradingAccount
 from packages.common.src.instrumentation import init_sentry, add_middleware_stack
+from packages.common.src import tenant_hosts
 from packages.common.src.tenant_cors import install_tenant_cors
 
 from .api import (
@@ -441,7 +442,7 @@ def _normalize_origin(raw: str) -> str:
 _NORMALIZED_ALLOWED_ORIGINS = {_normalize_origin(o) for o in _cors_origins}
 
 
-def _check_ws_origin(websocket: WebSocket) -> bool:
+async def _check_ws_origin(websocket: WebSocket) -> bool:
     """Reject WebSocket handshakes whose Origin header isn't on our
     allow-list. Browsers send cookies on cross-origin WS handshakes
     regardless of SameSite, so a malicious page could otherwise open
@@ -464,6 +465,17 @@ def _check_ws_origin(websocket: WebSocket) -> bool:
     normalized = _normalize_origin(raw_origin)
     if normalized in _NORMALIZED_ALLOWED_ORIGINS:
         return True
+    # A white-label broker's own domain. HTTP CORS already admits these
+    # (packages/common/src/tenant_cors.py); without the same rule here every
+    # broker's web terminal got its REST calls through and then a 403 on the
+    # socket, so it never received a price. Same snapshot, so a suspended
+    # broker's domain stops passing here too.
+    try:
+        await tenant_hosts.refresh()
+        if tenant_hosts.is_tenant_host(tenant_hosts.normalise_host(raw_origin)):
+            return True
+    except Exception:
+        logger.warning("tenant host lookup failed for WS origin %r", raw_origin, exc_info=True)
     logger.warning(
         "WS handshake rejected — Origin %r not in allow-list %s",
         raw_origin,
@@ -474,7 +486,7 @@ def _check_ws_origin(websocket: WebSocket) -> bool:
 
 @app.websocket("/ws/prices")
 async def price_stream(websocket: WebSocket, token: str | None = Query(default=None)):
-    if not _check_ws_origin(websocket):
+    if not await _check_ws_origin(websocket):
         await websocket.close(code=4003, reason="Origin not allowed")
         return
     effective = _ws_token_from_websocket(websocket, token)
@@ -565,7 +577,7 @@ async def bars_stream(websocket: WebSocket, token: str | None = Query(default=No
     A new bar `time` = the previous candle closed; the same `time` redrawn =
     the live candle extending. Bars are public market data, so auth mirrors
     /ws/prices (validated only if a token is supplied)."""
-    if not _check_ws_origin(websocket):
+    if not await _check_ws_origin(websocket):
         await websocket.close(code=4003, reason="Origin not allowed")
         return
     effective = _ws_token_from_websocket(websocket, token)
@@ -639,7 +651,7 @@ async def algo_prices_stream(websocket: WebSocket):
 
 @app.websocket("/ws/trades/{account_id}")
 async def trade_stream(websocket: WebSocket, account_id: str, token: str | None = Query(default=None)):
-    if not _check_ws_origin(websocket):
+    if not await _check_ws_origin(websocket):
         await websocket.close(code=4003, reason="Origin not allowed")
         return
     effective = _ws_token_from_websocket(websocket, token)
@@ -703,7 +715,7 @@ async def trade_stream(websocket: WebSocket, account_id: str, token: str | None 
 
 @app.websocket("/ws/admin")
 async def admin_stream(websocket: WebSocket, token: str | None = Query(default=None)):
-    if not _check_ws_origin(websocket):
+    if not await _check_ws_origin(websocket):
         await websocket.close(code=4003, reason="Origin not allowed")
         return
     # Cookie-first (audit H4) so the admin JWT never ends up in nginx

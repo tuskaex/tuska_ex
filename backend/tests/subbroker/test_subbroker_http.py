@@ -3,7 +3,7 @@ import secrets
 
 import pytest
 
-from conftest import PASSWORD, admin_headers, sql, user_headers
+from conftest import GATEWAY, PASSWORD, admin_headers, sql, user_headers
 
 FEATURE_OFF = "is not available for your account"
 
@@ -261,3 +261,31 @@ def test_signup_into_a_brokers_pool_needs_no_emailed_code(gw, world):
     row = sql("SELECT email_verified, assigned_admin_id FROM users WHERE email = :e", e=email)
     assert row and row[0][0] is True and row[0][1] == world["broker_b"]
     assert _login(gw, email, broker_code=world["broker_b_code"]).status_code == 200
+
+
+# ── WebSockets from a broker's own domain ─────────────────────────────────
+
+def _ws_handshake_status(origin: str) -> int:
+    import http.client
+    import urllib.parse
+
+    u = urllib.parse.urlparse(GATEWAY)
+    conn = http.client.HTTPConnection(u.hostname, u.port or 80, timeout=10)
+    conn.request("GET", "/ws/prices", headers={
+        "Connection": "Upgrade", "Upgrade": "websocket", "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==", "Origin": origin,
+    })
+    status = conn.getresponse().status
+    conn.close()
+    return status
+
+
+def test_ws_accepts_an_active_brokers_domain(world):
+    # The broker's web terminal dials its own domain; the gateway used to answer
+    # 403 because only the static CORS_ORIGINS list was consulted.
+    assert _ws_handshake_status("https://alpha-sbt.example") == 101
+
+
+def test_ws_still_refuses_unknown_and_suspended_origins(world):
+    assert _ws_handshake_status("https://evil-sbt.example") == 403
+    assert _ws_handshake_status("https://gone-sbt.example") == 403

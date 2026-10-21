@@ -7,6 +7,7 @@
  */
 
 import { isOnTerminalHost } from '../terminalHandoff';
+import { isTenantHost } from '../tenantHost';
 
 function apiUrlToWsOrigin(apiUrl: string): string | null {
   const t = apiUrl.trim();
@@ -37,8 +38,13 @@ export function getWebSocketBaseUrl(): string {
    *
    * trade.speedtrade.tech has its own /ws/ upgrade block proxying to the same
    * gateway, so this changes the hostname the browser dials and nothing else.
+   *
+   * A white-label broker's domain is the same case: its session cookie belongs
+   * to that domain, and its nginx vhost (connect-tenant-domain.sh) carries the
+   * same /ws/ block. Dialling api.tuskaex.com from there sent no cookie, so
+   * /ws/trades closed 4003 and the broker's web terminal never went live.
    */
-  if (isOnTerminalHost()) {
+  if (isOnTerminalHost() || isTenantHost()) {
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     return `${proto}://${window.location.host}`;
   }
