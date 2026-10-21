@@ -20,13 +20,14 @@ from packages.common.src.admin_schemas import (
     MLMConfigOut, MLMConfigIn, UpdateIBCommissionIn, RejectIBIn,
     IBCommissionPlanOut, IBCommissionPlanIn,
 )
-from dependencies import write_audit_log
+from dependencies import write_audit_log, platform_user_ids, assert_platform_client
 
 
 async def list_ib_applications(
     page: int, per_page: int, status_filter: str | None, db: AsyncSession,
 ):
-    query = select(IBApplication)
+    # Platform-only section: a sub-broker's clients are theirs, never listed here.
+    query = select(IBApplication).where(IBApplication.user_id.in_(platform_user_ids()))
     if status_filter:
         query = query.where(IBApplication.status == status_filter)
 
@@ -63,6 +64,7 @@ async def approve_ib_application(
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    await assert_platform_client(app.user_id, db)
     if app.status != "pending":
         raise HTTPException(status_code=400, detail="Application is not pending")
 
@@ -123,6 +125,7 @@ async def reject_ib_application(
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    await assert_platform_client(app.user_id, db)
     if app.status != "pending":
         raise HTTPException(status_code=400, detail="Application is not pending")
 
@@ -140,7 +143,9 @@ async def reject_ib_application(
 
 
 async def list_ib_agents(page: int, per_page: int, db: AsyncSession):
-    query = select(IBProfile).where(IBProfile.is_active == True)
+    query = select(IBProfile).where(
+        IBProfile.is_active == True, IBProfile.user_id.in_(platform_user_ids()),
+    )
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -187,6 +192,7 @@ async def update_ib_commission(
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="IB profile not found")
+    await assert_platform_client(profile.user_id, db)
 
     old_values = {
         "commission_plan_id": str(profile.commission_plan_id) if profile.commission_plan_id else None,
@@ -231,6 +237,7 @@ async def reject_active_ib(
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="IB profile not found")
+    await assert_platform_client(profile.user_id, db)
 
     profile.is_active = False
     profile.rejection_reason = body.reason
@@ -416,7 +423,8 @@ async def list_sub_broker_applications(
     page: int, per_page: int, status_filter: str | None, db: AsyncSession,
 ):
     query = select(IBApplication).where(
-        IBApplication.application_data["type"].as_string() == "sub_broker"
+        IBApplication.application_data["type"].as_string() == "sub_broker",
+        IBApplication.user_id.in_(platform_user_ids()),
     )
     if status_filter:
         query = query.where(IBApplication.status == status_filter)
@@ -452,6 +460,7 @@ async def approve_sub_broker(
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    await assert_platform_client(app.user_id, db)
     if app.status != "pending":
         raise HTTPException(status_code=400, detail="Application is not pending")
 
@@ -488,6 +497,7 @@ async def reject_sub_broker(
     app = result.scalar_one_or_none()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+    await assert_platform_client(app.user_id, db)
     if app.status != "pending":
         raise HTTPException(status_code=400, detail="Not pending")
 
@@ -505,7 +515,10 @@ async def reject_sub_broker(
 
 
 async def list_sub_brokers(page: int, per_page: int, db: AsyncSession):
-    query = select(User).where(User.role == "sub_broker", User.status == "active")
+    query = select(User).where(
+        User.role == "sub_broker", User.status == "active",
+        User.id.in_(platform_user_ids()),
+    )
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -550,6 +563,7 @@ async def set_parent_ib(
     ib = result.scalar_one_or_none()
     if not ib:
         raise HTTPException(status_code=404, detail="IB not found")
+    await assert_platform_client(ib.user_id, db)
 
     old_parent = str(ib.parent_ib_id) if ib.parent_ib_id else None
 
@@ -560,6 +574,7 @@ async def set_parent_ib(
         parent = parent_q.scalar_one_or_none()
         if not parent:
             raise HTTPException(status_code=404, detail="Parent IB not found")
+        await assert_platform_client(parent.user_id, db)
         # Circular check
         check = parent
         for _ in range(20):
@@ -594,6 +609,8 @@ async def move_user_to_ib(
     new_ib = ib_q.scalar_one_or_none()
     if not new_ib:
         raise HTTPException(status_code=404, detail="Target IB not found")
+    await assert_platform_client(new_ib.user_id, db)
+    await assert_platform_client(user_id, db)
 
     ref_q = await db.execute(select(Referral).where(Referral.referred_id == user_id))
     referral = ref_q.scalar_one_or_none()
@@ -618,9 +635,14 @@ async def get_ib_tree(ib_id: uuid.UUID | None, db: AsyncSession) -> list[dict]:
     if ib_id:
         root_q = await db.execute(select(IBProfile).where(IBProfile.id == ib_id))
         root = root_q.scalar_one_or_none()
+        if root:
+            await assert_platform_client(root.user_id, db)
         return [await _build_ib_node(root, db)] if root else []
     roots_q = await db.execute(
-        select(IBProfile).where(IBProfile.parent_ib_id.is_(None), IBProfile.is_active == True)
+        select(IBProfile).where(
+            IBProfile.parent_ib_id.is_(None), IBProfile.is_active == True,
+            IBProfile.user_id.in_(platform_user_ids()),
+        )
         .order_by(IBProfile.created_at))
     return [await _build_ib_node(r, db) for r in roots_q.scalars().all()]
 
@@ -634,7 +656,10 @@ async def _build_ib_node(ib, db: AsyncSession, depth: int = 0) -> dict:
         select(func.count(Referral.id)).where(Referral.ib_profile_id == ib.id)
     )).scalar() or 0
     children_q = await db.execute(
-        select(IBProfile).where(IBProfile.parent_ib_id == ib.id, IBProfile.is_active == True))
+        select(IBProfile).where(
+            IBProfile.parent_ib_id == ib.id, IBProfile.is_active == True,
+            IBProfile.user_id.in_(platform_user_ids()),
+        ))
     children = children_q.scalars().all()
     return {
         "id": str(ib.id), "user_id": str(ib.user_id),
@@ -653,6 +678,7 @@ async def get_unassigned_users(page: int, per_page: int, db: AsyncSession) -> di
     query = select(User).where(
         User.role.notin_(["ib", "sub_broker", "admin", "super_admin", "employee"]),
         not_(User.id.in_(subq)),
+        User.id.in_(platform_user_ids()),
     )
     total = (await db.execute(select(func.count()).select_from(query.subquery()))).scalar() or 0
     result = await db.execute(
@@ -671,11 +697,14 @@ async def get_unassigned_users(page: int, per_page: int, db: AsyncSession) -> di
 
 async def get_ib_referrals(ib_id: uuid.UUID, page: int, per_page: int, db: AsyncSession) -> dict:
     """Traders referred by a specific IB with commission data."""
+    ib_owner = (await db.execute(select(IBProfile.user_id).where(IBProfile.id == ib_id))).scalar_one_or_none()
+    await assert_platform_client(ib_owner, db)
+    in_pool = Referral.referred_id.in_(platform_user_ids())
     total = (await db.execute(
-        select(func.count(Referral.id)).where(Referral.ib_profile_id == ib_id)
+        select(func.count(Referral.id)).where(Referral.ib_profile_id == ib_id, in_pool)
     )).scalar() or 0
     refs = await db.execute(
-        select(Referral).where(Referral.ib_profile_id == ib_id)
+        select(Referral).where(Referral.ib_profile_id == ib_id, in_pool)
         .order_by(Referral.created_at.desc()).offset((page - 1) * per_page).limit(per_page))
     items = []
     for r in refs.scalars().all():
@@ -706,6 +735,8 @@ async def get_ib_commissions(
 ) -> dict:
     """Per-IB commission history. Each row is one IBCommission payout (one MLM-level slice
     of one trade). Joined with the source trader's email so admins can see who generated it."""
+    ib_owner = (await db.execute(select(IBProfile.user_id).where(IBProfile.id == ib_id))).scalar_one_or_none()
+    await assert_platform_client(ib_owner, db)
     query = select(IBCommission).where(IBCommission.ib_id == ib_id)
     if status_filter:
         query = query.where(IBCommission.status == status_filter)
@@ -771,12 +802,14 @@ async def get_ib_commissions(
 
 async def list_masters(page: int, per_page: int, db: AsyncSession) -> dict:
     """List all copy-trade masters (signal_provider, pamm, mamm) with stats."""
-    count_q = await db.execute(select(func.count(MasterAccount.id)))
+    in_pool = MasterAccount.user_id.in_(platform_user_ids())
+    count_q = await db.execute(select(func.count(MasterAccount.id)).where(in_pool))
     total = count_q.scalar() or 0
 
     result = await db.execute(
         select(MasterAccount, User.first_name, User.last_name, User.email)
         .join(User, MasterAccount.user_id == User.id)
+        .where(in_pool)
         .order_by(MasterAccount.created_at.desc())
         .offset((page - 1) * per_page).limit(per_page)
     )
@@ -838,6 +871,7 @@ async def delete_master(
     master = master_q.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master not found")
+    await assert_platform_client(master.user_id, db)
 
     master_acct = await db.get(TradingAccount, master.account_id) if master.account_id else None
     master_user = await db.get(User, master.user_id)

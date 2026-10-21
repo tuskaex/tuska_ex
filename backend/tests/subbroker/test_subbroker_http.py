@@ -188,8 +188,35 @@ def test_client_of_broker_with_live_domain_is_sent_home_from_platform_hosts(gw, 
     assert "different broker" in r.json()["detail"]
 
 
-def test_client_of_broker_without_domain_may_use_platform_hosts(gw, world):
-    assert _login(gw, world["client_b_email"], headers={"X-Forwarded-Host": "tuskaex.com"}).status_code == 200
+def test_client_of_broker_without_domain_is_refused_on_platform_hosts_too(gw, world):
+    # A broker's clients are the broker's alone, live domain or not. Until the
+    # domain is live they sign in through the app with the broker's code.
+    r = _login(gw, world["client_b_email"], headers={"X-Forwarded-Host": "tuskaex.com"})
+    assert r.status_code == 403
+    assert _login(gw, world["client_b_email"], broker_code=world["broker_b_code"]).status_code == 200
+
+
+# ── The platform has no hand in a broker's clients ─────────────────────────
+
+def test_super_admin_cannot_open_or_act_on_a_brokers_client(adm, world):
+    h = admin_headers(world["super"])
+    assert adm.get(f"/api/v1/admin/users/{world['client_a']}", headers=h).status_code == 404
+    assert adm.post(f"/api/v1/admin/users/{world['client_a']}/ban", headers=h).status_code == 404
+    assert sql("SELECT status FROM users WHERE id = :i", i=world["client_a"])[0][0] == "active"
+
+
+def test_super_admin_still_manages_the_platforms_own_clients(adm, world):
+    r = adm.get(f"/api/v1/admin/users/{world['platform_client']}", headers=admin_headers(world["super"]))
+    assert r.status_code == 200, r.text
+
+
+def test_platform_ib_screens_never_offer_a_brokers_client(adm, world):
+    r = adm.get("/api/v1/admin/business/ib/users/unassigned",
+                params={"per_page": 200}, headers=admin_headers(world["super"]))
+    assert r.status_code == 200, r.text
+    ids = {i["user_id"] for i in r.json()["items"]}
+    assert str(world["platform_client"]) in ids
+    assert not ids & {str(world[k]) for k in ("client_a", "client_b", "client_off")}
 
 
 def test_me_reports_the_users_broker(gw, world):

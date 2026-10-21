@@ -274,9 +274,11 @@ def scope_filter(admin: User):
     the house is counterparty to those trades whether or not it can see them.
     Reverting is this function and `scope_user_ids` below.
 
-    Super-admin can still reach an individual tenant client by id
-    (`assert_user_in_scope` lets ADMIN_BYPASS_ROLES through), which keeps a
-    support path open without putting those rows back in every list.
+    Not by id either: assert_user_in_scope and assert_row_in_scope refuse
+    platform staff a tenant client's user or rows with a 404. A sub-broker's
+    clients are that sub-broker's alone. The platform oversees the broker
+    itself from the Sub-brokers screen (sub_admin_service), which is the one
+    deliberate window onto a tenant's pool.
     """
     if admin.role == "sub_admin":
         return User.assigned_admin_id == admin.id
@@ -311,10 +313,35 @@ def scope_user_ids(admin: User | None):
         return None
     if admin.role == "sub_admin":
         return select(User.id).where(User.assigned_admin_id == admin.id).scalar_subquery()
+    return platform_user_ids()
+
+
+def platform_user_ids():
+    """Scalar subquery of the platform's own clients' ids.
+
+    For the platform-only sections (IB, bonuses, social/PAMM, admin audit log),
+    which only platform staff reach and whose services take no caller: they
+    filter to this so a sub-broker's clients never appear there.
+    """
     return select(User.id).where(
         User.assigned_admin_id.is_(None),
         or_(User.role.is_(None), User.role != "sub_admin"),
     ).scalar_subquery()
+
+
+async def assert_platform_client(user_id: uuid.UUID | None, db: AsyncSession) -> None:
+    """404 unless `user_id` is one of the platform's own clients.
+
+    The by-id counterpart of platform_user_ids(), for actions in those same
+    platform-only services (move a user under an IB, approve a master request).
+    """
+    if user_id is None:
+        return
+    assigned = (
+        await db.execute(select(User.assigned_admin_id).where(User.id == user_id))
+    ).scalar_one_or_none()
+    if assigned is not None:
+        raise HTTPException(status_code=404, detail="Not found")
 
 
 async def assert_row_in_scope(
@@ -322,25 +349,33 @@ async def assert_row_in_scope(
     owner_user_id: uuid.UUID | None,
     db: AsyncSession,
 ) -> None:
-    """Refuse a sub_admin reading one row belonging to another tenant's client.
+    """Refuse anyone acting on a row that belongs to another pool's client.
 
     For detail routes keyed by the row's own id (a deposit id, a KYC document
     id, a ticket id) rather than by user_id — the list is filtered, but the
     detail route would otherwise be reachable by guessing the id.
 
+    Both directions: a sub_admin reaches only their own clients' rows, and
+    platform staff reach only the platform's own clients' rows. A sub-broker's
+    clients are managed by that sub-broker alone; the platform has no hand in
+    them (it oversees the broker from the Sub-brokers screen instead).
+
     404, not 403, for the same reason as assert_user_in_scope: a 403 would
     confirm the row exists.
     """
-    if admin is None or admin.role in ADMIN_BYPASS_ROLES:
-        return
-    if admin.role != "sub_admin":
+    if admin is None:
         return
     if owner_user_id is None:
-        raise HTTPException(status_code=404, detail="Not found")
+        if admin.role == "sub_admin":
+            raise HTTPException(status_code=404, detail="Not found")
+        return
     owner = (
         await db.execute(select(User.assigned_admin_id).where(User.id == owner_user_id))
     ).scalar_one_or_none()
-    if owner != admin.id:
+    if admin.role == "sub_admin":
+        if owner != admin.id:
+            raise HTTPException(status_code=404, detail="Not found")
+    elif owner is not None:
         raise HTTPException(status_code=404, detail="Not found")
 
 
@@ -363,7 +398,12 @@ async def assert_user_in_scope(
     if target is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if admin.role in ADMIN_BYPASS_ROLES:
+    if admin.role != "sub_admin":
+        # Platform staff manage the platform's own clients only. A sub-broker's
+        # client belongs to that sub-broker; the platform answers as if the
+        # account did not exist.
+        if target.assigned_admin_id is not None:
+            raise HTTPException(status_code=404, detail="User not found")
         return target
 
     if admin.role == "sub_admin":
@@ -416,16 +456,14 @@ def require_owned_row(permission: str, model_name: str, param: str):
     parameter. `model_name` is resolved lazily against packages.common.src.models
     to keep this module's import graph as it is.
 
-    admin / super_admin skip the lookup entirely — one less query on the hot path
-    and byte-identical behaviour to before white-label existed.
+    Runs for every role: platform staff are held to the platform's own pool
+    the same way a sub_admin is held to theirs (see assert_row_in_scope).
     """
     async def _dep(
         request: Request,
         admin: User = Depends(require_permission(permission, tenant_safe=True)),
         db: AsyncSession = Depends(get_db),
     ) -> User:
-        if admin.role != "sub_admin":
-            return admin
         raw = request.path_params.get(param)
         try:
             row_id = uuid.UUID(str(raw))

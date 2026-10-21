@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.models import BonusOffer, UserBonus, User
 from packages.common.src.admin_schemas import BonusOfferIn, BonusOfferOut, UserBonusOut, PaginatedResponse
-from dependencies import write_audit_log
+from dependencies import write_audit_log, platform_user_ids
 
 
 async def list_bonus_offers(db: AsyncSession) -> list:
@@ -106,7 +106,8 @@ async def list_user_bonuses(
     per_page: int,
     db: AsyncSession,
 ) -> PaginatedResponse:
-    query = select(UserBonus)
+    # A sub-broker's clients' bonuses are theirs; the platform lists its own.
+    query = select(UserBonus).where(UserBonus.user_id.in_(platform_user_ids()))
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 

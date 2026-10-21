@@ -11,7 +11,7 @@ from packages.common.src.models import (
     User, MasterAccount, TradingAccount, InvestorAllocation,
     CopyTrade, TradeHistory, Transaction, Position, AccountGroup,
 )
-from dependencies import write_audit_log
+from dependencies import write_audit_log, platform_user_ids, assert_platform_client
 from packages.common.src.admin_fees import credit_admin_fee
 
 
@@ -23,7 +23,8 @@ async def pamm_analytics(db: AsyncSession) -> dict:
     pamm_result = await db.execute(
         select(MasterAccount, User)
         .join(User, MasterAccount.user_id == User.id)
-        .where(MasterAccount.status == "approved", MasterAccount.master_type == "pamm")
+        .where(MasterAccount.status == "approved", MasterAccount.master_type == "pamm",
+               MasterAccount.user_id.in_(platform_user_ids()))
         .order_by(MasterAccount.created_at.desc())
     )
     pamm_rows = pamm_result.all()
@@ -31,7 +32,8 @@ async def pamm_analytics(db: AsyncSession) -> dict:
     mam_result = await db.execute(
         select(MasterAccount, User)
         .join(User, MasterAccount.user_id == User.id)
-        .where(MasterAccount.status == "approved", MasterAccount.master_type == "mamm")
+        .where(MasterAccount.status == "approved", MasterAccount.master_type == "mamm",
+               MasterAccount.user_id.in_(platform_user_ids()))
         .order_by(MasterAccount.created_at.desc())
     )
     mam_rows = mam_result.all()
@@ -119,6 +121,7 @@ async def distribute_pamm_profit(
     master = master_result.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="PAMM pool not found or not approved")
+    await assert_platform_client(master.user_id, db)
 
     master_pnl_result = await db.execute(
         select(func.coalesce(func.sum(TradeHistory.profit), 0)).where(
@@ -238,7 +241,9 @@ async def distribute_pamm_profit(
 
 
 async def list_master_requests(page: int, per_page: int, db: AsyncSession) -> dict:
-    query = select(MasterAccount).where(MasterAccount.status == "pending")
+    query = select(MasterAccount).where(
+        MasterAccount.status == "pending", MasterAccount.user_id.in_(platform_user_ids()),
+    )
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -287,6 +292,7 @@ async def approve_master_request(
     master = result.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master request not found")
+    await assert_platform_client(master.user_id, db)
     if master.status != "pending":
         raise HTTPException(status_code=400, detail="Request is not pending")
 
@@ -364,6 +370,7 @@ async def reject_master_request(
     master = result.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master request not found")
+    await assert_platform_client(master.user_id, db)
     if master.status != "pending":
         raise HTTPException(status_code=400, detail="Request is not pending")
 
@@ -380,7 +387,10 @@ async def reject_master_request(
 
 
 async def list_masters(page: int, per_page: int, db: AsyncSession) -> dict:
-    query = select(MasterAccount).where(MasterAccount.status.in_(["approved", "active"]))
+    query = select(MasterAccount).where(
+        MasterAccount.status.in_(["approved", "active"]),
+        MasterAccount.user_id.in_(platform_user_ids()),
+    )
     count_q = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_q)).scalar() or 0
 
@@ -495,6 +505,7 @@ async def update_master_settings(
     master = result.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master not found")
+    await assert_platform_client(master.user_id, db)
 
     if admin_commission_pct is not None:
         master.admin_commission_pct = Decimal(str(admin_commission_pct))
@@ -520,6 +531,7 @@ async def delete_master(
     master = result.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master not found")
+    await assert_platform_client(master.user_id, db)
 
     active_inv_q = await db.execute(
         select(func.count()).where(
@@ -577,6 +589,7 @@ async def master_transactions(
     master = master_q.scalar_one_or_none()
     if not master:
         raise HTTPException(status_code=404, detail="Master not found")
+    await assert_platform_client(master.user_id, db)
     if not master.account_id:
         return {
             "items": [], "page": 1, "per_page": per_page, "total": 0, "pages": 0,

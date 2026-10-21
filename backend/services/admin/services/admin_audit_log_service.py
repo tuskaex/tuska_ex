@@ -11,7 +11,7 @@ import logging
 import uuid
 from datetime import date, datetime, time, timezone
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from packages.common.src.models import AuditLog, User
@@ -29,6 +29,10 @@ def _apply_filters(
     date_from: date | None,
     date_to: date | None,
 ):
+    # A sub-broker's actions concern its own clients, which the platform has no
+    # hand in, so the platform's log leaves them out.
+    tenant_operators = select(User.id).where(User.role == "sub_admin").scalar_subquery()
+    stmt = stmt.where(or_(AuditLog.admin_id.is_(None), AuditLog.admin_id.notin_(tenant_operators)))
     if admin_id:
         stmt = stmt.where(AuditLog.admin_id == admin_id)
     if action:

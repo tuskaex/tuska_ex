@@ -53,19 +53,6 @@ def platform_web_hosts() -> set[str]:
     return {tenant_hosts.normalise_host(h) for h in raw.split(",") if h.strip()}
 
 
-async def _tenant_has_live_domain(tenant_id: uuid.UUID, db: AsyncSession) -> bool:
-    try:
-        status = (await db.execute(
-            select(User.custom_domain_status).where(
-                User.id == tenant_id, User.custom_domain.isnot(None),
-            )
-        )).scalar_one_or_none()
-    except Exception:
-        logger.warning("tenant domain lookup failed for %s", tenant_id, exc_info=True)
-        return False
-    return status == "READY"
-
-
 def served_host(request: Request | None) -> str:
     """The hostname this request was served as.
 
@@ -237,18 +224,17 @@ async def assert_login_allowed_on_host(
     accepts every other broker's users, which both leaks the existence of those
     accounts and puts a client on a site that is not their broker's.
 
-    On TuskaEx's own web hosts, a tenant's client whose broker has a live
-    domain is refused: they belong on that domain, not in TuskaEx's user
-    panel. A client whose broker has no live domain yet has nowhere else to
-    sign in, so they are let through. Other hosts (the mobile app on
-    api.tuskaex.com, local dev) are left to the caller's broker_code check.
+    On TuskaEx's own web hosts, a tenant's client is always refused: a
+    sub-broker's clients belong to that sub-broker alone, and the platform has
+    no hand in them. That holds even while the broker's own domain is not live
+    yet; until it is, those clients sign in through the mobile app with the
+    broker's code. Other hosts (the mobile app on api.tuskaex.com, local dev)
+    are left to the caller's broker_code check.
     """
     owner = await find_owner_by_host(request, db)
     if owner is None:
         tenant_id = getattr(user, "assigned_admin_id", None)
-        if tenant_id is None or served_host(request) not in platform_web_hosts():
-            return True
-        return not await _tenant_has_live_domain(tenant_id, db)
+        return tenant_id is None or served_host(request) not in platform_web_hosts()
     if owner.role == "super_admin":
         return True
     if owner.id == user.id:
