@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type InputHTMLAttributes } from 'react';
 import Link from 'next/link';
 import { adminApi } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import {
-  ImagePlus, Loader2, Plus, RefreshCw, Search, ShieldCheck, X,
+  Eye, EyeOff, ImagePlus, Loader2, Plus, RefreshCw, Search, ShieldCheck, X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { PaginatedResponse, SubAdmin } from '@/types';
@@ -371,8 +371,7 @@ export default function SubAdminsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Password (min 8)">
-                  <input
-                    type="password"
+                  <PasswordInput
                     name="new-broker-password"
                     autoComplete="new-password"
                     value={form.password}
@@ -381,8 +380,7 @@ export default function SubAdminsPage() {
                   />
                 </Field>
                 <Field label="Confirm password">
-                  <input
-                    type="password"
+                  <PasswordInput
                     name="new-broker-password-confirm"
                     autoComplete="new-password"
                     value={form.confirm}
@@ -547,6 +545,29 @@ export default function SubAdminsPage() {
 
 const inputCls =
   'w-full px-2.5 py-1.5 text-xs rounded-md bg-bg-tertiary border border-border-primary text-text-primary';
+
+/** Password field with an eye toggle, so the operator can check what they
+ *  typed before handing the broker their login. Each field keeps its own
+ *  toggle. */
+function PasswordInput({
+  className, ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input {...props} type={show ? 'text' : 'password'} className={cn(className, 'pr-8')} />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        aria-label={show ? 'Hide password' : 'Show password'}
+        title={show ? 'Hide password' : 'Show password'}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary transition-colors"
+      >
+        {show ? <EyeOff size={14} /> : <Eye size={14} />}
+      </button>
+    </div>
+  );
+}
 
 /* Sections that cannot be delegated are shown, not hidden: the operator is
  * looking at their own sidebar and asking which of it they can hand over, and a
