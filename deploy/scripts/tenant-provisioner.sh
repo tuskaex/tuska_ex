@@ -21,7 +21,9 @@ CONNECT="$DIR/deploy/scripts/connect-tenant-domain.sh"
 STATE_DIR=/var/lib/tuskaex-tenants
 WEBROOT=/var/www/certbot
 NGINX_ENABLED=/etc/nginx/sites-enabled
-env_val() { sed -n "s/^$1=//p" "$DIR/.env" 2>/dev/null | tail -1 | tr -d "\"' "; }
+# \r too: a .env written on Windows has CRLF endings, and a stray \r made the
+# role "tuskaex\r", so every run logged "database unreachable".
+env_val() { sed -n "s/^$1=//p" "$DIR/.env" 2>/dev/null | tail -1 | tr -d "\"' \r"; }
 PG_USER="$(env_val POSTGRES_USER)"; PG_DB="$(env_val POSTGRES_DB)"
 PG="docker exec ${PG_CONTAINER:-tuskaex-postgres-1} psql -U ${PG_USER:-tuskaex} -d ${PG_DB:-tuskaex} -tA -v ON_ERROR_STOP=1"
 RETRY_AFTER_FAIL=1200   # seconds between certificate attempts for one domain
@@ -100,7 +102,7 @@ while IFS='|' read -r DOMAIN APP ADMIN; do
       printf 'sig=%s\ncertnames=%s\nlastfail=%s\n' "$SIG" "$CERT_NAMES" "$LAST_FAIL" > "$STATE"
       continue
     fi
-    IP=$(sed -n 's/^PLATFORM_PUBLIC_IP=//p' "$DIR/.env" 2>/dev/null | tr -d "\"' ")
+    IP=$(env_val PLATFORM_PUBLIC_IP)
     [ -n "$IP" ] || IP="the platform IP"
     set_note "$DOMAIN" "Waiting for DNS: add A records for ${NAMES[*]} pointing to $IP."
     printf 'sig=%s\ncertnames=%s\nlastfail=%s\n' "$SIG" "$CERT_NAMES" "$LAST_FAIL" > "$STATE"
