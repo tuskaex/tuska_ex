@@ -251,6 +251,10 @@ server {
     ssl_certificate     ${CERT};
     ssl_certificate_key ${CERT_KEY};
     ssl_protocols       TLSv1.2 TLSv1.3;
+    # Same as the trader block above. Without these two Cloudflare's handshake
+    # fails with "bad cipher" and the broker's admin panel answers 525.
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
 
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
