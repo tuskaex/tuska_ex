@@ -1,4 +1,5 @@
 """TuskaEx-specific values in the ported white-label code."""
+import asyncio
 from types import SimpleNamespace
 
 from packages.common.src import push, smtp_mail, tenant_brand
@@ -65,3 +66,13 @@ def test_push_scrubber_matches_platform_and_terminal_names():
     for name in ("TuskaEx", "TUSKAEX", "SpeedTrade", "SpeedTrader"):
         assert push._PLATFORM_NAME_RE.fullmatch(name), name
     assert push._PLATFORM_NAME_RE.sub("Alpha", "Your SpeedTrader order on TuskaEx") == "Your Alpha order on Alpha"
+
+
+def test_tenant_branded_email_is_not_sent_while_tenant_email_is_off(monkeypatch):
+    sent = []
+    monkeypatch.setattr(smtp_mail, "_send_sync", lambda *a, **k: sent.append(a))
+    brand = smtp_mail.Brand(name="Alpha Markets", inline_logo=False, site_url=None,
+                            admin_url=None, support_email=None)
+    ok = asyncio.run(smtp_mail.send_email("client@alpha.example", "Hi", "<p>x</p>", brand=brand))
+    assert ok is False
+    assert sent == []

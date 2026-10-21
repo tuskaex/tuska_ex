@@ -1,4 +1,6 @@
 """Sub-broker / white-label behaviour, end to end over HTTP."""
+import secrets
+
 import pytest
 
 from conftest import PASSWORD, admin_headers, sql, user_headers
@@ -243,3 +245,19 @@ def test_active_tenant_domain_passes_cors(gw, world):
 def test_suspended_tenant_domain_is_not_allowed_by_cors(gw, world):
     r = _preflight(gw, "https://gone-sbt.example")
     assert r.headers.get("access-control-allow-origin") != "https://gone-sbt.example"
+
+
+# ── Tenant email switched off ──────────────────────────────────────────────
+
+def test_signup_into_a_brokers_pool_needs_no_emailed_code(gw, world):
+    # No OTP can be mailed to a broker's client, so the account is created on
+    # the first step, verified, in the broker's pool, and can sign in at once.
+    email = f"sbt-signup-{secrets.token_hex(4)}@example.com"
+    r = gw.post("/api/v1/auth/register/start", json={
+        "email": email, "password": PASSWORD, "first_name": "New", "last_name": "Client",
+        "referral_code": world["broker_b_code"],
+    })
+    assert r.status_code in (200, 201), r.text
+    row = sql("SELECT email_verified, assigned_admin_id FROM users WHERE email = :e", e=email)
+    assert row and row[0][0] is True and row[0][1] == world["broker_b"]
+    assert _login(gw, email, broker_code=world["broker_b_code"]).status_code == 200

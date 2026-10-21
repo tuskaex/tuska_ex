@@ -229,6 +229,22 @@ async def start_pending_registration(
         "code_is_tenant": _code_is_tenant,
     }
 
+    # Joining a sub-broker's pool while tenant email is switched off: no OTP can
+    # be mailed (send_email skips every tenant recipient), so the second step
+    # could never complete. Create the account now, verified, the same way the
+    # verification-off branch above does. register_user attributes the tenant
+    # itself.
+    from packages.common.src.config import get_settings
+    if _owner_id is not None and not get_settings().TENANT_EMAIL_ENABLED:
+        from .auth_service import register_user
+
+        return await register_user(
+            email=email_lower, password=password,
+            first_name=first_name, last_name=last_name,
+            phone=phone, country=country, referral_code=referral_code,
+            request=request, db=db, mark_email_verified=True,
+        )
+
     # Idempotency cooldown: a duplicate /register/start for the same email
     # within this window (double-click, client retry while the SMTP send is
     # still in flight, back-then-submit) must NOT mint + email a second OTP.

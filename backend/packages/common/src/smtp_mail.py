@@ -321,9 +321,16 @@ async def send_email(
 
     Any non-platform brand (resolved here or passed explicitly) has the copy
     rewritten by _rebrand before sending."""
+    tenant_mail_off = not get_settings().TENANT_EMAIL_ENABLED
+    if tenant_mail_off and brand is not None and not brand.is_platform:
+        logger.info("tenant email switched off — skipping email to %s subj=%r", to_email, subject)
+        return False
     if smtp is None and brand is None:
         tenant = await _tenant_identity_for_recipient(to_email)
         if tenant is not None:
+            if tenant_mail_off:
+                logger.info("tenant email switched off — skipping email to %s subj=%r", to_email, subject)
+                return False
             smtp, brand = tenant
             if brand is None:
                 logger.warning(

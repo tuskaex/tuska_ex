@@ -198,6 +198,13 @@ class Settings(BaseSettings):
     # That is the intended behaviour (a broker's mail must never leave another
     # broker's address) but it is a visible change, so it is opt-in.
     BRANDING_ENABLED: bool = False
+    # Email to white-label sub-brokers and their clients. OFF: nothing is sent to
+    # a broker or to anyone in a broker's pool, from any account — no OTP, no
+    # welcome, no deposit/KYC/statement mail (smtp_mail.send_email skips them),
+    # and a sign-up on a broker's site is created already verified because no
+    # code can be mailed. Turned off by the owner on 2026-10-21; set true to
+    # bring tenant mail back.
+    TENANT_EMAIL_ENABLED: bool = False
     # Tenant logos. Served through a media route, never as static files.
     BRANDING_UPLOAD_DIR: str = "uploads/branding"
     # The A-record target a tenant points their domain at. Shown verbatim in the
