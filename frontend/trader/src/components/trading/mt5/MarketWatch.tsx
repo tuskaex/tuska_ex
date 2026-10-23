@@ -318,6 +318,31 @@ function TicksTab({ symbol, tick, digits }: { symbol: string; tick?: TickData; d
   );
 }
 
+/* Market Watch groups. Segments come from the admin's instrument setup, where
+ * gold and silver usually sit under "commodities" next to oil, so metals and
+ * energy are recognised by symbol first and the segment decides the rest. */
+const GROUP_ORDER = ['Forex', 'Metals', 'Energy', 'Indices', 'Crypto', 'Stocks', 'Commodities'];
+const METAL_SYMBOL = /^(XAU|XAG|XPT|XPD|XCU|XAL|XNI|XPB|XZN|COPPER)/;
+const ENERGY_SYMBOL = /^(USOIL|UKOIL|WTI|BRENT|XTI|XBR|NATGAS|NGAS|XNG)/;
+
+function symbolGroup(inst: { symbol: string; segment?: string | null }): string {
+  const s = inst.symbol.toUpperCase();
+  const seg = (inst.segment || '').toLowerCase();
+  if (METAL_SYMBOL.test(s) || seg.includes('metal')) return 'Metals';
+  if (ENERGY_SYMBOL.test(s) || seg.startsWith('energ')) return 'Energy';
+  if (seg.includes('forex') || seg === 'fx') return 'Forex';
+  if (seg.includes('indic') || seg.includes('index')) return 'Indices';
+  if (seg.includes('crypto')) return 'Crypto';
+  if (seg.includes('stock') || seg.includes('share') || seg.includes('equit')) return 'Stocks';
+  if (seg.includes('commodit')) return 'Commodities';
+  return seg ? seg.charAt(0).toUpperCase() + seg.slice(1) : 'Other';
+}
+
+function groupRank(group: string): number {
+  const i = GROUP_ORDER.indexOf(group);
+  return i === -1 ? GROUP_ORDER.length : i;
+}
+
 export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
   const instruments = useTradingStore((s) => s.instruments);
   const prices = useTradingStore((s) => s.prices);
@@ -328,10 +353,9 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
 
   const [tab, setTab] = useState<MarketWatchTab>('symbols');
   const [query, setQuery] = useState('');
-  /* MT5 opens with a short curated list and "Show all" reveals the rest. The
-   * default here is the user's watchlist for the same reason: 100+ rows of
-   * instruments they do not trade is not a market watch. */
-  const [showAll, setShowAll] = useState(false);
+  /* 'all', 'watchlist', or a group name from symbolGroup(). Opens on every
+   * symbol; the dropdown narrows it to one asset type or the watchlist. */
+  const [filter, setFilter] = useState<string>('all');
   const [clock, setClock] = useState('');
 
   /* The caption clock. MetaTrader shows the SERVER time there, and this
@@ -345,11 +369,34 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
     return () => clearInterval(id);
   }, []);
 
+  /* The groups actually present, in GROUP_ORDER, with their symbol counts. */
+  const groups = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const i of instruments) {
+      const g = symbolGroup(i);
+      counts.set(g, (counts.get(g) || 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => groupRank(a[0]) - groupRank(b[0]) || a[0].localeCompare(b[0]));
+  }, [instruments]);
+
+  /* A group that disappears (admin deactivated its last symbol) falls back
+   * to everything rather than an empty list. */
+  useEffect(() => {
+    if (filter !== 'all' && filter !== 'watchlist' && !groups.some(([g]) => g === filter)) {
+      setFilter('all');
+    }
+  }, [filter, groups]);
+
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = showAll || q !== ''
-      ? instruments
-      : instruments.filter((i) => watchlist.includes(i.symbol));
+    let base = instruments;
+    if (filter === 'watchlist') {
+      /* Typing searches every symbol, so one outside the watchlist can be
+       * found and added from here. */
+      if (q === '') base = instruments.filter((i) => watchlist.includes(i.symbol));
+    } else if (filter !== 'all') {
+      base = instruments.filter((i) => symbolGroup(i) === filter);
+    }
     const list = q === ''
       ? base
       : base.filter(
@@ -358,12 +405,15 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
             (i.display_name || '').toLowerCase().includes(q) ||
             (i.segment || '').toLowerCase().includes(q),
         );
-    /* Grouped by segment then alphabetical, which is how MetaTrader orders
+    /* Grouped by asset type then alphabetical, which is how MetaTrader orders
      * Market Watch once you stop dragging rows around by hand. */
     return [...list].sort(
-      (a, b) => (a.segment || '').localeCompare(b.segment || '') || a.symbol.localeCompare(b.symbol),
+      (a, b) =>
+        groupRank(symbolGroup(a)) - groupRank(symbolGroup(b)) ||
+        symbolGroup(a).localeCompare(symbolGroup(b)) ||
+        a.symbol.localeCompare(b.symbol),
     );
-  }, [instruments, watchlist, query, showAll]);
+  }, [instruments, watchlist, query, filter]);
 
   const selectedInst = useMemo(
     () => instruments.find((i) => i.symbol === selectedSymbol),
@@ -410,15 +460,19 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
                 className="w-full !pl-5"
               />
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAll((v) => !v)}
-              aria-pressed={showAll}
-              className="mt5-tbtn"
-              title={showAll ? 'Show only my watchlist' : 'Show all symbols'}
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              aria-label="Symbol type"
+              title="Show one type of symbol"
+              className="w-[6.5rem] shrink-0"
             >
-              {showAll ? 'Mine' : 'All'}
-            </button>
+              <option value="all">All ({instruments.length})</option>
+              <option value="watchlist">My watchlist ({watchlist.filter((s) => instruments.some((i) => i.symbol === s)).length})</option>
+              {groups.map(([g, n]) => (
+                <option key={g} value={g}>{g} ({n})</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex-1 min-h-0 overflow-auto">
@@ -445,7 +499,9 @@ export default function MarketWatch({ onNewOrder, onClose }: MarketWatchProps) {
                 {rows.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-2 py-3 text-center text-text-tertiary">
-                      {query ? `No symbol matches "${query}"` : 'No symbols'}
+                      {query
+                        ? `No symbol matches "${query}"`
+                        : filter === 'watchlist' ? 'Your watchlist is empty' : 'No symbols'}
                     </td>
                   </tr>
                 )}
