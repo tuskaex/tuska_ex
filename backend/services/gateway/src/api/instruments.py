@@ -11,7 +11,7 @@ from packages.common.src.redis_client import redis_client
 from packages.common.src.schemas import InstrumentResponse, TickData
 from packages.common.src.instrumentation import get_rate_limiter
 from packages.common.src.config import get_settings
-from packages.common.src import bars_store, infoway_history
+from packages.common.src import bars_store, infoway_history, yahoo_history
 from ..services import instrument_service
 
 router = APIRouter()
@@ -152,6 +152,18 @@ async def get_price(symbol: str):
     return await instrument_service.get_price(symbol=symbol)
 
 
+async def _live_mid(sym: str) -> float | None:
+    """Mid of the latest live tick in Redis, or None."""
+    try:
+        raw = await redis_client.get(f"tick:{sym}")
+        if raw:
+            t = _json.loads(raw)
+            return (float(t["bid"]) + float(t["ask"])) / 2.0
+    except Exception:
+        pass
+    return None
+
+
 async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int | None) -> list[dict]:
     """Pull historical bars from the market-data SOURCE for a (symbol, tf).
     Crypto → Binance (keyless, reliable); everything else → Infoway history.
@@ -168,6 +180,18 @@ async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int 
                 result = await infoway_history.fetch_infoway_klines(key, sym, tf, count=500, end_ts=int(end_ts))
             else:
                 result = await infoway_history.backfill_infoway(key, sym, tf, target_bars=2000)
+        # No Infoway (e.g. live prices come from PrimeXM FIX, which has no
+        # history API) → Yahoo, keyless. Futures-based symbols are shifted to
+        # the live spot mid so history meets the live candle.
+        if not result and yahoo_history.yahoo_supports(tf):
+            result = await yahoo_history.fetch_yahoo_bars(
+                sym, tf, count=2000 if not end_ts else 500,
+                end_ts=int(end_ts) if end_ts else None,
+                live_mid=await _live_mid(sym),
+            )
+            # The forming bar belongs to the live aggregator, not the backfill.
+            slot = (int(_time.time()) // bars_store.TF_SECONDS.get(tf, 300)) * bars_store.TF_SECONDS.get(tf, 300)
+            result = [b for b in result if b["time"] < slot]
 
     # Guaranteed fallback: build history from our OWN TimescaleDB tick feed when
     # the external source returns nothing (Binance geo-block / Infoway REST).

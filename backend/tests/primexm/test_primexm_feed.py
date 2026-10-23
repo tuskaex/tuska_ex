@@ -131,3 +131,20 @@ def test_symbol_mapping():
     assert feed.to_platform("XNG/USD", aliases) == "NGAS"
     assert feed.guess_pxm_name("GBPJPY", aliases) == "GBP/JPY"
     assert feed.guess_pxm_name("USOIL", aliases) == "XTI/USD"
+
+
+def test_yahoo_history_mapping_and_resample():
+    spec = importlib.util.spec_from_file_location(
+        "yahoo_history", _FEED.parents[3] / "packages" / "common" / "src" / "yahoo_history.py")
+    yh = importlib.util.module_from_spec(spec)
+    sys.modules["yahoo_history"] = yh
+    spec.loader.exec_module(yh)
+    assert yh.yahoo_ticker("EURUSD") == "EURUSD=X"
+    assert yh.yahoo_ticker("XAUUSD") == "GC=F"
+    assert yh.yahoo_ticker("GER40") == "^GDAXI"
+    assert yh.yahoo_ticker("AAPL") == "AAPL"
+    one_h = [{"time": 3600 * h, "open": h, "high": h + 1, "low": h - 1, "close": h + 0.5, "volume": 1.0}
+             for h in range(8)]
+    four_h = yh._resample(one_h, 14400)
+    assert [b["time"] for b in four_h] == [0, 14400]
+    assert four_h[0] == {"time": 0, "open": 0, "high": 4, "low": -1, "close": 3.5, "volume": 4.0}
