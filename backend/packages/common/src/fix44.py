@@ -223,7 +223,7 @@ class FixSession:
                 raise
             except Exception as exc:
                 if self._running:  # not just our own stop() closing the socket
-                    self._log.warning("session error: %s", exc)
+                    self._log.warning("session error: %s", str(exc) or repr(exc))
             finally:
                 await self._close()
             if not self._running:
@@ -266,9 +266,16 @@ class FixSession:
             ssl_ctx.verify_mode = ssl.CERT_NONE
             ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         self._log.info("connecting to %s:%s", self.host, self.port)
-        reader, writer = await asyncio.wait_for(
-            asyncio.open_connection(self.host, self.port, ssl=ssl_ctx), timeout=15
-        )
+        try:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(self.host, self.port, ssl=ssl_ctx), timeout=15
+            )
+        except asyncio.TimeoutError:
+            # Live LP endpoints drop packets from IPs they haven't whitelisted.
+            raise ConnectionError(
+                f"no TCP answer from {self.host}:{self.port} in 15s — "
+                "is this server's public IP whitelisted with the LP?"
+            ) from None
         self._writer = writer
         self._logon_event.clear()
         self.logged_on = False
