@@ -22,6 +22,7 @@ from .feed_handler import FeedSimulator, INSTRUMENTS, LIVE_CRYPTO_SYMBOLS
 from .infoway_config import usable_infoway_api_key
 from .infoway_feed import InfowayFeed
 from .corecen_lp_feed import CorecenLPFeed
+from .primexm_feed import PrimeXMFeed, parse_aliases
 from .bar_aggregator import BarAggregator
 from .seed_bars import seed as seed_bars
 from .spread_cache import StreamSpreadCache, RELOAD_INTERVAL_SEC
@@ -65,6 +66,20 @@ class MarketDataService:
                 )
             self.feed = CorecenLPFeed()
             logger.info("Price feed: Corecen LP (receiving pushes on /api/lp/prices/batch)")
+        elif settings.PRIMEXM_PRICING_ENABLED and self._primexm_configured():
+            self.feed = PrimeXMFeed(
+                host=settings.PRIMEXM_PRICING_HOST,
+                port=settings.PRIMEXM_PRICING_PORT,
+                sender_comp_id=settings.PRIMEXM_PRICING_SENDER_COMP_ID,
+                target_comp_id=settings.PRIMEXM_PRICING_TARGET_COMP_ID,
+                username=settings.PRIMEXM_PRICING_USERNAME,
+                password=settings.PRIMEXM_PRICING_PASSWORD,
+                use_ssl=settings.PRIMEXM_PRICING_SSL,
+                heartbeat_sec=settings.PRIMEXM_HEARTBEAT_SEC,
+                symbols=lambda: set(INSTRUMENTS) | set(self.spread_cache.symbols()),
+                extra_aliases=parse_aliases(settings.PRIMEXM_SYMBOL_ALIASES),
+            )
+            logger.info("Price feed: PrimeXM FIX 4.4 (%s)", settings.PRIMEXM_PRICING_HOST)
         elif usable_infoway_api_key(raw_key):
             self.feed = InfowayFeed(raw_key, INSTRUMENTS)
             self._infoway_watchdog_armed = True
@@ -103,6 +118,29 @@ class MarketDataService:
         # (Infoway) — drives the mid-flight reconnect watchdog below.
         self._last_feed_tick_mono: float = time.monotonic()
 
+    @staticmethod
+    def _primexm_configured() -> bool:
+        missing = [
+            name for name in (
+                "PRIMEXM_PRICING_HOST", "PRIMEXM_PRICING_PORT",
+                "PRIMEXM_PRICING_SENDER_COMP_ID", "PRIMEXM_PRICING_TARGET_COMP_ID",
+                "PRIMEXM_PRICING_USERNAME", "PRIMEXM_PRICING_PASSWORD",
+            )
+            if not getattr(settings, name)
+        ]
+        if missing:
+            logger.error(
+                "PRIMEXM_PRICING_ENABLED=true but %s not set — falling back to the next feed.",
+                ", ".join(missing),
+            )
+        return not missing
+
+    def _binance_side_feed_wanted(self) -> bool:
+        # Infoway's crypto ticks are slow and PrimeXM offers BTC only, so both
+        # get Binance crypto alongside. The crypto-only FeedSimulator runs its
+        # own Binance feed, and Corecen pushes its own crypto.
+        return isinstance(self.feed, (InfowayFeed, PrimeXMFeed))
+
     async def start(self):
         logger.info("Starting Market Data Service...")
 
@@ -133,8 +171,9 @@ class MarketDataService:
         # Infoway's crypto socket ticks only every few seconds, which made BTC
         # P&L crawl. Pull crypto from Binance's public trade stream ALONGSIDE
         # Infoway (many ticks/sec) — same fix as the sibling platform.
-        if isinstance(self.feed, InfowayFeed):
+        if self._binance_side_feed_wanted():
             tasks.append(asyncio.create_task(self._binance_crypto_feed()))
+        if isinstance(self.feed, InfowayFeed):
             tasks.append(asyncio.create_task(self._feed_reconnect_watchdog()))
 
         await asyncio.gather(*tasks)
@@ -352,13 +391,13 @@ class MarketDataService:
         url = f"{BINANCE_WS}/{'/'.join(streams)}"
         # Stop if the watchdog swaps the primary feed to FeedSimulator, which
         # runs its OWN Binance feed — else we'd double-publish crypto.
-        while self.running and isinstance(self.feed, InfowayFeed):
+        while self.running and self._binance_side_feed_wanted():
             try:
-                logger.info("Binance crypto feed connecting (alongside Infoway)")
+                logger.info("Binance crypto feed connecting (alongside %s)", type(self.feed).__name__)
                 async with _ws.connect(url, ping_interval=20, ping_timeout=10) as ws:
                     logger.info("Binance crypto feed connected — live crypto prices active")
                     async for raw in ws:
-                        if not self.running or not isinstance(self.feed, InfowayFeed):
+                        if not self.running or not self._binance_side_feed_wanted():
                             break
                         try:
                             data = json.loads(raw)

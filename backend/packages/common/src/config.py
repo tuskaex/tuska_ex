@@ -126,6 +126,22 @@ class Settings(BaseSettings):
     # Reject pushes older than this many ms (same tolerance as Corecen's HMAC middleware).
     CORECEN_LP_TIMESTAMP_TOLERANCE_MS: int = 60_000
 
+    # PrimeXM XCore pricing over FIX 4.4. When enabled (and Corecen LP is not),
+    # market-data streams quotes from this session instead of Infoway. Values
+    # come from the "Pricing" block of PrimeXM's connection JSON. Live crypto
+    # beyond BTC still comes from Binance alongside it.
+    PRIMEXM_PRICING_ENABLED: bool = False
+    PRIMEXM_PRICING_HOST: str = ""            # SocketConnectHost
+    PRIMEXM_PRICING_PORT: int = 0             # SocketConnectPort
+    PRIMEXM_PRICING_SENDER_COMP_ID: str = ""  # SenderCompID
+    PRIMEXM_PRICING_TARGET_COMP_ID: str = ""  # TargetCompID
+    PRIMEXM_PRICING_USERNAME: str = ""        # LoginUsername
+    PRIMEXM_PRICING_PASSWORD: str = ""        # LoginPassword
+    PRIMEXM_PRICING_SSL: bool = False         # SocketUseSSL
+    PRIMEXM_HEARTBEAT_SEC: int = 30
+    # Extra PrimeXM-name → platform-symbol pairs, e.g. "XNG/USD=NGAS,DE30=GER40".
+    PRIMEXM_SYMBOL_ALIASES: str = ""
+
     # Corecen Broker API (A-Book trade forwarding). When an A-Book user opens/closes
     # a position, TuskaEx pushes the trade to Corecen's broker API for LP routing.
     # These credentials are the API key/secret registered in Corecen's admin panel

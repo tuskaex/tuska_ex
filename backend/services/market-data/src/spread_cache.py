@@ -95,6 +95,10 @@ class StreamSpreadCache:
             except Exception as exc:
                 logger.warning("Spread cache reload failed: %s", exc)
 
+    def symbols(self) -> list[str]:
+        """Active instrument symbols as of the last reload."""
+        return list(self._params)
+
     def widen(self, symbol: str, bid: float, ask: float) -> Tuple[float, float]:
         """Apply the admin spread when configured; otherwise return a 0 spread.
 
