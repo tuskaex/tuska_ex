@@ -283,6 +283,7 @@ class PrimeXMFeed:
 
     # ── subscribing ───────────────────────────────────────────────────
     async def _subscribe(self, pxm_names: Iterable[str]) -> None:
+        pxm_names = list(pxm_names)
         wanted = {s.strip().upper() for s in self._wanted() if s}
         chosen: Dict[str, str] = {}
         for name in pxm_names:
@@ -302,6 +303,11 @@ class PrimeXMFeed:
             "PrimeXM: subscribed %d symbol(s); %d platform symbol(s) not offered by this taker%s",
             len(chosen), len(missing), f": {', '.join(missing)}" if missing else "",
         )
+        unused = sorted(set(pxm_names) - set(chosen))
+        if missing and unused:
+            # Usually the same instrument under another name (e.g. a DAX
+            # offered as "GER30"): map it with PRIMEXM_SYMBOL_ALIASES.
+            logger.info("PrimeXM: offered but not mapped to a platform symbol: %s", ", ".join(unused))
 
     async def _fallback_subscribe(self) -> None:
         await asyncio.sleep(SECURITY_LIST_WAIT_SEC)

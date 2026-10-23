@@ -25,6 +25,8 @@ BINANCE_MAP = {
     "ltcusdt": "LTCUSD",
     "xrpusdt": "XRPUSD",
     "solusdt": "SOLUSD",
+    "adausdt": "ADAUSD",
+    "dogeusdt": "DOGEUSD",
 }
 LIVE_CRYPTO_SYMBOLS = set(BINANCE_MAP.values())
 
