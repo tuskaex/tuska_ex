@@ -102,3 +102,25 @@ async def aggregate_ticks_to_bars(
         except (TypeError, ValueError):
             continue
     return out
+
+
+async def mid_at(symbol: str, ts: int, max_age_sec: int = 120) -> float | None:
+    """Mid of our own last recorded tick at or before `ts` (epoch seconds), if
+    one exists within `max_age_sec` of it. None when there's no such tick."""
+    sql = text(
+        """
+        SELECT (bid + ask) / 2.0 FROM ticks
+        WHERE symbol = :sym
+          AND time <= to_timestamp(:ts)
+          AND time >= to_timestamp(:ts) - make_interval(secs => :age)
+        ORDER BY time DESC LIMIT 1
+        """
+    )
+    try:
+        Session = _session_maker()
+        async with Session() as s:
+            row = (await s.execute(sql, {"sym": symbol.upper(), "ts": int(ts), "age": int(max_age_sec)})).first()
+    except Exception as e:
+        logger.warning("mid_at lookup failed for %s @%s: %s", symbol, ts, e)
+        return None
+    return float(row[0]) if row and row[0] is not None else None

@@ -148,3 +148,47 @@ def test_yahoo_history_mapping_and_resample():
     four_h = yh._resample(one_h, 14400)
     assert [b["time"] for b in four_h] == [0, 14400]
     assert four_h[0] == {"time": 0, "open": 0, "high": 4, "low": -1, "close": 3.5, "volume": 4.0}
+
+
+def test_yahoo_drops_forming_and_stub_bars_and_shifts_at_as_of():
+    import asyncio
+    import httpx
+
+    yh = sys.modules.get("yahoo_history")
+    if yh is None:
+        test_yahoo_history_mapping_and_resample()
+        yh = sys.modules["yahoo_history"]
+    yh._basis_cache.clear()
+    # Shape of the real GC=F reply at 14:28 UTC: data as of 14:18:09, a
+    # closed 14:10 bar, a forming 14:15 bar and a flat 14:18 stub.
+    base = 1792764000  # 14:00:00 UTC, on the 5m grid
+    as_of = base + 18 * 60 + 9
+    payload = {"chart": {"result": [{
+        "meta": {"regularMarketTime": as_of, "regularMarketPrice": 4011.5},
+        "timestamp": [base + 600, base + 900, base + 1080],
+        "indicators": {"quote": [{
+            "open": [4027.4, 4021.5, 4011.5], "high": [4027.4, 4022.6, 4011.5],
+            "low": [4020.5, 4007.0, 4011.5], "close": [4021.7, 4007.6, 4011.5],
+            "volume": [2442, 2595, 0],
+        }]},
+    }]}}
+    client = httpx.AsyncClient(transport=httpx.MockTransport(lambda req: httpx.Response(200, json=payload)))
+    asked = []
+
+    async def mid_at(ts):
+        asked.append(ts)
+        return 3995.5  # our feed's mid at Yahoo's as_of
+
+    async def run():
+        orig = yh.time.time
+        yh.time.time = lambda: as_of + 600  # "now" = 14:28
+        try:
+            return await yh.fetch_yahoo_bars("XAUUSD", "5m", count=10, live_mid_at=mid_at,
+                                             live_mid_now=3990.0, client=client)
+        finally:
+            yh.time.time = orig
+
+    bars = asyncio.run(run())
+    assert [b["time"] for b in bars] == [base + 600]   # forming 14:15 and stub 14:18 dropped
+    assert asked == [as_of]                             # basis read at Yahoo's own time
+    assert abs(bars[0]["close"] - (4021.7 + 3995.5 - 4011.5)) < 1e-9

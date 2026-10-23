@@ -164,12 +164,15 @@ async def _live_mid(sym: str) -> float | None:
     return None
 
 
-async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int | None) -> list[dict]:
+async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int | None) -> tuple[list[dict], bool]:
     """Pull historical bars from the market-data SOURCE for a (symbol, tf).
-    Crypto → Binance (keyless, reliable); everything else → Infoway history.
-    `end_ts` (unix seconds) requests OLDER data ending there (scroll-back);
-    None fetches the most-recent deep window (first-time seed)."""
+    Crypto → Binance (keyless, reliable); everything else → Infoway history,
+    then Yahoo. `end_ts` (unix seconds) requests OLDER data ending there
+    (scroll-back); None fetches the most-recent deep window (first-time seed).
+    Returns (bars, overwrite): overwrite=False means the bars may only fill
+    empty slots, never replace candles already stored."""
     result: list = []
+    source_overwrites = True
     if sym in _BINANCE_PAIRS:
         # Binance uses from/to; for scroll-back cap the window at end_ts.
         result = await _fetch_binance_klines(sym, resolution, 0, int(end_ts or 0))
@@ -184,14 +187,18 @@ async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int 
         # history API) → Yahoo, keyless. Futures-based symbols are shifted to
         # the live spot mid so history meets the live candle.
         if not result and yahoo_history.yahoo_supports(tf):
+            from ..services import timescale_bars
+
+            async def _mid_at(ts: int) -> float | None:
+                return await timescale_bars.mid_at(sym, ts)
+
+            # Closed bars only (Yahoo drops its forming/delayed ones itself).
             result = await yahoo_history.fetch_yahoo_bars(
                 sym, tf, count=2000 if not end_ts else 500,
                 end_ts=int(end_ts) if end_ts else None,
-                live_mid=await _live_mid(sym),
+                live_mid_at=_mid_at, live_mid_now=await _live_mid(sym),
             )
-            # The forming bar belongs to the live aggregator, not the backfill.
-            slot = (int(_time.time()) // bars_store.TF_SECONDS.get(tf, 300)) * bars_store.TF_SECONDS.get(tf, 300)
-            result = [b for b in result if b["time"] < slot]
+            source_overwrites = False
 
     # Guaranteed fallback: build history from our OWN TimescaleDB tick feed when
     # the external source returns nothing (Binance geo-block / Infoway REST).
@@ -210,7 +217,7 @@ async def _fetch_history_source(sym: str, tf: str, resolution: str, end_ts: int 
     # offset grid. Idempotent for already-aligned bars.
     if result:
         result = bars_store.grid_snap(result, bars_store.TF_SECONDS.get(tf, 300))
-    return result
+    return result, source_overwrites
 
 
 # Track in-flight background backfills so a burst of chart requests for the
@@ -231,9 +238,9 @@ def _schedule_bg_backfill(sym: str, tf: str, resolution: str) -> None:
     async def _run() -> None:
         try:
             async with AsyncSessionLocal() as bg_db:
-                src = await _fetch_history_source(sym, tf, resolution, None)
+                src, overwrite = await _fetch_history_source(sym, tf, resolution, None)
                 if src:
-                    await bars_store.upsert_bars(bg_db, sym, tf, src)
+                    await bars_store.upsert_bars(bg_db, sym, tf, src, overwrite=overwrite)
                     await bg_db.commit()
         except Exception as e:
             _logger.warning("bg bars backfill failed for %s %s: %s", sym, tf, e)
@@ -319,10 +326,10 @@ async def get_bars(
                 if need == "older":
                     oldest = await bars_store.oldest_ts(db, sym, tf)
                     end_ts = (oldest - 1) if oldest else None
-                src = await _fetch_history_source(sym, tf, resolution, end_ts)
+                src, overwrite = await _fetch_history_source(sym, tf, resolution, end_ts)
                 _logger.info("bars backfill %s %s (%s): source returned %d bars", sym, tf, need, len(src))
                 if src:
-                    await bars_store.upsert_bars(db, sym, tf, src)
+                    await bars_store.upsert_bars(db, sym, tf, src, overwrite=overwrite)
                     await db.commit()
         except Exception as e:
             _logger.warning("bars source backfill skipped for %s %s: %s", sym, tf, e)

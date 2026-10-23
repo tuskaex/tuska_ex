@@ -151,9 +151,13 @@ async def read_bars(
     ]
 
 
-async def upsert_bars(db: AsyncSession, symbol: str, tf: str, bars: Iterable[dict]) -> int:
+async def upsert_bars(
+    db: AsyncSession, symbol: str, tf: str, bars: Iterable[dict], overwrite: bool = True,
+) -> int:
     """Insert/replace bars. Idempotent on (symbol, tf, ts). `bars` items may use
     either {time|ts, open, high, low, close, volume} keys. Returns count written.
+    overwrite=False only fills empty slots: a secondary source (Yahoo) must
+    never replace a candle our own feed built.
 
     Does NOT commit — caller controls the transaction so a batch upsert stays
     atomic with any surrounding work."""
@@ -180,6 +184,12 @@ async def upsert_bars(db: AsyncSession, symbol: str, tf: str, bars: Iterable[dic
         ON CONFLICT (symbol, tf, ts) DO UPDATE SET
             open = EXCLUDED.open, high = EXCLUDED.high, low = EXCLUDED.low,
             close = EXCLUDED.close, volume = EXCLUDED.volume
+        """
+        if overwrite else
+        """
+        INSERT INTO ohlc_bars (symbol, tf, ts, open, high, low, close, volume)
+        VALUES (:sym, :tf, :ts, :o, :h, :l, :c, :v)
+        ON CONFLICT (symbol, tf, ts) DO NOTHING
         """
     )
     await db.execute(sql, payload)
