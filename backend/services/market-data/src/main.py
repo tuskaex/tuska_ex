@@ -306,7 +306,7 @@ class MarketDataService:
             # different mids can't interleave. Still counts toward _tick_count
             # (Infoway IS alive) so the fallback watchdog judges it correctly.
             # With an LP feed (PrimeXM) the LP is the source of truth for every
-            # symbol it streams; Binance never overrides it (see
+            # symbol it quotes; Binance only fills in where it is silent (see
             # _binance_crypto_feed).
             if symbol in LIVE_CRYPTO_SYMBOLS and not isinstance(self.feed, PrimeXMFeed):
                 last_b = self._binance_live_mono.get(symbol, 0.0)
@@ -444,9 +444,11 @@ class MarketDataService:
                             symbol = BINANCE_MAP.get(pair)
                             if not symbol:
                                 continue
-                            # The LP streams this one itself (BTC, ETH, … on
-                            # PrimeXM): its price wins, Binance stays out.
-                            if isinstance(self.feed, PrimeXMFeed) and symbol in self.feed.subscribed_symbols:
+                            # The LP is quoting this one itself (BTC on PrimeXM):
+                            # its price wins and Binance stays out. Binance only
+                            # covers what the LP doesn't quote (it accepts ETH,
+                            # for one, and never sends a price).
+                            if isinstance(self.feed, PrimeXMFeed) and self.feed.is_quoting(symbol):
                                 continue
                             price = float(data["p"])
                         except (KeyError, ValueError, TypeError):

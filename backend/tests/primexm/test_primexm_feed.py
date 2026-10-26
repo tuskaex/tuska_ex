@@ -192,3 +192,15 @@ def test_yahoo_drops_forming_and_stub_bars_and_shifts_at_as_of():
     assert [b["time"] for b in bars] == [base + 600]   # forming 14:15 and stub 14:18 dropped
     assert asked == [as_of]                             # basis read at Yahoo's own time
     assert abs(bars[0]["close"] - (4021.7 + 3995.5 - 4011.5)) < 1e-9
+
+
+def test_is_quoting_only_for_symbols_the_lp_actually_quotes():
+    f = feed.PrimeXMFeed(host="h", port=1, sender_comp_id="Q", target_comp_id="X",
+                         username="u", password="p", symbols=lambda: ["BTCUSD", "ETHUSD"])
+    f._req_symbol = {"1": "BTCUSD", "2": "ETHUSD"}  # both subscribed
+    f._book._entries["BTCUSD"] = {"0": feed._Entry(80000.0, 80000.1, 1.0, 1.0)}
+    f._emit(["BTCUSD"])                               # only BTC ever quotes
+    assert f.is_quoting("BTCUSD")
+    assert not f.is_quoting("ETHUSD")                  # Binance must cover it
+    f._last_quote_by_symbol["BTCUSD"] -= 31            # LP silent for 31 s
+    assert not f.is_quoting("BTCUSD")

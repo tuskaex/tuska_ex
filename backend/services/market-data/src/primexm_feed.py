@@ -209,6 +209,7 @@ class PrimeXMFeed:
         self._security_list_task: Optional[asyncio.Task] = None
         self._watchdog_task: Optional[asyncio.Task] = None
         self._last_quote_mono = time.monotonic()
+        self._last_quote_by_symbol: Dict[str, float] = {}
         self._rejected: Set[str] = set()
         self._tick_queue: asyncio.Queue = asyncio.Queue(maxsize=50_000)
         self.quotes_received = 0
@@ -217,11 +218,12 @@ class PrimeXMFeed:
     def current_prices(self) -> dict:
         return {}
 
-    @property
-    def subscribed_symbols(self) -> Set[str]:
-        """Platform symbols this session streams. The LP is the price source
-        for these; side feeds (Binance crypto) must stay out of them."""
-        return set(self._req_symbol.values())
+    def is_quoting(self, symbol: str, within_sec: float = 30.0) -> bool:
+        """True while the LP is actually streaming `symbol`. A subscription
+        alone isn't enough: XCore accepts some (ETH on the live taker) and then
+        never quotes them, and a side feed must cover those."""
+        t = self._last_quote_by_symbol.get(symbol)
+        return t is not None and time.monotonic() - t < within_sec
 
     async def start(self) -> None:
         logger.info("PrimeXM pricing feed starting (%s:%s)", self._session.host, self._session.port)
@@ -334,6 +336,7 @@ class PrimeXMFeed:
             bid, ask = best
             self.quotes_received += 1
             self._last_quote_mono = time.monotonic()
+            self._last_quote_by_symbol[sym] = self._last_quote_mono
             tick = {"symbol": sym, "bid": bid, "ask": ask, "timestamp": ts, "volume": 1}
             try:
                 self._tick_queue.put_nowait(tick)
