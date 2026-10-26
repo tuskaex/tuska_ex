@@ -55,15 +55,18 @@ class TickStore:
         self._batch.clear()
 
         try:
+            # One executemany round trip, not one INSERT per tick: this runs
+            # inline in the tick processor, and 100 sequential INSERTs per
+            # flush made the tick queue fall seconds behind the LP stream.
             async with TimescaleSessionLocal() as session:
-                for ts, symbol, bid, ask in batch:
-                    await session.execute(
-                        text(
-                            "INSERT INTO ticks (time, symbol, bid, ask) "
-                            "VALUES (:time, :symbol, :bid, :ask)"
-                        ),
-                        {"time": ts, "symbol": symbol, "bid": bid, "ask": ask},
-                    )
+                await session.execute(
+                    text(
+                        "INSERT INTO ticks (time, symbol, bid, ask) "
+                        "VALUES (:time, :symbol, :bid, :ask)"
+                    ),
+                    [{"time": ts, "symbol": symbol, "bid": bid, "ask": ask}
+                     for ts, symbol, bid, ask in batch],
+                )
                 await session.commit()
         except Exception as e:
             logger.error(f"Failed to flush ticks: {e}")

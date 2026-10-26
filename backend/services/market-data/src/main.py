@@ -156,6 +156,7 @@ class MarketDataService:
 
         await self.spread_cache.reload_if_stale(force=True)
         await self._seed_last_mid_from_redis()
+        await self._seed_open_bars_from_ticks()
 
         tasks = [
             asyncio.create_task(self.feed.start()),
@@ -209,6 +210,35 @@ class MarketDataService:
                     await pubsub.aclose()
                 except Exception:
                     pass
+
+    async def _seed_open_bars_from_ticks(self) -> None:
+        """Rebuild every currently open candle (1m … 1d) from the ticks already
+        recorded for its window, so a restart doesn't cut the day's candle
+        (and the Market Watch High/Low taken from it) at the restart time."""
+        from sqlalchemy import text
+        from packages.common.src.database import TimescaleSessionLocal
+        from .bar_aggregator import TIMEFRAMES
+
+        now = int(time.time())
+        seeded = 0
+        try:
+            async with TimescaleSessionLocal() as s:
+                for tf, sec in TIMEFRAMES.items():
+                    start = now // sec * sec
+                    rows = (await s.execute(text(
+                        "SELECT symbol, first((bid + ask) / 2.0, time), max((bid + ask) / 2.0), "
+                        "min((bid + ask) / 2.0), last((bid + ask) / 2.0, time), count(*) "
+                        "FROM ticks WHERE time >= to_timestamp(:t) GROUP BY symbol"
+                    ), {"t": start})).all()
+                    for sym, o, h, l, c, n in rows:
+                        self.aggregator.seed_open_bar(
+                            str(sym).upper(), tf, start, float(o), float(h), float(l), float(c), int(n),
+                        )
+                        seeded += 1
+        except Exception as exc:
+            logger.warning("Seeding open candles from ticks failed (they start at the next tick): %s", exc)
+            return
+        logger.info("Resumed %d open candles from recorded ticks", seeded)
 
     async def _seed_last_mid_from_redis(self) -> None:
         """Prime last mid from existing tick:* keys so stale-quote refresh can fix spread after restart."""
@@ -275,7 +305,10 @@ class MarketDataService:
             # (much slower) Infoway crypto tick so the two feeds' slightly
             # different mids can't interleave. Still counts toward _tick_count
             # (Infoway IS alive) so the fallback watchdog judges it correctly.
-            if symbol in LIVE_CRYPTO_SYMBOLS:
+            # With an LP feed (PrimeXM) the LP is the source of truth for every
+            # symbol it streams; Binance never overrides it (see
+            # _binance_crypto_feed).
+            if symbol in LIVE_CRYPTO_SYMBOLS and not isinstance(self.feed, PrimeXMFeed):
                 last_b = self._binance_live_mono.get(symbol, 0.0)
                 if last_b and time.monotonic() - last_b < BINANCE_FRESH_SEC:
                     self._tick_count += 1
@@ -305,17 +338,23 @@ class MarketDataService:
                 self._mid_history[symbol].clear()
             self._bad_tick_count[symbol] = 0
 
-            # 2. De-spike: median of the last 3 accepted native mids.
+            # 2. De-spike: median of the last 3 accepted native mids. Not for a
+            #    liquidity provider's quotes: they are the prices clients trade
+            #    against and must match the LP's own terminal tick for tick (a
+            #    median lags every move by one tick). The jump guard above
+            #    still applies to them.
             hist = self._mid_history[symbol]
             hist.append(raw_mid)
-            mids = sorted(hist)
-            despiked_mid = mids[len(mids) // 2]
-            # Rebuild the native quote around the de-spiked mid, preserving the
-            # feed's native half-spread; the spread engine re-spreads from this
-            # mid next, so only the mid matters downstream.
-            half = (ask - bid) / 2.0
-            bid = despiked_mid - half
-            ask = despiked_mid + half
+            if isinstance(self.feed, PrimeXMFeed):
+                despiked_mid = raw_mid
+            else:
+                mids = sorted(hist)
+                despiked_mid = mids[len(mids) // 2]
+                # Rebuild the native quote around the de-spiked mid, preserving
+                # the feed's native half-spread.
+                half = (ask - bid) / 2.0
+                bid = despiked_mid - half
+                ask = despiked_mid + half
 
             self._last_mid[symbol] = despiked_mid
             self._last_quote[symbol] = (bid, ask)
@@ -404,6 +443,10 @@ class MarketDataService:
                             pair = (data.get("s") or "").lower()
                             symbol = BINANCE_MAP.get(pair)
                             if not symbol:
+                                continue
+                            # The LP streams this one itself (BTC, ETH, … on
+                            # PrimeXM): its price wins, Binance stays out.
+                            if isinstance(self.feed, PrimeXMFeed) and symbol in self.feed.subscribed_symbols:
                                 continue
                             price = float(data["p"])
                         except (KeyError, ValueError, TypeError):

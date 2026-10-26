@@ -44,3 +44,23 @@ def test_late_tick_joins_open_bar_and_never_reopens_a_closed_one():
     agg.update("XAUUSD", 3994, 3994, _ts(n + 320))
     assert [s for s in stored if s[0] == "5m"] == five
     assert agg._bars["XAUUSD"]["5m"].tick_count == 3
+
+
+def test_seeded_open_candle_continues_after_restart():
+    agg = BarAggregator()
+    stored = []
+    agg._spawn_store = lambda sym, tf, bar, start: stored.append((tf, start))
+    day = 1_792_886_400  # a UTC midnight
+    # Before the restart the day ran 4000 → 3970 … 4020, last 4010.
+    agg.seed_open_bar("XAUUSD", "1d", day, 4000.0, 4020.0, 3970.0, 4010.0, 50_000)
+    agg.update("XAUUSD", 4012, 4012, _ts(day + 6 * 3600))
+    bar = agg._bars["XAUUSD"]["1d"]
+    assert (bar.open, bar.high, bar.low, bar.close) == (4000.0, 4020.0, 3970.0, 4012)
+    assert not [s for s in stored if s[0] == "1d"]  # same day: nothing closed
+
+
+def test_no_admin_spread_passes_the_lp_quote_through():
+    from services.market_data.src.spread_cache import StreamSpreadCache
+
+    cache = StreamSpreadCache()  # nothing loaded: no admin spread anywhere
+    assert cache.widen("EURUSD", 1.121812, 1.121884) == (1.12181, 1.12188)

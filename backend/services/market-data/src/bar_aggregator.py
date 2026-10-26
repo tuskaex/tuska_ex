@@ -89,6 +89,21 @@ class BarAggregator:
 
         task.add_done_callback(_done)
 
+    def seed_open_bar(
+        self, symbol: str, tf_name: str, bar_start: int,
+        open_: float, high: float, low: float, close: float, tick_count: int,
+    ) -> None:
+        """Resume a window that was already running before this process
+        started, from the ticks recorded for it. Without this a restart (every
+        deploy) opened every current candle afresh at the first new tick, so
+        the day's High/Low and the open hourly/4h candles lost everything
+        before the restart."""
+        bar = BarData(open_, datetime.fromtimestamp(bar_start, tz=timezone.utc).isoformat())
+        bar.high, bar.low, bar.close, bar.tick_count = high, low, close, tick_count
+        self._bars[symbol][tf_name] = bar
+        self._bar_timestamps[symbol][tf_name] = bar_start
+        self._last_real_tick[symbol] = time.monotonic()
+
     def update(self, symbol: str, bid: float, ask: float, timestamp: str):
         self._last_real_tick[symbol] = time.monotonic()
         mid = (bid + ask) / 2

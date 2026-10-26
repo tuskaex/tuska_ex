@@ -217,6 +217,12 @@ class PrimeXMFeed:
     def current_prices(self) -> dict:
         return {}
 
+    @property
+    def subscribed_symbols(self) -> Set[str]:
+        """Platform symbols this session streams. The LP is the price source
+        for these; side feeds (Binance crypto) must stay out of them."""
+        return set(self._req_symbol.values())
+
     async def start(self) -> None:
         logger.info("PrimeXM pricing feed starting (%s:%s)", self._session.host, self._session.port)
         self._watchdog_task = asyncio.create_task(self._silence_watchdog(), name="primexm-watchdog")

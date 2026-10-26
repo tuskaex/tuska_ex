@@ -271,6 +271,18 @@ async def algo_bars(
 
     list_key = f"bars:{symbol_upper}:{tf}"
     raws = await redis_client.lrange(list_key, 0, limit - 1)
+    # The list holds CLOSED bars only. Lead with the forming one, so "newest"
+    # is the current candle: the desk terminal's Market Watch High/Low reads
+    # bars[0] of 1d and showed yesterday's range without it.
+    current = await redis_client.get(f"bar:current:{symbol_upper}:{tf}")
+    if current:
+        try:
+            cur_t = int(json.loads(current).get("time") or 0)
+            newest_t = int(json.loads(raws[0]).get("time") or 0) if raws else 0
+            if cur_t > newest_t:
+                raws = [current] + raws[: limit - 1]
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
 
     bars = []
     for raw in raws:

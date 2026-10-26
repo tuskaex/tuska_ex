@@ -105,12 +105,11 @@ class StreamSpreadCache:
         Priority:
           1. Per-instrument / per-segment admin spread (``self._params[sym]`` > 0)
           2. Global admin "Default (All Instruments)" spread (``self._default_spread`` > 0)
-          3. Neither set → 0 spread (bid == ask == mid).
+          3. Neither set → the feed's own bid/ask (the LP's spread).
 
         When an admin spread applies, the quote is rebuilt symmetrically around
         the feed mid so the provider's own spread is replaced (not stacked on
-        top). When none applies, every instrument ships with a 0 default spread
-        (Buy == Sell) until an admin configures one — there is no invented width.
+        top). When none applies, the provider's quote passes through as is.
         """
         from .feed_handler import INSTRUMENTS
 
@@ -144,8 +143,9 @@ class StreamSpreadCache:
             )
             return float(b), float(a)
 
-        # No admin spread anywhere → 0 spread by default: collapse to the mid so
-        # Buy == Sell until an admin sets a spread for this instrument (or the
-        # global default). This is the platform's out-of-the-box state.
-        m = round(mid, digits)
-        return m, m
+        # No admin spread anywhere → the feed's own quote, unchanged. With a
+        # liquidity provider as the feed (PrimeXM) that is the LP's real bid
+        # and ask, which is what the LP's own terminal shows. (Collapsing to
+        # the mid, as this used to, showed Buy == Sell and quoted clients
+        # inside the LP's spread.)
+        return round(bid, digits), round(ask, digits)
