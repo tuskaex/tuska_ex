@@ -100,6 +100,15 @@ class BarAggregator:
 
             current_start = self._bar_timestamps.get(symbol, {}).get(tf_name)
 
+            # A tick stamped before the open bar's window arrived late (the
+            # tick queue runs a few seconds behind under heavy flow) after
+            # run_aggregation_loop already closed its bar on the wall clock.
+            # It goes into the open bar. Re-opening the closed window here
+            # built a bar from that one late tick, and persisting it replaced
+            # the full candle in the store: the flat "dash" candles.
+            if current_start is not None and bar_start < current_start:
+                bar_start = current_start
+
             if current_start != bar_start:
                 # Persist the bar that just closed. The guard MUST use tf_name:
                 # self._bars[symbol] is keyed by timeframe ("1m"), not by
