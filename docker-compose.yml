@@ -174,6 +174,22 @@ services:
       - ./backend/services/risk-engine:/app/services/risk_engine
       - ./backend/packages:/app/packages
 
+  # PrimeXM trading session (FIX). One owner for the session: XCore allows a
+  # single live logon per SenderCompID. Idle unless PRIMEXM_TRADING_ENABLED.
+  lp-bridge:
+    build:
+      context: .
+      dockerfile: backend/services/lp-bridge/Dockerfile
+    env_file:
+      - path: ./.env
+        required: false
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/services/lp-bridge:/app/services/lp_bridge
+      - ./backend/packages:/app/packages
+
   # Trader frontend (port 3000) — RESTART ALONE IS NOT ENOUGH. Rebuild the image or the browser keeps old JS:
   #   PowerShell:  $env:APP_VERSION=(Get-Date -Format 'yyyyMMdd-HHmmss'); docker compose build --no-cache trader-frontend; docker compose up -d trader-frontend
   #   Bash:        APP_VERSION=$(date +%Y%m%d-%H%M%S) docker compose build --no-cache trader-frontend && docker compose up -d trader-frontend

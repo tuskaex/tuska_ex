@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import ssl
 import time
 from datetime import datetime, timezone
@@ -157,6 +158,17 @@ class FixParser:
         return msg
 
 
+_EXPECTED_SEQ = re.compile(r"expect(?:ing|ed)?\D{0,20}(\d+)", re.IGNORECASE)
+
+
+def _expected_seq(text: str) -> Optional[int]:
+    """The sequence number a 'MsgSeqNum too low, expecting N' logout asks for."""
+    if not text or "low" not in text.lower():
+        return None
+    m = _EXPECTED_SEQ.search(text)
+    return int(m.group(1)) if m else None
+
+
 OnMessage = Callable[[str, Message], Awaitable[None]]
 OnLogon = Callable[[], Awaitable[None]]
 
@@ -183,6 +195,7 @@ class FixSession:
         heartbeat_sec: int = 30,
         on_message: Optional[OnMessage] = None,
         on_logon: Optional[OnLogon] = None,
+        log_messages: bool = False,
     ) -> None:
         self.name = name
         self.host = host
@@ -196,6 +209,10 @@ class FixSession:
         self.heartbeat_sec = max(5, int(heartbeat_sec))
         self.on_message = on_message
         self.on_logon = on_logon
+        # Log every message in and out (password masked). For a trading
+        # session that's a handful a minute and it's what the LP asks for when
+        # something goes wrong; a price stream would flood the log.
+        self.log_messages = log_messages
 
         self.out_seq = 1  # next MsgSeqNum we send
         self.in_seq = 1   # next MsgSeqNum we expect
@@ -247,7 +264,10 @@ class FixSession:
             w = self._writer
             if w is None:
                 raise ConnectionError(f"{self.name}: not connected")
+            fields = list(fields)
             w.write(encode(msg_type, self.sender_comp_id, self.target_comp_id, self.out_seq, fields))
+            if self.log_messages:
+                self._log.info("OUT 35=%s|34=%d|%s", msg_type, self.out_seq, pretty(fields))
             self.out_seq += 1
             self._last_sent = time.monotonic()
             await w.drain()
@@ -331,6 +351,8 @@ class FixSession:
         except ValueError:
             seq = 0
         poss_dup = get(msg, "43") == "Y"
+        if self.log_messages:
+            self._log.info("IN  %s", pretty(msg))
 
         if msg_type == "4":  # SequenceReset — sets the next inbound number itself
             new_seq = int(get(msg, "36") or 0)
@@ -349,7 +371,12 @@ class FixSession:
             elif seq < self.in_seq:
                 if poss_dup:
                     return  # a replay we already have
-                if msg_type != "5":
+                if msg_type == "A":
+                    # The counterparty restarted its numbering (PrimeXM's weekly
+                    # reset, Fri 17:05 New York): follow it.
+                    self._log.info("counterparty restarted its MsgSeqNum at %d (was expecting %d)", seq, self.in_seq)
+                    self.in_seq = seq + 1
+                elif msg_type != "5":
                     raise ConnectionError(f"MsgSeqNum too low: expected {self.in_seq}, got {seq}")
             else:
                 self.in_seq = seq + 1
@@ -372,6 +399,12 @@ class FixSession:
         elif msg_type == "5":
             self.last_logout_text = get(msg, "58") or ""
             self._log.warning("Logout from counterparty: %s", self.last_logout_text or "(no reason)")
+            expected = _expected_seq(self.last_logout_text)
+            if expected and expected > self.out_seq and not self.reset_on_logon:
+                # "MsgSeqNum too low, expecting N": our stored number fell
+                # behind (crash between saves). Resume from theirs.
+                self._log.warning("resuming outbound MsgSeqNum at %d as the counterparty expects", expected)
+                self.out_seq = expected
             if self.logged_on:
                 with contextlib.suppress(Exception):
                     await self.send("5", [])

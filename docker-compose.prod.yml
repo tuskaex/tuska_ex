@@ -92,6 +92,9 @@ services:
   risk-engine:
     restart: always
 
+  lp-bridge:
+    restart: always
+
   # ── Frontends — build with production domain + restart ──────
   trader-frontend:
     build:

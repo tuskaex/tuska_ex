@@ -142,6 +142,20 @@ class Settings(BaseSettings):
     # Extra PrimeXM-name → platform-symbol pairs, e.g. "XNG/USD=NGAS,DE30=GER40".
     PRIMEXM_SYMBOL_ALIASES: str = ""
 
+    # PrimeXM trading session (the "Trading" block of the same JSON), held by
+    # the lp-bridge service. It logs on and stays connected; it sends no orders.
+    PRIMEXM_TRADING_ENABLED: bool = False
+    PRIMEXM_TRADING_HOST: str = ""
+    PRIMEXM_TRADING_PORT: int = 0
+    PRIMEXM_TRADING_SENDER_COMP_ID: str = ""
+    PRIMEXM_TRADING_TARGET_COMP_ID: str = ""
+    PRIMEXM_TRADING_USERNAME: str = ""
+    PRIMEXM_TRADING_PASSWORD: str = ""
+    PRIMEXM_TRADING_SSL: bool = True          # SocketUseSSL (Y on PrimeXM trading)
+    # XCore account name (tag 1). When set, lp-bridge asks for a balance /
+    # position snapshot after each logon so the log shows the account state.
+    PRIMEXM_TRADING_ACCOUNT: str = ""
+
     # Corecen Broker API (A-Book trade forwarding). When an A-Book user opens/closes
     # a position, TuskaEx pushes the trade to Corecen's broker API for LP routing.
     # These credentials are the API key/secret registered in Corecen's admin panel

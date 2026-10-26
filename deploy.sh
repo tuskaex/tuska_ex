@@ -38,13 +38,14 @@ NEEDS_ADMIN_API=0;    matches '^backend/services/admin/'          && NEEDS_ADMIN
 NEEDS_BBOOK=0;        matches '^backend/services/b-book-engine/'  && NEEDS_BBOOK=1
 NEEDS_MD=0;           matches '^backend/services/market-data/'    && NEEDS_MD=1
 NEEDS_RISK=0;         matches '^backend/services/risk-engine/'    && NEEDS_RISK=1
+NEEDS_LPB=0;          matches '^backend/services/lp-bridge/'      && NEEDS_LPB=1
 NEEDS_TRADER=0;       matches '^frontend/trader/'                 && NEEDS_TRADER=1
 NEEDS_ADMIN_FE=0;     matches '^frontend/admin/'                  && NEEDS_ADMIN_FE=1
 NEEDS_MIGRATE=0;      matches '^backend/infra/migrations/'        && NEEDS_MIGRATE=1
 NEEDS_NGINX=0;        matches '^deploy/nginx/'                    && NEEDS_NGINX=1
 
 if [ $NEEDS_COMMON -eq 1 ]; then
-  NEEDS_GATEWAY=1; NEEDS_ADMIN_API=1; NEEDS_BBOOK=1; NEEDS_MD=1; NEEDS_RISK=1
+  NEEDS_GATEWAY=1; NEEDS_ADMIN_API=1; NEEDS_BBOOK=1; NEEDS_MD=1; NEEDS_RISK=1; NEEDS_LPB=1
 fi
 
 if [ $NEEDS_MIGRATE -eq 1 ]; then
@@ -58,6 +59,7 @@ TO_BUILD=()
 [ $NEEDS_BBOOK -eq 1 ]     && TO_BUILD+=(b-book-engine)
 [ $NEEDS_MD -eq 1 ]        && TO_BUILD+=(market-data)
 [ $NEEDS_RISK -eq 1 ]      && TO_BUILD+=(risk-engine)
+[ $NEEDS_LPB -eq 1 ]       && TO_BUILD+=(lp-bridge)
 [ $NEEDS_TRADER -eq 1 ]    && TO_BUILD+=(trader-frontend)
 [ $NEEDS_ADMIN_FE -eq 1 ]  && TO_BUILD+=(admin-frontend)
 
