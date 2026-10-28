@@ -123,8 +123,10 @@ signals:
     // track the session's own ticks meanwhile, so a failed seed costs a
     // slightly narrow range, not an empty one, and is not worth a message.
     // `open` is the day's opening price, which Market Watch's Change column is
-    // measured against. Zero when the bar did not carry one.
-    void dailyRangeReceived(const QString& symbol, double high, double low, double open);
+    // measured against. Zero when the bar did not carry one. `day` is when that
+    // trading day began (17:00 New York, in UTC).
+    void dailyRangeReceived(const QString& symbol, double high, double low, double open,
+                            const QDateTime& day);
     void historyReceived(const QVector<HistoryTrade>& history);
     // Result of a per-position modify/close. ok=false carries the reject reason
     // (so the chart can snap a dragged line back and toast the message).

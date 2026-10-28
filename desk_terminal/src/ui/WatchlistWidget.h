@@ -58,7 +58,8 @@ public:
     // Ticks widen them from there, so a seed that never arrives costs the
     // session's own range rather than an empty column.
     // `open` drives the Change column; high/low drive High and Low.
-    void setDailyRange(const QString& symbol, double high, double low, double open = 0.0);
+    void setDailyRange(const QString& symbol, double high, double low, double open = 0.0,
+                       const QDateTime& day = QDateTime());
     QString currentSymbol() const { return m_selected; }
     void selectSymbol(const QString& symbol);
 
@@ -100,6 +101,7 @@ private:
         double  high     = 0.0;
         double  low      = 0.0;
         bool    hasRange = false;
+        QDateTime rangeDay;       // trading day the range belongs to
         // The day's OPEN, which the Change column is measured from. Unlike the
         // range it cannot be reconstructed from ticks — a terminal opened at
         // midday never saw the open — so it stays unset, and Change reads "—",

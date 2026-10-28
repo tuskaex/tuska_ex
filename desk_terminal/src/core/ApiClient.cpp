@@ -10,6 +10,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QUrlQuery>
+#include <QTimeZone>
 
 ApiClient::ApiClient(const Config& cfg, QObject* parent)
     : QObject(parent), m_cfg(cfg), m_net(new QNetworkAccessManager(this)) {}
@@ -335,13 +336,30 @@ void ApiClient::fetchInstrumentSpec(const QString& symbol) {
 // one-bar range request fired while a chart happened to be loading the same
 // symbol and timeframe would be handed to the chart instead — a thousand-bar
 // history silently truncated to a single candle.
+// Start of the trading day that contains `t`: 17:00 New York, the rollover MT
+// servers use (21:00 UTC while the US is on summer time, 22:00 in winter). The
+// server's own 1d bar starts at 00:00 UTC instead, so it left out the hours
+// from the Sunday-evening open to midnight, and High / Low / Change disagreed
+// with the LP's terminal by however far price moved in those hours.
+static QDateTime tradingDayStart(const QDateTime& t) {
+    static const QTimeZone ny = QTimeZone("America/New_York").isValid()
+                                    ? QTimeZone("America/New_York")
+                                    : QTimeZone(-5 * 3600);   // no tz data: EST
+    const QDateTime local = t.toTimeZone(ny);
+    QDateTime start(local.date(), QTime(17, 0), ny);
+    if (local < start) start = QDateTime(local.date().addDays(-1), QTime(17, 0), ny);
+    return start.toUTC();
+}
+
 void ApiClient::fetchDailyRange(const QString& symbol) {
     if (symbol.trimmed().isEmpty()) return;
     const QString sym = symbol.toUpper();
+    // Hourly bars, folded into the trading day here. The rollover always falls
+    // on a whole UTC hour, and a day is at most 24 of them plus the forming one.
     QUrlQuery q;
     q.addQueryItem("symbol", sym);
-    q.addQueryItem("timeframe", "1d");
-    q.addQueryItem("limit", "1");
+    q.addQueryItem("timeframe", "1h");
+    q.addQueryItem("limit", "30");
     QNetworkReply* r = m_net->get(makeRequest("/bars?" + q.toString()));
     connect(r, &QNetworkReply::finished, this, [this, r, sym]() {
         r->deleteLater();
@@ -350,10 +368,22 @@ void ApiClient::fetchDailyRange(const QString& symbol) {
         const QJsonArray bars = QJsonDocument::fromJson(r->readAll())
                                     .object().value("bars").toArray();
         if (bars.isEmpty()) return;   // no history for this instrument yet
-        // Newest first, so the current day is the first entry.
-        const Bar b = parseBar(bars.first().toObject());
-        if (b.high <= 0.0 || b.low <= 0.0) return;
-        emit dailyRangeReceived(sym, b.high, b.low, b.open);
+        // Newest first. The day is the one the newest bar belongs to, not the
+        // one the clock is in: over a weekend that is still Friday's.
+        const Bar newest = parseBar(bars.first().toObject());
+        if (!newest.time.isValid()) return;
+        const QDateTime day = tradingDayStart(newest.time);
+        double high = 0.0, low = 0.0, open = 0.0;
+        for (const QJsonValue& v : bars) {
+            const Bar b = parseBar(v.toObject());
+            if (!b.time.isValid() || b.time < day) break;
+            if (b.high <= 0.0 || b.low <= 0.0) continue;
+            high = high > 0.0 ? qMax(high, b.high) : b.high;
+            low  = low  > 0.0 ? qMin(low,  b.low)  : b.low;
+            open = b.open;   // walking back in time: the last one kept is the day's first
+        }
+        if (high <= 0.0 || low <= 0.0) return;
+        emit dailyRangeReceived(sym, high, low, open, day);
     });
 }
 

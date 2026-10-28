@@ -1169,8 +1169,9 @@ void MainWindow::connectServices() {
         fitWatchlistWidth();
     });
     connect(m_api, &ApiClient::dailyRangeReceived, this,
-            [this](const QString& sym, double high, double low, double open) {
-        m_watch->setDailyRange(sym, high, low, open);
+            [this](const QString& sym, double high, double low, double open,
+                   const QDateTime& day) {
+        m_watch->setDailyRange(sym, high, low, open, day);
     });
 
     // The chart (TradingView) pulls bars + ticks itself via the ChartBridge,

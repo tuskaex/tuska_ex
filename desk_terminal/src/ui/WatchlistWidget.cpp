@@ -656,17 +656,21 @@ void WatchlistWidget::applyFilter() {
 }
 
 void WatchlistWidget::setDailyRange(const QString& symbol, double high, double low,
-                                    double open) {
+                                    double open, const QDateTime& day) {
     auto it = m_rows.find(symbol);
     if (it == m_rows.end() || it->row < 0) return;
     Row& row = it.value();
     if (!(high > 0.0) || !(low > 0.0)) return;
 
-    // Merge rather than overwrite. Ticks taken since the terminal opened can
-    // already sit outside the bar the server aggregated, and a re-seed that
-    // narrowed the range back would show a high the price has visibly passed.
-    row.high = row.hasRange ? qMax(row.high, high) : high;
-    row.low  = row.hasRange ? qMin(row.low,  low)  : low;
+    // Within one day, merge rather than overwrite: ticks taken since the
+    // terminal opened can already sit outside the bars the server aggregated,
+    // and a re-seed that narrowed the range back would show a high the price
+    // has visibly passed. A NEW day replaces it — merging there kept
+    // yesterday's extremes in the columns until the terminal was restarted.
+    const bool newDay = day.isValid() && day != row.rangeDay;
+    if (newDay) row.rangeDay = day;
+    row.high = row.hasRange && !newDay ? qMax(row.high, high) : high;
+    row.low  = row.hasRange && !newDay ? qMin(row.low,  low)  : low;
     row.hasRange = true;
     if (auto* h = m_table->item(row.row, 5)) h->setText(QString::number(row.high, 'f', row.digits));
     if (auto* l = m_table->item(row.row, 6)) l->setText(QString::number(row.low,  'f', row.digits));
@@ -741,10 +745,13 @@ void WatchlistWidget::updateQuote(const Quote& q) {
     }
     refreshChange(row);
 
-    // Spread in points, the unit MT5 shows it in.
+    // Spread in points, the unit MT5 shows it in: one point is the last
+    // quoted digit, so 1.12072 / 1.12079 is 7. Scaling by 10^(digits-1) gave
+    // pips (0.7) instead, and side by side with the LP's MT terminal every
+    // spread read ten times tighter than the LP's.
     if (auto* sp = m_table->item(row.row, 4)) {
-        const double points = q.spread * std::pow(10.0, row.digits - 1);
-        sp->setText(QString::number(points, 'f', 1));
+        const double points = q.spread * std::pow(10.0, row.digits);
+        sp->setText(QString::number(qRound(points)));
     }
 
     // Day's range, tracked at BID so it agrees with the Bid column beside it.

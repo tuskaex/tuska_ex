@@ -454,8 +454,9 @@ void OrderTicket::updateQuote(const Quote& q) {
     // SELL fills at the bid, BUY at the ask — each tile shows the price you get.
     m_sell.price->setText(QString::number(q.bid, 'f', m_digits));
     m_buy.price->setText(QString::number(q.ask, 'f', m_digits));
-    const double points = q.spread * std::pow(10.0, m_digits - 1);
-    m_spreadLabel->setText(QString::number(points, 'f', 1));
+    // Points, as Market Watch and MT5 show it (see WatchlistWidget::updateQuote).
+    const double points = q.spread * std::pow(10.0, m_digits);
+    m_spreadLabel->setText(QString::number(qRound(points)));
 
     m_bid = q.bid;
     m_ask = q.ask;
