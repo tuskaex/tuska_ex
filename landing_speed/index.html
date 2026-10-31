@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Speed Trade Technologies | Financial Technology &amp; Platform Solutions</title>
+  <meta name="description" content="Speed Trade Technologies Sdn Bhd is a Malaysian technology provider building high-performance desktop, web and mobile platforms, real-time data infrastructure, white-label solutions and APIs for financial businesses." />
+  <meta name="theme-color" content="#030B26" />
+  <meta property="og:title" content="Speed Trade Technologies — Platform technology built for speed" />
+  <meta property="og:description" content="Desktop, web and mobile platforms, real-time data infrastructure, white-label solutions and APIs from Malaysia." />
+  <meta property="og:image" content="assets/img/hero-network.jpg" />
+  <link rel="icon" type="image/png" href="assets/img/favicon.png" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ============ HEADER ============ -->
+  <header class="header" id="header">
+    <div class="container header__inner">
+      <a href="#home" class="brand" aria-label="Speed Trade Technologies home">
+        <img src="assets/img/logo-light.png" alt="Speed Trade — Technology Provider" class="brand__logo" width="900" height="242" />
+      </a>
+
+      <nav class="nav" id="nav" aria-label="Main navigation">
+        <a href="#platform">Platform</a>
+        <a href="#features">Features</a>
+        <a href="#solutions">Solutions</a>
+        <a href="#industries">Industries</a>
+        <a href="#technology">Technology</a>
+        <a href="#about">About</a>
+        <a href="#contact" class="btn btn--primary btn--sm nav__cta">Get in Touch</a>
+      </nav>
+
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ HERO ============ -->
+    <section class="hero" id="home">
+      <div class="hero__bg">
+        <img src="assets/img/hero-network.jpg" alt="" />
+        <canvas id="heroCanvas" aria-hidden="true"></canvas>
+      </div>
+      <div class="container hero__grid">
+        <div class="hero__content">
+          <!-- Technology animation around the headline: orbits, circuit traces, radar pings -->
+          <div class="hero__fx" aria-hidden="true">
+            <svg viewBox="0 0 1200 600" preserveAspectRatio="xMidYMid meet">
+              <defs>
+                <filter id="fxGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+
+              <circle class="fx-ping" cx="600" cy="300" r="260" />
+              <circle class="fx-ping fx-ping--late" cx="600" cy="300" r="260" />
+
+              <g transform="rotate(-7 600 300)">
+                <path id="fxOrbitA" class="fx-orbit" pathLength="1000" d="M40 300a560 185 0 1 0 1120 0a560 185 0 1 0-1120 0" />
+                <circle class="fx-dot fx-dot--cyan" r="5" filter="url(#fxGlow)">
+                  <animateMotion dur="10s" repeatCount="indefinite"><mpath href="#fxOrbitA" /></animateMotion>
+                </circle>
+                <circle class="fx-dot fx-dot--red" r="4" filter="url(#fxGlow)">
+                  <animateMotion dur="10s" begin="-5s" repeatCount="indefinite"><mpath href="#fxOrbitA" /></animateMotion>
+                </circle>
+              </g>
+              <g transform="rotate(12 600 300)">
+                <path id="fxOrbitB" class="fx-orbit fx-orbit--slow" pathLength="1000" d="M110 300a490 245 0 1 0 980 0a490 245 0 1 0-980 0" />
+                <circle class="fx-dot fx-dot--cyan" r="3.5" filter="url(#fxGlow)">
+                  <animateMotion dur="14s" repeatCount="indefinite" keyPoints="1;0" keyTimes="0;1" calcMode="linear"><mpath href="#fxOrbitB" /></animateMotion>
+                </circle>
+              </g>
+
+              <g class="fx-circuit">
+                <path d="M0 250H70l30-30h70" /><circle cx="170" cy="220" r="4" />
+                <path d="M0 300h140" /><circle cx="140" cy="300" r="4" />
+                <path d="M0 350h50l30 30h80" /><circle cx="160" cy="380" r="4" />
+                <path d="M1200 250h-70l-30-30h-70" /><circle cx="1030" cy="220" r="4" />
+                <path d="M1200 300h-140" /><circle cx="1060" cy="300" r="4" />
+                <path d="M1200 350h-50l-30 30h-80" /><circle cx="1040" cy="380" r="4" />
+              </g>
+              <g class="fx-pulses" filter="url(#fxGlow)">
+                <path class="fx-pulse" pathLength="100" d="M0 250H70l30-30h70" />
+                <path class="fx-pulse fx-pulse--d2" pathLength="100" d="M0 300h140" />
+                <path class="fx-pulse fx-pulse--d3" pathLength="100" d="M0 350h50l30 30h80" />
+                <path class="fx-pulse fx-pulse--red fx-pulse--d2" pathLength="100" d="M1200 250h-70l-30-30h-70" />
+                <path class="fx-pulse fx-pulse--red fx-pulse--d3" pathLength="100" d="M1200 300h-140" />
+                <path class="fx-pulse fx-pulse--red" pathLength="100" d="M1200 350h-50l-30 30h-80" />
+              </g>
+
+              <g class="fx-brackets">
+                <path d="M190 215v-40h40" /><path d="M970 175h40v40" />
+                <path d="M190 385v40h40" /><path d="M970 425h40v-40" />
+              </g>
+            </svg>
+          </div>
+          <h1 class="hero__title" id="heroTitle">
+            <span class="sr-only">Speed Trade Technologies — platform technology built for speed</span>
+            <span class="hero__type" id="heroType" aria-hidden="true">Platform technology built for <span class="gradient-text">speed.</span></span>
+          </h1>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CAPABILITY MARQUEE ============ -->
+    <section class="marquee" aria-label="Our technology capabilities">
+      <div class="marquee__track">
+        <span>Real-time Data Streaming</span><span>Cloud Infrastructure</span><span>Web Applications</span><span>Mobile Apps</span>
+        <span>API Integration</span><span>Data Analytics</span><span>Cybersecurity</span><span>White-label Solutions</span><span>AI &amp; Automation</span>
+        <span aria-hidden="true">Real-time Data Streaming</span><span aria-hidden="true">Cloud Infrastructure</span><span aria-hidden="true">Web Applications</span><span aria-hidden="true">Mobile Apps</span>
+        <span aria-hidden="true">API Integration</span><span aria-hidden="true">Data Analytics</span><span aria-hidden="true">Cybersecurity</span><span aria-hidden="true">White-label Solutions</span><span aria-hidden="true">AI &amp; Automation</span>
+      </div>
+    </section>
+
+    <!-- ============ PLATFORM ============ -->
+    <section class="section" id="platform">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="eyebrow">The platform</p>
+          <h2>One platform. Every screen.</h2>
+          <p>Deliver a seamless experience across desktop, browser and mobile. Accounts, dashboards, settings and alerts stay in sync wherever your users log in.</p>
+        </div>
+
+        <div class="platforms">
+          <article class="card platform reveal">
+            <div class="platform__img"><img src="assets/img/terminal-desktop.jpg" alt="Professional using a desktop application with real-time data dashboards" loading="lazy" /></div>
+            <div class="platform__body">
+              <span class="platform__tag">Windows &middot; macOS</span>
+              <h3>Desktop Application</h3>
+              <p>A professional workstation with multi-window layouts, detachable panels, live data views and keyboard shortcuts for power users.</p>
+              <ul class="mini-list"><li>Multi-monitor workspaces</li><li>Real-time data panels</li><li>Custom scripting &amp; automation</li></ul>
+            </div>
+          </article>
+
+          <article class="card platform reveal">
+            <div class="platform__img"><img src="assets/img/web-terminal.jpg" alt="Laptop running a browser-based platform with a dark analytics chart" loading="lazy" /></div>
+            <div class="platform__body">
+              <span class="platform__tag">Any browser</span>
+              <h3>Web Platform</h3>
+              <p>Full functionality with zero installation. Fast, responsive and secure — users can sign in from any device in seconds.</p>
+              <ul class="mini-list"><li>No downloads required</li><li>Synced layouts &amp; preferences</li><li>Embeddable in your client portal</li></ul>
+            </div>
+          </article>
+
+          <article class="card platform reveal">
+            <div class="platform__img"><img src="assets/img/terminal-mobile.jpg" alt="Smartphone showing interactive charts in a mobile app" loading="lazy" /></div>
+            <div class="platform__body">
+              <span class="platform__tag">iOS &middot; Android</span>
+              <h3>Mobile Apps</h3>
+              <p>Native apps with interactive charts, instant notifications and biometric login — the full platform in your users' pockets.</p>
+              <ul class="mini-list"><li>Push notifications &amp; alerts</li><li>Face ID / fingerprint login</li><li>Branded for your business</li></ul>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FEATURES ============ -->
+    <section class="section section--alt" id="features">
+      <div class="container">
+        <div class="section__head section__head--row reveal">
+          <div>
+            <p class="eyebrow">Platform features</p>
+            <h2>Everything a modern financial platform needs</h2>
+          </div>
+          <p>Powerful, flexible building blocks that help businesses deliver fast, secure and data-rich digital experiences to their users.</p>
+        </div>
+
+        <div class="services">
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4M4 20h16"/><path d="M8 14v-4M8 16v-2M12 12V7M12 15v-3M16 10V8M16 13v-3"/></svg></div>
+            <h3>Advanced Data Visualisation</h3>
+            <p>Interactive charts, multiple timeframes, a large library of analytical tools and dashboards users can customise, save and share.</p>
+            <ul class="tags"><li>Charts</li><li>Dashboards</li><li>Templates</li></ul>
+          </article>
+
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></svg></div>
+            <h3>Real-time Processing</h3>
+            <p>A low-latency engine that ingests, processes and distributes high volumes of data to thousands of users simultaneously.</p>
+            <ul class="tags"><li>Streaming</li><li>Low latency</li><li>High volume</li></ul>
+          </article>
+
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/></svg></div>
+            <h3>Automation &amp; Scripting</h3>
+            <p>Build custom tools, scripts and automated workflows, test them against historical data and run them around the clock.</p>
+            <ul class="tags"><li>Scripting</li><li>Workflows</li><li>Testing</li></ul>
+          </article>
+
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.5"/><path d="M3 20a6 6 0 0 1 12 0M14 20a4 4 0 0 1 7-2.6"/></svg></div>
+            <h3>User &amp; Account Management</h3>
+            <p>Flexible user groups, roles and permissions, with self-service onboarding and identity verification built in.</p>
+            <ul class="tags"><li>Roles</li><li>Onboarding</li><li>eKYC</li></ul>
+          </article>
+
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+            <h3>Enterprise Security</h3>
+            <p>End-to-end encryption, two-factor authentication, audit logs and role-based access protect every user and every transaction.</p>
+            <ul class="tags"><li>Encryption</li><li>2FA</li><li>Audit logs</li></ul>
+          </article>
+
+          <article class="card service reveal">
+            <div class="service__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4M7 13h3M7 17h3M14 13h3"/></svg></div>
+            <h3>Notifications &amp; Insights</h3>
+            <p>Smart alerts, in-app messaging, news feeds and calendars keep users informed and engaged in real time.</p>
+            <ul class="tags"><li>Alerts</li><li>News feed</li><li>Calendar</li></ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SOLUTIONS (WHITE-LABEL) ============ -->
+    <section class="section" id="solutions">
+      <div class="container split">
+        <div class="split__media reveal">
+          <img src="assets/img/analytics-screen.jpg" alt="Screen showing financial analytics charts" class="split__img split__img--main" loading="lazy" />
+          <img src="assets/img/multi-device.jpg" alt="Laptop and smartphone both running the same platform" class="split__img split__img--float" loading="lazy" />
+        </div>
+        <div class="split__body reveal">
+          <p class="eyebrow">For businesses &amp; fintechs</p>
+          <h2>Launch your own platform on proven technology</h2>
+          <p class="muted">Everything you need to run a modern digital financial platform — from the core server to the client portal — delivered as a turnkey, fully branded solution.</p>
+          <ul class="checklist">
+            <li>
+              <span class="check"></span>
+              <div><strong>White-label platform</strong><p>Desktop, web and mobile applications carrying your logo, colours and domain.</p></div>
+            </li>
+            <li>
+              <span class="check"></span>
+              <div><strong>Back office &amp; administration</strong><p>Manage users, products, pricing, permissions and configuration from one console.</p></div>
+            </li>
+            <li>
+              <span class="check"></span>
+              <div><strong>Monitoring &amp; controls</strong><p>Real-time system monitoring, exposure dashboards and configurable business rules.</p></div>
+            </li>
+            <li>
+              <span class="check"></span>
+              <div><strong>CRM, client portal &amp; payments</strong><p>Onboarding, eKYC, payment gateways and partner management fully integrated.</p></div>
+            </li>
+          </ul>
+          <a href="#contact" class="btn btn--primary">Talk to our solutions team</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ MODULES ============ -->
+    <section class="section section--alt section--tight">
+      <div class="container">
+        <div class="modules reveal">
+          <div class="module"><span class="module__k">01</span><h4>Core Server</h4><p>Scalable processing engine, account management and real-time data distribution.</p></div>
+          <div class="module"><span class="module__k">02</span><h4>Data Integration Hub</h4><p>Connect multiple data providers and third-party services with smart routing.</p></div>
+          <div class="module"><span class="module__k">03</span><h4>Reporting &amp; Compliance</h4><p>Reports, audit trails and data exports to support regulatory obligations.</p></div>
+          <div class="module"><span class="module__k">04</span><h4>Analytics Suite</h4><p>Business intelligence dashboards and user-behaviour insights out of the box.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INDUSTRIES ============ -->
+    <section class="section" id="industries">
+      <div class="container">
+        <div class="section__head section__head--row reveal">
+          <div>
+            <p class="eyebrow">Industries</p>
+            <h2>Technology for the digital finance economy</h2>
+          </div>
+          <p>Our platforms power digital services for a wide range of financial and technology businesses.</p>
+        </div>
+
+        <div class="solutions">
+          <article class="solution solution--lg reveal">
+            <img src="assets/img/fintech-app.jpg" alt="Phone and screen showing a financial services app" loading="lazy" />
+            <div class="solution__body">
+              <span class="chip">Financial services</span>
+              <h3>Financial Institutions</h3>
+              <p>Secure, scalable digital platforms and client applications for banks, investment firms and financial service providers.</p>
+            </div>
+          </article>
+          <article class="solution reveal">
+            <img src="assets/img/candles.jpg" alt="Real-time data chart on a dark screen" loading="lazy" />
+            <div class="solution__body">
+              <span class="chip">Data</span>
+              <h3>Market Data &amp; Analytics</h3>
+              <p>Real-time data feeds and visual analytics.</p>
+            </div>
+          </article>
+          <article class="solution reveal">
+            <img src="assets/img/crypto.jpg" alt="Digital coins in front of a data chart" loading="lazy" />
+            <div class="solution__body">
+              <span class="chip">Blockchain</span>
+              <h3>Digital Assets</h3>
+              <p>Blockchain integration and digital wallets.</p>
+            </div>
+          </article>
+          <article class="solution reveal">
+            <img src="assets/img/laptop-chart.jpg" alt="Laptop showing a growth chart" loading="lazy" />
+            <div class="solution__body">
+              <span class="chip">Fintech</span>
+              <h3>Fintech Startups</h3>
+              <p>Launch faster with ready-made platform modules.</p>
+            </div>
+          </article>
+          <article class="solution reveal">
+            <img src="assets/img/dashboard.jpg" alt="Monitor showing an analytics dashboard with charts" loading="lazy" />
+            <div class="solution__body">
+              <span class="chip">Enterprise</span>
+              <h3>Enterprise Dashboards</h3>
+              <p>Custom real-time dashboards for operations.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TECHNOLOGY ============ -->
+    <section class="section section--dark tech" id="technology">
+      <div class="tech__bg"><img src="assets/img/datacenter.jpg" alt="" loading="lazy" /></div>
+      <div class="container split">
+        <div class="split__body reveal">
+          <p class="eyebrow">Technology</p>
+          <h2>Institutional-grade infrastructure under the hood</h2>
+          <p>Our platform is engineered from the ground up for performance, resilience and security — so businesses can grow without re-platforming.</p>
+          <div class="specs">
+            <div class="spec"><h4>Low-latency engine</h4><p>Optimised processing and data distribution designed for high-volume workloads.</p></div>
+            <div class="spec"><h4>High availability</h4><p>Redundant servers, automatic failover and continuous monitoring.</p></div>
+            <div class="spec"><h4>Bank-level security</h4><p>Encrypted connections, two-factor authentication and role-based access.</p></div>
+            <div class="spec"><h4>Cloud scalable</h4><p>Scale capacity on demand as your user base grows.</p></div>
+          </div>
+        </div>
+        <div class="code-card reveal" aria-label="Example of the Speed Trade platform API">
+          <div class="code-card__bar">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="code-card__tabs"><b>REST</b><span>WebSocket</span><span>FIX 4.4</span></span>
+          </div>
+<pre><code><span class="c"># Subscribe to a real-time data stream</span>
+<span class="k">POST</span> /v1/streams
+<span class="k">Authorization:</span> Bearer &lt;api_key&gt;
+
+{
+  <span class="s">"source"</span>:   <span class="s">"market-data"</span>,
+  <span class="s">"channels"</span>: [<span class="s">"prices"</span>, <span class="s">"news"</span>],
+  <span class="s">"format"</span>:   <span class="s">"json"</span>,
+  <span class="s">"interval"</span>: <span class="n">250</span>,
+  <span class="s">"webhook"</span>:  <span class="s">"https://api.yourapp.com/hook"</span>
+}
+
+<span class="c"># 201 Created</span>
+{ <span class="s">"streamId"</span>: <span class="s">"st_48213"</span>, <span class="s">"status"</span>: <span class="s">"active"</span> }</code></pre>
+          <p class="code-card__note">Illustrative example. Full API documentation is available to partners.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LAUNCH PROCESS ============ -->
+    <section class="section" id="process">
+      <div class="container">
+        <div class="section__head reveal">
+          <p class="eyebrow">Go live</p>
+          <h2>Launch your platform in four steps</h2>
+          <p>Our team supports you from first consultation to go-live — and every day after.</p>
+        </div>
+        <ol class="process">
+          <li class="process__step reveal">
+            <span class="process__num">01</span>
+            <h3>Consult</h3>
+            <p>We map your business model, target users, required features and compliance requirements.</p>
+          </li>
+          <li class="process__step reveal">
+            <span class="process__num">02</span>
+            <h3>Configure &amp; brand</h3>
+            <p>Your applications, client portal and back office are set up with your branding and business rules.</p>
+          </li>
+          <li class="process__step reveal">
+            <span class="process__num">03</span>
+            <h3>Integrate</h3>
+            <p>We connect your data providers, payment gateways and eKYC services, then test end to end.</p>
+          </li>
+          <li class="process__step reveal">
+            <span class="process__num">04</span>
+            <h3>Go live &amp; scale</h3>
+            <p>Launch with 24/7 technical support, monitoring and continuous platform updates.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ============ ABOUT ============ -->
+    <section class="section section--dark about" id="about">
+      <div class="about__bg"><img src="assets/img/kl.jpg" alt="" loading="lazy" /></div>
+      <div class="container split split--reverse">
+        <div class="split__body reveal">
+          <p class="eyebrow">About us</p>
+          <h2>Financial technology, engineered in Malaysia</h2>
+          <p>
+            <strong>SPEED TRADE TECHNOLOGIES SDN BHD</strong> is a technology provider specialising in
+            high-performance software platforms for the financial sector. Our team of software engineers,
+            data specialists and support professionals builds the technology that powers modern digital finance.
+          </p>
+          <p>
+            Our mission is to give financial institutions and fintechs a fast, reliable and fully customisable
+            alternative to legacy platforms — with the flexibility and support of a dedicated technology partner.
+          </p>
+          <div class="values">
+            <div><h4>Speed</h4><p>Fast performance and fast time to market.</p></div>
+            <div><h4>Reliability</h4><p>Built to stay up when it matters most.</p></div>
+            <div><h4>Partnership</h4><p>Support that grows with your business.</p></div>
+          </div>
+        </div>
+        <div class="about__media reveal">
+          <img src="assets/img/team.jpg" alt="Engineering team collaborating on laptops" loading="lazy" />
+          <img src="assets/img/watchlist.jpg" alt="Smartphone showing a data list in a mobile app" loading="lazy" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INSIGHTS ============ -->
+    <section class="section section--alt" id="insights">
+      <div class="container">
+        <div class="section__head section__head--row reveal">
+          <div>
+            <p class="eyebrow">Insights</p>
+            <h2>From our technology desk</h2>
+          </div>
+          <p>Perspectives from our engineers on the technology shaping digital finance.</p>
+        </div>
+        <div class="insights">
+          <article class="card insight reveal">
+            <img src="assets/img/code.jpg" alt="" loading="lazy" />
+            <div class="insight__body">
+              <span class="insight__meta">Engineering</span>
+              <h3>Building real-time data pipelines that never sleep</h3>
+              <p>How we design streaming systems that handle huge data volumes with low latency and zero downtime.</p>
+            </div>
+          </article>
+          <article class="card insight reveal">
+            <img src="assets/img/network.jpg" alt="" loading="lazy" />
+            <div class="insight__body">
+              <span class="insight__meta">Strategy</span>
+              <h3>White-label or build in-house? Choosing the right path</h3>
+              <p>The cost, time-to-market and control factors every business should weigh before building a platform.</p>
+            </div>
+          </article>
+          <article class="card insight reveal">
+            <img src="assets/img/terminal-mobile.jpg" alt="" loading="lazy" />
+            <div class="insight__body">
+              <span class="insight__meta">Mobile</span>
+              <h3>Mobile-first finance: what users expect in 2026</h3>
+              <p>Why most financial interactions now happen on a phone, and the features that keep users engaged.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="cta">
+      <div class="container cta__inner reveal">
+        <div>
+          <h2>See Speed Trade in action</h2>
+          <p>Book a personalised walkthrough of our applications, back office and integration tools.</p>
+        </div>
+        <a href="#contact" class="btn btn--light">Book a live demo</a>
+      </div>
+    </section>
+
+    <!-- ============ CONTACT ============ -->
+    <section class="section" id="contact">
+      <div class="container contact">
+        <div class="contact__info reveal">
+          <p class="eyebrow">Contact</p>
+          <h2>Let's talk technology</h2>
+          <p class="muted">Whether you're launching a new digital platform, replacing legacy systems or need API access, our team is ready to help.</p>
+
+          <ul class="contact__list">
+            <li>
+              <span class="contact__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></span>
+              <div><small>Office</small><span>Kuala Lumpur, Malaysia</span></div>
+            </li>
+            <li>
+              <span class="contact__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+              <div><small>Email</small><a href="mailto:info@speedtrade.com.my">info@speedtrade.com.my</a></div>
+            </li>
+            <li>
+              <span class="contact__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></span>
+              <div><small>Phone</small><a href="tel:+60300000000">+60 3-0000 0000</a></div>
+            </li>
+            <li>
+              <span class="contact__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              <div><small>Technical support</small><span>24/7 for platform clients</span></div>
+            </li>
+          </ul>
+        </div>
+
+        <form class="card contact__form reveal" id="contactForm" novalidate>
+          <div class="form-row">
+            <label>Full name<input type="text" name="name" required autocomplete="name" placeholder="Your name" /></label>
+            <label>Company<input type="text" name="company" autocomplete="organization" placeholder="Company name" /></label>
+          </div>
+          <div class="form-row">
+            <label>Email<input type="email" name="email" required autocomplete="email" placeholder="you@company.com" /></label>
+            <label>Phone<input type="tel" name="phone" autocomplete="tel" placeholder="+60" /></label>
+          </div>
+          <div class="form-row">
+            <label>I am a
+              <select name="role">
+                <option>Financial institution</option>
+                <option>Fintech startup</option>
+                <option>Enterprise</option>
+                <option>Technology partner</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>Interested in
+              <select name="service">
+                <option>White-label platform</option>
+                <option>Desktop, web &amp; mobile apps</option>
+                <option>Data integration</option>
+                <option>CRM &amp; back office</option>
+                <option>API access</option>
+                <option>Something else</option>
+              </select>
+            </label>
+          </div>
+          <label>Message<textarea name="message" rows="4" required placeholder="Tell us about your business and requirements"></textarea></label>
+          <button type="submit" class="btn btn--primary btn--block">Send Enquiry
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="form-note" id="formNote" role="status"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer__grid">
+      <div class="footer__brand">
+        <a href="#home" class="brand">
+          <img src="assets/img/logo-light.png" alt="Speed Trade — Technology Provider" class="brand__logo" width="900" height="242" />
+        </a>
+        <p>High-performance software platforms and digital infrastructure for financial businesses.</p>
+      </div>
+      <div>
+        <h4>Platform</h4>
+        <ul>
+          <li><a href="#platform">Desktop Application</a></li>
+          <li><a href="#platform">Web Platform</a></li>
+          <li><a href="#platform">Mobile Apps</a></li>
+          <li><a href="#technology">Developer API</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Solutions</h4>
+        <ul>
+          <li><a href="#solutions">White-label</a></li>
+          <li><a href="#solutions">Data Integration</a></li>
+          <li><a href="#solutions">Back Office &amp; CRM</a></li>
+          <li><a href="#solutions">Analytics Suite</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Company</h4>
+        <ul>
+          <li><a href="#about">About us</a></li>
+          <li><a href="#insights">Insights</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li><a href="mailto:info@speedtrade.com.my">info@speedtrade.com.my</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="container footer__risk">
+      <p>
+        <strong>Disclaimer:</strong> Speed Trade Technologies Sdn Bhd is a software and technology provider. We do not
+        provide investment advice or financial services. Data shown on this website is for illustration only.
+      </p>
+    </div>
+    <div class="container footer__bottom">
+      <p>&copy; <span id="year"></span> SPEED TRADE TECHNOLOGIES SDN BHD. All rights reserved.</p>
+      <a href="#home" class="to-top">Back to top &uarr;</a>
+    </div>
+  </footer>
+
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
