@@ -26,7 +26,7 @@ from .api import (
     websocket_manager, social, business, portfolio, profile, support,
     notifications, banners, trading_catalog, followers, lp_receiver,
     share, algo_connector, algo_keys, algo_market_data, algo_terminal,
-    brokers,
+    brokers, indicators,
 )
 from .engines.sltp_engine import sltp_engine
 from .engines.copy_engine import copy_engine
@@ -341,6 +341,7 @@ app.include_router(support.router, prefix="/api/v1/support", tags=["Support"])
 app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["Notifications"])
 app.include_router(banners.media_router, prefix="/api/v1/banners", tags=["Banners"])
 app.include_router(banners.router, prefix="/api/v1/banners", tags=["Banners"])
+app.include_router(indicators.router, prefix="/api/v1/indicators", tags=["Indicators"])
 app.include_router(followers.router, prefix="/api/v1/followers", tags=["Followers"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 # Corecen LP price push receiver — HMAC-secured, public (no JWT). Path mirrors

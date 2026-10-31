@@ -243,6 +243,9 @@ services:
     environment:
       # Server-side proxy /admin-api → admin-api (browser must not use docker hostname admin-api)
       ADMIN_API_PROXY_TARGET: http://admin-api:8001
+      # Admin → Indicators preview loads the charting library from the trader
+      # frontend's copy (src/app/charting_library/[...path]/route.ts).
+      TRADER_FRONTEND_INTERNAL_URL: http://trader-frontend:3000
     depends_on:
       - gateway
       - admin-api

@@ -14,6 +14,7 @@ Module map:
     support.py    Tickets, notifications, banners
     system.py     SystemSetting, BonusOffer, UserBonus
     share.py      SharedTrade
+    charts.py     CustomIndicator
 """
 
 from ..database import Base
@@ -54,6 +55,7 @@ from .system import (
 )
 from .vip import VipPass
 from .share import SharedTrade
+from .charts import CustomIndicator
 
 
 __all__ = [
@@ -85,4 +87,6 @@ __all__ = [
     "VipPass",
     # share
     "SharedTrade",
+    # charts
+    "CustomIndicator",
 ]

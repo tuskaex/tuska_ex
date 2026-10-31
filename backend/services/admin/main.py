@@ -22,6 +22,7 @@ from routes import (
     notifications,
     sub_admins,
     branding,
+    indicators,
 )
 
 app_settings = get_settings()
@@ -192,6 +193,7 @@ app.include_router(social.router, prefix=prefix)
 app.include_router(analytics.router, prefix=prefix)
 app.include_router(bonus.router, prefix=prefix)
 app.include_router(banners.router, prefix=prefix)
+app.include_router(indicators.router, prefix=prefix)
 app.include_router(support.router, prefix=prefix)
 app.include_router(employees.router, prefix=prefix)
 app.include_router(sub_admins.router, prefix=prefix)

@@ -46,6 +46,7 @@ import { useTradingStore } from '@/stores/tradingStore';
 import { createDatafeed, type DatafeedInstrument } from '@/lib/chart/datafeed';
 import { useChartBrand } from '@/hooks/useTenantBrand';
 import { loadChartLibrary } from '@/lib/chart/loadChartLibrary';
+import { buildCustomIndicators, fetchCustomIndicators } from '@/lib/chart/customIndicators';
 import { api } from '@/lib/api/client';
 import { openPnl } from '@/lib/pnl';
 import toast from 'react-hot-toast';
@@ -291,6 +292,9 @@ function TradingViewChartInner({
         /* resolveSymbol falls back to heuristics */
       }
 
+      // Admin-published indicators; fetched alongside the library load.
+      const customIndicators = fetchCustomIndicators();
+
       // Both failure paths below used to `return` silently, leaving the
       // full-cover spinner up forever with nothing in the UI to explain it.
       // The charting library is licensed and NOT in the repo, so "missing
@@ -322,6 +326,9 @@ function TradingViewChartInner({
         container: CONTAINER_ID,
         container_id: CONTAINER_ID,
         datafeed,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        custom_indicators_getter: (PineJS: any) =>
+          customIndicators.then((rows) => buildCustomIndicators(PineJS, rows)),
         library_path: '/charting_library/',
         locale: 'en',
         timezone: 'Etc/UTC',

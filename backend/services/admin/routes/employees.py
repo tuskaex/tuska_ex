@@ -25,6 +25,7 @@ PERMISSION_CATALOG = {
     "IB":          ["ib.view", "ib.manage"],
     "Marketing":   ["banners.view", "banners.create", "banners.update", "banners.delete", "bonus.view", "bonus.create", "bonus.update"],
     "Support":     ["tickets.view", "tickets.reply", "tickets.assign"],
+    "Charts":      ["indicators.view", "indicators.manage", "indicators.publish"],
     "Analytics":   ["analytics.view", "exposure.view"],
     "Audit":       ["audit_logs.view"],
 }

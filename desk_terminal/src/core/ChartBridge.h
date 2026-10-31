@@ -55,6 +55,11 @@ public:
     Q_INVOKABLE void modifyBracket(const QString& positionId, const QString& kind, double level);
     Q_INVOKABLE void closePosition(const QString& positionId);
 
+    // JS -> C++: fetch the admin-published custom indicators. Answered once
+    // via customIndicatorsReady(json) — "{}" when there are none or the fetch
+    // failed. See web/tx_indicators.js.
+    Q_INVOKABLE void requestCustomIndicators();
+
     // ── Saved chart layouts and templates ──────────────────────────────
     //
     // These back the charting library's save/load adapter, which is what puts
@@ -222,6 +227,7 @@ signals:
     void compactChanged(bool compact);
     void dataWindowChanged(bool on);
     void barsReady(const QString& reqId, const QString& barsJson);
+    void customIndicatorsReady(const QString& json);
     void tick(const QString& symbol, double bid, double ask, double tsMs);
     // Result of a modifyBrackets()/closePosition() call, back to the broker adapter.
     void positionOp(const QString& positionId, const QString& op, bool ok, const QString& message);

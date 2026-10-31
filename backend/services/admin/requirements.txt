@@ -17,3 +17,7 @@ httpx>=0.27.0
 # (branding_service), deliberately bypassing the container's resolver so a
 # stale cache cannot report a domain as unpointed after the customer fixed it.
 dnspython>=2.6.0
+# Admin → Indicators: converts pasted Pine Script / MQL with Claude, and parses
+# the generated JavaScript to check it before it is stored.
+anthropic>=2.3.0,<3
+esprima>=4.0.1

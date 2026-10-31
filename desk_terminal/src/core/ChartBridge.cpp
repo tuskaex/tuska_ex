@@ -12,6 +12,7 @@
 ChartBridge::ChartBridge(ApiClient* api, PriceStream* stream, QObject* parent)
     : QObject(parent), m_api(api), m_stream(stream) {
     connect(m_api,    &ApiClient::barsReceived,   this, &ChartBridge::onBarsReceived);
+    connect(m_api, &ApiClient::customIndicatorsReceived, this, &ChartBridge::customIndicatorsReady);
     connect(m_stream, &PriceStream::tickReceived, this, &ChartBridge::onTick);
     // Relay per-position modify/close outcomes to the broker adapter.
     connect(m_api, &ApiClient::positionOpResult, this,
@@ -291,6 +292,12 @@ void ChartBridge::modifyBracket(const QString& positionId, const QString& kind, 
 
 void ChartBridge::closePosition(const QString& positionId) {
     m_api->closePositionById(positionId);
+}
+
+// Every pane's bridge hears every answer (one ApiClient); a pane that is not
+// waiting simply ignores it, which is cheaper than tracking who asked.
+void ChartBridge::requestCustomIndicators() {
+    m_api->fetchCustomIndicators();
 }
 
 void ChartBridge::setOverlayHidden(bool hidden) {

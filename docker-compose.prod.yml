@@ -154,4 +154,7 @@ services:
       # is a white-label tenant's back office and must wear their brand, not
       # ours. Unset ⇒ everything is treated as TuskaEx (local dev).
       NEXT_PUBLIC_PLATFORM_ADMIN_HOST: admin.tuskaex.com
+      # Admin → Indicators preview loads the charting library from the trader
+      # frontend's copy (src/app/charting_library/[...path]/route.ts).
+      TRADER_FRONTEND_INTERNAL_URL: http://trader-frontend:3000
     restart: always

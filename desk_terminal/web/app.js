@@ -306,6 +306,13 @@
       // Saved layouts and templates go through our own adapter, into a file
       // beside config.json. No TradingView account and no server is involved.
       save_load_adapter: makeSaveLoadAdapter(bridge),
+      // Indicators the broker published from Admin → Indicators. Fetched per
+      // build; see tx_indicators.js.
+      custom_indicators_getter: function (PineJS) {
+        return window.txIndicators.load(bridge).then(function (rows) {
+          return window.txIndicators.build(PineJS, rows);
+        });
+      },
       // MetaTrader's menu on the candles, in place of the library's own. A
       // constructor option, which is why the rebuild paths below re-apply it
       // for free. See tx_chartmenu.js.

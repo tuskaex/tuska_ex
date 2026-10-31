@@ -780,3 +780,18 @@ void ApiClient::handleReply(QNetworkReply* reply, const QString& kind, const QSt
         }
     });
 }
+
+void ApiClient::fetchCustomIndicators() {
+    QNetworkReply* r = m_net->get(v1Request("/indicators"));
+    connect(r, &QNetworkReply::finished, this, [this, r]() {
+        r->deleteLater();
+        const int http = r->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        const QByteArray body = r->readAll();
+        if (r->error() != QNetworkReply::NoError || http >= 400
+            || !QJsonDocument::fromJson(body).isObject()) {
+            emit customIndicatorsReceived(QStringLiteral("{}"));
+            return;
+        }
+        emit customIndicatorsReceived(QString::fromUtf8(body));
+    });
+}

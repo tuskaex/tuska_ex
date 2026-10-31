@@ -106,6 +106,10 @@ class Settings(BaseSettings):
     INFOWAY_API_KEY: str = ""
     INFOWAY_API_URL: str = "https://api.infoway.io"
 
+    # Admin → Indicators converts pasted Pine Script / MQL with Claude.
+    # Empty disables conversion; everything else in the admin API still runs.
+    ANTHROPIC_API_KEY: str = ""
+
     # When True, order fills and closes re-derive the user's bid/ask from the
     # broadcast MID using the user's resolved spread config (per-user / per-tier),
     # instead of trusting the single global broadcast spread — so the admin

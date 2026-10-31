@@ -665,6 +665,13 @@ class BannerIn(BaseModel):
     is_active: bool = True
 
 
+class IndicatorIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    source_code: str = Field(..., min_length=1, max_length=200_000)
+    # pine | mql4 | mql5; None = detect from the code.
+    source_language: Optional[str] = None
+
+
 class BannerOut(BaseModel):
     id: str
     title: Optional[str] = None

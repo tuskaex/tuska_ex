@@ -39,6 +39,10 @@ public:
     // reply would satisfy, and truncate, a chart asking for a thousand.
     void fetchDailyRange(const QString& symbol);
     void fetchHistory(int limit = 100);
+    // Chart indicators published from the admin panel (pasted Pine Script /
+    // MQL, converted to Charting Library JS). Public /api/v1/indicators, so it
+    // works for key-only sessions too. Answered by customIndicatorsReceived.
+    void fetchCustomIndicators();
 
     // action = "BUY" | "SELL". sl/tp <= 0 are omitted.
     void placeOrder(const QString& action, const QString& symbol, double volume,
@@ -128,6 +132,9 @@ signals:
     void dailyRangeReceived(const QString& symbol, double high, double low, double open,
                             const QDateTime& day);
     void historyReceived(const QVector<HistoryTrade>& history);
+    // Answer to fetchCustomIndicators(): the response body as-is, or "{}" on
+    // any failure. Always emitted, so a chart waiting on it never hangs.
+    void customIndicatorsReceived(const QString& json);
     // Result of a per-position modify/close. ok=false carries the reject reason
     // (so the chart can snap a dragged line back and toast the message).
     void positionOpResult(const QString& positionId, const QString& op, bool ok, const QString& message);

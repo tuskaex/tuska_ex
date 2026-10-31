@@ -207,6 +207,15 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     unavailableReason: SHARED_BY_ALL_TENANTS,
   },
   {
+    key: 'indicators',
+    label: 'Chart indicators',
+    hint: '⚠ Platform indicators — published to every tenant’s terminals',
+    perms: ['indicators.view', 'indicators.manage', 'indicators.publish'],
+    platformWide: true,
+    available: false,
+    unavailableReason: SHARED_BY_ALL_TENANTS,
+  },
+  {
     key: 'support',
     defaultForNewTenant: true,
     label: 'Support',
