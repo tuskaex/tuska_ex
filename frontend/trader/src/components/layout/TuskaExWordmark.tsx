@@ -26,7 +26,8 @@ import { isTenantHost } from '@/lib/tenantHost';
  */
 const BRAND_BY_HOST = {
   tuskaex: { logo: '/marketing/tuskaex-logo.png', mark: '/marketing/tuskaex_fevicon.png', name: 'TuskaEx' },
-  speedtrade: { logo: '/marketing/speedtrade-logo.png', mark: '/marketing/speedtrade-icon.png', name: 'SpeedTrade' },
+  // -v2: a new logo needs a new URL — /_next/image responses are cached for a year.
+  speedtrade: { logo: '/marketing/speedtrade-logo-v2.png', mark: '/marketing/speedtrade-icon-v2.png', name: 'SpeedTrade' },
 } as const;
 
 function brand() {

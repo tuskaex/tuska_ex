@@ -39,7 +39,7 @@ import {
  *
  * The copy is checked into this repo; replace the file if the brand changes.
  */
-const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo.png';
+const SPEEDTRADE_LOGO = '/marketing/speedtrade-logo-v2.png';
 
 /**
  * Branded full-screen hold.

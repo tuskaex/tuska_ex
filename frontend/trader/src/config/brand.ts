@@ -33,8 +33,13 @@ export const BRAND_LOGO_LIGHT = '/marketing/tuskaex-logo-light.png';
  * A white-label tenant overrides both — see useChartBrand.
  */
 export const TERMINAL_BRAND_NAME = 'SpeedTrade';
-/** Mark + wordmark on transparent, so it reads on the light and dark chart. */
-export const TERMINAL_BRAND_LOGO = '/marketing/speedtrade-logo.png';
+/** Mark + wordmark on transparent. "Speed" is navy in this one and near-white
+ *  in the dark-theme copy, so each needs the matching chart background.
+ *  Versioned file names, not edited files: /_next/ and /marketing/ responses
+ *  are cached for days to a year, so a logo swapped under the same URL keeps
+ *  showing the old one. A new logo gets a new name. */
+export const TERMINAL_BRAND_LOGO = '/marketing/speedtrade-logo-v2.png';
+export const TERMINAL_BRAND_LOGO_DARK = '/marketing/speedtrade-logo-v2-dark.png';
 
 export const BRAND_DOMAIN = 'tuskaex.com';
 export const BRAND_SUPPORT_EMAIL = 'support@tuskaex.com';

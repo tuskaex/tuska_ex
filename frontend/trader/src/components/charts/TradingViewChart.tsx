@@ -202,7 +202,7 @@ function TradingViewChartInner({
   // Whose name and mark the chart wears. Mirrored into a ref because the
   // datafeed is built once inside the mount effect and must not re-run (that
   // would tear the widget down); the getter it holds reads the ref instead.
-  const chartBrand = useChartBrand();
+  const chartBrand = useChartBrand(theme);
   const chartBrandRef = useRef(chartBrand);
   chartBrandRef.current = chartBrand;
 

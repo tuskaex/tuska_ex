@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import {
   BRAND_NAME,
   TERMINAL_BRAND_LOGO,
+  TERMINAL_BRAND_LOGO_DARK,
   TERMINAL_BRAND_NAME,
 } from '@/config/brand';
 import {
@@ -98,10 +99,15 @@ export function useBrandName(fallbackWhileLoading = ''): string {
  * different company's mark at the broker's own client — the same rule the rest
  * of the branding code follows.
  */
-export function useChartBrand(): { name: string; logoUrl: string | null } {
+export function useChartBrand(theme: 'light' | 'dark' = 'light'): { name: string; logoUrl: string | null } {
   const brand = useTenantBrand();
   if (!brand.isTenant) {
-    return { name: TERMINAL_BRAND_NAME, logoUrl: TERMINAL_BRAND_LOGO };
+    // Each theme gets the copy whose "Speed" contrasts with its background.
+    // A tenant uploads one logo, so it is used on both.
+    return {
+      name: TERMINAL_BRAND_NAME,
+      logoUrl: theme === 'dark' ? TERMINAL_BRAND_LOGO_DARK : TERMINAL_BRAND_LOGO,
+    };
   }
   if (brand.loading) return { name: '', logoUrl: null };
   return { name: brand.brandName, logoUrl: brand.logoUrl };
