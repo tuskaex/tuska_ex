@@ -43,6 +43,8 @@ WS_CLOSE_ACCOUNT_INACTIVE = 4004
 
 AUTH_TIMEOUT_SECONDS = 5
 WS_HEARTBEAT_INTERVAL = 30
+# Most queued ticks folded into one send pass, so a flood can't starve the loop.
+_DRAIN_MAX = 5000
 
 
 def _hash_secret(raw: str) -> str:
@@ -428,16 +430,30 @@ async def algo_prices_ws(websocket: WebSocket) -> None:
         loop = asyncio.get_event_loop()
         last_ping = loop.time()
         while not client_gone.is_set():
-            # Returns as soon as a tick is there; the timeout only bounds how
-            # long a quiet market keeps the heartbeat and disconnect waiting.
+            # Send the NEWEST tick per symbol, not every tick in order — the
+            # same conflation /ws/prices does for the web terminal and the app.
+            # Relaying one by one meant any client a little slower than the
+            # feed (dozens of ticks/s) fell behind for good, and the desk
+            # terminal showed prices seconds to minutes old next to the LP's
+            # MT4 while the web terminal, on the conflated socket, matched it.
+            # The first read blocks (up to 1s, for the heartbeat and the
+            # disconnect check); everything else queued is drained without
+            # waiting.
+            latest: dict = {}
             message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
-            if message and message.get("type") == "message":
-                try:
-                    tick = json.loads(message["data"])
-                    tick["type"] = "tick"
-                    await websocket.send_json(tick)
-                except (json.JSONDecodeError, TypeError):
-                    pass
+            for _ in range(_DRAIN_MAX):
+                if message is None:
+                    break
+                if message.get("type") == "message":
+                    try:
+                        tick = json.loads(message["data"])
+                        latest[tick.get("symbol")] = tick
+                    except (json.JSONDecodeError, TypeError, AttributeError):
+                        pass
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.0)
+            for tick in latest.values():
+                tick["type"] = "tick"
+                await websocket.send_json(tick)
 
             now = loop.time()
             if now - last_ping >= WS_HEARTBEAT_INTERVAL:
