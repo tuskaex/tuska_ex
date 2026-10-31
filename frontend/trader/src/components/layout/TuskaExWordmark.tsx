@@ -153,7 +153,7 @@ export function TuskaExWordmark({
         <Image
           src={brand().logo}
           alt={brand().name}
-          width={220}
+          width={isOnTerminalHost() ? 179 : 220}
           height={48}
           priority
           className="h-9 sm:h-10 w-auto"

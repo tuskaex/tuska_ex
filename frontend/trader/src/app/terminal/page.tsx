@@ -80,7 +80,7 @@ function Splash({ children }: { children: React.ReactNode }) {
       <Image
         src={SPEEDTRADE_LOGO}
         alt="SpeedTrade"
-        width={293}
+        width={238}
         height={64}
         priority
         className="h-8 w-auto sm:h-10"
