@@ -1,4 +1,4 @@
-# Build the TuskaEx Terminal with the MSYS2 UCRT64 toolchain.
+# Build the Vxness Terminal with the MSYS2 UCRT64 toolchain.
 # Usage:  powershell -ExecutionPolicy Bypass -File build.ps1
 $ErrorActionPreference = "Stop"
 

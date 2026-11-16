@@ -35,7 +35,7 @@ static void applyTheme(QApplication& app) {
 // handle when the process dies, including a crash, so it can never go stale.
 static void holdInstallerMutex() {
     static HANDLE h = nullptr;
-    if (!h) h = ::CreateMutexW(nullptr, FALSE, L"TuskaExTerminal.SingleInstance");
+    if (!h) h = ::CreateMutexW(nullptr, FALSE, L"VxnessTerminal.SingleInstance");
 }
 #endif
 
@@ -61,12 +61,12 @@ int main(int argc, char* argv[]) {
 #endif
     // These two also decide where Config writes its file (AppConfigLocation is
     // derived from them), so changing them relocates the saved session.
-    app.setApplicationName("TuskaEx Terminal");
-    app.setOrganizationName("TuskaEx");
+    app.setApplicationName("Vxness Terminal");
+    app.setOrganizationName("Vxness");
     // Brand mark on the window title bar / taskbar, so it's obvious at a glance
     // which platform's terminal this is. (The EXE's own icon comes from
     // resources/app.rc, which is what Explorer and the desktop shortcut use.)
-    app.setWindowIcon(QIcon(":/tuskaex-256.png"));
+    app.setWindowIcon(QIcon(":/vxness-256.png"));
 
     qRegisterMetaType<Quote>("Quote");
     qRegisterMetaType<AccountInfo>("AccountInfo");

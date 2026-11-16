@@ -60,7 +60,7 @@ QComboBox#input QAbstractItemView {
     background: %CARDBG%; color: %TEXTSTRONG%; border: 1px solid %BORDER%;
     border-radius: 8px; padding: 4px; selection-background-color: %MENUSEL%; outline: none;
 }
-/* TuskaEx red, to match the brand panel beside it. Safe here and only here:
+/* Vxness red, to match the brand panel beside it. Safe here and only here:
    #primary is the sign-in button and nothing else, so this does not bleed into
    the trading UI, where red means SELL. */
 QPushButton#primary {
@@ -168,8 +168,8 @@ LoginDialog::LoginDialog(const Config& cfg, QWidget* parent, Mode mode)
     : QDialog(parent), m_cfg(cfg), m_mode(mode),
       m_net(new QNetworkAccessManager(this)) {
     setWindowTitle(mode == Mode::WebService
-                       ? tr("TuskaEx Terminal — Web service")
-                       : tr("TuskaEx Terminal — Sign in"));
+                       ? tr("Vxness Terminal — Web service")
+                       : tr("Vxness Terminal — Sign in"));
     setModal(true);
     // Frameless + translucent so the card can have rounded corners and a real
     // drop shadow. The card is draggable by any empty area (see mouseMoveEvent).
@@ -216,7 +216,7 @@ LoginDialog::LoginDialog(const Config& cfg, QWidget* parent, Mode mode)
     // Preselect the profile matching the saved endpoints.
     {
         QSignalBlocker b(m_profile);
-        if (m_cfg.restBase == TX_REST)         m_profile->setCurrentText(tr("TuskaEx Live 01"));
+        if (m_cfg.restBase == TX_REST)         m_profile->setCurrentText(tr("Vxness Live 01"));
         else if (m_cfg.restBase == LOCAL_REST) m_profile->setCurrentText(tr("Local dev"));
         else                                   m_profile->setCurrentText(tr("Custom"));
     }
@@ -228,7 +228,7 @@ LoginDialog::LoginDialog(const Config& cfg, QWidget* parent, Mode mode)
         m_credRows->hide();
         m_keyRows->show();
         m_stepTitle->setText(tr("Web service"));
-        m_stepSub->setText(tr("Connect to the TuskaEx web service with the API key "
+        m_stepSub->setText(tr("Connect to the Vxness web service with the API key "
                               "and secret from your dashboard. This is separate "
                               "from your trading account sign-in."));
         m_loginBtn->setText(tr("Connect"));
@@ -240,7 +240,7 @@ QWidget* LoginDialog::buildBrandPanel() {
     auto* p = new QFrame;
     p->setObjectName("brand");
     p->setFixedWidth(290);
-    // TuskaEx red on black: a deep crimson bleeding into the app's darkest
+    // Vxness red on black: a deep crimson bleeding into the app's darkest
     // surface in dark mode, the brand red itself in light mode. Both keep the
     // white/near-white brand type readable.
     //
@@ -264,13 +264,13 @@ QWidget* LoginDialog::buildBrandPanel() {
     // used here — the full wordmark's type is black and would disappear against
     // this panel's gradient.
     auto* mark = new QLabel;
-    mark->setPixmap(QPixmap(":/tuskaex-256.png")
+    mark->setPixmap(QPixmap(":/vxness-256.png")
                     .scaled(46, 46, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     mark->setStyleSheet("background:transparent;");
     v->addWidget(mark);
     v->addSpacing(12);
 
-    auto* name = new QLabel(QStringLiteral("TuskaEx"));
+    auto* name = new QLabel(QStringLiteral("Vxness"));
     name->setStyleSheet("background:transparent; color:#ffffff; font-size:26px;"
                         "font-weight:800; letter-spacing:0.4px;");
     v->addWidget(name);
@@ -338,7 +338,7 @@ QWidget* LoginDialog::buildFormPanel() {
     v->addWidget(m_stepTitle);
     v->addSpacing(6);
 
-    m_stepSub = new QLabel(tr("Sign in with your TuskaEx email and password, or with an "
+    m_stepSub = new QLabel(tr("Sign in with your Vxness email and password, or with an "
                               "account number and its master or investor password."));
     m_stepSub->setWordWrap(true);
     m_stepSub->setStyleSheet(QString("background:transparent; color:%1; font-size:12px;")
@@ -350,7 +350,7 @@ QWidget* LoginDialog::buildFormPanel() {
     m_profile = new QComboBox;
     m_profile->setObjectName("input");
     m_profile->setCursor(Qt::PointingHandCursor);
-    m_profile->addItems({tr("TuskaEx Live 01"), tr("Local dev"), tr("Custom")});
+    m_profile->addItems({tr("Vxness Live 01"), tr("Local dev"), tr("Custom")});
     connect(m_profile, &QComboBox::currentTextChanged, this,
             [this](const QString& n) { applyProfile(n); });
 
@@ -381,7 +381,7 @@ QWidget* LoginDialog::buildFormPanel() {
     rows->setSpacing(14);
     // SERVER is built but NOT shown, which is what the desk asked for.
     //
-    // There is one server. The box only ever read "TuskaEx Live 01", and the
+    // There is one server. The box only ever read "Vxness Live 01", and the
     // other two entries pointed at a developer's own machine — a control whose
     // single meaningful value is already its default is furniture on a sign-in
     // card, and the one place a trader can pick the wrong thing and be unable
@@ -560,7 +560,7 @@ void LoginDialog::mouseMoveEvent(QMouseEvent* e) {
 // --- behaviour --------------------------------------------------------------
 
 void LoginDialog::applyProfile(const QString& name) {
-    if (name == tr("TuskaEx Live 01")) { m_rest->setText(TX_REST);    m_ws->setText(TX_WS); }
+    if (name == tr("Vxness Live 01")) { m_rest->setText(TX_REST);    m_ws->setText(TX_WS); }
     else if (name == tr("Local dev")) { m_rest->setText(LOCAL_REST); m_ws->setText(LOCAL_WS); }
     else if (m_advanced->isHidden())  { m_advancedBtn->click(); }   // Custom → reveal
 }
@@ -614,9 +614,9 @@ void LoginDialog::toggleAuthMode() {
     m_modeBtn->setText(m_keyMode ? tr("✉  Use email and password instead")
                                  : tr("🔑  Use an API key instead"));
     m_stepSub->setText(m_keyMode
-        ? tr("Sign in with an API key and secret generated in your TuskaEx "
+        ? tr("Sign in with an API key and secret generated in your Vxness "
              "dashboard. The key already identifies one trading account.")
-        : tr("Sign in with your TuskaEx email and password, or with an "
+        : tr("Sign in with your Vxness email and password, or with an "
              "account number and its master or investor password."));
     adjustSize();
 }
@@ -954,7 +954,7 @@ void LoginDialog::mintAlgoKey() {
 
     QJsonObject body;
     body["account_id"] = m_cfg.accountId;
-    body["label"]      = QStringLiteral("TuskaEx Terminal");
+    body["label"]      = QStringLiteral("Vxness Terminal");
 
     QNetworkReply* reply = m_net->post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {

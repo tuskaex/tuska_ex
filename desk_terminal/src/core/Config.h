@@ -136,12 +136,12 @@ public:
     QString apiKey;
     QString apiSecret;
 
-    // REST base, e.g. https://api.tuskaex.com/api/algo
-    QString restBase = "https://api.tuskaex.com/api/algo";
-    // WebSocket URL, e.g. wss://api.tuskaex.com/ws/algo/prices
-    // WebSockets only work on the api. host — trade.tuskaex.com proxies REST
+    // REST base, e.g. https://api.vxness.in/api/algo
+    QString restBase = "https://api.vxness.in/api/algo";
+    // WebSocket URL, e.g. wss://api.vxness.in/ws/algo/prices
+    // WebSockets only work on the api. host — trade.vxness.in proxies REST
     // but its nginx block does not upgrade the connection.
-    QString wsUrl    = "wss://api.tuskaex.com/ws/algo/prices";
+    QString wsUrl    = "wss://api.vxness.in/ws/algo/prices";
 
     bool hasToken() const {
         return !token.trimmed().isEmpty() && !accountId.trimmed().isEmpty();
@@ -160,7 +160,7 @@ public:
     QString installId;
 
     // Drops everything that identifies or signs in a user — session, account,
-    // email, saved password, API key — and points the terminal back at TuskaEx
+    // email, saved password, API key — and points the terminal back at Vxness
     // Live. Layout, theme and watchlist preferences are kept.
     void forgetLogin();
 

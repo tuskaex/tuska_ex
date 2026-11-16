@@ -1,5 +1,5 @@
 /*
- * TuskaEx datafeed for TradingView Advanced Charts.
+ * Vxness datafeed for TradingView Advanced Charts.
  *
  * Data flows over the Qt WebChannel bridge object `sc` (exposed by the C++
  * ChartBridge), which reuses the app's authenticated ApiClient / PriceStream.
@@ -243,7 +243,7 @@ function makeDatafeed(bridge) {
         .filter(s => s.symbol.toUpperCase().includes(q))
         .map(s => ({
           symbol: s.symbol, full_name: s.symbol, description: s.display_name || s.symbol,
-          exchange: "TuskaEx", ticker: s.symbol, type: s.category || "forex",
+          exchange: "Vxness", ticker: s.symbol, type: s.category || "forex",
         }));
       onResult(res);
     },
@@ -258,8 +258,8 @@ function makeDatafeed(bridge) {
         type: meta.category || "forex",
         session: "24x7",
         timezone: "Etc/UTC",
-        exchange: "TuskaEx",
-        listed_exchange: "TuskaEx",
+        exchange: "Vxness",
+        listed_exchange: "Vxness",
         format: "price",
         minmov: 1,
         pricescale: pricescale,

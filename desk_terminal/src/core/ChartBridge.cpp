@@ -30,7 +30,7 @@ ChartBridge::ChartBridge(ApiClient* api, PriceStream* stream, QObject* parent)
 
 static QString storePath() {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    if (dir.isEmpty()) dir = QDir::homePath() + "/.tuskaex-terminal";
+    if (dir.isEmpty()) dir = QDir::homePath() + "/.vxness-terminal";
     QDir().mkpath(dir);
     return dir + "/chart-templates.json";
 }

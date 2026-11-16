@@ -69,7 +69,7 @@ static const char* MASK = "••••••";
 
 MainWindow::MainWindow(const Config& cfg, QWidget* parent)
     : QMainWindow(parent), m_cfg(cfg) {
-    setWindowTitle(tr("TuskaEx Terminal"));
+    setWindowTitle(tr("Vxness Terminal"));
     setMinimumSize(980, 600);
     resize(1360, 840);
 

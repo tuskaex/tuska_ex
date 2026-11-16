@@ -9,7 +9,7 @@
   function overridesFor(theme, compact) {
     const light = theme === "light";
     return {
-      // Split view: drop the "Bitcoin / US Dollar · 5 · TuskaEx" line from the
+      // Split view: drop the "Bitcoin / US Dollar · 5 · Vxness" line from the
       // legend. The pane header above it already names the instrument, so in a
       // half or quarter pane it is a second copy of the same fact sitting on
       // top of the candles. The OHLC row underneath is left alone — that IS
@@ -36,7 +36,7 @@
   const surfaceFor = (t) => (t === "light" ? "#ffffff" : "#0e0f13");
 
   /*
-   * TuskaEx watermark, centred on the chart canvas.
+   * Vxness watermark, centred on the chart canvas.
    *
    * Built as our own DOM layer rather than through the library: the charting
    * library's symbolWatermark only draws the SYMBOL text, and there is no hook
@@ -65,7 +65,7 @@
 
       const txt = document.createElement("span");
       txt.id = "tx_watermark_text";
-      txt.textContent = "TuskaEx";
+      txt.textContent = "Vxness";
       txt.style.cssText =
         "font:800 44px -apple-system,'Segoe UI',sans-serif;letter-spacing:0.5px;";
 
@@ -76,7 +76,7 @@
     // Faint enough that candles and grid lines stay fully readable through it.
     el.style.opacity = theme === "light" ? "0.09" : "0.12";
     document.getElementById("tx_watermark_mark").src =
-      theme === "light" ? "tuskaex-mark.png" : "tuskaex-mark-light.png";
+      theme === "light" ? "vxness-mark.png" : "vxness-mark-light.png";
     document.getElementById("tx_watermark_text").style.color =
       theme === "light" ? "#0d1117" : "#e6e8ec";
   }
@@ -319,7 +319,7 @@
       ...(chartMenu ? { context_menu: chartMenu.options } : {}),
       // The library needs a layout name to show in the header before the first
       // save; it renames itself as soon as one is saved.
-      saved_data_meta_info: { uid: 1, name: "TuskaEx", description: "" },
+      saved_data_meta_info: { uid: 1, name: "Vxness", description: "" },
       // The widget bar down the right of the chart. Only the Data Window is
       // turned on — watchlist, news and details all duplicate panels the
       // terminal already has natively. Constructor-only, like the compact

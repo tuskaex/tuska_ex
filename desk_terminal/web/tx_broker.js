@@ -1,5 +1,5 @@
 /*
- * TuskaEx Broker API adapter for the TradingView Trading Terminal.
+ * Vxness Broker API adapter for the TradingView Trading Terminal.
  *
  * This turns the read-only chart into a trading chart: it draws a line for
  * every open position (with live P&L + a close ✕), and lets the user drag the
@@ -30,7 +30,7 @@
   function tickForDigits(d) { return Math.pow(10, -(d == null ? 5 : d)); }
   function pipForDigits(d)  { return Math.pow(10, -((d == null ? 5 : d) - 1)); }
 
-  function TuskaExBroker(host, bridge) {
+  function VxnessBroker(host, bridge) {
     this._host = host;
     this._bridge = bridge;
 
@@ -60,19 +60,19 @@
 
   // ---- helpers ------------------------------------------------------------
 
-  TuskaExBroker.prototype._tick = function (symbol) {
+  VxnessBroker.prototype._tick = function (symbol) {
     var m = this._meta[symbol];
     return tickForDigits(m ? m.digits : 5);
   };
 
-  TuskaExBroker.prototype._parsePositions = function () {
+  VxnessBroker.prototype._parsePositions = function () {
     var arr = [];
     try { arr = JSON.parse(this._bridge.positionsJson || "[]") || []; } catch (e) {}
     return arr;
   };
 
   // Build a TradingView Position object from a bridge position record.
-  TuskaExBroker.prototype._toTv = function (p) {
+  VxnessBroker.prototype._toTv = function (p) {
     var side = (String(p.side).toLowerCase() === "sell") ? Side.Sell : Side.Buy;
     var pos = {
       id: String(p.id),
@@ -89,7 +89,7 @@
   };
 
   // Reconcile the chart's position lines with the latest server snapshot.
-  TuskaExBroker.prototype._reconcile = function () {
+  VxnessBroker.prototype._reconcile = function () {
     var arr = this._parsePositions();
     var seen = {};
     var self = this;
@@ -134,7 +134,7 @@
   };
 
   // Smooth live P&L for positions on `sym` between polls.
-  TuskaExBroker.prototype._updatePL = function (sym) {
+  VxnessBroker.prototype._updatePL = function (sym) {
     var q = this._quotes[sym];
     if (!q) return;
     var self = this;
@@ -152,7 +152,7 @@
     if (touched) this._recomputeTotals();
   };
 
-  TuskaExBroker.prototype._recomputeTotals = function () {
+  VxnessBroker.prototype._recomputeTotals = function () {
     var total = 0;
     var self = this;
     Object.keys(this._positions).forEach(function (id) {
@@ -163,7 +163,7 @@
   };
 
   // Resolve/reject the pending modify/close promise; toast on rejection.
-  TuskaExBroker.prototype._onOp = function (id, op, ok, msg) {
+  VxnessBroker.prototype._onOp = function (id, op, ok, msg) {
     var key = id + "|" + op;
     var pend = this._pending[key];
     if (pend) {
@@ -180,26 +180,26 @@
 
   // ---- IBrokerCommon ------------------------------------------------------
 
-  TuskaExBroker.prototype.connectionStatus = function () { return Connected; };
+  VxnessBroker.prototype.connectionStatus = function () { return Connected; };
 
-  TuskaExBroker.prototype.chartContextMenuActions = function (context, options) {
+  VxnessBroker.prototype.chartContextMenuActions = function (context, options) {
     return this._host.defaultContextMenuActions(context, options);
   };
 
-  TuskaExBroker.prototype.isTradable = function (symbol) {
+  VxnessBroker.prototype.isTradable = function (symbol) {
     return Promise.resolve(true);
   };
 
-  TuskaExBroker.prototype.orders = function () { return Promise.resolve([]); };
+  VxnessBroker.prototype.orders = function () { return Promise.resolve([]); };
 
-  TuskaExBroker.prototype.executions = function (symbol) { return Promise.resolve([]); };
+  VxnessBroker.prototype.executions = function (symbol) { return Promise.resolve([]); };
 
-  TuskaExBroker.prototype.positions = function () {
+  VxnessBroker.prototype.positions = function () {
     var self = this;
     return Promise.resolve(this._parsePositions().map(function (p) { return self._toTv(p); }));
   };
 
-  TuskaExBroker.prototype.symbolInfo = function (symbol) {
+  VxnessBroker.prototype.symbolInfo = function (symbol) {
     var m = this._meta[symbol] || {};
     var d = (m.digits != null) ? m.digits : 5;
     return Promise.resolve({
@@ -213,9 +213,9 @@
     });
   };
 
-  TuskaExBroker.prototype.accountManagerInfo = function () {
+  VxnessBroker.prototype.accountManagerInfo = function () {
     return {
-      accountTitle: "TuskaEx",
+      accountTitle: "Vxness",
       summary: [
         { text: "Open P&L", wValue: this._openPl, formatter: "profit" },
       ],
@@ -235,26 +235,26 @@
 
   // ---- IBrokerAccountInfo -------------------------------------------------
 
-  TuskaExBroker.prototype.accountsMetainfo = function () {
-    return Promise.resolve([{ id: "main", name: "TuskaEx" }]);
+  VxnessBroker.prototype.accountsMetainfo = function () {
+    return Promise.resolve([{ id: "main", name: "Vxness" }]);
   };
 
-  TuskaExBroker.prototype.currentAccount = function () { return "main"; };
+  VxnessBroker.prototype.currentAccount = function () { return "main"; };
 
   // ---- IBrokerTerminal ----------------------------------------------------
 
   // Order entry stays in the native Order Ticket; reject any chart order entry.
-  TuskaExBroker.prototype.placeOrder = function (order) {
+  VxnessBroker.prototype.placeOrder = function (order) {
     this._host.showNotification("Use the Order panel",
       "Open new trades from the terminal's Order Ticket.", 1);
     return Promise.reject(new Error("Order entry is disabled on the chart"));
   };
 
-  TuskaExBroker.prototype.modifyOrder = function () { return Promise.resolve(); };
-  TuskaExBroker.prototype.cancelOrder = function () { return Promise.resolve(); };
+  VxnessBroker.prototype.modifyOrder = function () { return Promise.resolve(); };
+  VxnessBroker.prototype.cancelOrder = function () { return Promise.resolve(); };
 
   // Drag SL/TP handle -> modify the real server position.
-  TuskaExBroker.prototype.editPositionBrackets = function (positionId, brackets) {
+  VxnessBroker.prototype.editPositionBrackets = function (positionId, brackets) {
     var id = String(positionId);
     var sl = (brackets && brackets.stopLoss > 0) ? brackets.stopLoss : 0;
     var tp = (brackets && brackets.takeProfit > 0) ? brackets.takeProfit : 0;
@@ -266,7 +266,7 @@
   };
 
   // ✕ on the line -> close the real server position.
-  TuskaExBroker.prototype.closePosition = function (positionId) {
+  VxnessBroker.prototype.closePosition = function (positionId) {
     var id = String(positionId);
     var self = this;
     return new Promise(function (resolve, reject) {
@@ -276,7 +276,7 @@
   };
 
   // Broker config passed to TradingView.widget alongside broker_factory.
-  window.TUSKAEX_BROKER_CONFIG = {
+  window.VXNESS_BROKER_CONFIG = {
     configFlags: {
       supportPositions: true,
       supportPositionBrackets: true,   // draggable SL/TP on positions
@@ -299,5 +299,5 @@
     durations: [],
   };
 
-  window.makeBroker = function (host, bridge) { return new TuskaExBroker(host, bridge); };
+  window.makeBroker = function (host, bridge) { return new VxnessBroker(host, bridge); };
 })();

@@ -24,8 +24,8 @@ class QJsonArray;
 class LoginDialog : public QDialog {
     Q_OBJECT
 public:
-    static constexpr const char* TX_REST    = "https://api.tuskaex.com/api/algo";
-    static constexpr const char* TX_WS      = "wss://api.tuskaex.com/ws/algo/prices";
+    static constexpr const char* TX_REST    = "https://api.vxness.in/api/algo";
+    static constexpr const char* TX_WS      = "wss://api.vxness.in/ws/algo/prices";
     static constexpr const char* LOCAL_REST = "http://localhost:8000/api/algo";
     static constexpr const char* LOCAL_WS   = "ws://localhost:8000/ws/algo/prices";
 

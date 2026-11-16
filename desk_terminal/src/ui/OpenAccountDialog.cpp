@@ -192,7 +192,7 @@ QWidget* OpenAccountDialog::buildTypePage() {
     m_loginPw->setPlaceholderText(tr("Master or investor password"));
     m_savePw = new QCheckBox(tr("Save password"));
     m_savePw->setChecked(m_cfg.rememberPassword);
-    auto* server = new QLabel(QStringLiteral("TuskaEx"));
+    auto* server = new QLabel(QStringLiteral("Vxness"));
     server->setStyleSheet("font-weight:600;");
     g->addWidget(caption(tr("Login:")), 0, 0);
     g->addWidget(m_login, 0, 1);
@@ -288,7 +288,7 @@ QWidget* OpenAccountDialog::buildDetailsPage() {
     wg->setVerticalSpacing(9);
     m_webPw = new QLineEdit;
     m_webPw->setEchoMode(QLineEdit::Password);
-    m_webPw->setPlaceholderText(tr("For the TuskaEx website"));
+    m_webPw->setPlaceholderText(tr("For the Vxness website"));
     m_webPw2 = new QLineEdit;
     m_webPw2->setEchoMode(QLineEdit::Password);
     m_webPw2->setPlaceholderText(tr("Repeat it"));
@@ -398,7 +398,7 @@ QWidget* OpenAccountDialog::buildDonePage() {
         const QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
         const QString file = QFileDialog::getSaveFileName(
             this, tr("Save account details"),
-            dir + QStringLiteral("/TuskaEx-%1.txt").arg(m_accountNumber), tr("Text files (*.txt)"));
+            dir + QStringLiteral("/Vxness-%1.txt").arg(m_accountNumber), tr("Text files (*.txt)"));
         if (file.isEmpty()) return;
         QFile f(file);
         if (!f.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
@@ -789,7 +789,7 @@ void OpenAccountDialog::showRegistration(const QJsonObject& o) {
     m_reg = o;
     m_reg["full_name"] = m_name->text().simplified();
     if (!m_reg.contains("server"))
-        m_reg["server"] = o.value("is_demo").toBool() ? "TuskaEx-Demo" : "TuskaEx-Live";
+        m_reg["server"] = o.value("is_demo").toBool() ? "Vxness-Demo" : "Vxness-Live";
     m_accountNumber = o.value("account_number").toString();
     m_finished = true;
 
@@ -831,7 +831,7 @@ void OpenAccountDialog::showRegistration(const QJsonObject& o) {
 }
 
 QString OpenAccountDialog::detailsText() const {
-    QString t = tr("TuskaEx trading account\n");
+    QString t = tr("Vxness trading account\n");
     t += tr("Name:      %1\n").arg(m_reg.value("full_name").toString());
     t += tr("Type:      %1 (1:%2)\n").arg(m_reg.value("account_group_name").toString())
                                      .arg(m_reg.value("leverage").toInt());

@@ -1,17 +1,17 @@
-; Inno Setup script — packages the built TuskaEx Terminal into a single
-; TuskaExTerminal-Setup.exe installer. Installs per-user (no admin / no UAC).
+; Inno Setup script — packages the built Vxness Terminal into a single
+; VxnessTerminal-Setup.exe installer. Installs per-user (no admin / no UAC).
 ;
 ; Paths are relative to this script ({#SourcePath}) rather than absolute: the
 ; previous version hard-coded "D:\setupfx codes\trading terminal", which broke
 ; the moment the repo was cloned anywhere else.
-#define MyApp "TuskaEx Terminal"
+#define MyApp "Vxness Terminal"
 #define MyExe "terminal.exe"
 #define BuildDir SourcePath + "build-msvc"
 
 [Setup]
 ; A FRESH AppId, unlike the Bull4x → SwissCresta renames this build was forked
 ; from. Those were renames of one product, so they kept the original AppId to
-; upgrade in place. TuskaEx is a different platform: reusing that AppId would
+; upgrade in place. Vxness is a different platform: reusing that AppId would
 ; make this installer overwrite an existing SwissCresta install and take over
 ; its Apps & features entry. Once published, do not change it again — that is
 ; what lets a later version upgrade this one.
@@ -22,14 +22,14 @@ AppName={#MyApp}
 ; (frontend/trader/src/landing/marketing/Navbar.tsx). Bump both together, and
 ; the site's href with them, or the link 404s.
 AppVersion=2.7
-AppPublisher=TuskaEx
-DefaultDirName={autopf}\TuskaEx Terminal
-DefaultGroupName=TuskaEx Terminal
+AppPublisher=Vxness
+DefaultDirName={autopf}\Vxness Terminal
+DefaultGroupName=Vxness Terminal
 DisableProgramGroupPage=yes
 UninstallDisplayIcon={app}\{#MyExe}
 OutputDir={#SourcePath}dist
-OutputBaseFilename=TuskaExTerminal-Setup-2.7
-SetupIconFile={#SourcePath}resources\tuskaex.ico
+OutputBaseFilename=VxnessTerminal-Setup-2.7
+SetupIconFile={#SourcePath}resources\vxness.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -55,10 +55,10 @@ CloseApplicationsFilter=*.*
 ; and reopening it silently mid-install races the file copy.
 RestartApplications=no
 ; Belt and braces: the app holds this mutex while it runs (see src/main.cpp),
-; so Setup can say "close TuskaEx Terminal" up front instead of relying on
+; so Setup can say "close Vxness Terminal" up front instead of relying on
 ; Restart Manager alone. Renaming it breaks that detection on installed
 ; versions, so leave it alone.
-AppMutex=TuskaExTerminal.SingleInstance
+AppMutex=VxnessTerminal.SingleInstance
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -88,21 +88,21 @@ Source: "{#BuildDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdir
   Excludes: "CMakeFiles\*,terminal_autogen\*,*.obj,*.pdb,*.ilk,*.cmake,CMakeCache.txt,build.ninja,.ninja_deps,.ninja_log,*.ninja_deps,*.ninja_log,chart-diag.log,install-id.txt"
 
 [Icons]
-Name: "{group}\TuskaEx Terminal"; Filename: "{app}\{#MyExe}"
-Name: "{autodesktop}\TuskaEx Terminal"; Filename: "{app}\{#MyExe}"; Tasks: desktopicon
+Name: "{group}\Vxness Terminal"; Filename: "{app}\{#MyExe}"
+Name: "{autodesktop}\Vxness Terminal"; Filename: "{app}\{#MyExe}"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\{#MyExe}"; Description: "Launch TuskaEx Terminal"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyExe}"; Description: "Launch Vxness Terminal"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 ; install-id.txt is written by [Code] below, so the uninstaller does not know
 ; about it on its own.
 Type: files; Name: "{app}\install-id.txt"
 ; The terminal's settings folder (QStandardPaths::AppConfigLocation for org
-; "TuskaEx", app "TuskaEx Terminal"). It holds the session tokens, the API
+; "Vxness", app "Vxness Terminal"). It holds the session tokens, the API
 ; secret and, if "Remember password" was ticked, the password, all in
 ; plaintext. Uninstalling must not leave them behind for the next person.
-Type: filesandordirs; Name: "{localappdata}\TuskaEx\TuskaEx Terminal"
+Type: filesandordirs; Name: "{localappdata}\Vxness\Vxness Terminal"
 
 [Code]
 // Every install, re-install and upgrade gets a new id. The terminal compares it

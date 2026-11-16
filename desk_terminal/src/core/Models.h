@@ -4,7 +4,7 @@
 #include <QMetaType>
 #include <QVector>
 
-// Plain data structs mirroring the TuskaEx Algo API JSON shapes.
+// Plain data structs mirroring the Vxness Algo API JSON shapes.
 
 struct SymbolSpec {
     QString symbol;

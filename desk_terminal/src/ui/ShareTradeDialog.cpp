@@ -48,7 +48,7 @@ QString fmtStamp(const QString& iso) {
 
 } // namespace
 
-// api.tuskaex.com serves the API; the share page is a route on the TRADER
+// api.vxness.in serves the API; the share page is a route on the TRADER
 // frontend, which is a different host. Mapping api. -> trade. is how every
 // other deployment of this stack is laid out, and a wrong guess here produces
 // a link that 404s — so a local gateway maps to the local frontend's port
@@ -56,7 +56,7 @@ QString fmtStamp(const QString& iso) {
 QString ShareTradeDialog::shareSiteFor(const QString& restBase) {
     const QUrl u(restBase);
     QString host = u.host();
-    if (host.isEmpty()) return QStringLiteral("https://trade.tuskaex.com");
+    if (host.isEmpty()) return QStringLiteral("https://vxness.in");
 
     if (host == "localhost" || host == "127.0.0.1")
         return QStringLiteral("http://%1:3010").arg(host);
@@ -365,7 +365,7 @@ QPixmap ShareTradeDialog::renderCard(int width) const {
     };
 
     // ── brand: the mark over the wordmark ──
-    const QPixmap mark(QStringLiteral(":/tuskaex-mark-light.png"));
+    const QPixmap mark(QStringLiteral(":/vxness-mark-light.png"));
     const int markPx = int(40 * k);
     if (!mark.isNull()) {
         p.drawPixmap(QRect((W - markPx) / 2, int(26 * k), markPx, markPx),
@@ -375,7 +375,7 @@ QPixmap ShareTradeDialog::renderCard(int width) const {
     p.setPen(kInk);
     p.setFont(font(11, QFont::Black, 3.4));
     p.drawText(QRect(0, int(72 * k), W, int(18 * k)), Qt::AlignCenter,
-               QStringLiteral("TUSKAEX"));
+               QStringLiteral("VXNESS"));
 
     // ── status + headline ──
     p.setPen(QColor(255, 255, 255, 180));
@@ -502,7 +502,7 @@ void ShareTradeDialog::createLink() {
 void ShareTradeDialog::downloadCard() {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
     if (dir.isEmpty()) dir = QDir::homePath();
-    const QString suggested = QStringLiteral("%1/tuskaex-%2-%3.png")
+    const QString suggested = QStringLiteral("%1/vxness-%2-%3.png")
         .arg(dir, m_pos.symbol.toLower(), m_pos.side.toLower());
 
     const QString path = QFileDialog::getSaveFileName(

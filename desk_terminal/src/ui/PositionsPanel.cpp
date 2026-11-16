@@ -821,7 +821,7 @@ QString PositionsPanel::historyReportHtml() const {
 
     QString h;
     h += QStringLiteral("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">\n");
-    h += QStringLiteral("<title>") + esc(tr("TuskaEx statement")) + QStringLiteral("</title>\n<style>\n");
+    h += QStringLiteral("<title>") + esc(tr("Vxness statement")) + QStringLiteral("</title>\n<style>\n");
     h += QStringLiteral(
          "body{font:12px Tahoma,Geneva,Verdana,sans-serif;color:#111827;background:#fff;"
          "margin:24px;}\n"
@@ -863,7 +863,7 @@ QString PositionsPanel::historyReportHtml() const {
     // resource bundle for the window icon, so nothing new ships to carry it.
     QString logo;
     {
-        QFile mark(QStringLiteral(":/tuskaex-256.png"));
+        QFile mark(QStringLiteral(":/vxness-256.png"));
         if (mark.open(QIODevice::ReadOnly))
             logo = QStringLiteral("data:image/png;base64,")
                  + QString::fromLatin1(mark.readAll().toBase64());
@@ -871,7 +871,7 @@ QString PositionsPanel::historyReportHtml() const {
     h += QStringLiteral("<div class=\"house\">");
     if (!logo.isEmpty())
         h += QStringLiteral("<img src=\"") + logo + QStringLiteral("\" alt=\"\">");
-    h += QStringLiteral("<span>") + esc(tr("TuskaEx")) + QStringLiteral("</span></div>\n");
+    h += QStringLiteral("<span>") + esc(tr("Vxness")) + QStringLiteral("</span></div>\n");
 
     const QString leverage = m_lastAccount.leverage > 0
         ? QStringLiteral("1:%1").arg(m_lastAccount.leverage) : QStringLiteral("—");
@@ -1143,7 +1143,7 @@ QString PositionsPanel::historyReportHtml() const {
     st(tr("Swap"), money(swap), tr("Commission"), money(comm));
     h += QStringLiteral("</table>\n");
 
-    h += QStringLiteral("<div class=\"foot\">") + esc(tr("TuskaEx Terminal"))
+    h += QStringLiteral("<div class=\"foot\">") + esc(tr("Vxness Terminal"))
        + QStringLiteral("</div>\n</body></html>\n");
     return h;
 }
@@ -1154,7 +1154,7 @@ void PositionsPanel::exportHistoryReport() {
                                                           : m_lastAccount.account;
     QString dir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
     if (dir.isEmpty()) dir = QDir::homePath();
-    const QString suggested = QStringLiteral("%1/TuskaEx-statement-%2-%3.html")
+    const QString suggested = QStringLiteral("%1/Vxness-statement-%2-%3.html")
                                   .arg(dir, acct, stamp);
 
     const QString path = QFileDialog::getSaveFileName(

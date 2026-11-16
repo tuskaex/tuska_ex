@@ -5,7 +5,7 @@
 # not us. build-macos.sh alone produces an ad-hoc signed app: it runs on the
 # machine that built it and nowhere else. Anything downloaded from the web
 # carries a quarantine flag, and macOS refuses to launch a quarantined app
-# that Apple has not notarised — with "TuskaEx Terminal is damaged and can't
+# that Apple has not notarised — with "Vxness Terminal is damaged and can't
 # be opened", which reads as a corrupt download rather than a missing
 # certificate. Apple's own syspolicy_check calls it out in as many words:
 #
@@ -28,14 +28,14 @@
 #
 # Alternatively store the credentials once in the keychain and skip three of
 # the four variables:
-#   xcrun notarytool store-credentials tuskaex-notary \
+#   xcrun notarytool store-credentials vxness-notary \
 #       --apple-id <id> --team-id <TEAMID> --password <app-specific-pw>
-#   TX_SIGN_ID="..." TX_NOTARY_PROFILE=tuskaex-notary ./notarize-macos.sh
+#   TX_SIGN_ID="..." TX_NOTARY_PROFILE=vxness-notary ./notarize-macos.sh
 set -euo pipefail
 
 src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 build="$src/build-macos"
-app_name="TuskaEx Terminal"
+app_name="Vxness Terminal"
 app="$build/$app_name.app"
 
 die() { echo "error: $*" >&2; exit 1; }
@@ -114,7 +114,7 @@ xcrun stapler staple "$app"
 echo "==> Packaging the dmg…"
 "$src/package-macos.sh"
 
-dmg="$(ls -t "$src/dist"/TuskaExTerminal-*.dmg 2>/dev/null | head -1)"
+dmg="$(ls -t "$src/dist"/VxnessTerminal-*.dmg 2>/dev/null | head -1)"
 [[ -n "$dmg" && -f "$dmg" ]] || die "package-macos.sh produced no dmg in $src/dist"
 
 # ── 4. notarise the dmg ─────────────────────────────────────────────────────
@@ -145,5 +145,5 @@ fi
 echo
 echo "==> Done: $dmg"
 echo "    This one opens on any Mac, with no Terminal commands."
-echo "    Upload it to /opt/tuskaex/downloads/ under exactly the name the"
+echo "    Upload it to /opt/vxness/downloads/ under exactly the name the"
 echo "    navbar links to, or the download 404s."

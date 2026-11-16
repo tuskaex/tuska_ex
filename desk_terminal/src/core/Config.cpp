@@ -9,7 +9,7 @@
 QString Config::filePath() {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
     if (dir.isEmpty())
-        dir = QDir::homePath() + "/.tuskaex-terminal";
+        dir = QDir::homePath() + "/.vxness-terminal";
     QDir().mkpath(dir);
     return dir + "/config.json";
 }
@@ -18,10 +18,10 @@ QString Config::filePath() {
 //
 // This terminal was forked from the Bull4x → SwissCresta build, which did carry
 // its config forward on each rename because those were renames of the same
-// broker: the same account, the same backend, only the host moved. TuskaEx is a
+// broker: the same account, the same backend, only the host moved. Vxness is a
 // *different platform*. A SwissCresta token or API key authenticates nothing
 // here, and adopting one would also drag its endpoints in, pointing this build
-// at another broker's API. So a TuskaEx install starts with a clean config and
+// at another broker's API. So a Vxness install starts with a clean config and
 // a real sign-in.
 //
 // For the same reason nothing deletes those files either: the SwissCresta

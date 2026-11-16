@@ -3,7 +3,7 @@
 // instead of falling back to the generic Qt/exe icon.
 // IDI_ICON1 (id 1) is the lowest icon id, which is what Explorer picks as the
 // executable's display icon.
-1 ICON "tuskaex.ico"
+1 ICON "vxness.ico"
 
 1 VERSIONINFO
 // Keep in step with AppVersion in installer.iss and the version in the
@@ -17,12 +17,12 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName",      "TuskaEx"
-            VALUE "FileDescription",  "TuskaEx Terminal"
+            VALUE "CompanyName",      "Vxness"
+            VALUE "FileDescription",  "Vxness Terminal"
             VALUE "FileVersion",      "2.7.0.0"
             VALUE "InternalName",     "terminal"
             VALUE "OriginalFilename", "terminal.exe"
-            VALUE "ProductName",      "TuskaEx Terminal"
+            VALUE "ProductName",      "Vxness Terminal"
             VALUE "ProductVersion",   "2.7.0.0"
         END
     END

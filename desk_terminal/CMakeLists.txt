@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(TuskaExTerminal VERSION 0.2.0 LANGUAGES CXX)
+project(VxnessTerminal VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -152,15 +152,15 @@ endif()
 
 if (APPLE)
     # A mac app is a bundle named after its executable, so the binary is
-    # "TuskaEx Terminal" here rather than the bare "terminal" Windows ships —
+    # "Vxness Terminal" here rather than the bare "terminal" Windows ships —
     # that name is what Finder, the Dock and ⌘-Tab all show.
-    set(TX_APP_NAME "TuskaEx Terminal")
-    set(TX_BUNDLE_ID "com.tuskaex.terminal")
+    set(TX_APP_NAME "Vxness Terminal")
+    set(TX_BUNDLE_ID "com.vxness.terminal")
 
-    set(TX_ICNS "${CMAKE_SOURCE_DIR}/resources/tuskaex.icns")
+    set(TX_ICNS "${CMAKE_SOURCE_DIR}/resources/vxness.icns")
     if (NOT EXISTS "${TX_ICNS}")
         message(FATAL_ERROR
-            "resources/tuskaex.icns is missing. Generate it first:\n"
+            "resources/vxness.icns is missing. Generate it first:\n"
             "    ./resources/make-icns.sh")
     endif()
     # MACOSX_PACKAGE_LOCATION puts the file in Contents/Resources, which is

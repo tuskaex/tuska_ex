@@ -27,7 +27,7 @@ namespace {
 
 QString scriptsDir() {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    if (dir.isEmpty()) dir = QDir::homePath() + "/.tuskaex-terminal";
+    if (dir.isEmpty()) dir = QDir::homePath() + "/.vxness-terminal";
     return dir + "/scripts";
 }
 

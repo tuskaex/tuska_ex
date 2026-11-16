@@ -1,7 +1,7 @@
-# TuskaEx Terminal
+# Vxness Terminal
 
-A native **C++ / Qt6 desktop trading terminal** for the TuskaEx platform.
-It connects to the [TuskaEx Algo API](../ALGO_API.md) over REST + WebSocket
+A native **C++ / Qt6 desktop trading terminal** for the Vxness platform.
+It connects to the [Vxness Algo API](../ALGO_API.md) over REST + WebSocket
 (see also the [web terminal reference](../WEB_TERMINAL_API.md))
 and gives you a live watchlist, candlestick charts,
 an order ticket (BUY / SELL / CLOSE), and an account panel — all updating in
@@ -71,24 +71,24 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 powershell -ExecutionPolicy Bypass -File run.ps1
 ```
 
-On first launch you sign in with your **TuskaEx email and password** — the
+On first launch you sign in with your **Vxness email and password** — the
 terminal mints its own algo key/secret from `POST /api/v1/algo/generate` once
 you pick an account. You can also paste an **API Key + Secret** generated in
-your TuskaEx dashboard instead. For production leave the endpoints as the
+your Vxness dashboard instead. For production leave the endpoints as the
 defaults:
 
-- REST base: `https://api.tuskaex.com/api/algo`
-- WebSocket: `wss://api.tuskaex.com/ws/algo/prices`
+- REST base: `https://api.vxness.in/api/algo`
+- WebSocket: `wss://api.vxness.in/ws/algo/prices`
 
-The WebSocket must use the `api.` host — `trade.tuskaex.com` proxies REST but
+The WebSocket must use the `api.` host — `trade.vxness.in` proxies REST but
 does not upgrade WebSocket connections. For a local backend, point both at your
 local gateway instead. Credentials are saved to
-`%APPDATA%\TuskaEx\TuskaEx Terminal\config.json`.
+`%APPDATA%\Vxness\Vxness Terminal\config.json`.
 
 > This build was forked from the SwissCresta terminal and shares no identity
 > with it: different config path, different installer AppId, and **no** config
 > migration. A SwissCresta sign-in is not carried over — that account does not
-> exist on TuskaEx's backend. Both apps can be installed side by side.
+> exist on Vxness's backend. Both apps can be installed side by side.
 
 ## ⚠️ Smart App Control must be off to run
 

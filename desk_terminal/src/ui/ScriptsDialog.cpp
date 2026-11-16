@@ -26,7 +26,7 @@ namespace {
 // immediately, and it shows both shapes — the one-shot body and the optional
 // onTick — because the difference between them is the thing that is not
 // obvious from an empty editor.
-const char* kTemplate = R"JS(// A TuskaEx script. Everything you can reach is on `terminal`.
+const char* kTemplate = R"JS(// A Vxness script. Everything you can reach is on `terminal`.
 //
 //   terminal.log(text)
 //   terminal.symbols()                 -> ["EURUSD", …]
@@ -150,7 +150,7 @@ ScriptsDialog::ScriptsDialog(ApiClient* api, QWidget* parent)
 
 QString ScriptsDialog::scriptsDir() {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
-    if (dir.isEmpty()) dir = QDir::homePath() + "/.tuskaex-terminal";
+    if (dir.isEmpty()) dir = QDir::homePath() + "/.vxness-terminal";
     dir += "/scripts";
     QDir().mkpath(dir);
     return dir;
